@@ -86,6 +86,8 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(wp)              :: min_mineral_volume_fraction_surface !< minimum mineral volume fraction in the first soil layer
+    REAL(wp)              :: min_mineral_volume_fraction_gradient !< increase of minimum mineral volume fraction with depth [m-1]
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
@@ -192,6 +194,8 @@ CONTAINS
                                    soil_p_occluded,     &
                                    soil_p_primary
     REAL(wp)                    :: qmax_org_fine_particle
+    REAL(wp)                    :: min_mineral_volume_fraction_surface
+    REAL(wp)                    :: min_mineral_volume_fraction_gradient
     LOGICAL                     :: flag_apply_nml_parameters
     REAL(wp)                    :: nml_temp_freeze_thres_bio
     REAL(wp)                    :: nml_temp_freeze_window_bio
@@ -240,6 +244,8 @@ CONTAINS
                       soil_p_occluded           , &
                       soil_p_primary            , &
                       qmax_org_fine_particle, &
+      &               min_mineral_volume_fraction_surface, &
+      &               min_mineral_volume_fraction_gradient, &
       &   flag_apply_nml_parameters, &
       &   nml_temp_freeze_thres_bio, &
       &   nml_temp_freeze_window_bio, &
@@ -300,6 +306,8 @@ CONTAINS
     soil_p_occluded             = 150._wp
     soil_p_primary              = 100._wp
     qmax_org_fine_particle      = 6.5537_wp
+    min_mineral_volume_fraction_surface = 0.05_wp
+    min_mineral_volume_fraction_gradient = 0.01_wp
     flag_apply_nml_parameters   = .FALSE.
     nml_temp_freeze_thres_bio   = def_parameters
     nml_temp_freeze_window_bio  = def_parameters
@@ -354,6 +362,8 @@ CONTAINS
     config%soil_p_occluded                 = soil_p_occluded
     config%soil_p_primary                  = soil_p_primary
     config%qmax_org_fine_particle          = qmax_org_fine_particle
+    config%min_mineral_volume_fraction_surface = min_mineral_volume_fraction_surface
+    config%min_mineral_volume_fraction_gradient = min_mineral_volume_fraction_gradient
     config%flag_apply_nml_parameters       = flag_apply_nml_parameters
     config%nml_temp_freeze_thres_bio       = nml_temp_freeze_thres_bio
     config%nml_temp_freeze_window_bio      = nml_temp_freeze_window_bio
@@ -376,6 +386,14 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
+
+    IF (min_mineral_volume_fraction_surface < 0.0_wp .OR. &
+        & min_mineral_volume_fraction_surface >= 1.0_wp) THEN
+      CALL finish(TRIM(routine), 'min_mineral_volume_fraction_surface must be in the range [0, 1).')
+    END IF
+    IF (min_mineral_volume_fraction_gradient < 0.0_wp) THEN
+      CALL finish(TRIM(routine), 'min_mineral_volume_fraction_gradient must not be negative.')
+    END IF
 
     ! Set deposition scheme
     SELECT CASE (tolower(TRIM(deposition_scheme)))

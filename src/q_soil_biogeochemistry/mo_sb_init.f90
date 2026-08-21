@@ -177,6 +177,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: soil_litter_carbon_sl
     dsl4jsb_Real3D_onDomain :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onDomain :: qmax_org
+    dsl4jsb_Real3D_onDomain :: surface_burial_frac
+    dsl4jsb_Real3D_onDomain :: bulk_carbon_max
     dsl4jsb_Real3D_onDomain :: qmax_po4
     dsl4jsb_Real3D_onDomain :: qmax_nh4
     dsl4jsb_Real3D_onDomain :: qmax_fast_po4
@@ -259,6 +261,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    soil_litter_carbon_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    bulk_dens_corr_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_org)
+    dsl4jsb_Get_var3D_onDomain(SB_,    surface_burial_frac)
+    dsl4jsb_Get_var3D_onDomain(SB_,    bulk_carbon_max)
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4)
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_nh4)
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_fast_po4)
@@ -424,6 +428,12 @@ CONTAINS
     fact_n_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial N status, to scale up/down some microbial processes
     fact_p_status_mic_c_growth(:,:,:)   = 1._wp              !< [0,1] microbial P status, to scale up/down some microbial processes
 
+    CALL calc_bulk_carbon_max_profile( &
+      & nproma, nsoil_w, nblks, num_sl_above_bedrock, soil_lay_depth_center_sl, &
+      & dsl4jsb_Config(SB_)%min_mineral_volume_fraction_surface, &
+      & dsl4jsb_Config(SB_)%min_mineral_volume_fraction_gradient, bulk_carbon_max)
+    surface_burial_frac(:,:,:) = 1.0_wp
+
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
     !>2.0 ssm - a simple four pool soil biogeochemical model
     !>
@@ -456,6 +466,8 @@ CONTAINS
         & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
+        & bulk_carbon_max(:,:,:), &
+        & surface_burial_frac(:,:,:), &
         & bulk_soil_carbon_sl(:,:,:), &
         & soil_litter_carbon_sl(:,:,:), &
         & po4_solute(:,:,:), &
@@ -516,6 +528,8 @@ CONTAINS
         & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
         & ph_sl(:,:,:), &                             ! inout
+        & bulk_carbon_max(:,:,:), &
+        & surface_burial_frac(:,:,:), &
         & qmax_po4_min_sl(:,:,:), &
         & qmax_po4_om_sl(:,:,:), &
         & volume_min_sl(:,:,:), &
@@ -571,7 +585,7 @@ CONTAINS
 
     ! IN-OUT
     !$ACC UPDATE DEVICE(qmax_org_min_sl(:,:,:), qmax_po4_min_sl(:,:,:), qmax_nh4_min_sl(:,:,:), qmax_po4_om_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(volume_min_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(volume_min_sl(:,:,:), surface_burial_frac(:,:,:), bulk_carbon_max(:,:,:)) ASYNC(1)
 
     ! SB_
     !$ACC UPDATE DEVICE(nh4_assoc(:,:,:), nh4_solute(:,:,:), no3_solute(:,:,:), po4_solute(:,:,:)) ASYNC(1)
@@ -822,6 +836,44 @@ CONTAINS
 #endif
 
   ! ======================================================================================================= !
+  !> Calculate the layer-wise maximum bulk carbon allowed by the minimum mineral-volume profile.
+  SUBROUTINE calc_bulk_carbon_max_profile(nproma, nsoil_w, nblks, num_sl_above_bedrock, &
+      & soil_lay_depth_center_sl, min_volume_surface, min_volume_gradient, bulk_carbon_max)
+
+    USE mo_sb_constants,            ONLY: carbon_per_dryweight_SOM, rho_bulk_org
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+
+    INTEGER,  INTENT(in)  :: nproma
+    INTEGER,  INTENT(in)  :: nsoil_w
+    INTEGER,  INTENT(in)  :: nblks
+    REAL(wp), INTENT(in)  :: num_sl_above_bedrock(:,:)
+    REAL(wp), INTENT(in)  :: soil_lay_depth_center_sl(:,:,:)
+    REAL(wp), INTENT(in)  :: min_volume_surface
+    REAL(wp), INTENT(in)  :: min_volume_gradient
+    REAL(wp), INTENT(out) :: bulk_carbon_max(:,:,:)
+
+    REAL(wp) :: carbon_at_zero_mineral_volume
+    REAL(wp) :: min_volume_layer
+    REAL(wp) :: layer_center_distance
+    INTEGER  :: iblk, ic, is
+
+    carbon_at_zero_mineral_volume = carbon_per_dryweight_SOM * rho_bulk_org * 1000._wp / molar_mass_C
+    bulk_carbon_max(:,:,:) = 0.0_wp
+
+    DO iblk = 1,nblks
+      DO ic = 1,nproma
+        DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic, iblk)))
+          layer_center_distance = MAX(0.0_wp, soil_lay_depth_center_sl(ic, is, iblk) - &
+            & soil_lay_depth_center_sl(ic, 1, iblk))
+          min_volume_layer = MIN(0.99_wp, min_volume_surface + min_volume_gradient * layer_center_distance)
+          bulk_carbon_max(ic, is, iblk) = carbon_at_zero_mineral_volume * (1.0_wp - min_volume_layer)
+        END DO
+      END DO
+    END DO
+
+  END SUBROUTINE calc_bulk_carbon_max_profile
+
+  ! ======================================================================================================= !
   !>init SB_ with the simple soil model
   !>
   SUBROUTINE sb_init_simple_sm( &
@@ -852,6 +904,8 @@ CONTAINS
     & vol_porosity_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
+    & bulk_carbon_max, &
+    & surface_burial_frac, &
     & bulk_soil_carbon_sl, &
     & soil_litter_carbon_sl, &
     & po4_solute, &
@@ -928,6 +982,8 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: bulk_carbon_max(:,:,:)
+    REAL(wp),                   INTENT(inout) :: surface_burial_frac(:,:,:)
     REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: po4_solute(:,:,:)
@@ -1073,6 +1129,8 @@ CONTAINS
         & num_sl_above_bedrock(:,iblk), &
         & TRIM(sb_model_scheme), &
         & sb_pool_mt_domain(:,:,:,:,iblk), &  ! in
+        & bulk_carbon_max(:,:,iblk), &
+        & surface_burial_frac(:,:,iblk), &
         & bulk_soil_carbon_sl(:,:,iblk), &    ! inout
         & soil_litter_carbon_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk) )           ! inout
@@ -1292,6 +1350,8 @@ CONTAINS
     & vol_porosity_sl, &
     & bulk_dens_sl, &
     & ph_sl, &
+    & bulk_carbon_max, &
+    & surface_burial_frac, &
     & qmax_po4_min_sl, &
     & qmax_po4_om_sl, &
     & volume_min_sl, &
@@ -1365,6 +1425,8 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
+    REAL(wp),                   INTENT(in)    :: bulk_carbon_max(:,:,:)
+    REAL(wp),                   INTENT(inout) :: surface_burial_frac(:,:,:)
     REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
     REAL(wp),                   INTENT(inout) :: volume_min_sl(:,:,:)
@@ -1621,6 +1683,8 @@ CONTAINS
         & num_sl_above_bedrock(:,iblk), &
         & TRIM(sb_model_scheme), &
         & sb_pool_mt_domain(:,:,:,:,iblk), &  ! in
+        & bulk_carbon_max(:,:,iblk), &
+        & surface_burial_frac(:,:,iblk), &
         & bulk_soil_carbon_sl(:,:,iblk), &    ! inout
         & soil_litter_carbon_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk) )           ! inout

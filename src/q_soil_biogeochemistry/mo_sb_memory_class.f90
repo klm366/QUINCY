@@ -270,8 +270,10 @@ MODULE mo_sb_memory_class
     !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
-                            qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
-                            qmax_po4, &                           !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
+                            qmax_org, &             !< DOM sorption capacity of mineral soil [kg C kg-1 mineral soil]
+                            surface_burial_frac, & !< buried fraction of non-associated surface SOM [unitless]
+                            bulk_carbon_max, &     !< maximum bulk carbon allowed by mineral volume [mol m-3]
+                            qmax_po4, &            !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                             qmax_nh4, &                           !< sorption capacity of nh4 of mineral soil [mol N m-3 soil]
                             qmax_fast_po4, &                      !< sorption capacity of po4 of the Fe/Al pool [mol P m-3 soil]
                             qmax_slow_po4, &                      !< sorption capacity of po4 of the clay/silt pool [mol P m-3 soil]
@@ -2677,6 +2679,32 @@ CONTAINS
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('surface_burial_frac', mem%surface_burial_frac, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('surface_burial_frac', unitless, &
+        & 'fraction of non-associated surface SOM buried into the first mineral soil layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .TRUE., &
+        & initval_r = 1.0_wp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('bulk_carbon_max', mem%bulk_carbon_max, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('bulk_carbon_max', 'mol m-3', &
+        & 'maximum bulk carbon allowed by the mineral-volume constraint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp, &
+        & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_po4', mem%qmax_po4, &
         & hgrid, vgrid_soil_w, &

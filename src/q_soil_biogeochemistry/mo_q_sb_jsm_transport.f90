@@ -370,6 +370,7 @@ CONTAINS
     & ixC, &
     & soil_depth_sl, &
     & bulk_dens_corr_sl, &
+    & surface_burial_frac, &
     & sb_formation_mt, &
     & sb_loss_mt) &
     & RESULT (particle_fluxrate)
@@ -382,6 +383,7 @@ CONTAINS
     INTEGER,                                          INTENT(in) :: ixC                       !< index of C elem in elem map
     REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: soil_depth_sl             !< depth of soil layer [m]
     REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: bulk_dens_corr_sl         !< bulk density of mineral+organic soil [kg/m3]
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: surface_burial_frac !< buried surface SOM fraction
     REAL(wp),                                         INTENT(in) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: formation of pools [mol/m3/timestep]
     REAL(wp),                                         INTENT(in) :: sb_loss_mt(:,:,:,:)       !< bgcm flux: loss from pools [mol/m3/timestep]
     REAL(wp), DIMENSION(nc, nsoil_w)                             :: particle_fluxrate         !< particile flux rate [m/timestep]
@@ -392,17 +394,18 @@ CONTAINS
 
     !>1.0 calculate net change of organic matter cummulative down the profile [kg/m2/dtime]
     !>
-    !>  NOTE omission of woody litter in the first layer, which is assumed not to be part of the profile
+    !>  Woody litter is omitted from the first layer. Non-associated pools contribute only with their buried fraction.
     !>
     particle_fluxrate(:,1) = soil_depth_sl(:,1)                           &
-      & * ( sb_formation_mt(ix_soluable_litter, ixC, :, 1)  - sb_loss_mt(ix_soluable_litter, ixC, :, 1)   &
+      & * ((sb_formation_mt(ix_soluable_litter, ixC, :, 1)  - sb_loss_mt(ix_soluable_litter, ixC, :, 1)   &
       &   + sb_formation_mt(ix_polymeric_litter, ixC, :, 1) - sb_loss_mt(ix_polymeric_litter, ixC, :, 1)  &
       &   + sb_formation_mt(ix_dom, ixC, :, 1)              - sb_loss_mt(ix_dom, ixC, :, 1)               &
-      &   + sb_formation_mt(ix_dom_assoc, ixC, :, 1)        - sb_loss_mt(ix_dom_assoc, ixC, :, 1)         &
       &   + sb_formation_mt(ix_mycorrhiza, ixC, :, 1)       - sb_loss_mt(ix_mycorrhiza, ixC, :, 1)        &
       &   + sb_formation_mt(ix_microbial, ixC, :, 1)        - sb_loss_mt(ix_microbial, ixC, :, 1)         &
-      &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1)           &
-      &   + sb_formation_mt(ix_residue_assoc, ixC, :, 1)    - sb_loss_mt(ix_residue_assoc, ixC, :, 1)  )  &
+      &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1))          &
+      &     * surface_burial_frac(:,1)                                                                    &
+      &   + sb_formation_mt(ix_dom_assoc, ixC, :, 1)        - sb_loss_mt(ix_dom_assoc, ixC, :, 1)         &
+      &   + sb_formation_mt(ix_residue_assoc, ixC, :, 1)    - sb_loss_mt(ix_residue_assoc, ixC, :, 1))    &
       & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
 
     ! For lower soil layers all compartments (including woody litter) are considered
