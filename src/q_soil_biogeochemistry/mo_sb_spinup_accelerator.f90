@@ -36,11 +36,15 @@ MODULE mo_sb_spinup_accelerator
   PUBLIC :: apply_sb_spinup_accelerator
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_spinup_accelerator'
+  CHARACTER(len=*), PARAMETER :: sb_spinup_debug_filename = 'sb_spinup_accelerator_debug.txt'
+  INTEGER, PARAMETER :: sb_spinup_debug_years(10) = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000]
 
   !> Event-local climatology reconstructed from restart-safe accumulated sums.
   TYPE :: t_sb_spinup_forcing_climatology
     INTEGER :: n_forcing_bins = 0
     INTEGER :: n_soil_layers = 0
+    INTEGER :: n_litter_sources = 0
+    INTEGER :: n_elements = 0
     REAL(wp), ALLOCATABLE :: forcing_time(:,:)     !< sampled time by cell and bin [s]
     REAL(wp), ALLOCATABLE :: litterfall_rate(:,:)  !< mean litterfall rate, flattened by bin/source/element [mol m-2 s-1]
     REAL(wp), ALLOCATABLE :: fine_root_c(:,:)       !< mean fine-root carbon by cell and bin [mol C m-2]
@@ -675,7 +679,7 @@ CONTAINS
     ! event flag while replay repeatedly calls update_sb_pools in pseudo-time.
     l_analytical_event = execute_quincy_sb_analytical_accelerator_this_timestep
     execute_quincy_sb_analytical_accelerator_this_timestep = .FALSE.
-    CALL run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, represented_years, &
+    CALL run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
     execute_quincy_sb_analytical_accelerator_this_timestep = l_analytical_event
     CALL reset_sb_fluxes(tile, options)
@@ -813,6 +817,8 @@ CONTAINS
 
     n_cells = SIZE(sb_spinup_accelerator_forcing_time, 1)
     forcing%n_forcing_bins = SIZE(sb_spinup_accelerator_forcing_time, 2)
+    forcing%n_litter_sources = SIZE(veg_litterfall_mt, 1)
+    forcing%n_elements = SIZE(veg_litterfall_mt, 2)
     IF (forcing%n_forcing_bins <= 0 .OR. &
         & MOD(SIZE(sb_spinup_accelerator_root_fraction_sum, 2), forcing%n_forcing_bins) /= 0) THEN
       CALL finish(TRIM(routine), 'Invalid stored forcing dimensions.')
@@ -903,7 +909,7 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Replay the bookkept climatology until the maximum pseudo-time or convergence criterion is reached.
-  SUBROUTINE run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, represented_years, &
+  SUBROUTINE run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
 
     USE mo_jsb_process_class, ONLY: SB_
@@ -913,6 +919,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    INTEGER,                    INTENT(in)    :: execution_index
     INTEGER,                    INTENT(out)   :: represented_years
     REAL(wp),                   INTENT(out)   :: max_relative_change
     REAL(wp),                   INTENT(out)   :: max_total_c_absolute_change
@@ -924,11 +931,19 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER :: consecutive_converged_years
     INTEGER :: i_year
+    INTEGER :: last_debug_year
     REAL(wp), ALLOCATABLE :: previous_pool(:,:,:,:)
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
     CALL snapshot_sb_spinup_pools(tile, options, previous_pool)
+
+    last_debug_year = -1
+    IF (model%config%flag_spinup_debug) THEN
+      CALL write_sb_spinup_forcing_debug(options, execution_index, forcing)
+      CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, 0)
+      last_debug_year = 0
+    END IF
 
     represented_years = 0
     consecutive_converged_years = 0
@@ -950,8 +965,18 @@ CONTAINS
 
       CALL check_sb_spinup_convergence(tile, options, previous_pool, consecutive_converged_years, &
         & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
+      IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(i_year)) THEN
+        CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, i_year, &
+          & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
+        last_debug_year = i_year
+      END IF
       IF (l_converged) EXIT
     END DO
+
+    IF (model%config%flag_spinup_debug .AND. represented_years /= last_debug_year) THEN
+      CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, represented_years, &
+        & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
+    END IF
 
   END SUBROUTINE run_sb_forward_relaxation
 
@@ -1162,6 +1187,193 @@ CONTAINS
     END DO
 
   END SUBROUTINE load_sb_spinup_forcing_bin
+
+  ! ===================================================================================================== !
+  !> Return true for the sparse pseudo-years included in the detailed accelerator diagnostics.
+  LOGICAL FUNCTION is_sb_spinup_debug_year(represented_year)
+
+    INTEGER, INTENT(in) :: represented_year
+
+    is_sb_spinup_debug_year = ANY(sb_spinup_debug_years == represented_year)
+
+  END FUNCTION is_sb_spinup_debug_year
+
+  ! ===================================================================================================== !
+  !> Write the event-local forcing climatology used by one forward SB acceleration.
+  SUBROUTINE write_sb_spinup_forcing_debug(options, execution_index, forcing)
+
+    USE mo_mpi, ONLY: p_pe_work_only
+
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: execution_index
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_forcing_debug'
+    INTEGER :: lun
+    INTEGER :: ios
+    INTEGER :: ic
+    INTEGER :: forcing_bin
+    INTEGER :: i_element
+    INTEGER :: i_source
+    INTEGER :: litter_entry
+    INTEGER :: i_soil
+    INTEGER :: profile_entry
+
+    ! Limit this local-file diagnostic to one work rank and block. For global runs,
+    ! it therefore represents the first local chunk rather than a global gather.
+    IF (p_pe_work_only /= 0 .OR. options%iblk /= 1) RETURN
+
+    IF (execution_index == 1) THEN
+      OPEN(newunit=lun, file=sb_spinup_debug_filename, status='replace', action='write', iostat=ios)
+    ELSE
+      OPEN(newunit=lun, file=sb_spinup_debug_filename, status='unknown', position='append', &
+        & action='write', iostat=ios)
+    END IF
+    IF (ios /= 0) CALL finish(TRIM(routine), 'Could not open '//sb_spinup_debug_filename)
+
+    WRITE(lun,'(A)') ''
+    WRITE(lun,*) 'FORCING_SUMMARY execution, n_bins, n_layers, n_litter_sources, n_elements = ', &
+      & execution_index, forcing%n_forcing_bins, forcing%n_soil_layers, &
+      & forcing%n_litter_sources, forcing%n_elements
+    WRITE(lun,'(A)') 'FORCING_SCALAR_COLUMNS execution ic bin sampled_time_s fine_root_c_mol_m-2 '// &
+      & 'f_n_demand f_p_demand nhx_dep_umol_m-2_s-1 noy_dep_umol_m-2_s-1 '// &
+      & 'nhx_n15_dep_umol_m-2_s-1 noy_n15_dep_umol_m-2_s-1 p_dep_umol_m-2_s-1 growth_p_limit'
+    DO ic = 1, SIZE(forcing%forcing_time, 1)
+      DO forcing_bin = 1, forcing%n_forcing_bins
+        WRITE(lun,*) 'FORCING_SCALAR ', execution_index, ic, forcing_bin, &
+          & forcing%forcing_time(ic,forcing_bin), forcing%fine_root_c(ic,forcing_bin), &
+          & forcing%f_n_demand(ic,forcing_bin), forcing%f_p_demand(ic,forcing_bin), &
+          & forcing%nhx_deposition(ic,forcing_bin), forcing%noy_deposition(ic,forcing_bin), &
+          & forcing%nhx_n15_deposition(ic,forcing_bin), forcing%noy_n15_deposition(ic,forcing_bin), &
+          & forcing%p_deposition(ic,forcing_bin), forcing%growth_p_limit(ic,forcing_bin)
+      END DO
+    END DO
+
+    WRITE(lun,'(A)') 'FORCING_LITTER_COLUMNS execution ic bin source element '// &
+      & 'litterfall_rate_mol_m-2_s-1; source n_litter_sources+1 is seed-bed litterfall'
+    DO ic = 1, SIZE(forcing%forcing_time, 1)
+      DO i_element = 1, forcing%n_elements
+        DO i_source = 1, forcing%n_litter_sources + 1
+          DO forcing_bin = 1, forcing%n_forcing_bins
+            litter_entry = forcing_bin + forcing%n_forcing_bins * &
+              & ((i_source - 1) + (forcing%n_litter_sources + 1) * (i_element - 1))
+            WRITE(lun,*) 'FORCING_LITTER ', execution_index, ic, forcing_bin, i_source, i_element, &
+              & forcing%litterfall_rate(ic,litter_entry)
+          END DO
+        END DO
+      END DO
+    END DO
+
+    WRITE(lun,'(A)') 'FORCING_SOIL_COLUMNS execution ic bin layer root_fraction wtr_down_fraction '// &
+      & 'wtr_lateral_loss_fraction t_soil_K wtr_soil_m ice_soil_m wtr_potential_MPa'
+    DO ic = 1, SIZE(forcing%forcing_time, 1)
+      DO i_soil = 1, forcing%n_soil_layers
+        DO forcing_bin = 1, forcing%n_forcing_bins
+          profile_entry = forcing_bin + forcing%n_forcing_bins * (i_soil - 1)
+          WRITE(lun,*) 'FORCING_SOIL ', execution_index, ic, forcing_bin, i_soil, &
+            & forcing%root_fraction(ic,profile_entry), forcing%wtr_down(ic,profile_entry), &
+            & forcing%wtr_lat_loss(ic,profile_entry), forcing%t_soil(ic,profile_entry), &
+            & forcing%wtr_soil(ic,profile_entry), forcing%ice_soil(ic,profile_entry), &
+            & forcing%wtr_pot(ic,profile_entry)
+        END DO
+      END DO
+    END DO
+    CLOSE(lun)
+
+  END SUBROUTINE write_sb_spinup_forcing_debug
+
+  ! ===================================================================================================== !
+  !> Write a sparse pool and physical-state snapshot during forward pseudo-time.
+  SUBROUTINE write_sb_spinup_snapshot_debug(tile, options, execution_index, represented_year, &
+      & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
+
+    USE mo_mpi,               ONLY: p_pe_work_only
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_lnd_bgcm_idx,      ONLY: ixC
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: execution_index
+    INTEGER, INTENT(in) :: represented_year
+    REAL(wp), OPTIONAL, INTENT(in) :: max_relative_change
+    REAL(wp), OPTIONAL, INTENT(in) :: max_total_c_absolute_change
+    REAL(wp), OPTIONAL, INTENT(in) :: max_total_c_relative_change
+    LOGICAL, OPTIONAL, INTENT(in) :: l_converged
+
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_snapshot_debug'
+    REAL(wp), ALLOCATABLE :: pool_snapshot(:,:,:,:)
+    INTEGER :: lun
+    INTEGER :: ios
+    INTEGER :: ics
+    INTEGER :: ice
+    INTEGER :: iblk
+    INTEGER :: ic
+    INTEGER :: is
+    INTEGER :: n_active_layers
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
+    dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
+    dsl4jsb_Real3D_onChunk :: bulk_carbon_max
+    dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
+    dsl4jsb_Real3D_onChunk :: soil_litter_carbon_sl
+    dsl4jsb_Real3D_onChunk :: volume_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_org
+    dsl4jsb_Real3D_onChunk :: surface_burial_frac
+    dsl4jsb_Real3D_onChunk :: soil_lay_width_sl
+
+    IF (p_pe_work_only /= 0 .OR. options%iblk /= 1) RETURN
+
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_lay_width_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, bulk_dens_corr_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, bulk_carbon_max)
+    dsl4jsb_Get_var3D_onChunk(SB_, bulk_soil_carbon_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, soil_litter_carbon_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_org)
+    dsl4jsb_Get_var3D_onChunk(SB_, surface_burial_frac)
+    CALL snapshot_sb_spinup_pools(tile, options, pool_snapshot)
+
+    OPEN(newunit=lun, file=sb_spinup_debug_filename, status='unknown', position='append', &
+      & action='write', iostat=ios)
+    IF (ios /= 0) CALL finish(TRIM(routine), 'Could not open '//sb_spinup_debug_filename)
+
+    WRITE(lun,'(A)') ''
+    WRITE(lun,*) 'STATE_SNAPSHOT execution, represented_year = ', execution_index, represented_year
+    IF (PRESENT(max_relative_change) .AND. PRESENT(max_total_c_absolute_change) .AND. &
+        & PRESENT(max_total_c_relative_change) .AND. PRESENT(l_converged)) THEN
+      WRITE(lun,*) 'RELAXATION_STATUS max_pool_relative_change, total_C_absolute_change_mol_m-2, ', &
+        & 'total_C_relative_change, converged = ', max_relative_change, max_total_c_absolute_change, &
+        & max_total_c_relative_change, l_converged
+    END IF
+    WRITE(lun,'(A)') 'STATE_COLUMNS execution represented_year ic layer '// &
+      & 'C_DOM C_aDOM C_soluble_litter C_polymeric_litter C_woody_litter C_mycorrhiza '// &
+      & 'C_microbial C_residue C_aRes C_total_concentration layer_width_m layer_C_stock_mol_m-2 '// &
+      & 'bulk_soil_C soil_litter_C bulk_C_max bulk_density_corrected_kg_m-3 mineral_volume '// &
+      & 'qmax_org_mol_C_m-3 surface_burial_fraction; C pools and bulk diagnostics are mol C m-3'
+    DO ic = 1, SIZE(pool_snapshot, 3)
+      n_active_layers = MIN(SIZE(pool_snapshot, 4), NINT(num_sl_above_bedrock(ic)))
+      DO is = 1, n_active_layers
+        WRITE(lun,*) 'STATE ', execution_index, represented_year, ic, is, &
+          & pool_snapshot(:,ixC,ic,is), SUM(pool_snapshot(:,ixC,ic,is)), &
+          & soil_lay_width_sl(ic,is), SUM(pool_snapshot(:,ixC,ic,is)) * soil_lay_width_sl(ic,is), &
+          & bulk_soil_carbon_sl(ic,is), soil_litter_carbon_sl(ic,is), bulk_carbon_max(ic,is), &
+          & bulk_dens_corr_sl(ic,is), volume_min_sl(ic,is), qmax_org(ic,is), surface_burial_frac(ic,is)
+      END DO
+    END DO
+    CLOSE(lun)
+
+  END SUBROUTINE write_sb_spinup_snapshot_debug
 
   ! ===================================================================================================== !
   !> Copy the complete soil-biogeochemistry pool matrix for annual convergence comparison.
