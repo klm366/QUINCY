@@ -1194,12 +1194,15 @@ CONTAINS
       IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp))) THEN
         DO ic = 1, nc
           ! vegetation and soil carbon
-          q_total_c_new(ic) = veg_pool_total_c(ic) + SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:)) + &
-                                dinsect_pool_total_c(ic)
+          q_total_c_new(ic) = veg_pool_total_c(ic) + SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
 
           IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
             dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
             q_total_c_new(ic) = q_total_c_new(ic) + veg_products_total_c(ic)
+          END IF
+
+          IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
+            q_total_c_new(ic) = q_total_c_new(ic) + dinsect_pool_total_c(ic)
           END IF
 
           IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
