@@ -32,6 +32,7 @@ MODULE mo_lice_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_lice_config
     LOGICAL :: l_get_icefract   !< receive ice fraction from the external land ice model (EBFM)
+    LOGICAL :: l_get_albedo     !< receive surface albedo from the external land ice model (EBFM)
     LOGICAL :: l_put_fields     !< send fields to the external land ice model (not yet implemented)
   CONTAINS
     PROCEDURE :: Init => Init_lice_config
@@ -55,6 +56,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename     !< file with initial conditions (not used)
     CHARACTER(len=filename_max) :: bc_filename     !< file with boundary conditions (not used)
     LOGICAL                     :: l_get_icefract  !< receive ice fraction from external land ice model
+    LOGICAL                     :: l_get_albedo    !< receive surface albedo from external land ice model
     LOGICAL                     :: l_put_fields    !< send fields to external land ice model
 
     NAMELIST /jsb_lice_nml/    &
@@ -63,6 +65,7 @@ CONTAINS
       ic_filename,             &
       bc_filename,             &
       l_get_icefract,          &
+      l_get_albedo,            &
       l_put_fields
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -77,6 +80,7 @@ CONTAINS
     ic_filename    = 'ic_land_lice.nc'
     bc_filename    = 'bc_land_lice.nc'
     l_get_icefract = .TRUE.
+    l_get_albedo   = .TRUE.
     l_put_fields   = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -91,6 +95,7 @@ CONTAINS
     config%ic_filename    = ic_filename
     config%bc_filename    = bc_filename
     config%l_get_icefract = l_get_icefract
+    config%l_get_albedo   = l_get_albedo
     config%l_put_fields   = l_put_fields
 
     IF (.NOT. active) RETURN

@@ -40,8 +40,10 @@ MODULE mo_lice_memory_class
       & icefract,             & !< Ice-covered fraction of the grid cell received from the external
                                 !< land ice model (EBFM); -1: no data from external model for this cell
       & icefract_valid,       & !< 1 where icefract has been received (>= 0), 0 elsewhere
-      & glac_fract_diff         !< icefract minus glacier fraction of the grid cell in ICON-Land
+      & glac_fract_diff,      & !< icefract minus glacier fraction of the grid cell in ICON-Land
                                 !< (0 where no data from the external model)
+      & albedo                  !< Surface albedo received from the external land ice model (EBFM);
+                                !< -1: no data from external model for this cell
 
   CONTAINS
     PROCEDURE :: Init => Init_lice_memory
@@ -111,6 +113,15 @@ CONTAINS
         & output_level=BASIC,                                                                   &
         & lrestart=.FALSE.,                                                                     &
         & initval_r=0.0_lp )
+
+      CALL mem%Add_var('albedo', mem%albedo,                                                     &
+        & hgrid, surface,                                                                       &
+        & t_cf('albedo', '1', 'Surface albedo from external land ice model (-1: no data)'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.TRUE.,                                                                      &
+        & initval_r=-1.0_lp )
 
     END IF
 

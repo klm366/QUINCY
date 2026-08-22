@@ -22,6 +22,8 @@
 !> Fields exchanged (phase 1):
 !>   - icefract (EBFM -> ICON-Land): ice-covered fraction of the grid cell on the EBFM
 !>     mesh, conservatively remapped to the ICON grid; -1 where EBFM has no data
+!>   - albedo (EBFM -> ICON-Land): surface albedo of the EBFM cells, area-weighted over
+!>     the covered part of the ICON cell; -1 where EBFM has no data
 !>
 !> The received fields are written into the lice memory of the glacier tile;
 !> aggregation to the parent tiles is done by the lice_diag task of the lice process.
@@ -59,9 +61,11 @@ MODULE mo_interface_lice_ebfm
 
   !> Names of the coupling fields (must match coupling.yaml and the EBFM side)
   CHARACTER(len=*), PARAMETER :: fname_icefract = 'icefract'
+  CHARACTER(len=*), PARAMETER :: fname_albedo   = 'albedo'
 
   ! YAC field ids (one domain only)
   INTEGER :: field_id_icefract = -1
+  INTEGER :: field_id_albedo   = -1
 
   LOGICAL :: fields_defined = .FALSE.
 
@@ -121,6 +125,15 @@ CONTAINS
         & 'Ice-covered fraction of grid cell from EBFM (1); -1 where EBFM provides no data')
     END IF
 
+    IF (dsl4jsb_Config(LICE_)%l_get_albedo) THEN
+      CALL cpl_def_field(                                          &
+        & land_comp_id, cell_point_id, modelTimeStep,              &
+        & fname_albedo, 1, field_id_albedo)
+      CALL cpl_def_field_metadata(                                 &
+        & routine, land_comp_name, grid_name, fname_albedo,        &
+        & 'Surface albedo from EBFM (1); -1 where EBFM provides no data')
+    END IF
+
     ! ---------------------------------------------------------------------
     ! Fields sent to EBFM (source fields) - not implemented yet
     ! ---------------------------------------------------------------------
@@ -151,6 +164,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: icefract
+    dsl4jsb_Real2D_onDomain :: albedo
 
     LOGICAL :: received_data
 
@@ -161,7 +175,7 @@ CONTAINS
 
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
-    IF (.NOT. dsl4jsb_Config(LICE_)%l_get_icefract) RETURN
+    IF (.NOT. (dsl4jsb_Config(LICE_)%l_get_icefract .OR. dsl4jsb_Config(LICE_)%l_get_albedo)) RETURN
 
     tile => get_glacier_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -174,18 +188,33 @@ CONTAINS
     ! Get reference to variables in memory of the glacier tile
     dsl4jsb_Get_memory(LICE_)
     dsl4jsb_Get_var2D_onDomain(LICE_, icefract)   ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, albedo)     ! OUT
+
+    ! The memory is only updated at coupling time steps (received_data=.TRUE.); in between,
+    ! the last received (or restarted) values are kept.
 
     ! Receive ice fraction
     ! --------------------
-    ! The memory is only updated at coupling time steps (received_data=.TRUE.); in between,
-    ! the last received (or restarted) values are kept.
-    CALL cpl_get_field(                                           &
-      & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
-      & icefract, first_get=.TRUE., received_data=received_data)
+    IF (dsl4jsb_Config(LICE_)%l_get_icefract) THEN
+      CALL cpl_get_field(                                           &
+        & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
+        & icefract, first_get=.TRUE., received_data=received_data)
+      IF (received_data) THEN
+        !$ACC UPDATE DEVICE(icefract)
+        CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
+      END IF
+    END IF
 
-    IF (received_data) THEN
-      !$ACC UPDATE DEVICE(icefract)
-      CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
+    ! Receive surface albedo
+    ! ----------------------
+    IF (dsl4jsb_Config(LICE_)%l_get_albedo) THEN
+      CALL cpl_get_field(                                           &
+        & routine, field_id_albedo, fname_albedo, grid%ntotal,      &
+        & albedo, first_get=.FALSE., received_data=received_data)
+      IF (received_data) THEN
+        !$ACC UPDATE DEVICE(albedo)
+        CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
+      END IF
     END IF
 
   END SUBROUTINE interface_lice_get

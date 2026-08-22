@@ -106,6 +106,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: icefract
     dsl4jsb_Real2D_onChunk :: icefract_valid
     dsl4jsb_Real2D_onChunk :: glac_fract_diff
+    dsl4jsb_Real2D_onChunk :: albedo
 
     REAL(lp), POINTER :: tile_fract(:)
 
@@ -138,6 +139,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LICE_, icefract)         ! in
     dsl4jsb_Get_var2D_onChunk(LICE_, icefract_valid)   ! out
     dsl4jsb_Get_var2D_onChunk(LICE_, glac_fract_diff)  ! out
+    dsl4jsb_Get_var2D_onChunk(LICE_, albedo)           ! inout
+
+    ! Make sure albedo is undefined (-1) where EBFM does not provide data
 
     tile_fract => tile%fract(ics:ice, iblk)
 
@@ -149,6 +153,7 @@ CONTAINS
       ELSE
         icefract_valid(ic)  = 0._lp
         glac_fract_diff(ic) = 0._lp
+        albedo(ic)          = -1._lp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -187,6 +192,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LICE_, icefract,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, icefract_valid,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, glac_fract_diff, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LICE_, albedo,          weighted_by_fract)
     CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
