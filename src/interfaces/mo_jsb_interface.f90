@@ -740,6 +740,9 @@ CONTAINS
     USE mo_veg_util,           ONLY: test_carbon_conservation
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
+#endif
+    USE mo_interface_lice_ebfm, ONLY: interface_lice_put
+#ifndef __NO_JSBACH_HD__
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
@@ -809,6 +812,11 @@ CONTAINS
       CALL interface_hd_ocean(tile, model%options(no_omp_thread))
     END IF
 #endif
+
+    ! Send the surface energy balance results of the glacier tile to the external land ice model (EBFM)
+    IF (.NOT. linit .AND. model%processes(LICE_)%p%config%active) THEN
+      CALL interface_lice_put(model)
+    END IF
 
 ! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
