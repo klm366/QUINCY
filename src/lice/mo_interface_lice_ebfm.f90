@@ -24,6 +24,9 @@
 !>     remapped to the ICON grid; -1 where EBFM has no data
 !>   - albedo: surface albedo of the EBFM cells, area-weighted over the covered part of
 !>     the ICON cell; -1 where EBFM has no data
+!>   - t_sub [K], ghf_cond [W m-2 K-1]: temperature of the first firn layer and conductance
+!>     between surface and that layer (for the ground heat flux in the SEB); -1 where no data
+!>   - runoff, smb [kg m-2 s-1], snowmass [kg m-2]: per unit ice area; 0 where no data
 !>
 !> Fields sent to EBFM (glacier tile values, put every time step, time-averaged by YAC
 !> over the coupling period; JSBACH computes the surface energy balance, EBFM the firn):
@@ -76,6 +79,11 @@ MODULE mo_interface_lice_ebfm
   ! received from EBFM
   CHARACTER(len=*), PARAMETER :: fname_icefract   = 'icefract'
   CHARACTER(len=*), PARAMETER :: fname_albedo     = 'albedo'
+  CHARACTER(len=*), PARAMETER :: fname_t_sub      = 't_sub'
+  CHARACTER(len=*), PARAMETER :: fname_ghf_cond   = 'ghf_cond'
+  CHARACTER(len=*), PARAMETER :: fname_runoff     = 'runoff'
+  CHARACTER(len=*), PARAMETER :: fname_smb        = 'smb'
+  CHARACTER(len=*), PARAMETER :: fname_snowmass   = 'snowmass'
   ! sent to EBFM
   CHARACTER(len=*), PARAMETER :: fname_t_srf      = 't_srf'
   CHARACTER(len=*), PARAMETER :: fname_melt       = 'melt'
@@ -89,6 +97,11 @@ MODULE mo_interface_lice_ebfm
   ! YAC field ids (one domain only)
   INTEGER :: field_id_icefract   = -1
   INTEGER :: field_id_albedo     = -1
+  INTEGER :: field_id_t_sub      = -1
+  INTEGER :: field_id_ghf_cond   = -1
+  INTEGER :: field_id_runoff     = -1
+  INTEGER :: field_id_smb        = -1
+  INTEGER :: field_id_snowmass   = -1
   INTEGER :: field_id_t_srf      = -1
   INTEGER :: field_id_melt       = -1
   INTEGER :: field_id_evapotrans = -1
@@ -168,6 +181,13 @@ CONTAINS
       & routine, land_comp_name, grid_name, fname_albedo,        &
       & 'Surface albedo from EBFM (1); -1 where EBFM provides no data')
 
+    CALL def_target_field(fname_t_sub,    'Temperature of the first firn layer of EBFM (K); -1 where no data', field_id_t_sub)
+    CALL def_target_field(fname_ghf_cond, 'Conductance surface - first firn layer of EBFM (W m-2 K-1); -1 where no data', &
+      &                                                                                                    field_id_ghf_cond)
+    CALL def_target_field(fname_runoff,   'Runoff from the EBFM firn column (kg m-2 s-1); 0 where no data', field_id_runoff)
+    CALL def_target_field(fname_smb,      'Climatic surface mass balance of EBFM (kg m-2 s-1); 0 where no data', field_id_smb)
+    CALL def_target_field(fname_snowmass, 'Snow mass on top of the ice in EBFM (kg m-2); 0 where no data', field_id_snowmass)
+
     ! ---------------------------------------------------------------------
     ! Fields sent to EBFM (source fields)
     ! ---------------------------------------------------------------------
@@ -208,6 +228,16 @@ CONTAINS
 
   CONTAINS
 
+    SUBROUTINE def_target_field(name, metadata, field_id)
+      CHARACTER(len=*), INTENT(in)  :: name, metadata
+      INTEGER,          INTENT(out) :: field_id
+
+      CALL cpl_def_field(                                          &
+        & land_comp_id, cell_point_id, modelTimeStep,              &
+        & name, 1, field_id)
+      CALL cpl_def_field_metadata(routine, land_comp_name, grid_name, name, metadata)
+    END SUBROUTINE def_target_field
+
     SUBROUTINE def_source_field(name, metadata, field_id)
       CHARACTER(len=*), INTENT(in)  :: name, metadata
       INTEGER,          INTENT(out) :: field_id
@@ -238,6 +268,11 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: icefract
     dsl4jsb_Real2D_onDomain :: albedo
+    dsl4jsb_Real2D_onDomain :: t_sub
+    dsl4jsb_Real2D_onDomain :: ghf_cond
+    dsl4jsb_Real2D_onDomain :: runoff
+    dsl4jsb_Real2D_onDomain :: smb
+    dsl4jsb_Real2D_onDomain :: snowmass
 
     LOGICAL :: received_data
 
@@ -261,6 +296,11 @@ CONTAINS
     dsl4jsb_Get_memory(LICE_)
     dsl4jsb_Get_var2D_onDomain(LICE_, icefract)   ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, albedo)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, t_sub)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, ghf_cond)   ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, runoff)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, smb)        ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, snowmass)   ! OUT
 
     ! The memory is only updated at coupling time steps (received_data=.TRUE.); in between,
     ! the last received (or restarted) values are kept.
@@ -284,6 +324,30 @@ CONTAINS
       !$ACC UPDATE DEVICE(albedo) ASYNC(acc_stream)
       CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
     END IF
+
+    ! Receive firn state and mass balance
+    ! -----------------------------------
+    CALL get_target_field(field_id_t_sub,    fname_t_sub,    t_sub)
+    CALL get_target_field(field_id_ghf_cond, fname_ghf_cond, ghf_cond)
+    CALL get_target_field(field_id_runoff,   fname_runoff,   runoff)
+    CALL get_target_field(field_id_smb,      fname_smb,      smb)
+    CALL get_target_field(field_id_snowmass, fname_snowmass, snowmass)
+
+  CONTAINS
+
+    SUBROUTINE get_target_field(field_id, name, var)
+      INTEGER,          INTENT(in)    :: field_id
+      CHARACTER(len=*), INTENT(in)    :: name
+      REAL(lp), CONTIGUOUS, TARGET, INTENT(inout) :: var(:,:)
+
+      LOGICAL :: lreceived
+
+      CALL cpl_get_field(routine, field_id, name, grid%ntotal, var, first_get=.FALSE., received_data=lreceived)
+      IF (lreceived) THEN
+        !$ACC UPDATE DEVICE(var) ASYNC(acc_stream)
+        CALL message(routine, 'Received ' // name // ' from EBFM')
+      END IF
+    END SUBROUTINE get_target_field
 
   END SUBROUTINE interface_lice_get
 

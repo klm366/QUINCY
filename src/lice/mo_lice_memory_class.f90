@@ -32,7 +32,7 @@ MODULE mo_lice_memory_class
 
   PUBLIC :: t_lice_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 10
+  INTEGER, PARAMETER :: max_no_of_vars = 20
 
   TYPE, EXTENDS(t_jsb_memory) :: t_lice_memory
 
@@ -42,8 +42,13 @@ MODULE mo_lice_memory_class
       & icefract_valid,       & !< 1 where icefract has been received (>= 0), 0 elsewhere
       & glac_fract_diff,      & !< icefract minus glacier fraction of the grid cell in ICON-Land
                                 !< (0 where no data from the external model)
-      & albedo                  !< Surface albedo received from the external land ice model (EBFM);
+      & albedo,               & !< Surface albedo received from the external land ice model (EBFM);
                                 !< -1: no data from external model for this cell
+      & t_sub,                & !< Temperature of the first subsurface firn layer of EBFM [K]; -1: no data
+      & ghf_cond,             & !< Conductance between surface and first firn layer of EBFM [W m-2 K-1]; -1: no data
+      & runoff,               & !< Runoff from the EBFM firn column [kg m-2 s-1] (per unit ice area; 0 where no data)
+      & smb,                  & !< Climatic surface mass balance of EBFM [kg m-2 s-1] (0 where no data)
+      & snowmass                !< Snow mass on top of the ice in EBFM [kg m-2] (0 where no data)
 
   CONTAINS
     PROCEDURE :: Init => Init_lice_memory
@@ -122,6 +127,51 @@ CONTAINS
         & output_level=BASIC,                                                                   &
         & lrestart=.TRUE.,                                                                      &
         & initval_r=-1.0_lp )
+
+      CALL mem%Add_var('t_sub', mem%t_sub,                                                       &
+        & hgrid, surface,                                                                       &
+        & t_cf('t_sub', 'K', 'Temperature of first subsurface firn layer from external land ice model (-1: no data)'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.TRUE.,                                                                      &
+        & initval_r=-1.0_lp )
+
+      CALL mem%Add_var('ghf_cond', mem%ghf_cond,                                                 &
+        & hgrid, surface,                                                                       &
+        & t_cf('ghf_cond', 'W m-2 K-1', 'Conductance surface - first firn layer from external land ice model (-1: no data)'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.TRUE.,                                                                      &
+        & initval_r=-1.0_lp )
+
+      CALL mem%Add_var('runoff', mem%runoff,                                                     &
+        & hgrid, surface,                                                                       &
+        & t_cf('runoff', 'kg m-2 s-1', 'Runoff from external land ice model (per unit ice area)'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.TRUE.,                                                                      &
+        & initval_r=0.0_lp )
+
+      CALL mem%Add_var('smb', mem%smb,                                                           &
+        & hgrid, surface,                                                                       &
+        & t_cf('smb', 'kg m-2 s-1', 'Climatic surface mass balance from external land ice model'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.FALSE.,                                                                     &
+        & initval_r=0.0_lp )
+
+      CALL mem%Add_var('snowmass', mem%snowmass,                                                 &
+        & hgrid, surface,                                                                       &
+        & t_cf('snowmass', 'kg m-2', 'Snow mass on top of the ice from external land ice model'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.FALSE.,                                                                     &
+        & initval_r=0.0_lp )
 
     END IF
 
