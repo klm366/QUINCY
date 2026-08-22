@@ -41,6 +41,7 @@ MODULE mo_interface_lice_ebfm
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+  USE mo_jsb_control,         ONLY: acc_stream
   USE mo_coupling_config,     ONLY: is_coupled_run, is_coupled_to_ebfm_land, land_comp_name
   USE mo_coupling_utils,      ONLY: cpl_def_field, cpl_def_field_metadata, cpl_get_field
   USE mo_time_config,         ONLY: time_config
@@ -196,7 +197,7 @@ CONTAINS
       & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
       & icefract, first_get=.TRUE., received_data=received_data)
     IF (received_data) THEN
-      !$ACC UPDATE DEVICE(icefract)
+      !$ACC UPDATE DEVICE(icefract) ASYNC(acc_stream)
       CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
     END IF
 
@@ -206,7 +207,7 @@ CONTAINS
       & routine, field_id_albedo, fname_albedo, grid%ntotal,      &
       & albedo, first_get=.FALSE., received_data=received_data)
     IF (received_data) THEN
-      !$ACC UPDATE DEVICE(albedo)
+      !$ACC UPDATE DEVICE(albedo) ASYNC(acc_stream)
       CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
     END IF
 
@@ -232,7 +233,8 @@ CONTAINS
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
 
-    ! Sending of fields to EBFM is not implemented yet, e.g.
+    ! Sending of fields to EBFM is not implemented yet. Note: before cpl_put_field the data must be
+    ! brought to the host: !$ACC UPDATE HOST(<var>) ASYNC(acc_stream) followed by !$ACC WAIT(acc_stream), e.g.
     !   CALL cpl_put_field(routine, field_id_<name>, '<name>', grid%ntotal, <var>, write_restart=write_coupler_restart)
 
   END SUBROUTINE interface_lice_put
