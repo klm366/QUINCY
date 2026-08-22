@@ -110,36 +110,34 @@ CONTAINS
 
     CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
+    ! All fields are defined here unconditionally; which of them are actually exchanged
+    ! is determined by the coupling configuration (coupling.yaml). A defined field that is
+    ! not coupled is simply never received (YAC_ACTION_NONE).
+
     ! ---------------------------------------------------------------------
     ! Fields received from EBFM (target fields)
     ! ---------------------------------------------------------------------
-    IF (dsl4jsb_Config(LICE_)%l_get_icefract) THEN
-      ! No YAC mask is used: YAC writes an interpolated value or the fixed fallback value
-      ! (-1, see coupling configuration) to every cell, so that -1 unambiguously means
-      ! "no data from EBFM". Land/sea handling remains with ICON-Land.
-      CALL cpl_def_field(                                          &
-        & land_comp_id, cell_point_id, modelTimeStep,              &
-        & fname_icefract, 1, field_id_icefract)
-      CALL cpl_def_field_metadata(                                 &
-        & routine, land_comp_name, grid_name, fname_icefract,      &
-        & 'Ice-covered fraction of grid cell from EBFM (1); -1 where EBFM provides no data')
-    END IF
+    ! No YAC mask is used: YAC writes an interpolated value or the fixed fallback value
+    ! (-1, see coupling configuration) to every cell, so that -1 unambiguously means
+    ! "no data from EBFM". Land/sea handling remains with ICON-Land.
+    CALL cpl_def_field(                                          &
+      & land_comp_id, cell_point_id, modelTimeStep,              &
+      & fname_icefract, 1, field_id_icefract)
+    CALL cpl_def_field_metadata(                                 &
+      & routine, land_comp_name, grid_name, fname_icefract,      &
+      & 'Ice-covered fraction of grid cell from EBFM (1); -1 where EBFM provides no data')
 
-    IF (dsl4jsb_Config(LICE_)%l_get_albedo) THEN
-      CALL cpl_def_field(                                          &
-        & land_comp_id, cell_point_id, modelTimeStep,              &
-        & fname_albedo, 1, field_id_albedo)
-      CALL cpl_def_field_metadata(                                 &
-        & routine, land_comp_name, grid_name, fname_albedo,        &
-        & 'Surface albedo from EBFM (1); -1 where EBFM provides no data')
-    END IF
+    CALL cpl_def_field(                                          &
+      & land_comp_id, cell_point_id, modelTimeStep,              &
+      & fname_albedo, 1, field_id_albedo)
+    CALL cpl_def_field_metadata(                                 &
+      & routine, land_comp_name, grid_name, fname_albedo,        &
+      & 'Surface albedo from EBFM (1); -1 where EBFM provides no data')
 
     ! ---------------------------------------------------------------------
     ! Fields sent to EBFM (source fields) - not implemented yet
     ! ---------------------------------------------------------------------
-    ! IF (dsl4jsb_Config(LICE_)%l_put_fields) THEN
-    !   CALL cpl_def_field(land_comp_id, cell_point_id, modelTimeStep, '<name>', 1, field_id_<name>)
-    ! END IF
+    ! CALL cpl_def_field(land_comp_id, cell_point_id, modelTimeStep, '<name>', 1, field_id_<name>)
 
     fields_defined = .TRUE.
 
@@ -175,7 +173,6 @@ CONTAINS
 
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
-    IF (.NOT. (dsl4jsb_Config(LICE_)%l_get_icefract .OR. dsl4jsb_Config(LICE_)%l_get_albedo)) RETURN
 
     tile => get_glacier_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -195,26 +192,22 @@ CONTAINS
 
     ! Receive ice fraction
     ! --------------------
-    IF (dsl4jsb_Config(LICE_)%l_get_icefract) THEN
-      CALL cpl_get_field(                                           &
-        & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
-        & icefract, first_get=.TRUE., received_data=received_data)
-      IF (received_data) THEN
-        !$ACC UPDATE DEVICE(icefract)
-        CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
-      END IF
+    CALL cpl_get_field(                                           &
+      & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
+      & icefract, first_get=.TRUE., received_data=received_data)
+    IF (received_data) THEN
+      !$ACC UPDATE DEVICE(icefract)
+      CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
     END IF
 
     ! Receive surface albedo
     ! ----------------------
-    IF (dsl4jsb_Config(LICE_)%l_get_albedo) THEN
-      CALL cpl_get_field(                                           &
-        & routine, field_id_albedo, fname_albedo, grid%ntotal,      &
-        & albedo, first_get=.FALSE., received_data=received_data)
-      IF (received_data) THEN
-        !$ACC UPDATE DEVICE(albedo)
-        CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
-      END IF
+    CALL cpl_get_field(                                           &
+      & routine, field_id_albedo, fname_albedo, grid%ntotal,      &
+      & albedo, first_get=.FALSE., received_data=received_data)
+    IF (received_data) THEN
+      !$ACC UPDATE DEVICE(albedo)
+      CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
     END IF
 
   END SUBROUTINE interface_lice_get
@@ -238,7 +231,6 @@ CONTAINS
 
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
-    IF (.NOT. dsl4jsb_Config(LICE_)%l_put_fields) RETURN
 
     ! Sending of fields to EBFM is not implemented yet, e.g.
     !   CALL cpl_put_field(routine, field_id_<name>, '<name>', grid%ntotal, <var>, write_restart=write_coupler_restart)
