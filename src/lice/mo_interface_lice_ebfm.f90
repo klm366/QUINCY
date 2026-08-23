@@ -31,7 +31,6 @@
 !> Fields sent to EBFM (glacier tile values, put every time step, time-averaged by YAC
 !> over the coupling period; JSBACH computes the surface energy balance, EBFM the firn):
 !>   - t_srf [K], melt [kg m-2 s-1], evapotrans [kg m-2 s-1, negative upward]
-!>   - diagnostics: hfss, hfls, rsns, rlns, ghf [W m-2]
 !> The source fields are masked to cells with a glacier fraction > 0, so that the dummy
 !> values of the glacier tile on ice-free cells are never mapped to the EBFM mesh.
 !>
@@ -58,13 +57,11 @@ MODULE mo_interface_lice_ebfm
   USE mo_time_config,         ONLY: time_config
   USE mtime,                  ONLY: timedeltaToString, MAX_TIMEDELTA_STR_LEN
 
-  dsl4jsb_Use_processes LICE_, SEB_, HYDRO_, RAD_, SSE_
+  dsl4jsb_Use_processes LICE_, SEB_, HYDRO_
   dsl4jsb_Use_config(LICE_)
   dsl4jsb_Use_memory(LICE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory(SSE_)
 
   IMPLICIT NONE
   PRIVATE
@@ -88,11 +85,6 @@ MODULE mo_interface_lice_ebfm
   CHARACTER(len=*), PARAMETER :: fname_t_srf      = 't_srf'
   CHARACTER(len=*), PARAMETER :: fname_melt       = 'melt'
   CHARACTER(len=*), PARAMETER :: fname_evapotrans = 'evapotrans'
-  CHARACTER(len=*), PARAMETER :: fname_hfss       = 'hfss'
-  CHARACTER(len=*), PARAMETER :: fname_hfls       = 'hfls'
-  CHARACTER(len=*), PARAMETER :: fname_rsns       = 'rsns'
-  CHARACTER(len=*), PARAMETER :: fname_rlns       = 'rlns'
-  CHARACTER(len=*), PARAMETER :: fname_ghf        = 'ghf'
 
   ! YAC field ids (one domain only)
   INTEGER :: field_id_icefract   = -1
@@ -105,11 +97,6 @@ MODULE mo_interface_lice_ebfm
   INTEGER :: field_id_t_srf      = -1
   INTEGER :: field_id_melt       = -1
   INTEGER :: field_id_evapotrans = -1
-  INTEGER :: field_id_hfss       = -1
-  INTEGER :: field_id_hfls       = -1
-  INTEGER :: field_id_rsns       = -1
-  INTEGER :: field_id_rlns       = -1
-  INTEGER :: field_id_ghf        = -1
 
   LOGICAL :: fields_defined = .FALSE.
 
@@ -216,11 +203,6 @@ CONTAINS
     CALL def_source_field(fname_melt,       'Snow/ice melt on the glacier tile (kg m-2 s-1)',               field_id_melt)
     CALL def_source_field(fname_evapotrans, 'Evapotranspiration incl. sublimation, negative upward (kg m-2 s-1)', &
       &                                                                                                  field_id_evapotrans)
-    CALL def_source_field(fname_hfss,       'Sensible heat flux at the surface (W m-2)',                    field_id_hfss)
-    CALL def_source_field(fname_hfls,       'Latent heat flux at the surface (W m-2)',                      field_id_hfls)
-    CALL def_source_field(fname_rsns,       'Net surface shortwave radiation (W m-2)',                      field_id_rsns)
-    CALL def_source_field(fname_rlns,       'Net surface longwave radiation (W m-2)',                       field_id_rlns)
-    CALL def_source_field(fname_ghf,        'Ground heat flux (W m-2)',                                     field_id_ghf)
 
     fields_defined = .TRUE.
 
@@ -364,8 +346,6 @@ CONTAINS
     dsl4jsb_Def_config(LICE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SSE_)
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     TYPE(t_jsb_grid),           POINTER :: grid
@@ -374,11 +354,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: t
     dsl4jsb_Real2D_onDomain :: snowmelt
     dsl4jsb_Real2D_onDomain :: evapotrans
-    dsl4jsb_Real2D_onDomain :: sensible_hflx
-    dsl4jsb_Real2D_onDomain :: latent_hflx
-    dsl4jsb_Real2D_onDomain :: sw_srf_net
-    dsl4jsb_Real2D_onDomain :: lw_srf_net
-    dsl4jsb_Real2D_onDomain :: grnd_hflx
 
     LOGICAL :: write_coupler_restart
 
@@ -398,21 +373,13 @@ CONTAINS
 
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SSE_)
 
     dsl4jsb_Get_var2D_onDomain(SEB_,   t)              ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, snowmelt)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, evapotrans)     ! IN
-    dsl4jsb_Get_var2D_onDomain(SEB_,   sensible_hflx)  ! IN
-    dsl4jsb_Get_var2D_onDomain(SEB_,   latent_hflx)    ! IN
-    dsl4jsb_Get_var2D_onDomain(RAD_,   sw_srf_net)     ! IN
-    dsl4jsb_Get_var2D_onDomain(RAD_,   lw_srf_net)     ! IN
-    dsl4jsb_Get_var2D_onDomain(SSE_,   grnd_hflx)      ! IN
 
     ! The fields are computed on the device; bring them to the host for the YAC put
-    !$ACC UPDATE HOST(t, snowmelt, evapotrans, sensible_hflx, latent_hflx, sw_srf_net, lw_srf_net, grnd_hflx) &
-    !$ACC   ASYNC(acc_stream)
+    !$ACC UPDATE HOST(t, snowmelt, evapotrans) ASYNC(acc_stream)
     !$ACC WAIT(acc_stream)
 
     write_coupler_restart = .FALSE.
@@ -420,11 +387,6 @@ CONTAINS
       &                write_restart=write_coupler_restart)
     CALL cpl_put_field(routine, field_id_melt,       fname_melt,       grid%ntotal, snowmelt)
     CALL cpl_put_field(routine, field_id_evapotrans, fname_evapotrans, grid%ntotal, evapotrans)
-    CALL cpl_put_field(routine, field_id_hfss,       fname_hfss,       grid%ntotal, sensible_hflx)
-    CALL cpl_put_field(routine, field_id_hfls,       fname_hfls,       grid%ntotal, latent_hflx)
-    CALL cpl_put_field(routine, field_id_rsns,       fname_rsns,       grid%ntotal, sw_srf_net)
-    CALL cpl_put_field(routine, field_id_rlns,       fname_rlns,       grid%ntotal, lw_srf_net)
-    CALL cpl_put_field(routine, field_id_ghf,        fname_ghf,        grid%ntotal, grnd_hflx)
 
     IF (write_coupler_restart) &
       & CALL message(routine, 'YAC says it is put for restart')
