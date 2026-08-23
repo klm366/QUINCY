@@ -13,14 +13,14 @@
 !>
 !>#### Configuration of the land ice (lice) process
 !>
-!> The lice process handles the coupling of the ICON-Land glacier tile to external
-!> land ice models (currently the EBFM firn model) via YAC. In the first version,
-!> only the ice fraction is received from EBFM.
+!> The lice process handles the coupling of the ICON-Land land ice tile 'lice' (a
+!> second glacier tile for the cells covered by the external land ice model, currently
+!> the EBFM firn model) to that model via YAC.
 !>
 MODULE mo_lice_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message
+  USE mo_exception,         ONLY: message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -84,6 +84,16 @@ CONTAINS
     config%lrestart_cont  = lrestart_cont
     config%ic_filename    = ic_filename
     config%bc_filename    = bc_filename
+
+    IF (.NOT. active) RETURN
+
+    ! The lice tile and the EBFM-specific branches of the processes exist only in the TMX usecases
+    IF (.NOT. config%model_config%use_tmx) THEN
+      CALL finish(TRIM(routine), 'The lice process requires use_tmx=.TRUE. (jsb_model_nml)')
+    END IF
+    IF (.NOT. config%model_config%use_glacier) THEN
+      CALL finish(TRIM(routine), 'The lice process requires use_glacier=.TRUE. (jsb_model_nml)')
+    END IF
 
   END SUBROUTINE Init_lice_config
 

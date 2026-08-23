@@ -36,7 +36,7 @@ MODULE mo_rad_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_, SB_, VEG_
+  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_, SB_, VEG_, LICE_
 
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
@@ -50,6 +50,7 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SB_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(LICE_)
 #ifdef __QUINCY_STANDALONE__
 #else
   ! Use of processes in this module
@@ -920,10 +921,14 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(LICE_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
 #endif
+    ! Pointer to the albedo received from the external land ice model (lice tile only)
+    dsl4jsb_Real2D_onChunk :: lice_albedo
+
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
     INTEGER :: use_alb_soil_organic_int
@@ -1356,16 +1361,39 @@ CONTAINS
     !> 3.0 glacier
     !!
     ELSE IF (tile%is_glacier) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-      DO ic=1,nc
-        CALL calc_glacier_albedo(  &
-          & l_day(ic),             & ! in
-          & temperature_surface(ic), & ! in
-          & alb_vis_lnd(ic),       & ! inout
-          & alb_nir_lnd(ic)        & ! inout
-          & )
-      END DO
-      !$ACC END PARALLEL LOOP
+      IF (tile%Is_process_calculated(LICE_)) THEN
+        !> 3.1 land ice tile coupled to an external land ice model (EBFM): use the albedo received
+        !!     from that model (one broadband value for both bands, as for the lake ice); fall back to
+        !!     the glacier albedo scheme where the external model provides no data (missing value)
+        dsl4jsb_Get_memory(LICE_)
+        lice_albedo => LICE__mem%albedo%ptr(ics:ice,iblk)   ! in (memory pointer set by dsl4jsb_Get_memory)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          IF (lice_albedo(ic) >= 0._lp) THEN
+            alb_vis_lnd(ic) = lice_albedo(ic)
+            alb_nir_lnd(ic) = lice_albedo(ic)
+          ELSE
+            CALL calc_glacier_albedo(  &
+              & l_day(ic),             & ! in
+              & temperature_surface(ic), & ! in
+              & alb_vis_lnd(ic),       & ! inout
+              & alb_nir_lnd(ic)        & ! inout
+              & )
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+      ELSE
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          CALL calc_glacier_albedo(  &
+            & l_day(ic),             & ! in
+            & temperature_surface(ic), & ! in
+            & alb_vis_lnd(ic),       & ! inout
+            & alb_nir_lnd(ic)        & ! inout
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
+      END IF
 
     !> 4.0 soil
     !! currently jsbach4 does not consider "bare tiles"

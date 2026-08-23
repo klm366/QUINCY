@@ -13,8 +13,8 @@
 !>
 !>#### Memory of the land ice (lice) process
 !>
-!> The variables are defined on the glacier tile (where the process runs) and on all
-!> tiles that contain the glacier land cover type (land, box), where they are filled
+!> The variables are defined on the lice tile (the glacier tile coupled to EBFM, where the
+!> process runs) and on its parent tiles (land, box), where they are filled
 !> by aggregation. Where the external model provides no data, the state variables carry the
 !> CDI missing value (mo_jsb_io::missval) and the mass fluxes/amounts are zero.
 !>
@@ -42,7 +42,7 @@ MODULE mo_lice_memory_class
       & icefract,             & !< Ice-covered fraction of the grid cell received from the external
                                 !< land ice model (EBFM); missing value where the external model has no data
       & icefract_valid,       & !< 1 where icefract has been received (>= 0), 0 elsewhere
-      & glac_fract_diff,      & !< icefract minus glacier fraction of the grid cell in ICON-Land
+      & glac_fract_diff,      & !< icefract minus fraction of the lice tile (ICON-Land's EBFM-coupled ice)
                                 !< (missing value where no data from the external model)
       & albedo,               & !< Surface albedo received from the external land ice model (EBFM);
                                 !< missing value where the external model has no data
@@ -91,7 +91,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    ! Variables exist on the glacier tile and on all tiles containing the glacier lct (aggregation)
+    ! Variables exist on tiles with the glacier lct where the process is calculated or aggregated
+    ! (lice tile and its parents; the sibling glacier tile 'glac' has no lice memory)
     IF (One_of(GLACIER_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var('icefract', mem%icefract,                                                 &
@@ -114,7 +115,7 @@ CONTAINS
 
       CALL mem%Add_var('glac_fract_diff', mem%glac_fract_diff,                                   &
         & hgrid, surface,                                                                       &
-        & t_cf('glac_fract_diff', '1', 'Ice fraction from external land ice model minus ICON-Land glacier fraction'), &
+        & t_cf('glac_fract_diff', '1', 'Ice fraction from external land ice model minus lice tile fraction'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &

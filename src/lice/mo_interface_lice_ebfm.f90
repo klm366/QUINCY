@@ -30,14 +30,16 @@
 !>   Where EBFM has no data, the state fields carry the CDI missing value (mo_jsb_io::missval,
 !>   set as fixed value in the coupling configuration) and the mass fields are zero.
 !>
-!> Fields sent to EBFM (glacier tile values, put every time step, time-averaged by YAC
+!> Fields sent to EBFM (lice tile values, put every time step, time-averaged by YAC
 !> over the coupling period; JSBACH computes the surface energy balance, EBFM the firn):
 !>   - t_srf [K], melt [kg m-2 s-1], evapotrans [kg m-2 s-1, negative upward]
-!> The source fields are masked to cells with a glacier fraction > 0, so that the dummy
-!> values of the glacier tile on ice-free cells are never mapped to the EBFM mesh.
+!> The source fields are masked to cells with a lice tile fraction > 0, so that the dummy
+!> values of the lice tile on other cells are never mapped to the EBFM mesh.
 !>
-!> The received fields are written into the lice memory of the glacier tile;
-!> aggregation to the parent tiles is done by the lice_diag task of the lice process.
+!> The received fields are written into the lice memory of the lice tile (the land ice tile
+!> coupled to EBFM, a second glacier tile next to 'glac'); aggregation to the parent tiles is
+!> done by the lice_diag task of the lice process. The fields sent to EBFM are the glacier
+!> physics results of the lice tile.
 !>
 !> Follows the pattern of mo_interface_hd_ocean.f90 (HD -> ocean coupling).
 !>
@@ -102,8 +104,8 @@ MODULE mo_interface_lice_ebfm
 
   LOGICAL :: fields_defined = .FALSE.
 
-  !> Cached pointer to the glacier tile (set on first use)
-  CLASS(t_jsb_tile_abstract), POINTER :: glacier_tile => NULL()
+  !> Cached pointer to the lice tile (the tile on which the lice process runs; set on first use)
+  CLASS(t_jsb_tile_abstract), POINTER :: lice_tile => NULL()
 
 CONTAINS
 
@@ -180,12 +182,12 @@ CONTAINS
     ! ---------------------------------------------------------------------
     ! Fields sent to EBFM (source fields)
     ! ---------------------------------------------------------------------
-    ! The values are taken from the glacier tile, which carries dummy values on cells
-    ! without glacier. A YAC source mask restricts the fields to cells with a glacier
-    ! fraction > 0 (the tile fractions have been initialised in jsbach_init).
-    tile => get_glacier_tile(model)
+    ! The values are taken from the lice tile, which carries dummy values on cells without
+    ! land ice coupled to EBFM. A YAC source mask restricts the fields to cells with a lice
+    ! tile fraction > 0 (the tile fractions have been initialised in jsbach_init).
+    tile => get_lice_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(routine, 'No glacier tile found - the lice process requires use_glacier=.TRUE.')
+      & CALL finish(routine, 'No lice tile found - the lice process must be ON_TILE_ on the lice tile')
 
     grid => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -201,8 +203,8 @@ CONTAINS
     CALL cpl_def_cell_field_mask(routine, grid_id, is_valid, cell_mask_id)
     DEALLOCATE(is_valid)
 
-    CALL def_source_field(fname_t_srf,      'Surface temperature of the glacier tile (K)',                  field_id_t_srf)
-    CALL def_source_field(fname_melt,       'Snow/ice melt on the glacier tile (kg m-2 s-1)',               field_id_melt)
+    CALL def_source_field(fname_t_srf,      'Surface temperature of the lice tile (K)',                  field_id_t_srf)
+    CALL def_source_field(fname_melt,       'Snow/ice melt on the lice tile (kg m-2 s-1)',               field_id_melt)
     CALL def_source_field(fname_evapotrans, 'Evapotranspiration incl. sublimation, negative upward (kg m-2 s-1)', &
       &                                                                                                  field_id_evapotrans)
 
@@ -235,7 +237,7 @@ CONTAINS
   END SUBROUTINE jsb_fdef_lice_fields
 
   ! ======================================================================================================= !
-  !> Receive fields from EBFM and store them in the lice memory of the glacier tile
+  !> Receive fields from EBFM and store them in the lice memory of the lice tile
   !>
   !> Called from jsbach_start_timestep (outside of the block loop).
   !>
@@ -268,15 +270,13 @@ CONTAINS
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
 
-    tile => get_glacier_tile(model)
+    tile => get_lice_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(routine, 'No glacier tile found - the lice process requires use_glacier=.TRUE.')
-    IF (.NOT. tile%Is_process_calculated(LICE_)) &
-      & CALL finish(routine, 'The lice process is not active on the glacier tile')
+      & CALL finish(routine, 'No lice tile found - the lice process must be ON_TILE_ on the lice tile')
 
     grid => Get_grid(model%grid_id)
 
-    ! Get reference to variables in memory of the glacier tile
+    ! Get reference to variables in memory of the lice tile
     dsl4jsb_Get_memory(LICE_)
     dsl4jsb_Get_var2D_onDomain(LICE_, icefract)   ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, albedo)     ! OUT
@@ -336,7 +336,7 @@ CONTAINS
   END SUBROUTINE interface_lice_get
 
   ! ======================================================================================================= !
-  !> Send the glacier tile surface energy balance results to EBFM
+  !> Send the lice tile surface energy balance results to EBFM
   !>
   !> Called from jsbach_finish_timestep (outside of the block loop) every time step; YAC
   !> averages the fields over the coupling period.
@@ -352,7 +352,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     TYPE(t_jsb_grid),           POINTER :: grid
 
-    ! Pointers to variables in memory of the glacier tile
+    ! Pointers to variables in memory of the lice tile
     dsl4jsb_Real2D_onDomain :: t
     dsl4jsb_Real2D_onDomain :: snowmelt
     dsl4jsb_Real2D_onDomain :: evapotrans
@@ -367,9 +367,9 @@ CONTAINS
     dsl4jsb_Get_config(LICE_)
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
 
-    tile => get_glacier_tile(model)
+    tile => get_lice_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(routine, 'No glacier tile found - the lice process requires use_glacier=.TRUE.')
+      & CALL finish(routine, 'No lice tile found - the lice process must be ON_TILE_ on the lice tile')
 
     grid => Get_grid(model%grid_id)
 
@@ -396,17 +396,18 @@ CONTAINS
   END SUBROUTINE interface_lice_put
 
   ! ======================================================================================================= !
-  !> Find the glacier tile in the tile tree of the model (cached after the first call)
+  !> Find the lice tile, i.e. the tile on which the lice process is calculated (ON_TILE_), in the
+  !> tile tree of the model (cached after the first call)
   !>
-  FUNCTION get_glacier_tile(model) RESULT(return_ptr)
+  FUNCTION get_lice_tile(model) RESULT(return_ptr)
 
     TYPE(t_jsb_model), INTENT(inout), TARGET :: model
     CLASS(t_jsb_tile_abstract), POINTER      :: return_ptr
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    IF (ASSOCIATED(glacier_tile)) THEN
-      return_ptr => glacier_tile
+    IF (ASSOCIATED(lice_tile)) THEN
+      return_ptr => lice_tile
       RETURN
     END IF
 
@@ -415,7 +416,7 @@ CONTAINS
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     DO WHILE (ASSOCIATED(tile))
-      IF (tile%is_glacier) THEN
+      IF (tile%is_glacier .AND. tile%Is_process_calculated(LICE_)) THEN
         return_ptr => tile
         EXIT
       END IF
@@ -423,9 +424,9 @@ CONTAINS
     END DO
     CALL model%Reset_tiles()
 
-    glacier_tile => return_ptr
+    lice_tile => return_ptr
 
-  END FUNCTION get_glacier_tile
+  END FUNCTION get_lice_tile
 
 #endif
 END MODULE mo_interface_lice_ebfm

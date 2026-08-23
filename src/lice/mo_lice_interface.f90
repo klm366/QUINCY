@@ -13,10 +13,11 @@
 !>
 !>#### Tasks of the land ice (lice) process
 !>
-!> The lice process couples the ICON-Land glacier tile to external land ice models
+!> The lice process couples the ICON-Land land ice tile 'lice' (a glacier tile for the cells
+!> covered by the external model) to external land ice models
 !> (currently the EBFM firn model) via YAC. The actual data exchange (YAC put/get)
 !> is done outside of the block loop in [[mo_interface_lice_ebfm]]. The task defined
-!> here runs on the glacier tile and derives diagnostics from the received fields,
+!> here runs on the lice tile and derives diagnostics from the received fields,
 !> which are then aggregated to the parent tiles.
 !>
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -89,11 +90,10 @@ CONTAINS
   END FUNCTION Create_task_lice_diag
 
   ! ======================================================================================================= !
-  !> Diagnostics of the fields received from the external land ice model (runs on the glacier tile)
+  !> Diagnostics of the fields received from the external land ice model (runs on the lice tile)
   !>
   !> - icefract_valid:  1 where a value has been received (icefract >= 0), 0 elsewhere
-  !> - glac_fract_diff: icefract minus the glacier fraction of the grid cell in ICON-Land
-  !>                    (the glacier tile fraction is the absolute glacier fraction of the grid cell)
+  !> - glac_fract_diff: icefract minus the lice tile fraction (both absolute fractions of the grid cell)
   !> Where no data have been received, the state variables are set to the missing value.
   !>
   SUBROUTINE update_lice_diag(tile, options)
@@ -134,7 +134,7 @@ CONTAINS
     IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
 
     IF (.NOT. tile%is_glacier) &
-      & CALL finish(TRIM(routine), 'The lice process must run on the glacier tile (ON_TILE_), not on '//TRIM(tile%name))
+      & CALL finish(TRIM(routine), 'The lice process must run on a glacier-type tile (ON_TILE_), not on '//TRIM(tile%name))
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
