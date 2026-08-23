@@ -15,7 +15,8 @@
 !>
 !> The variables are defined on the glacier tile (where the process runs) and on all
 !> tiles that contain the glacier land cover type (land, box), where they are filled
-!> by aggregation.
+!> by aggregation. Where the external model provides no data, the state variables carry the
+!> CDI missing value (mo_jsb_io::missval) and the mass fluxes/amounts are zero.
 !>
 MODULE mo_lice_memory_class
 #ifndef __NO_JSBACH__
@@ -26,6 +27,7 @@ MODULE mo_lice_memory_class
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d
   USE mo_jsb_varlist,      ONLY: BASIC
+  USE mo_jsb_io,           ONLY: missval
 
   IMPLICIT NONE
   PRIVATE
@@ -38,14 +40,14 @@ MODULE mo_lice_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & icefract,             & !< Ice-covered fraction of the grid cell received from the external
-                                !< land ice model (EBFM); -1: no data from external model for this cell
+                                !< land ice model (EBFM); missing value where the external model has no data
       & icefract_valid,       & !< 1 where icefract has been received (>= 0), 0 elsewhere
       & glac_fract_diff,      & !< icefract minus glacier fraction of the grid cell in ICON-Land
-                                !< (0 where no data from the external model)
+                                !< (missing value where no data from the external model)
       & albedo,               & !< Surface albedo received from the external land ice model (EBFM);
-                                !< -1: no data from external model for this cell
-      & t_sub,                & !< Temperature of the first subsurface firn layer of EBFM [K]; -1: no data
-      & ghf_cond,             & !< Conductance between surface and first firn layer of EBFM [W m-2 K-1]; -1: no data
+                                !< missing value where the external model has no data
+      & t_sub,                & !< Temperature of the first subsurface firn layer of EBFM [K]; missing value where no data
+      & ghf_cond,             & !< Conductance between surface and first firn layer of EBFM [W m-2 K-1]; missing value where no data
       & runoff,               & !< Runoff from the EBFM firn column [kg m-2 s-1] (per unit ice area; 0 where no data)
       & smb,                  & !< Climatic surface mass balance of EBFM [kg m-2 s-1] (0 where no data)
       & snowmass                !< Snow mass on top of the ice in EBFM [kg m-2] (0 where no data)
@@ -94,12 +96,12 @@ CONTAINS
 
       CALL mem%Add_var('icefract', mem%icefract,                                                 &
         & hgrid, surface,                                                                       &
-        & t_cf('icefract', '1', 'Ice-covered fraction of grid cell from external land ice model (-1: no data)'), &
+        & t_cf('icefract', '1', 'Ice-covered fraction of grid cell from external land ice model'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &
         & lrestart=.TRUE.,                                                                      &
-        & initval_r=-1.0_lp )
+        & initval_r=missval )
 
       CALL mem%Add_var('icefract_valid', mem%icefract_valid,                                     &
         & hgrid, surface,                                                                       &
@@ -117,34 +119,34 @@ CONTAINS
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &
         & lrestart=.FALSE.,                                                                     &
-        & initval_r=0.0_lp )
+        & initval_r=missval )
 
       CALL mem%Add_var('albedo', mem%albedo,                                                     &
         & hgrid, surface,                                                                       &
-        & t_cf('albedo', '1', 'Surface albedo from external land ice model (-1: no data)'),     &
+        & t_cf('albedo', '1', 'Surface albedo from external land ice model'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &
         & lrestart=.TRUE.,                                                                      &
-        & initval_r=-1.0_lp )
+        & initval_r=missval )
 
       CALL mem%Add_var('t_sub', mem%t_sub,                                                       &
         & hgrid, surface,                                                                       &
-        & t_cf('t_sub', 'K', 'Temperature of first subsurface firn layer from external land ice model (-1: no data)'), &
+        & t_cf('t_sub', 'K', 'Temperature of first subsurface firn layer from external land ice model'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &
         & lrestart=.TRUE.,                                                                      &
-        & initval_r=-1.0_lp )
+        & initval_r=missval )
 
       CALL mem%Add_var('ghf_cond', mem%ghf_cond,                                                 &
         & hgrid, surface,                                                                       &
-        & t_cf('ghf_cond', 'W m-2 K-1', 'Conductance surface - first firn layer from external land ice model (-1: no data)'), &
+        & t_cf('ghf_cond', 'W m-2 K-1', 'Conductance surface - first firn layer from external land ice model'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &
         & lrestart=.TRUE.,                                                                      &
-        & initval_r=-1.0_lp )
+        & initval_r=missval )
 
       CALL mem%Add_var('runoff', mem%runoff,                                                     &
         & hgrid, surface,                                                                       &

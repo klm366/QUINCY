@@ -31,6 +31,7 @@ MODULE mo_lice_interface
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class, ONLY: t_jsb_process
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_jsb_io,            ONLY: missval
 
   ! Use of processes in this module
   dsl4jsb_Use_processes LICE_
@@ -93,6 +94,7 @@ CONTAINS
   !> - icefract_valid:  1 where a value has been received (icefract >= 0), 0 elsewhere
   !> - glac_fract_diff: icefract minus the glacier fraction of the grid cell in ICON-Land
   !>                    (the glacier tile fraction is the absolute glacier fraction of the grid cell)
+  !> Where no data have been received, the state variables are set to the missing value.
   !>
   SUBROUTINE update_lice_diag(tile, options)
 
@@ -145,7 +147,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LICE_, t_sub)            ! inout
     dsl4jsb_Get_var2D_onChunk(LICE_, ghf_cond)         ! inout
 
-    ! Make sure the state variables are undefined (-1) where EBFM does not provide data
+    ! Make sure the state variables carry the missing value where EBFM does not provide data
 
     tile_fract => tile%fract(ics:ice, iblk)
 
@@ -156,10 +158,11 @@ CONTAINS
         glac_fract_diff(ic) = icefract(ic) - tile_fract(ic)
       ELSE
         icefract_valid(ic)  = 0._lp
-        glac_fract_diff(ic) = 0._lp
-        albedo(ic)          = -1._lp
-        t_sub(ic)           = -1._lp
-        ghf_cond(ic)        = -1._lp
+        icefract(ic)        = missval
+        glac_fract_diff(ic) = missval
+        albedo(ic)          = missval
+        t_sub(ic)           = missval
+        ghf_cond(ic)        = missval
       END IF
     END DO
     !$ACC END PARALLEL LOOP

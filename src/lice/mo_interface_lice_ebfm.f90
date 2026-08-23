@@ -21,12 +21,14 @@
 !>
 !> Fields received from EBFM (state at the coupling instant):
 !>   - icefract: ice-covered fraction of the grid cell on the EBFM mesh, conservatively
-!>     remapped to the ICON grid; -1 where EBFM has no data
+!>     remapped to the ICON grid
 !>   - albedo: surface albedo of the EBFM cells, area-weighted over the covered part of
-!>     the ICON cell; -1 where EBFM has no data
+!>     the ICON cell
 !>   - t_sub [K], ghf_cond [W m-2 K-1]: temperature of the first firn layer and conductance
-!>     between surface and that layer (for the ground heat flux in the SEB); -1 where no data
-!>   - runoff, smb [kg m-2 s-1], snowmass [kg m-2]: per unit ice area; 0 where no data
+!>     between surface and that layer (for the ground heat flux in the SEB)
+!>   - runoff, smb [kg m-2 s-1], snowmass [kg m-2]: per unit ice area
+!>   Where EBFM has no data, the state fields carry the CDI missing value (mo_jsb_io::missval,
+!>   set as fixed value in the coupling configuration) and the mass fields are zero.
 !>
 !> Fields sent to EBFM (glacier tile values, put every time step, time-averaged by YAC
 !> over the coupling period; JSBACH computes the surface energy balance, EBFM the firn):
@@ -152,24 +154,24 @@ CONTAINS
     ! Fields received from EBFM (target fields)
     ! ---------------------------------------------------------------------
     ! No YAC mask is used: YAC writes an interpolated value or the fixed fallback value
-    ! (-1, see coupling configuration) to every cell, so that -1 unambiguously means
-    ! "no data from EBFM". Land/sea handling remains with ICON-Land.
+    ! (the missing value, see coupling configuration) to every cell, so that the missing
+    ! value unambiguously means "no data from EBFM". Land/sea handling remains with ICON-Land.
     CALL cpl_def_field(                                          &
       & land_comp_id, cell_point_id, modelTimeStep,              &
       & fname_icefract, 1, field_id_icefract)
     CALL cpl_def_field_metadata(                                 &
       & routine, land_comp_name, grid_name, fname_icefract,      &
-      & 'Ice-covered fraction of grid cell from EBFM (1); -1 where EBFM provides no data')
+      & 'Ice-covered fraction of grid cell from EBFM (1); missing value where EBFM provides no data')
 
     CALL cpl_def_field(                                          &
       & land_comp_id, cell_point_id, modelTimeStep,              &
       & fname_albedo, 1, field_id_albedo)
     CALL cpl_def_field_metadata(                                 &
       & routine, land_comp_name, grid_name, fname_albedo,        &
-      & 'Surface albedo from EBFM (1); -1 where EBFM provides no data')
+      & 'Surface albedo from EBFM (1); missing value where EBFM provides no data')
 
-    CALL def_target_field(fname_t_sub,    'Temperature of the first firn layer of EBFM (K); -1 where no data', field_id_t_sub)
-    CALL def_target_field(fname_ghf_cond, 'Conductance surface - first firn layer of EBFM (W m-2 K-1); -1 where no data', &
+    CALL def_target_field(fname_t_sub,    'Temperature of the first firn layer of EBFM (K); missing value where no data', field_id_t_sub)
+    CALL def_target_field(fname_ghf_cond, 'Conductance surface - first firn layer of EBFM (W m-2 K-1); missing value where no data', &
       &                                                                                                    field_id_ghf_cond)
     CALL def_target_field(fname_runoff,   'Runoff from the EBFM firn column (kg m-2 s-1); 0 where no data', field_id_runoff)
     CALL def_target_field(fname_smb,      'Climatic surface mass balance of EBFM (kg m-2 s-1); 0 where no data', field_id_smb)
