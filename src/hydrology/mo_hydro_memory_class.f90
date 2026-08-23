@@ -227,7 +227,10 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                              []  TODO: remove
       & weq_glac,             & !< Glacier depth (snow is considered as glacier)         [m water equivalent]
-      & runoff_glac             !< Runoff from glacier (rain + ice melt, no calving)     [m water equivalent]
+      & runoff_glac,          & !< Runoff from glacier (rain + ice melt, no calving)     [m water equivalent]
+      & weq_firn                !< Water stored in the firn of the external land ice model (EBFM), as implied
+                                !< by the ICON-Land fluxes: cumulative P + E - runoff on the lice tile
+                                !< [m water equivalent]
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -1391,6 +1394,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & initval_r=20.0_lp, l_aggregate_all=.TRUE. )
+
+      ! Water storage of the external land ice model (EBFM) implied by the ICON-Land fluxes on the
+      ! lice tile (cumulative P + E - runoff); keeps the water balance exact when the runoff sent
+      ! to the HD model is the EBFM firn runoff instead of P - E. Zero on all other tiles.
+      CALL mem%Add_var( 'weq_firn', mem%weq_firn,                                        &
+        & hgrid, surface,                                                                &
+        & t_cf('weq_firn', 'm (water equivalent)',                                       &
+        &      'Water stored in the firn of the external land ice model (lice tile)'),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
+        & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     END IF
 
