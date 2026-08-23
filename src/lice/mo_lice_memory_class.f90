@@ -48,6 +48,7 @@ MODULE mo_lice_memory_class
                                 !< missing value where the external model has no data
       & t_sub,                & !< Temperature of the first subsurface firn layer of EBFM [K]; missing value where no data
       & ghf_cond,             & !< Conductance between surface and first firn layer of EBFM [W m-2 K-1]; missing value where no data
+      & hcap_sub,             & !< Heat capacity of the firn surface layer of EBFM [J m-2 K-1]; missing value where no data
       & runoff,               & !< Runoff from the EBFM firn column [kg m-2 s-1] (per unit ice area; 0 where no data)
       & smb,                  & !< Climatic surface mass balance of EBFM [kg m-2 s-1] (0 where no data)
       & snowmass                !< Snow mass on top of the ice in EBFM [kg m-2] (0 where no data)
@@ -143,6 +144,15 @@ CONTAINS
       CALL mem%Add_var('ghf_cond', mem%ghf_cond,                                                 &
         & hgrid, surface,                                                                       &
         & t_cf('ghf_cond', 'W m-2 K-1', 'Conductance surface - first firn layer from external land ice model'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+        & prefix, suffix,                                                                       &
+        & output_level=BASIC,                                                                   &
+        & lrestart=.TRUE.,                                                                      &
+        & initval_r=missval )
+
+      CALL mem%Add_var('hcap_sub', mem%hcap_sub,                                                 &
+        & hgrid, surface,                                                                       &
+        & t_cf('hcap_sub', 'J m-2 K-1', 'Heat capacity of the firn surface layer from external land ice model'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
         & prefix, suffix,                                                                       &
         & output_level=BASIC,                                                                   &

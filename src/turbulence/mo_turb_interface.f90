@@ -630,7 +630,9 @@ CONTAINS
     l_veg_bare_glac_tile = .FALSE.
 #ifndef __QUINCY_STANDALONE__
     ! icon-land
-    IF (tile%Has_process_memory(SSE_)) THEN  ! Should catch all vegetated, bare and glacier tiles
+    IF (tile%Has_process_memory(SSE_) .OR. tile%is_glacier) THEN
+      ! Should catch all vegetated, bare and glacier tiles. The land ice tile coupled to EBFM
+      ! has no SSE memory (SSE is SKIP_ there) but is a glacier tile.
       l_veg_bare_glac_tile = .TRUE.
     END IF
 #else

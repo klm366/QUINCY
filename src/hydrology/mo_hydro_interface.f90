@@ -589,7 +589,11 @@ CONTAINS
     END IF
 
     ! Set pointers to variables needed on non-lake tiles
-    dsl4jsb_Get_memory(SSE_)
+    IF (tile%Has_process_memory(SSE_)) THEN
+      ! not present on the land ice tile coupled to EBFM (SSE is SKIP_ there; the SSE
+      ! variables below are only used on non-glacier tiles)
+      dsl4jsb_Get_memory(SSE_)
+    END IF
     IF (tile%contains_vegetation) THEN
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__

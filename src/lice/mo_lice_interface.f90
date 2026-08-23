@@ -111,6 +111,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: albedo
     dsl4jsb_Real2D_onChunk :: t_sub
     dsl4jsb_Real2D_onChunk :: ghf_cond
+    dsl4jsb_Real2D_onChunk :: hcap_sub
 
     REAL(lp), POINTER :: tile_fract(:)
 
@@ -146,6 +147,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LICE_, albedo)           ! inout
     dsl4jsb_Get_var2D_onChunk(LICE_, t_sub)            ! inout
     dsl4jsb_Get_var2D_onChunk(LICE_, ghf_cond)         ! inout
+    dsl4jsb_Get_var2D_onChunk(LICE_, hcap_sub)         ! inout
 
     ! Make sure the state variables carry the missing value where EBFM does not provide data
 
@@ -163,6 +165,7 @@ CONTAINS
         albedo(ic)          = missval
         t_sub(ic)           = missval
         ghf_cond(ic)        = missval
+        hcap_sub(ic)        = missval
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -204,6 +207,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LICE_, albedo,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, t_sub,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, ghf_cond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LICE_, hcap_sub,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, smb,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LICE_, snowmass,        weighted_by_fract)

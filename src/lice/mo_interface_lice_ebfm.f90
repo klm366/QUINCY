@@ -24,8 +24,9 @@
 !>     remapped to the ICON grid
 !>   - albedo: surface albedo of the EBFM cells, area-weighted over the covered part of
 !>     the ICON cell
-!>   - t_sub [K], ghf_cond [W m-2 K-1]: temperature of the first firn layer and conductance
-!>     between surface and that layer (for the ground heat flux in the SEB)
+!>   - t_sub [K], ghf_cond [W m-2 K-1], hcap_sub [J m-2 K-1]: temperature of the first firn
+!>     layer, conductance between surface and that layer and heat capacity of the surface layer
+!>     (for the ground heat flux term in the SEB of the lice tile)
 !>   - runoff, smb [kg m-2 s-1], snowmass [kg m-2]: per unit ice area
 !>   Where EBFM has no data, the state fields carry the CDI missing value (mo_jsb_io::missval,
 !>   set as fixed value in the coupling configuration) and the mass fields are zero.
@@ -82,6 +83,7 @@ MODULE mo_interface_lice_ebfm
   CHARACTER(len=*), PARAMETER :: fname_albedo     = 'albedo'
   CHARACTER(len=*), PARAMETER :: fname_t_sub      = 't_sub'
   CHARACTER(len=*), PARAMETER :: fname_ghf_cond   = 'ghf_cond'
+  CHARACTER(len=*), PARAMETER :: fname_hcap_sub   = 'hcap_sub'
   CHARACTER(len=*), PARAMETER :: fname_runoff     = 'runoff'
   CHARACTER(len=*), PARAMETER :: fname_smb        = 'smb'
   CHARACTER(len=*), PARAMETER :: fname_snowmass   = 'snowmass'
@@ -95,6 +97,7 @@ MODULE mo_interface_lice_ebfm
   INTEGER :: field_id_albedo     = -1
   INTEGER :: field_id_t_sub      = -1
   INTEGER :: field_id_ghf_cond   = -1
+  INTEGER :: field_id_hcap_sub   = -1
   INTEGER :: field_id_runoff     = -1
   INTEGER :: field_id_smb        = -1
   INTEGER :: field_id_snowmass   = -1
@@ -175,6 +178,8 @@ CONTAINS
     CALL def_target_field(fname_t_sub,    'Temperature of the first firn layer of EBFM (K); missing value where no data', field_id_t_sub)
     CALL def_target_field(fname_ghf_cond, 'Conductance surface - first firn layer of EBFM (W m-2 K-1); missing value where no data', &
       &                                                                                                    field_id_ghf_cond)
+    CALL def_target_field(fname_hcap_sub, 'Heat capacity of the firn surface layer of EBFM (J m-2 K-1); missing value where no data', &
+      &                                                                                                    field_id_hcap_sub)
     CALL def_target_field(fname_runoff,   'Runoff from the EBFM firn column (kg m-2 s-1); 0 where no data', field_id_runoff)
     CALL def_target_field(fname_smb,      'Climatic surface mass balance of EBFM (kg m-2 s-1); 0 where no data', field_id_smb)
     CALL def_target_field(fname_snowmass, 'Snow mass on top of the ice in EBFM (kg m-2); 0 where no data', field_id_snowmass)
@@ -256,6 +261,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: albedo
     dsl4jsb_Real2D_onDomain :: t_sub
     dsl4jsb_Real2D_onDomain :: ghf_cond
+    dsl4jsb_Real2D_onDomain :: hcap_sub
     dsl4jsb_Real2D_onDomain :: runoff
     dsl4jsb_Real2D_onDomain :: smb
     dsl4jsb_Real2D_onDomain :: snowmass
@@ -282,6 +288,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(LICE_, albedo)     ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, t_sub)      ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, ghf_cond)   ! OUT
+    dsl4jsb_Get_var2D_onDomain(LICE_, hcap_sub)   ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, runoff)     ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, smb)        ! OUT
     dsl4jsb_Get_var2D_onDomain(LICE_, snowmass)   ! OUT
@@ -313,6 +320,7 @@ CONTAINS
     ! -----------------------------------
     CALL get_target_field(field_id_t_sub,    fname_t_sub,    t_sub)
     CALL get_target_field(field_id_ghf_cond, fname_ghf_cond, ghf_cond)
+    CALL get_target_field(field_id_hcap_sub, fname_hcap_sub, hcap_sub)
     CALL get_target_field(field_id_runoff,   fname_runoff,   runoff)
     CALL get_target_field(field_id_smb,      fname_smb,      smb)
     CALL get_target_field(field_id_snowmass, fname_snowmass, snowmass)

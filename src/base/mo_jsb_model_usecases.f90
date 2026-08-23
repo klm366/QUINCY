@@ -27,7 +27,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LICE_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_, SKIP_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE   ! define the type of the tile
@@ -220,6 +220,9 @@ CONTAINS
               & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
               & fract_varname='fract_lice')
             CALL lice_tile%Set_process_action(LICE_, ON_TILE_, action_to_parents=AGGREGATE_)
+            ! The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB):
+            ! JSBACH's soil/snow energy computations are not needed on this tile
+            CALL lice_tile%Set_process_action(SSE_, SKIP_)
             !$ACC ENTER DATA COPYIN(lice_tile)
           END IF
 
@@ -455,6 +458,9 @@ CONTAINS
               & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
               & fract_varname='fract_lice')
             CALL lice_tile%Set_process_action(LICE_, ON_TILE_, action_to_parents=AGGREGATE_)
+            ! The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB):
+            ! JSBACH's soil/snow energy computations are not needed on this tile
+            CALL lice_tile%Set_process_action(SSE_, SKIP_)
             !$ACC ENTER DATA COPYIN(lice_tile)
           END IF
         END IF
