@@ -35,7 +35,7 @@ MODULE mo_turb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TURB_, A2L_, SEB_, HYDRO_, SSE_, VEG_, Q_ASSIMI_
+  dsl4jsb_Use_processes TURB_, A2L_, SEB_, HYDRO_, SSE_, VEG_, Q_ASSIMI_, LICE_
 
 
   ! Use process configurations
@@ -230,6 +230,7 @@ CONTAINS
 
     USE mo_aes_thermo,  ONLY: potential_temperature ! Todo: use from mo_util_jsbach
     USE mo_phy_schemes, ONLY: qsat_water, qsat_ice, sfc_exchange_coefficients
+    USE mo_jsb_physical_constants, ONLY: grav
       ! &                 exchange_coefficients, registered_exchange_coefficients_procedure
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -255,6 +256,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: press_air
     dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: rough_h
     dsl4jsb_Real2D_onChunk :: qsat_star
     dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: kh
@@ -268,9 +270,22 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(lp), DIMENSION(options%nc) :: &
-      & pot_temperature_srf, pot_temperature_air, qsat_srf
+      & pot_temperature_srf, pot_temperature_air, qsat_srf, z0h_used
     REAL(lp) :: qsat_lice
     LOGICAL :: use_tmx
+    LOGICAL :: l_lice_tile        !< tile is the land ice tile coupled to EBFM
+    LOGICAL :: l_rough_h_used     !< use the scalar roughness rough_h in the heat/moisture profile
+    LOGICAL :: l_katabatic        !< replace the scalar exchange coefficient by the katabatic closure
+    REAL(lp) :: c_kat, kat_fac
+    ! Constants of the EBFM bulk katabatic closure (Oerlemans & Grisogono type), matching
+    ! EBFM INIT.init_constants: background exchange velocity [m s-1], katabatic flux coefficient,
+    ! Prandtl number, background potential temperature lapse rate [K m-1] (EBFM fits this each
+    ! step from its forcing with a floor of 0.0015; a constant is used here) and T0 [K]
+    REAL(lp), PARAMETER :: kat_c_background = 0.0025_lp
+    REAL(lp), PARAMETER :: kat_k_turb       = 0.0004_lp
+    REAL(lp), PARAMETER :: kat_prandtl      = 5._lp
+    REAL(lp), PARAMETER :: kat_theta_lapse  = 0.0015_lp
+    REAL(lp), PARAMETER :: kat_t0           = 273.15_lp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_exchange_coefficients'
 
@@ -309,21 +324,48 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)        ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)         ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_2m)   ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  interp_fac_10m)  ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
-    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf) ASYNC(acc_stream)
+    l_lice_tile    = tile%Is_process_calculated(LICE_)
+    l_rough_h_used = l_lice_tile .AND. dsl4jsb_Config(TURB_)%l_rough_h_lice
+    l_katabatic    = l_lice_tile .AND. dsl4jsb_Config(TURB_)%l_katabatic_lice
+
+    !$ACC DATA CREATE(pot_temperature_srf, pot_temperature_air, qsat_srf, z0h_used) ASYNC(acc_stream)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       pot_temperature_srf(ic) = potential_temperature(t_unfilt(ic), press_srf(ic))
       pot_temperature_air(ic) = potential_temperature(t_air(ic), press_air(ic))
       qsat_srf(ic) = qsat_water(t_unfilt(ic), press_srf(ic))
+      ! Scalar roughness for the heat/moisture profile: by default the same as for momentum
+      ! (current behaviour); on the lice tile optionally the actual scalar roughness rough_h
+      z0h_used(ic) = rough_m(ic)
     END DO
     !$ACC END PARALLEL LOOP
+
+    IF (tile%is_glacier) THEN
+      ! On glacier (and lice) tiles the surface saturation humidity entering the buoyancy/
+      ! stability estimate of the exchange coefficients is over ice (the flux itself already
+      ! uses qsat_ice via qsat_star in the SEB)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        qsat_srf(ic) = qsat_ice(t_unfilt(ic), press_srf(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
+    IF (l_rough_h_used) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        z0h_used(ic) = rough_h(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     IF (tile%is_lake .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
@@ -345,7 +387,7 @@ CONTAINS
       ! CALL registered_exchange_coefficients_procedure( &
       CALL sfc_exchange_coefficients( &
         & dz_srf(ic), q_air(ic), pot_temperature_air(ic), wind_air(ic), rough_m(ic), pot_temperature_srf(ic), &
-        & qsat_srf(ic), km(ic), kh(ic), interp_fac_2m(ic), interp_fac_10m(ic))
+        & qsat_srf(ic), km(ic), kh(ic), interp_fac_2m(ic), interp_fac_10m(ic), rough_h=z0h_used(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -358,11 +400,27 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (l_katabatic) THEN
+      !> On the EBFM-coupled land ice tile the scalar exchange coefficient is the bulk katabatic
+      !> closure of EBFM (LOOP_EBM_SHF/LHF): an exchange velocity composed of a constant
+      !> background and a katabatic part growing with the surface-air (potential) temperature
+      !> deficit — no resolved-wind factor (the katabatic wind is generated by the deficit
+      !> itself). Momentum (km) and the 2m/10m diagnostics remain those of TMX.
+      kat_fac = SQRT(grav / (kat_t0 * kat_theta_lapse * kat_prandtl))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(c_kat)
+      DO ic = 1, nc
+        c_kat  = MAX(kat_k_turb * (pot_temperature_air(ic) - pot_temperature_srf(ic)) * kat_fac, 0._lp)
+        ch(ic) = rho_srf(ic) * 0.5_lp * (kat_c_background + c_kat)
+        IF (tile%fract(ics+ic-1,iblk) <= 0._lp) ch(ic) = 0._lp
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        ch(ic) = wind_air(ic) * rho_srf(ic) * kh(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 #if defined(_CRAYFTN) && _RELEASE_MAJOR <= 19
     !$ACC WAIT(acc_stream)
 #endif
@@ -581,7 +639,8 @@ CONTAINS
       & rough_veg_star_local, rough_bare_star, rough_snow_star, fract_fol_proj_cov
     REAL(lp) :: &
       & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
-      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
+      & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness, &
+      & config_rough_lice_star
     LOGICAL :: lctlib_ForestFlag
     LOGICAL                         :: l_veg_bare_glac_tile      !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_roughness'
@@ -757,6 +816,19 @@ CONTAINS
         DO ic = 1, nc
           rough_h_star(ic) = (1._lp - fract_snow_soil(ic)) * 1._lp / LOG(config_blending_height / MIN(1._lp, rough_m(ic)))**2 &
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
+
+      ELSE IF (tile%Is_process_calculated(LICE_) .AND. dsl4jsb_Config(TURB_)%roughness_lice > 0._lp) THEN
+        ! EBFM-coupled land ice tile with its own momentum roughness length (jsb_turb_nml
+        ! roughness_lice); the scalar roughness keeps the snow value as on other glacier tiles
+        config_rough_lice_star = 1._lp / LOG(dsl4jsb_Config(TURB_)%blending_height &
+          &                                  / dsl4jsb_Config(TURB_)%roughness_lice)**2
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic = 1, nc
+          rough_m_star(ic) = config_rough_lice_star
+          rough_h_star(ic) = (1._lp - fract_snow_soil(ic)) * config_rough_lice_star &
+            &                + fract_snow_soil(ic) * rough_snow_star(ic)
         END DO
         !$ACC END PARALLEL LOOP
 

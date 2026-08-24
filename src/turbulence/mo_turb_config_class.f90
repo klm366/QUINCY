@@ -36,10 +36,16 @@ MODULE mo_turb_config_class
       & roughness_water,             & !< Roughness length of lake open water [m]
       & roughness_lai_saturation,    & !< factor in roughness length dependence on LAI (should be between 0.1 and 1)
       & roughness_momentum_to_heat,  & !< factor by which roughness for heat is smaller than roughness for momentum
-      & max_ini_rough_m                !< Limit roughness length read from ini file (<= 0: no limit)
+      & max_ini_rough_m,             & !< Limit roughness length read from ini file (<= 0: no limit)
+      & roughness_lice                 !< Roughness length (momentum) of the EBFM-coupled land ice
+                                       !< tile [m]; <= 0: use roughness_bare (default behaviour)
     LOGICAL :: &
-      & l_roughness_lai  !< true:  calculation of roughness length depends on LAI
-                         !  false: PFT-specific values from lctlib are used
+      & l_roughness_lai, & !< true:  calculation of roughness length depends on LAI
+                           !  false: PFT-specific values from lctlib are used
+      & l_rough_h_lice,  & !< true: use the scalar roughness rough_h (instead of rough_m) in the
+                           !< heat/moisture profile of the exchange coefficients on the lice tile
+      & l_katabatic_lice   !< true: replace the scalar exchange coefficient on the lice tile by
+                           !< the bulk katabatic closure of EBFM (Oerlemans & Grisogono type)
    CONTAINS
      PROCEDURE :: Init => Init_turb_config
   END type t_turb_config
@@ -62,8 +68,9 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     REAL(lp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
-      & roughness_lai_saturation, roughness_momentum_to_heat, max_ini_rough_m
-    LOGICAL :: l_roughness_lai
+      & roughness_lai_saturation, roughness_momentum_to_heat, max_ini_rough_m, &
+      & roughness_lice
+    LOGICAL :: l_roughness_lai, l_rough_h_lice, l_katabatic_lice
 
     NAMELIST /jsb_turb_nml/           &
       &   active,                     &
@@ -77,7 +84,10 @@ CONTAINS
       &   roughness_lai_saturation,   &
       &   roughness_momentum_to_heat, &
       &   max_ini_rough_m,            &
-      &   l_roughness_lai
+      &   roughness_lice,             &
+      &   l_roughness_lai,            &
+      &   l_rough_h_lice,             &
+      &   l_katabatic_lice
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -97,7 +107,10 @@ CONTAINS
     roughness_lai_saturation   = 0.4_lp
     roughness_momentum_to_heat = 10._lp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
     max_ini_rough_m            = -1._lp      ! No limit
+    roughness_lice             = -1._lp      ! <= 0: use roughness_bare on the lice tile
     l_roughness_lai            = .TRUE.
+    l_rough_h_lice             = .FALSE.     ! Current behaviour: rough_m also for heat/moisture
+    l_katabatic_lice           = .FALSE.     ! Current behaviour: TMX exchange coefficients
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -117,7 +130,10 @@ CONTAINS
     config%roughness_lai_saturation   = roughness_lai_saturation
     config%roughness_momentum_to_heat = roughness_momentum_to_heat
     config%max_ini_rough_m            = max_ini_rough_m
+    config%roughness_lice             = roughness_lice
     config%l_roughness_lai            = l_roughness_lai
+    config%l_rough_h_lice             = l_rough_h_lice
+    config%l_katabatic_lice           = l_katabatic_lice
 
   END SUBROUTINE Init_turb_config
 
