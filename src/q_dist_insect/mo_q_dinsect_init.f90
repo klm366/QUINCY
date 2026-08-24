@@ -23,6 +23,10 @@ MODULE mo_q_dinsect_init
     USE mo_jsb_control,             ONLY: debug_on
     USE mo_jsb_math_constants,      ONLY: eps8
 
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+
     USE mo_lnd_bgcm_idx
     USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
     USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
@@ -30,6 +34,8 @@ MODULE mo_q_dinsect_init
      &                                    DINSECT_BGCM_DEADHEARTWOOD_ID, &
      &                                    DINSECT_BGCM_DEADLEAF_ID,      &
      &                                    DINSECT_BGCM_LARVA_ID
+
+    USE mo_jsb_process_class,     ONLY: Q_DINSECT_
 
     IMPLICIT NONE
 
@@ -135,6 +141,9 @@ MODULE mo_q_dinsect_init
     USE mo_jsb_time_iface,        ONLY: t_datetime
     USE mo_jsb_time,              ONLY: is_time_experiment_start, get_year
     USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_class,             ONLY: Get_model
+    dsl4jsb_Use_config(Q_DINSECT_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! USE mo_q_syl_config_class,    ONLY: CONST_HARV, REF_HARV, TRANS_HARV
 
     ! -------------------------------------------------------------------------------------------------- !
