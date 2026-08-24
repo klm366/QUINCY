@@ -76,9 +76,9 @@ MODULE mo_q_dinsect_memory_class
                                     dinsect_barkbeetle_labile_c13, &       !< the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
                                     dinsect_barkbeetle_labile_c14          !< the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
     TYPE(t_jsb_var_real2d)          :: &
-                                    dinsect_defoli_dt,   &                 !< the defoliation rate [fraction/timestep]
-                                    dinsect_mort_dt, &                     !< the addtional mortality caused by bark beetle
-                                    dinsect_flux_frac                      !< the fraction of disturbed fraction of target variable at each timestep.
+                                    dinsect_bb_mort_dt, &                  !< Disturbance fraction mortality caused by bark beetle [fraction/timestep]
+                                    dinsect_df_mort_dt, &                  !< Disturbance fraction mortality caused by defoliators [fraction/timestep]
+                                    dinsect_total_mort_dt                  !< Disturbance fraction mortality caused by all insects disturbances [fraction/timestep]
     TYPE(t_jsb_var_real2d)          :: &
                                     dinsect_pool_total_c                   !< Total carbon from insect pools [mol C/m2/timestep]
 
@@ -392,10 +392,9 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-
-      CALL mem%Add_var('dinsect_mort_dt', mem%dinsect_mort_dt, &
+      CALL mem%Add_var('dinsect_bb_mort_dt', mem%dinsect_bb_mort_dt, &
         & hgrid, surface, &
-        & t_cf('dinsect_mort_dt', '', 'dinsect_mort_dt'), &
+        & t_cf('dinsect_bb_mort_dt', 'fraction ts-1', 'dinsect_bb_mort_dt'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -404,9 +403,20 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('dinsect_defoli_dt', mem%dinsect_defoli_dt, &
+      CALL mem%Add_var('dinsect_df_mort_dt', mem%dinsect_df_mort_dt, &
         & hgrid, surface, &
-        & t_cf('dinsect_defoli_dt', '% timestep-1', 'dinsect_defoli_dt'), &
+        & t_cf('dinsect_df_mort_dt', 'fraction ts-1', 'dinsect_df_mort_dt'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dinsect_total_mort_dt', mem%dinsect_total_mort_dt, &
+        & hgrid, surface, &
+        & t_cf('dinsect_total_mort_dt', 'fraction ts-1', 'dinsect_total_mort_dt'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -506,17 +516,6 @@ CONTAINS
       CALL mem%Add_var('dinsect_barkbeetle_labile_c14', mem%dinsect_barkbeetle_labile_c14, &
         & hgrid, surface, &
         & t_cf('dinsect_barkbeetle_labile_c14', 'mol m-2 timestep-1', 'dinsect_barkbeetle_labile_c14'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('dinsect_flux_frac', mem%dinsect_flux_frac, &
-        & hgrid, surface, &
-        & t_cf('dinsect_flux_frac', '% timestep-1', 'dinsect_flux_frac'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

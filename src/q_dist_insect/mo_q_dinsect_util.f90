@@ -64,6 +64,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
     dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
     dsl4jsb_Real2D_onChunk :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
+    dsl4jsb_Real2D_onChunk :: dinsect_total_mort_dt         ! fraction of mortality rate caused by insect disturbances [fraction/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -88,6 +89,7 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_SLOW_LITTER_ID, dinsect_slow_litter_mt)
     dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DROPPING_ID, dinsect_dropping_mt)
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! out
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! out
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>1.0 bgcm fluxes
@@ -101,6 +103,7 @@ CONTAINS
     dinsect_slow_litter_mt(:,:,:) = zero
     dinsect_dropping_mt(:,:) = zero
     dinsect_pool_total_c = zero
+    dinsect_total_mort_dt = zero
 
   END SUBROUTINE reset_dinsect_fluxes
 

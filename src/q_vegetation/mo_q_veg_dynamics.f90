@@ -116,7 +116,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! Q_DINSECT_ 2D
-    dsl4jsb_Real2D_onChunk      :: dinsect_mort_dt
+    dsl4jsb_Real2D_onChunk      :: dinsect_total_mort_dt
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
@@ -201,7 +201,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)   ! inout
 
     ! Q_DINSECT_ 2D
-    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_mort_dt)        ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt)        ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)        ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)    ! out
@@ -252,7 +252,7 @@ CONTAINS
         & lai_tvegdyn_mavg(:)                             , &
         & fpc(:)                                          , &
         & veg_pool_mt(:,:,:)                              , & ! in
-        & dinsect_mort_dt(:)                              , & ! in
+        & dinsect_total_mort_dt(:)                        , & ! in
         & veg_litterfall_mt(:,:,:)                        , & ! inout
         & mortality_rate(:)                               )   ! out
     END IF
@@ -477,7 +477,7 @@ CONTAINS
     & lai_tvegdyn_mavg          , &
     & fpc                       , &
     & veg_pool_mt               , &
-    & dinsect_mort_dt           , &
+    & dinsect_total_mort_dt     , &
     & veg_litterfall_mt         , &
     & mortality_rate )
 
@@ -497,7 +497,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: dinsect_mort_dt     !< addtional mortality rate due to insect outbreak
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: dinsect_total_mort_dt      !< addtional mortality rate due to insect outbreak [fraction/timestep]
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -615,7 +615,7 @@ CONTAINS
     IF (is_dinsect_online) THEN
       DO ic = 1, nc
 
-        mortality_rate(ic) = MIN((mortality_rate(ic) + dinsect_mort_dt(ic)), 1.0_wp)
+        mortality_rate(ic) = MIN((mortality_rate(ic) + dinsect_total_mort_dt(ic)), 1.0_wp)
 
       END DO
     END IF
