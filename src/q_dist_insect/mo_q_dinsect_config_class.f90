@@ -49,6 +49,8 @@ MODULE mo_q_dinsect_config_class
     !< dinsect_bb_filename_prefix_XXXX.nc, where XXXX is the year
     CHARACTER(len=filename_max) :: dinsect_bb_filename_prefix !< Prefix for insect bb input file [string]
     CHARACTER(len=filename_max) :: dinsect_df_filename_prefix !< Prefix for insect df input file [string]
+    CHARACTER(len=:), ALLOCATABLE :: dinsect_bb_path !< Path for insect bb input file [string]
+    CHARACTER(len=:), ALLOCATABLE :: dinsect_df_path !< Path for insect bb input file [string]
 
     !> Development flags (leap year is ignored when not required)
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
@@ -83,9 +85,14 @@ CONTAINS
     LOGICAL                       :: dinsect_flag_bb_from_namelist !< on/off reading bark beetle data from namelist [boolean]
     LOGICAL                       :: dinsect_flag_df_from_namelist !< on/off reading defoliator data from namelist [boolean]
 
+    !< Used when dinsect_flag_bb_from_namelist or dinsect_flag_df_from_namelist is FALSE
     CHARACTER(len=filename_max)   :: dinsect_bb_filename_prefix !< prefix for bark beetle data filename [string]
     CHARACTER(len=filename_max)   :: dinsect_df_filename_prefix !< prefix for defoliator data filename [string]
+    CHARACTER(len=:), ALLOCATABLE :: dinsect_bb_path !< Path for insect bb input file [string], must have / at the end
+    CHARACTER(len=:), ALLOCATABLE :: dinsect_df_path !< Path for insect df input file [string], must have / at the end
 
+
+    !< Used when dinsect_flag_df_from_namelist = TRUE
     !< Prescribed for an entire year (daily data). Every year will use the same forcing data. For dev purposes only.
     !< Defined as 366 due to leap years. It is ignored for non-leap years.
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
@@ -101,6 +108,8 @@ CONTAINS
       dinsect_flag_df_from_namelist, &
       dinsect_bb_filename_prefix,    &
       dinsect_df_filename_prefix,    &
+      dinsect_bb_path,               &
+      dinsect_df_path,               &
       dinsect_dev_bb_forcing_dist_frac, &
       dinsect_dev_df_forcing_dist_frac
 
@@ -117,8 +126,10 @@ CONTAINS
 
     dinsect_flag_bb_from_namelist = .FALSE.
     dinsect_flag_df_from_namelist = .FALSE.
-    dinsect_bb_filename_prefix    = 'bb_dist_frac_daily'
-    dinsect_df_filename_prefix    = 'df_dist_frac_daily'
+    dinsect_bb_filename_prefix    = 'bb_dist_frac_daily_'
+    dinsect_df_filename_prefix    = 'df_dist_frac_daily_'
+    dinsect_bb_path               = ''
+    dinsect_df_path               = ''
 
     dinsect_dev_bb_forcing_dist_frac = 0._wp
     dinsect_dev_df_forcing_dist_frac = 0._wp
@@ -140,6 +151,8 @@ CONTAINS
     config%dinsect_flag_df_from_namelist = dinsect_flag_df_from_namelist
     config%dinsect_bb_filename_prefix    = dinsect_bb_filename_prefix
     config%dinsect_df_filename_prefix    = dinsect_df_filename_prefix
+    config%dinsect_bb_path               = dinsect_bb_path
+    config%dinsect_df_path               = dinsect_df_path
 
     config%dinsect_dev_bb_forcing_dist_frac = dinsect_dev_bb_forcing_dist_frac
     config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac

@@ -153,6 +153,7 @@ MODULE mo_q_dinsect_init
     TYPE(t_jsb_model),            POINTER :: model
     TYPE(t_jsb_grid),             POINTER :: hgrid
     CLASS(t_jsb_tile_abstract),   POINTER :: tile
+    CHARACTER(len=:), ALLOCATABLE         :: fullpath
 
     dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(Q_DINSECT_)
@@ -209,8 +210,9 @@ MODULE mo_q_dinsect_init
       WRITE (fname,'(a,a,I4.4,a)') &
         & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
     ! END IF
+    fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
 
-    input_file = jsb_netcdf_open_input(TRIM(fname), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
     ptr_2D => input_file%Read_2d(variable_name='dist_fract', fill_array = dinsect_bb_dist_fraction_read(:,:))
 
     CALL input_file%Close()
