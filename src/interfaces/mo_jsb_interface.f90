@@ -645,7 +645,9 @@ CONTAINS
 
     ! Receive fields from the external land ice model (EBFM) via YAC (lice process)
     IF (model%processes(LICE_)%p%config%active) THEN
-      CALL interface_lice_get(model)
+      ! At the very first time step of an experiment the surface temperature of the lice tile is
+      ! initialized from the received firn state (replacing the constant initval of the SEB memory)
+      CALL interface_lice_get(model, l_experiment_start=is_time_experiment_start(current_datetime))
     END IF
 
     ! For the ALCC process land use data has to be read once a year

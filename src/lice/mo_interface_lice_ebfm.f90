@@ -246,12 +246,15 @@ CONTAINS
   !>
   !> Called from jsbach_start_timestep (outside of the block loop).
   !>
-  SUBROUTINE interface_lice_get(model)
+  SUBROUTINE interface_lice_get(model, l_experiment_start)
 
     TYPE(t_jsb_model), INTENT(inout), TARGET :: model
+    LOGICAL,           INTENT(in)            :: l_experiment_start !< True: very first time step of the
+                                                                   !< experiment (not of a restart leg)
 
     dsl4jsb_Def_config(LICE_)
     dsl4jsb_Def_memory(LICE_)
+    dsl4jsb_Def_memory(SEB_)
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     TYPE(t_jsb_grid),           POINTER :: grid
@@ -265,6 +268,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: runoff
     dsl4jsb_Real2D_onDomain :: smb
     dsl4jsb_Real2D_onDomain :: snowmass
+
+    ! Surface temperature state of the SEB process on the lice tile (experiment-start init)
+    REAL(lp), POINTER :: seb_t(:,:), seb_t_unfilt(:,:), seb_t_filt(:,:), seb_t_srf(:,:)
 
     LOGICAL :: received_data
 
@@ -324,6 +330,36 @@ CONTAINS
     CALL get_target_field(field_id_runoff,   fname_runoff,   runoff)
     CALL get_target_field(field_id_smb,      fname_smb,      smb)
     CALL get_target_field(field_id_snowmass, fname_snowmass, snowmass)
+
+    ! Initialize the surface temperature of the lice tile from the firn state
+    ! ------------------------------------------------------------------------
+    ! At the very first time step of an experiment (cold start; restart legs get the temperature
+    ! from the restart file) the surface temperature of the lice tile is set to the received first
+    ! firn layer temperature t_sub. This replaces the constant initval (280 K) of the SEB memory,
+    ! which is above the melting point and would otherwise melt several mm w.e. on the ice sheet
+    ! while the surface relaxes during the first coupling window.
+    IF (l_experiment_start) THEN
+      dsl4jsb_Get_memory(SEB_)
+      seb_t        => SEB__mem%t%ptr(:,:)
+      seb_t_unfilt => SEB__mem%t_unfilt%ptr(:,:)
+      WHERE (ghf_cond(:,:) >= 0._lp)   ! only where EBFM provides data (no missing value)
+        seb_t(:,:)        = t_sub(:,:)
+        seb_t_unfilt(:,:) = t_sub(:,:)
+      END WHERE
+      !$ACC UPDATE DEVICE(seb_t, seb_t_unfilt) ASYNC(acc_stream)
+      ! t_filt and t_srf are allocated with TMX (or on LAND_TYPE tiles); check to be safe
+      IF (ASSOCIATED(SEB__mem%t_filt%ptr)) THEN
+        seb_t_filt => SEB__mem%t_filt%ptr(:,:)
+        WHERE (ghf_cond(:,:) >= 0._lp) seb_t_filt(:,:) = t_sub(:,:)
+        !$ACC UPDATE DEVICE(seb_t_filt) ASYNC(acc_stream)
+      END IF
+      IF (ASSOCIATED(SEB__mem%t_srf%ptr)) THEN
+        seb_t_srf => SEB__mem%t_srf%ptr(:,:)
+        WHERE (ghf_cond(:,:) >= 0._lp) seb_t_srf(:,:) = t_sub(:,:)
+        !$ACC UPDATE DEVICE(seb_t_srf) ASYNC(acc_stream)
+      END IF
+      CALL message(routine, 'Initialized the lice tile surface temperature from the EBFM firn state (t_sub)')
+    END IF
 
   CONTAINS
 
