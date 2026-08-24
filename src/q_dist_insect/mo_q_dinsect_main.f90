@@ -250,7 +250,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
 
   !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
-  ! include bark beetle mortality rate into total mortality rate
+  ! include defoliator mortality rate into total mortality rate
   dinsect_total_mort_dt = dinsect_total_mort_dt + dinsect_df_mort_dt
 END SUBROUTINE update_dinsect_defoliator
 
