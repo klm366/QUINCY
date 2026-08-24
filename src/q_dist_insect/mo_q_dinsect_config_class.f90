@@ -42,29 +42,6 @@ MODULE mo_q_dinsect_config_class
     !> Process control flags
     LOGICAL           :: flag_dinsect                 !< Enable insect disturbance process
     LOGICAL           :: dinsect_online               !< Enable coupling to vegetation and soil
-    LOGICAL           :: dinsect_prescribe            !< Enable prescribed insect damage
-
-    !> Input source flags
-    LOGICAL           :: dinsect_from_namelist        !< Read damage data from namelist
-
-    !> Insect parameters
-    INTEGER           :: dinsect_type                 !< Insect type (1: Bark beetle, 2: Defoliator)
-    INTEGER           :: dinsect_start_year           !< Start year for insect outbreak
-    INTEGER           :: dinsect_year_span            !< Duration of outbreak [years]
-    INTEGER           :: dinsect_start_doy            !< Start day of year for disturbance
-    INTEGER           :: dinsect_duration             !< Duration within year [days]
-
-    !> Impact parameters
-    REAL(wp)          :: dinsect_damage_year1        !< Prescribed mortality/defoliation rate [0-1] for the first disturbance year
-    REAL(wp)          :: dinsect_damage_year2        !< Prescribed mortality/defoliation rate [0-1] for the second disturbance year
-    REAL(wp)          :: dinsect_damage_year3        !< Prescribed mortality/defoliation rate [0-1] for the third disturbance year
-    REAL(wp)          :: dinsect_damage_year4        !< Prescribed mortality/defoliation rate [0-1] for the fourth disturbance year
-    REAL(wp)          :: dinsect_damage_year5        !< Prescribed mortality/defoliation rate [0-1] for the fifth disturbance year
-    REAL(wp)          :: dinsect_damage_year6        !< Prescribed mortality/defoliation rate [0-1] for the sixth disturbance year
-    REAL(wp)          :: dinsect_damage_year7        !< Prescribed mortality/defoliation rate [0-1] for the seventh disturbance year
-    REAL(wp)          :: dinsect_damage_year8        !< Prescribed mortality/defoliation rate [0-1] for the eighth disturbance year
-    REAL(wp)          :: dinsect_damage_year9        !< Prescribed mortality/defoliation rate [0-1] for the ninth disturbance year
-    REAL(wp)          :: dinsect_damage_year10       !< Prescribed mortality/defoliation rate [0-1]
 
     !> Development flags
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
@@ -93,28 +70,17 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, &
                                      bc_filename
-    LOGICAL           :: flag_dinsect                 !< on/off disturbance insect process [boolean]
-    LOGICAL           :: dinsect_online               !< on/off coupling dinsect to veg and soil [boolean]
-    LOGICAL           :: dinsect_prescribe            !< on/off prescribing insect damage or not [boolean]
-    LOGICAL           :: dinsect_from_namelist        !< on/off damage data from namelist [boolean]
-    INTEGER           :: dinsect_type                 !< insect type. 1: Bark beetle [Default]; 2: Defoliator
-    INTEGER           :: dinsect_start_year           !< prescribed start year for insect outbreak
-    INTEGER           :: dinsect_year_span            !< the time span of insect outbreak (unit: years)
-    INTEGER           :: dinsect_start_doy            !< the doy of starting day of a insect disturbance
-    INTEGER           :: dinsect_duration             !< the time duration that disturbance happened during a year [unit: days]
+    LOGICAL                       :: flag_dinsect                 !< on/off disturbance insect process [boolean]
+    LOGICAL                       :: dinsect_online               !< on/off coupling dinsect to veg and soil [boolean]
+    !LOGICAL                       :: dinsect_bb_from_namelist        !< Bark beetle on/off damage data from namelist [string]
+    !LOGICAL                       :: dinsect_df_from_namelist        !< Defoliator on/off damage data from namelist [string]
 
-    ! variables
-    REAL(wp)          :: dinsect_damage_year1        !< Prescribed mortality/defoliation rate [0-1] for the first disturbance year
-    REAL(wp)          :: dinsect_damage_year2        !< Prescribed mortality/defoliation rate [0-1] for the second disturbance year
-    REAL(wp)          :: dinsect_damage_year3        !< Prescribed mortality/defoliation rate [0-1] for the third disturbance year
-    REAL(wp)          :: dinsect_damage_year4        !< Prescribed mortality/defoliation rate [0-1] for the fourth disturbance year
-    REAL(wp)          :: dinsect_damage_year5        !< Prescribed mortality/defoliation rate [0-1] for the fifth disturbance year
-    REAL(wp)          :: dinsect_damage_year6        !< Prescribed mortality/defoliation rate [0-1] for the sixth disturbance year
-    REAL(wp)          :: dinsect_damage_year7        !< Prescribed mortality/defoliation rate [0-1] for the seventh disturbance year
-    REAL(wp)          :: dinsect_damage_year8        !< Prescribed mortality/defoliation rate [0-1] for the eighth disturbance year
-    REAL(wp)          :: dinsect_damage_year9        !< Prescribed mortality/defoliation rate [0-1] for the ninth disturbance year
-    REAL(wp)          :: dinsect_damage_year10       !< Prescribed mortality/defoliation rate [0-1] for the tenth disturbance year
+    !< Define dinsect_XX_from_namelist = FALSE to read from netcdf
+    !CHARACTER(len=filename_max)   :: dinsect_bb_filename, &  !< Bark beetle data filename [string]
+    !                                 dinsect_df_filename     !< Defoliator data filename [string]
 
+    !< Prescribed for an entire year (daily data). For dev purposes only.
+    !< Defined as 366 due to leap years. It is ignored for non-leap years.
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
     REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
                                                      !< Todo: properly read netcdf files with daily data
@@ -126,23 +92,6 @@ CONTAINS
       active,                        &
       flag_dinsect,                  &
       dinsect_online,                &
-      dinsect_type,                  &
-      dinsect_prescribe,             &
-      dinsect_start_year,            &
-      dinsect_year_span,             &
-      dinsect_from_namelist,         &
-      dinsect_duration,              &
-      dinsect_start_doy,             &
-      dinsect_damage_year1,          &
-      dinsect_damage_year2,          &
-      dinsect_damage_year3,          &
-      dinsect_damage_year4,          &
-      dinsect_damage_year5,          &
-      dinsect_damage_year6,          &
-      dinsect_damage_year7,          &
-      dinsect_damage_year8,          &
-      dinsect_damage_year9,          &
-      dinsect_damage_year10,         &
       dinsect_dev_bb_forcing_dist_frac, &
       dinsect_dev_df_forcing_dist_frac
 
@@ -156,24 +105,7 @@ CONTAINS
     active                       = .TRUE.
     flag_dinsect                 = .FALSE.
     dinsect_online               = .FALSE.
-    dinsect_type                 = 1         ! 1: Bark beetles 2: Defoliators
-    dinsect_prescribe            = .FALSE.
-    dinsect_from_namelist        = .TRUE.
-    dinsect_start_year           = 2001
-    dinsect_year_span            = 3
-    dinsect_duration             = 180
-    dinsect_start_doy            = 152
 
-    dinsect_damage_year1          = 0._wp
-    dinsect_damage_year2          = 0._wp
-    dinsect_damage_year3          = 0._wp
-    dinsect_damage_year4          = 0._wp
-    dinsect_damage_year5          = 0._wp
-    dinsect_damage_year6          = 0._wp
-    dinsect_damage_year7          = 0._wp
-    dinsect_damage_year8          = 0._wp
-    dinsect_damage_year9          = 0._wp
-    dinsect_damage_year10         = 0._wp
     dinsect_dev_bb_forcing_dist_frac = 0._wp
     dinsect_dev_df_forcing_dist_frac = 0._wp
 
@@ -189,23 +121,7 @@ CONTAINS
     config%active                       = active
     config%flag_dinsect                 = flag_dinsect
     config%dinsect_online               = dinsect_online
-    config%dinsect_type                 = dinsect_type
-    config%dinsect_prescribe            = dinsect_prescribe
-    config%dinsect_from_namelist        = dinsect_from_namelist
-    config%dinsect_start_year           = dinsect_start_year
-    config%dinsect_year_span            = dinsect_year_span
-    config%dinsect_duration             = dinsect_duration
-    config%dinsect_start_doy            = dinsect_start_doy
-    config%dinsect_damage_year1         = dinsect_damage_year1
-    config%dinsect_damage_year2         = dinsect_damage_year2
-    config%dinsect_damage_year3         = dinsect_damage_year3
-    config%dinsect_damage_year4         = dinsect_damage_year4
-    config%dinsect_damage_year5         = dinsect_damage_year5
-    config%dinsect_damage_year6         = dinsect_damage_year6
-    config%dinsect_damage_year7         = dinsect_damage_year7
-    config%dinsect_damage_year8         = dinsect_damage_year8
-    config%dinsect_damage_year9         = dinsect_damage_year9
-    config%dinsect_damage_year10        = dinsect_damage_year10
+
     config%dinsect_dev_bb_forcing_dist_frac = dinsect_dev_bb_forcing_dist_frac
     config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac
 

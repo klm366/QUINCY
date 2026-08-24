@@ -970,9 +970,8 @@ CONTAINS
       hlp1(:,1) = hlp1(:,1) + (nhx_deposition(:) + fertiliser_nh4(:)) &
                    &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
       !calculate the effect of N from dropping of defoliator
-      IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online) .and. &
-        & (dsl4jsb_Config(Q_DINSECT_)%dinsect_type == 2)) THEN
-          hlp1(:,1) = hlp1(:,1) + dinsect_dropping_mt(ixN,:) / soil_depth_sl(:,1) / 1.e6_wp * dtime
+      IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)) THEN
+          hlp1(:,1) = hlp1(:,1) + dinsect_dropping_mt(ixN,:) / soil_depth_sl(:,1) / 1.e6_wp * dtime ! defoliator
       END IF
 
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
@@ -1039,7 +1038,6 @@ CONTAINS
                                        occlusion_po4(:,:), &
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:), &
-                                       dsl4jsb_Config(Q_DINSECT_)%dinsect_type, &
                                        dsl4jsb_Config(Q_DINSECT_)%dinsect_online, &
                                        dinsect_dropping_mt(ixP,:), &
                                        soil_depth_sl(:,:))
@@ -1328,7 +1326,6 @@ CONTAINS
                                    occlusion_po4, &
                                    slow_exchange_po4, &
                                    fast_exchange_po4, &
-                                   dinsect_type, &
                                    dinsect_online, &
                                    dinsect_dropping_P, &
                                    soil_depth_sl)
@@ -1340,7 +1337,6 @@ CONTAINS
 
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
                                                                        nsoil_w
-    INTEGER,                                          INTENT(in)    :: dinsect_type                  !< 2: defoliator is on
     REAL(wp),                                         INTENT(in)    :: dtime                         !< timestep length
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
@@ -1443,8 +1439,8 @@ CONTAINS
                        transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
 
           ! 2.2 calculate the effects on litter P from droppings of defoliator
-          IF (dinsect_online .and. (dinsect_type == 2)) THEN
-            hlp1(:,1) = hlp1(:,1) + dinsect_dropping_P(:) / soil_depth_sl(:,1) * dtime / 1000000._wp
+          IF (dinsect_online) THEN
+            hlp1(:,1) = hlp1(:,1) + dinsect_dropping_P(:) / soil_depth_sl(:,1) * dtime / 1000000._wp ! defoliator
           END IF
 
           hlp2(ic,is) = ( - transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp

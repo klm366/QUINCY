@@ -665,9 +665,8 @@ CONTAINS
       & sb_formation_mt(:,:,:,:) )                    ! inout
 
     !< When defoliation is considered, the C litter from defoliation is added to the the formation of soluable C litter
-    IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)&
-    & .and. (dsl4jsb_Config(Q_DINSECT_)%dinsect_type == 2)) THEN  !HEREyma
-      sb_formation_mt(ix_soluable_litter, ixC, :, 1) = &
+    IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)) THEN  !HEREyma
+      sb_formation_mt(ix_soluable_litter, ixC, :, 1) = & ! defoliator
                                       sb_formation_mt(ix_soluable_litter, ixC, :, 1) &
                                       + dinsect_dropping_mt(ixC,:) / soil_depth_sl(:,1)
     END IF

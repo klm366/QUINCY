@@ -890,23 +890,20 @@ CONTAINS
 
       ! If defoliator is online, subtract the respiration flux from net biosphere production. Unit: mol m-2 timestep-1
       IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-        IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_type .eq. 2) THEN
-          net_biosphere_production(ic)     = net_biosphere_production(ic)     - &
-          & (dinsect_defoliator_resp_c(ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
-          & (dinsect_defoliator_resp_c13(ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
-          & (dinsect_defoliator_resp_c14(ic) * 1000000.0_wp / dtime)
-        END IF
-        IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_type .eq. 1) THEN
-          net_biosphere_production(ic)     = net_biosphere_production(ic)     - &
-          & (dinsect_barkbeetle_labile_c(ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
-          & (dinsect_barkbeetle_labile_c13(ic) * 1000000.0_wp / dtime)
-          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
-          & (dinsect_barkbeetle_labile_c14(ic) * 1000000.0_wp / dtime)
-        END IF
-      ENDIF
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - & ! defoliator
+        & (dinsect_defoliator_resp_c(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+        & (dinsect_defoliator_resp_c13(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+        & (dinsect_defoliator_resp_c14(ic) * 1000000.0_wp / dtime)
+
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - & ! bark beetle
+        & (dinsect_barkbeetle_labile_c(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+        & (dinsect_barkbeetle_labile_c13(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+        & (dinsect_barkbeetle_labile_c14(ic) * 1000000.0_wp / dtime)
+      ENDIF ! dinsect_online
     END DO
     !$ACC END PARALLEL LOOP
 
