@@ -81,6 +81,9 @@ MODULE mo_q_dinsect_memory_class
                                     dinsect_total_mort_dt                  !< Disturbance fraction mortality caused by all insects disturbances [fraction/timestep]
     TYPE(t_jsb_var_real2d)          :: &
                                     dinsect_pool_total_c                   !< Total carbon from insect pools [mol C/m2/timestep]
+    TYPE(t_jsb_var_real2d)          :: &
+                                    dinsect_bb_dist_fraction_read, &       !< Bark beetle fraction read from netcdf file [fraction/day]
+                                    dinsect_df_dist_fraction_read          !< Defoliator fraction read from netcdf file [fraction/day]
 
   !------------------------------------------------------------------------------------------------------ !
 
@@ -417,6 +420,28 @@ CONTAINS
       CALL mem%Add_var('dinsect_total_mort_dt', mem%dinsect_total_mort_dt, &
         & hgrid, surface, &
         & t_cf('dinsect_total_mort_dt', 'fraction ts-1', 'dinsect_total_mort_dt'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dinsect_bb_dist_fraction_read', mem%dinsect_bb_dist_fraction_read, &
+        & hgrid, surface, &
+        & t_cf('dinsect_bb_dist_fraction_read', 'fraction day-1', 'dinsect_bb_dist_fraction_read'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('dinsect_df_dist_fraction_read', mem%dinsect_df_dist_fraction_read, &
+        & hgrid, surface, &
+        & t_cf('dinsect_df_dist_fraction_read', 'fraction day-1', 'dinsect_df_dist_fraction_read'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

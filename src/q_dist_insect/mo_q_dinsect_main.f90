@@ -339,6 +339,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
+  dsl4jsb_Real2D_onChunk      :: dinsect_bb_dist_fraction_read ! bark beetle disturbance fraction [fraction/day]
   ! ----------------------------------------------------------------------------------------------------- !
   iblk    = options%iblk
   ics     = options%ics
@@ -394,6 +395,8 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
+  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_dist_fraction_read) ! in
+
 
 #ifdef __QUINCY_STANDALONE__
       year = forcing_options%forcing_year
@@ -405,8 +408,12 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
       hour = get_secs_of_day(options%current_datetime) / 3600._wp ! seconds to hours
 #endif
 
-  ! (fake) read input data (daily), import from namelist, apply same data to every year
-  dinsect_bb_mort_dt(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
+  IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
+    ! (fake) read input data (daily), import from namelist, apply same data to every year
+    dinsect_bb_mort_dt(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
+  ELSE
+    dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:) / (one_day / dtime)
+  ENDIF
 
   ! ======================================================================================================= !
   !> Go science

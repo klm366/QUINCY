@@ -43,7 +43,14 @@ MODULE mo_q_dinsect_config_class
     LOGICAL           :: flag_dinsect                 !< Enable insect disturbance process
     LOGICAL           :: dinsect_online               !< Enable coupling to vegetation and soil
 
-    !> Development flags
+    LOGICAL :: dinsect_flag_bb_from_namelist         !< Flag to indicate if disturbance BB fraction is read from namelist [logical]
+    LOGICAL :: dinsect_flag_df_from_namelist         !< Flag to indicate if disturbance DF fraction is read from namelist [logical]
+    !< Format:
+    !< dinsect_bb_filename_prefix_XXXX.nc, where XXXX is the year
+    CHARACTER(len=filename_max) :: dinsect_bb_filename_prefix !< Prefix for insect bb input file [string]
+    CHARACTER(len=filename_max) :: dinsect_df_filename_prefix !< Prefix for insect df input file [string]
+
+    !> Development flags (leap year is ignored when not required)
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
     REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Daily Prescribed mortality/defoliation rate for an entire year [0-1]
 
