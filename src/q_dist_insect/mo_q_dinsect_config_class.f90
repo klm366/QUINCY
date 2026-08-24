@@ -79,19 +79,17 @@ CONTAINS
                                      bc_filename
     LOGICAL                       :: flag_dinsect                 !< on/off disturbance insect process [boolean]
     LOGICAL                       :: dinsect_online               !< on/off coupling dinsect to veg and soil [boolean]
-    !LOGICAL                       :: dinsect_bb_from_namelist        !< Bark beetle on/off damage data from namelist [string]
-    !LOGICAL                       :: dinsect_df_from_namelist        !< Defoliator on/off damage data from namelist [string]
 
-    !< Define dinsect_XX_from_namelist = FALSE to read from netcdf
-    !CHARACTER(len=filename_max)   :: dinsect_bb_filename, &  !< Bark beetle data filename [string]
-    !                                 dinsect_df_filename     !< Defoliator data filename [string]
+    LOGICAL                       :: dinsect_flag_bb_from_namelist !< on/off reading bark beetle data from namelist [boolean]
+    LOGICAL                       :: dinsect_flag_df_from_namelist !< on/off reading defoliator data from namelist [boolean]
 
-    !< Prescribed for an entire year (daily data). For dev purposes only.
+    CHARACTER(len=filename_max)   :: dinsect_bb_filename_prefix !< prefix for bark beetle data filename [string]
+    CHARACTER(len=filename_max)   :: dinsect_df_filename_prefix !< prefix for defoliator data filename [string]
+
+    !< Prescribed for an entire year (daily data). Every year will use the same forcing data. For dev purposes only.
     !< Defined as 366 due to leap years. It is ignored for non-leap years.
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
     REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
-                                                     !< Todo: properly read netcdf files with daily data
-
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dinsect_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -99,6 +97,10 @@ CONTAINS
       active,                        &
       flag_dinsect,                  &
       dinsect_online,                &
+      dinsect_flag_bb_from_namelist, &
+      dinsect_flag_df_from_namelist, &
+      dinsect_bb_filename_prefix,    &
+      dinsect_df_filename_prefix,    &
       dinsect_dev_bb_forcing_dist_frac, &
       dinsect_dev_df_forcing_dist_frac
 
@@ -112,6 +114,11 @@ CONTAINS
     active                       = .TRUE.
     flag_dinsect                 = .FALSE.
     dinsect_online               = .FALSE.
+
+    dinsect_flag_bb_from_namelist = .FALSE.
+    dinsect_flag_df_from_namelist = .FALSE.
+    dinsect_bb_filename_prefix    = 'bb_dist_frac_daily'
+    dinsect_df_filename_prefix    = 'df_dist_frac_daily'
 
     dinsect_dev_bb_forcing_dist_frac = 0._wp
     dinsect_dev_df_forcing_dist_frac = 0._wp
@@ -128,6 +135,11 @@ CONTAINS
     config%active                       = active
     config%flag_dinsect                 = flag_dinsect
     config%dinsect_online               = dinsect_online
+
+    config%dinsect_flag_bb_from_namelist = dinsect_flag_bb_from_namelist
+    config%dinsect_flag_df_from_namelist = dinsect_flag_df_from_namelist
+    config%dinsect_bb_filename_prefix    = dinsect_bb_filename_prefix
+    config%dinsect_df_filename_prefix    = dinsect_df_filename_prefix
 
     config%dinsect_dev_bb_forcing_dist_frac = dinsect_dev_bb_forcing_dist_frac
     config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac
