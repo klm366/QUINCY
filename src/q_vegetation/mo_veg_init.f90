@@ -535,7 +535,7 @@ CONTAINS
               &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
             ! soil layers 2 to x
             !
-            DO is = 2,INT(num_sl_above_bedrock(ic, iblk))
+            DO is = 2,NINT(num_sl_above_bedrock(ic, iblk))
               IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is-1, iblk)) THEN
                 IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
                   root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
