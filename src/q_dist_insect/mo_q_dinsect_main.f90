@@ -217,7 +217,11 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !>
 
   !<  ------------------  2.1 get defoliation_dt ----------------------------------
-  dinsect_df_mort_dt = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_df_forcing_dist_frac(doy) / (one_day / dtime) ! distribute DF outbreak accross the whole day
+  IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
+    dinsect_df_mort_dt = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_df_forcing_dist_frac(doy) / (one_day / dtime) ! distribute DF outbreak accross the whole day
+  ELSE
+    dinsect_df_mort_dt = 0.0_wp
+  ENDIF
   !<  ------------------  2.2 determine the defoliation  ----------------------------------
 
   ! Defoliated_state is reset in every timestep
