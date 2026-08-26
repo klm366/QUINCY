@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -35,6 +35,7 @@ icon_grid=${icon_grid}
 
 tile_mode=1    # land variables are also defined where land fraction < 0.5
 urban_mode=0
+topo_data=Merit-Rema    # GLOBE / Merit-Rema
 
 bindir=${extpar_source_dir}/bin
 pydir=${extpar_source_dir}/python
@@ -43,10 +44,9 @@ workdir=${work_dir}
 extpar_file=${extpar_file}
 
 datadir=${extpar_data_dir}
-
 clean_up=true
 
-cdo="cdo -s"
+cdo="$cdo"
 
 if [[ ! -d ${workdir} ]] ; then
   mkdir -p ${workdir}
@@ -57,7 +57,7 @@ echo "$0: Working directory: $(pwd)"
 griddir=${icon_grid%/*}
 icon_grid_file=${icon_grid##*/}  # i.e. ${atmGridID}_${atmRes}_G
 
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=8
 export NETCDF_OUTPUT_FILETYPE=NETCDF4
 
 # Include extpar python lib in PYTHONPATH
@@ -76,6 +76,7 @@ then
 else
     echo "$0: URBAN_MODE for EXTPAR is switched OFF"
 fi
+echo "$0: Using topography data: ${topo_data}"
 
 #nest_TAG=$(basename ${icon_grid_file} .nc | awk -F '_' '{print $5}' | cut -c 1)
 #nest_ID=$(basename ${icon_grid_file} .nc | awk -F '_' '{print $5}' | cut -c 3)
@@ -91,6 +92,7 @@ binary_soil=extpar_soil_to_buffer.exe
 binary_flake=extpar_flake_to_buffer.exe
 binary_alb=extpar_alb_to_buffer.py
 binary_era=extpar_era_to_buffer.py
+binary_cdnc=extpar_cdnc_to_buffer.py
 
 cat > INPUT_grid_org << EOF
 &GRID_DEF
@@ -172,6 +174,8 @@ raw_data_globe_O10='topo/globe/GLOBE_O10.nc'
 raw_data_globe_P10='topo/globe/GLOBE_P10.nc'
 
 buffer_topo='topography_BUFFER.nc'
+buffer_globe=${buffer_topo%.nc}_GLOBE.nc
+buffer_merit=${buffer_topo%.nc}_MERIT.nc
 output_topo='topography_ICON.nc'
 
 buffer_era='era_buffer.nc'
@@ -213,6 +217,11 @@ raw_data_ahf='AHF_2006_2.5min_latreverse.nc'
 
 buffer_ahf='AHF_BUFFER.nc'
 output_ahf='AHF_extpar_ICON.nc'
+
+# CDNC data
+raw_data_cdnc='modis_cdnc_climatology_BR17_37mu_adjusted.nc'
+buffer_cdnc='cdnc_BUFFER.nc'
+
 
 # create input namelists
 cat > INPUT_AOT << EOF
@@ -256,12 +265,12 @@ cat > INPUT_LU << EOF
 /
 EOF
 #---
-cat > INPUT_ORO << EOF
+cat > INPUT_ORO_GLOBE << EOF
 &oro_runcontrol
   lcompute_sgsl=.FALSE.
 /
 &orography_io_extpar
-  orography_buffer_file='${buffer_topo}',
+  orography_buffer_file='${buffer_globe}',
   orography_output_file='${output_topo}'
 /
 &orography_raw_data
@@ -274,6 +283,40 @@ cat > INPUT_ORO << EOF
  topo_files='${datadir}/${raw_data_globe_A10}' '${datadir}/${raw_data_globe_B10}' '${datadir}/${raw_data_globe_C10}' '${datadir}/${raw_data_globe_D10}' '${datadir}/${raw_data_globe_E10}' '${datadir}/${raw_data_globe_F10}' '${datadir}/${raw_data_globe_G10}' '${datadir}/${raw_data_globe_H10}' '${datadir}/${raw_data_globe_I10}' '${datadir}/${raw_data_globe_J10}' '${datadir}/${raw_data_globe_K10}' '${datadir}/${raw_data_globe_L10}' '${datadir}/${raw_data_globe_M10}' '${datadir}/${raw_data_globe_N10}' '${datadir}/${raw_data_globe_O10}' '${datadir}/${raw_data_globe_P10}'
 /
 EOF
+#---
+if [[ ${topo_data} == "Merit-Rema" ]]; then
+  cat > INPUT_ORO_MERIT << EOF
+&oro_runcontrol
+ lcompute_sgsl = .FALSE.
+/
+&orography_io_extpar
+ orography_buffer_file='${buffer_merit}'
+ orography_output_file='${output_topo}'
+/
+&orography_raw_data
+ itopo_type = 3
+ lsso_param = .TRUE.
+ lsubtract_mean_slope = .FALSE.
+ raw_data_orography_path = '${datadir}/topo/merit/'
+ ntiles_column = 12
+ ntiles_row = 6
+ topo_files = 'MERIT_N90-N60_W180-W150.nc' 'MERIT_N90-N60_W150-W120.nc' 'MERIT_N90-N60_W120-W090.nc' 'MERIT_N90-N60_W090-W060.nc' 'MERIT_N90-N60_W060-W030.nc' 'MERIT_N90-N60_W030
+-E000.nc' 'MERIT_N90-N60_E000-E030.nc' 'MERIT_N90-N60_E030-E060.nc' 'MERIT_N90-N60_E060-E090.nc' 'MERIT_N90-N60_E090-E120.nc' 'MERIT_N90-N60_E120-E150.nc' 'MERIT_N90-N60_E150-E1
+80.nc' 'MERIT_N60-N30_W180-W150.nc' 'MERIT_N60-N30_W150-W120.nc' 'MERIT_N60-N30_W120-W090.nc' 'MERIT_N60-N30_W090-W060.nc' 'MERIT_N60-N30_W060-W030.nc' 'MERIT_N60-N30_W030-E000.
+nc' 'MERIT_N60-N30_E000-E030.nc' 'MERIT_N60-N30_E030-E060.nc' 'MERIT_N60-N30_E060-E090.nc' 'MERIT_N60-N30_E090-E120.nc' 'MERIT_N60-N30_E120-E150.nc' 'MERIT_N60-N30_E150-E180.nc
+' 'MERIT_N30-N00_W180-W150.nc' 'MERIT_N30-N00_W150-W120.nc' 'MERIT_N30-N00_W120-W090.nc' 'MERIT_N30-N00_W090-W060.nc' 'MERIT_N30-N00_W060-W030.nc' 'MERIT_N30-N00_W030-E000.nc' '
+MERIT_N30-N00_E000-E030.nc' 'MERIT_N30-N00_E030-E060.nc' 'MERIT_N30-N00_E060-E090.nc' 'MERIT_N30-N00_E090-E120.nc' 'MERIT_N30-N00_E120-E150.nc' 'MERIT_N30-N00_E150-E180.nc' 'MER
+IT_N00-S30_W180-W150.nc' 'MERIT_N00-S30_W150-W120.nc' 'MERIT_N00-S30_W120-W090.nc' 'MERIT_N00-S30_W090-W060.nc' 'MERIT_N00-S30_W060-W030.nc' 'MERIT_N00-S30_W030-E000.nc' 'MERIT_
+N00-S30_E000-E030.nc' 'MERIT_N00-S30_E030-E060.nc' 'MERIT_N00-S30_E060-E090.nc' 'MERIT_N00-S30_E090-E120.nc' 'MERIT_N00-S30_E120-E150.nc' 'MERIT_N00-S30_E150-E180.nc' 'MERIT_S30
+-S60_W180-W150.nc' 'MERIT_S30-S60_W150-W120.nc' 'MERIT_S30-S60_W120-W090.nc' 'MERIT_S30-S60_W090-W060.nc' 'MERIT_S30-S60_W060-W030.nc' 'MERIT_S30-S60_W030-E000.nc' 'MERIT_S30-S6
+0_E000-E030.nc' 'MERIT_S30-S60_E030-E060.nc' 'MERIT_S30-S60_E060-E090.nc' 'MERIT_S30-S60_E090-E120.nc' 'MERIT_S30-S60_E120-E150.nc' 'MERIT_S30-S60_E150-E180.nc' 'REMA_BKG_S60-S9
+0_W180-W150.nc' 'REMA_BKG_S60-S90_W150-W120.nc' 'REMA_BKG_S60-S90_W120-W090.nc' 'REMA_BKG_S60-S90_W090-W060.nc' 'REMA_BKG_S60-S90_W060-W030.nc' 'REMA_BKG_S60-S90_W030-E000.nc' '
+REMA_BKG_S60-S90_E000-E030.nc' 'REMA_BKG_S60-S90_E030-E060.nc' 'REMA_BKG_S60-S90_E060-E090.nc' 'REMA_BKG_S60-S90_E090-E120.nc' 'REMA_BKG_S60-S90_E120-E150.nc' 'REMA_BKG_S60-S90_E
+150-E180.nc'
+/
+EOF
+fi
+#---
 cat > INPUT_OROSMOOTH << EOF
 &orography_smoothing
   lfilter_oro=.FALSE.   ! Smoothing does not work for ICON grids
@@ -376,6 +419,14 @@ input_alb = {
     'alb_output_file': '${output_alb}',
 }
 EOF
+#---
+cat >> namelist.py << EOF
+input_cdnc= {
+    'raw_data_cdnc_path': '${datadir}/cdnc',
+    'raw_data_cdnc_filename': '${raw_data_cdnc}',
+    'cdnc_buffer_file': '${buffer_cdnc}',
+}
+EOF
 #_______________________________________________________________________________
 # consistency check
 cat > INPUT_CHECK << EOF
@@ -407,8 +458,33 @@ then
     ${bindir}/${binary_isa}
 fi
 
-set -x
+# Note: The GLOBE topography needs to be generated even if the Merit-Rema topography
+#    has been chosen, as the FLAKE raw data is based on GLOBE data and the GLOBE
+#    land see mask (FR_LAND_TOPO) needs to be used to correctly identify the lakes.
+cp INPUT_ORO_GLOBE INPUT_ORO
+echo "$0: run ${bindir}/${binary_topo} with GLOBE data"
 ${bindir}/${binary_topo}
+
+if [[ ${topo_data} == "Merit-Rema" ]]; then
+
+  cp INPUT_ORO_MERIT INPUT_ORO
+  echo "$0: run ${bindir}/${binary_topo} with Merit-Rema data"
+  ${bindir}/${binary_topo}
+
+  # Merge Merit-Rema and GLOBE data
+  # -------------------------------
+  # Replace FR_LAND_TOPO of Merit-Rema by GLOBE data to correctly identify lakes
+  # in the flake module
+  echo "$0: Replace FR_LAND_TOPO from Merit-Rema by GLOBE land fraction"
+  $cdo replace ${buffer_merit} -selvar,FR_LAND_TOPO ${buffer_globe} ${buffer_topo}
+
+  mv ${buffer_topo} ${buffer_merit}
+
+  # clean up
+  rm -f *.tmp ${buffer_globe}
+fi
+
+set -x
 ${bindir}/${binary_soil}
 ${bindir}/${binary_alb}
 ${bindir}/${binary_ndvi}
@@ -417,9 +493,10 @@ ${bindir}/${binary_lu}
 ${bindir}/${binary_cru}
 ${bindir}/${binary_aot}
 ${bindir}/${binary_era}
+${bindir}/${binary_cdnc}
 set +x
 
-# the consistency check requires the output of
+# The consistency check requires the output of
 #   ${binary_aot}, ${binary_cru}, ${binary_lu}, ${binary_globe},
 #   ${binary_ndvi}, ${binary_soil} and ${binary_flake}
 
@@ -444,6 +521,37 @@ if [[ $(cdo showvar $workdir/${netcdf_output_filename} | grep SOILTYP_2 ) != "" 
   $cdo delname,SOILTYP_2 $workdir/${netcdf_output_filename}.tmp    $workdir/${netcdf_output_filename}
 fi
 
+# --------------------------------------------
+echo 'Generation of global NetCDF attributes'
+# --------------------------------------------
+
+sed -n '/Code information/,/code information/p' extpar_consistency_check.log > attrib_comment.txt
+library_name=$(fgrep  "Library name" attrib_comment.txt | awk -F ":"  '{print $2}')
+tag_name=$(fgrep  "Tag name" attrib_comment.txt | awk -F ":"  '{print $2}')
+revision_number=$(fgrep  "Revision number" attrib_comment.txt | awk -F ":"  '{print $2}')
+checkin_date=$(fgrep  "Checkin-Date" attrib_comment.txt | awk -F ":"  '{print $2}')
+code_modified=$(fgrep  "Code is modified" attrib_comment.txt | awk -F ":"  '{print $2}')
+compile_date=$(fgrep  "Compile-Date" attrib_comment.txt | awk -F ":"  '{print $2}')
+compiled_by=$(fgrep  "Compiled by" attrib_comment.txt | awk -F ":"  '{print $2}')
+compiled_on=$(fgrep  "Compiled on" attrib_comment.txt | awk -F ":"  '{print $2}')
+start_time=$(fgrep  "Current start time" attrib_comment.txt | awk -F ": "  '{print $2}')
+
+ncatted -h -a library_name,global,o,c,"$library_name"\
+ -a tag_name,global,o,c,"$tag_name"\
+ -a comment,global,d,, \
+ -a history,global,d,, \
+ -a bin_dir,global,o,c,"$bindir"\
+ -a revision_number,global,o,c,"$revision_number"\
+ -a checkin_date,global,o,c,"$checkin_date"\
+ -a code_modified,global,o,c,"$code_modified"\
+ -a compile_date,global,o,c,"$compile_date"\
+ -a compiled_by,global,o,c,"$compiled_by"\
+ -a compiled_on,global,o,c,"$compiled_on"\
+ -a start_time,global,o,c,"$start_time"\
+ -a tile_mode,global,o,c,"$tile_mode"\
+ -a urban_mode,global,o,c,"$urban_mode"\
+ -a topo_data,global,o,c,"$topo_data" ${netcdf_output_filename}
+
 ${cdo} setgrid,${griddir}/${icon_grid_file} $workdir/${netcdf_output_filename} \
     ${extpar_dir}/${netcdf_output_filename}
 
@@ -463,64 +571,4 @@ if [[ ${clean_up} == true ]]; then
 fi
 
 exit 0
-
-#echo 'Generation of global NetCDF attributes'
-#
-#sed -n '/Code information/,/code information/p' log_consistency_check.txt > attrib_comment.txt
-#library_name=$(fgrep  "Library name" attrib_comment.txt | awk -F ":"  '{print $2}')
-#tag_name=$(fgrep  "Tag name" attrib_comment.txt | awk -F ":"  '{print $2}')
-#revision_number=$(fgrep  "Revision number" attrib_comment.txt | awk -F ":"  '{print $2}')
-#checkin_date=$(fgrep  "Checkin-Date" attrib_comment.txt | awk -F ":"  '{print $2}')
-#code_modified=$(fgrep  "Code is modified" attrib_comment.txt | awk -F ":"  '{print $2}')
-#compile_date=$(fgrep  "Compile-Date" attrib_comment.txt | awk -F ":"  '{print $2}')
-#compiled_by=$(fgrep  "Compiled by" attrib_comment.txt | awk -F ":"  '{print $2}')
-#compiled_on=$(fgrep  "Compiled on" attrib_comment.txt | awk -F ":"  '{print $2}')
-#start_time=$(fgrep  "Current start time" attrib_comment.txt | awk -F ":"  '{print $2}')
-#grib_md5sum=$(md5sum -b ${grib_output_filename})
-#
-#echo "MD5SUM of the GRIB file is $grib_md5sum"
-#
-#if [ "${nest_TAG}" = "N" ]
-#then
-#    if [ "${nest_ID}" = "2" ]
-#    then
-#        /usr/local/pkg/grib_api/1.12.3/CRAY/bin/grib_set -sgeneratingProcessIdentifier=2 ${grib_output_filename} ${grib_output_filename}_GPI2
-#        echo "For nested domain nest_TAG = ${nest_TAG} with generatingProcessIdentifier=${nest_ID} the result file in GRIB2 is ${grib_output_filename}_GPI2"
-#    fi
-#    if [ "${nest_ID}" = "3" ]
-#    then
-#        /usr/local/pkg/grib_api/1.12.3/CRAY/bin/grib_set -sgeneratingProcessIdentifier=3 ${grib_output_filename} ${grib_output_filename}_GPI3
-#        echo "For nested domain nest_TAG = ${nest_TAG} with generatingProcessIdentifier=${nest_ID} the result file in GRIB2 is ${grib_output_filename}_GPI3"
-#    fi
-#fi
-#
-#/e/uhome/jhelmert/bin/nco-4.4.7/src/nco/ncatted -h -a library_name,global,o,c,"$library_name"\
-# -a tag_name,global,o,c,"$tag_name"\
-# -a comment,global,d,, \
-# -a history,global,d,, \
-# -a bin_dir,global,o,c,"$bindir"\
-# -a revision_number,global,o,c,"$revision_number"\
-# -a checkin_date,global,o,c,"$checkin_date"\
-# -a code_modified,global,o,c,"$code_modified"\
-# -a compile_date,global,o,c,"$compile_date"\
-# -a compiled_by,global,o,c,"$compiled_by"\
-# -a compiled_on,global,o,c,"$compiled_on"\
-# -a start_time,global,o,c,"$start_time"\
-# -a tile_mode,global,o,c,"$tile_mode"\
-# -a grib_md5sum,global,o,c,"$grib_md5sum" ${netcdf_output_filename}
-#
-#/e/uhome/jhelmert/bin/nco-4.4.7/src/nco/ncbo -O $workdir/${netcdf_output_filename} ${testfile}  diff.nc; /e/uhome/jhelmert/bin/cdo_xce infov diff.nc
-#
-#echo "Test of external parameters against version ${testfile} has been performed"
-#echo "Difference to former version using cdo_xce infov diff.nc should be min,max,avg=0 for every parameter!"
-
-#echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-#echo "External parameters for refinement grid of ICON model generated in $workdir"
-#echo "$testfile has been used as reference. Please check $workdir/diff.nc"
-
-#echo "Check consistency to former versions with ncdiff -O ${netcdf_output_filename} /e/uscratch/jhelmert/ICON_EXTPAR_20141202/icon_extpar_0026_R03B07_G_20141202.nc diff.nc; cdo infov diff.nc"
-
-#echo "For plotting results with bplot use: export ICON_COORDINATE_FILE=$griddir/$icon_grid_file"
-#echo "or modify ${HOME}/.profile_bplot  "
-#echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 

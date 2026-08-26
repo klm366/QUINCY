@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -186,6 +186,7 @@ CONTAINS
       !$ACC UPDATE ASYNC(1) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star)) &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_h), dsl4jsb_var2D_onDomain(TURB_,rough_h_star))
+      !$ACC WAIT(1)
 
     END IF
 

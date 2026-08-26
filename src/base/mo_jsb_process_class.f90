@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -15,7 +15,7 @@ MODULE mo_jsb_process_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,           ONLY: message, finish
-  USE mo_util_string,         ONLY: tolower
+  USE mo_util,                ONLY: tolower
   USE mo_jsb_control,         ONLY: debug_on
 
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p
@@ -28,7 +28,7 @@ MODULE mo_jsb_process_class
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, HLCC_, VEG_, SB_, SPQ_, &
-    &       Q_PHENO_, Q_SH_, Q_ASSIMI_
+    &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -53,8 +53,13 @@ MODULE mo_jsb_process_class
 
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
+<<<<<<< HEAD
       &           FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, HLCC_, VEG_, SB_, SPQ_, &
       &           Q_PHENO_, Q_SH_, Q_ASSIMI_
+=======
+      &           FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+      &           Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+>>>>>>> 5600386be
   END ENUM
 
   ! Process actions
@@ -93,8 +98,10 @@ CONTAINS
       return_value = 'q_assimi'
     CASE (PHENO_)
       return_value = 'pheno'
-    CASE (Q_SH_)
-      return_value = 'q_sh'
+    CASE (Q_SYL_)
+      return_value = 'q_syl'
+    CASE (Q_AGR_)
+      return_value = 'q_agr'
     CASE (Q_PHENO_)
       return_value = 'q_pheno'
 #ifndef __NO_JSBACH_HD__
@@ -159,8 +166,10 @@ CONTAINS
       return_value = Q_ASSIMI_
     CASE ('pheno')
       return_value = PHENO_
-    CASE ('q_sh')
-      return_value = Q_SH_
+    CASE ('q_syl')
+      return_value = Q_SYL_
+    CASE ('q_agr')
+      return_value = Q_AGR_
     CASE ('q_pheno')
       return_value = Q_PHENO_
 #ifndef __NO_JSBACH_HD__

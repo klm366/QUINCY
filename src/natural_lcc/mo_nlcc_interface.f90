@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -199,7 +199,6 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
 
     model => Get_model(tile%owner_model_id)
 
@@ -241,6 +240,7 @@ CONTAINS
     is_dynamic(:,:) = .FALSE.
     DO i = 1,nc
       DO itile = 1,no_children
+        ! Note: The numbers correspond to the land cover classes defined in lctlib file ("LandcoverClass")
         IF (NINT(var_collect(i,itile)) == 3 .OR. NINT(var_collect(i,itile)) == 5) is_woody(i,itile) = .TRUE.
         IF (NINT(var_collect(i,itile)) == 4) is_grass(i,itile) = .TRUE.
         IF (NINT(var_collect(i,itile)) == 7) is_pasture(i,itile) = .TRUE.

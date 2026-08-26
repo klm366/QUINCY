@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -24,7 +24,7 @@ tmpdir=${work_dir}/hd_tmp
 mkdir -p ${tmpdir}; rm -f ${tmpdir}/*.nc
 cd ${tmpdir}
 
-cdo="cdo -s"
+cdo="$cdo"
 
 echo "=============================================================="
 echo "===  Generation of the HD receive mask"

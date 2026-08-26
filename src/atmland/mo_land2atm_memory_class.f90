@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -56,7 +56,7 @@ MODULE mo_l2a_memory_class
     ! C in Quincy
     TYPE(t_jsb_var_real2d) :: &
       & q_total_c,            & !< total C, sum of all quincy carbon pools
-      & q_c_conservation_test   !< difference in quincy total C of last timestep and nbp and total C of this timestep
+      & q_c_conservation_test   !< difference in quincy "total C of last timestep" & "nbp and total C of this timestep" [mol m-2 timestep-1]
 
     ! For lakes
     TYPE(t_jsb_var_real2d) :: &
@@ -218,8 +218,8 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & lrestart = .TRUE., &
+        & initval_r = -999.0_wp)
 #endif
     ELSE
 #ifdef __QUINCY_STANDALONE__
@@ -240,7 +240,7 @@ CONTAINS
           & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
           & prefix, suffix,                                                                          &
-          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
+          & loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,                                 &
           & initval_r=0.0_wp )
       END IF
 #endif

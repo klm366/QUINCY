@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -34,9 +34,11 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
     INTEGER                        :: model_scheme        !< model_scheme as integer
+    INTEGER                        :: npft                !< Number of PFTs
     LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
+    LOGICAL                        :: check_child_cf      !< Assert that cover fractions of child tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< descriptor for water balance 'ignore', 'logging', or 'error'
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
@@ -47,6 +49,7 @@ MODULE mo_jsb_config_class
 #ifndef __NO_QUINCY__
     ! Characteristics of bgc material in this model: flags specifying used elements and bookkeeping vector for elements used
     ! Note: no logical for carbon because we presuppose that it is always used!
+    LOGICAL                        :: use_soil_phys_jsbach  !< use jsbach soil physics processes instead of SPQ_ with quincy
     LOGICAL                        :: force_c_isotopes      !< If c isotopes forcing should be used (else use atmland constant)
     LOGICAL                        :: include_nitrogen      !< If bgc materials contain nitrogen as element
     LOGICAL                        :: include_phosphorus    !< If bgc materials contain phosphorus as element
@@ -72,6 +75,12 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
     CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
     TYPE(t_input_file)             :: ifs_input_file
+
+    ! Single site setup
+    LOGICAL                        :: is_single_site        !< Single site model
+    CHARACTER(len=:), ALLOCATABLE  :: single_site_name      !< Single site name
+    CHARACTER(len=:), ALLOCATABLE  :: single_site_shortname !< Single site short name
+    REAL(wp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
 
   END TYPE t_jsb_model_config
 
@@ -107,7 +116,9 @@ CONTAINS
 
     USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
-    USE mo_util_string,         ONLY: tolower
+    USE mo_jsb_control,         ONLY: jsbach_runs_standalone
+    USE mo_util,                ONLY: tolower
+
 #ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
 #endif
@@ -127,15 +138,18 @@ CONTAINS
     LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
+    LOGICAL                       :: check_child_cf
     CHARACTER(len=10)             :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     INTEGER                       :: qmodel_id
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
+    INTEGER                       :: npft
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
     CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
+    LOGICAL                       :: use_soil_phys_jsbach       !< use jsbach soil physics processes instead of SPQ_ with quincy
 #ifndef __NO_QUINCY__
     LOGICAL :: force_c_isotopes           !< use c isotopes forcing
     LOGICAL :: include_nitrogen           !< element variables in bgc_material (infrastructure)
@@ -151,20 +165,27 @@ CONTAINS
 #endif
     LOGICAL                       :: init_from_ifs
     CHARACTER(len=filename_max)   :: ifs_filename
+    LOGICAL                       :: is_single_site
+    CHARACTER(len=filename_max)   :: single_site_name
+    CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
+    REAL(wp)                      :: single_site_lonlat(2)
 
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_tmx, &
       use_lakes, &
       use_glacier, &
+      check_child_cf, &
       enforce_water_budget, &
       quincy_model, &
       usecase, &
+      npft, &
       tpe_scheme, &
       hsm_mode, &
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
+      use_soil_phys_jsbach, &
 #ifndef __NO_QUINCY__
       force_c_isotopes, &
       include_nitrogen, &
@@ -179,7 +200,11 @@ CONTAINS
       slow_sb_pool_spinup_accelerator_max_executions, &
 #endif
       init_from_ifs, &
-      ifs_filename
+      ifs_filename, &
+      is_single_site, &
+      single_site_name, &
+      single_site_shortname, &
+      single_site_lonlat
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -202,6 +227,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
 #ifndef __NO_QUINCY__
@@ -210,12 +236,19 @@ CONTAINS
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
+    npft                       = 0
     tpe_scheme                 = ''
     hsm_mode                   = 'simple'
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
 #ifndef __NO_QUINCY__
+#ifdef __QUINCY_STANDALONE__
+    use_soil_phys_jsbach       = .FALSE.  ! with quincy standalone the default is to not use the jsbach soil physics but SPQ_
+#else
+    use_soil_phys_jsbach       = .TRUE.   ! MODEL_QUINCY: default is TRUE
+                                          ! MODEL_JSBACH: not used
+#endif
     force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
@@ -227,9 +260,15 @@ CONTAINS
     slow_sb_pool_spinup_accelerator_length = 1000
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
+#else
+    use_soil_phys_jsbach       = .TRUE.  ! MODEL_JSBACH: not used
 #endif
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
+    is_single_site             = .FALSE.
+    single_site_name           = ''
+    single_site_shortname      = ''
+    single_site_lonlat         = [0._wp, 0._wp]
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -250,9 +289,19 @@ CONTAINS
     CASE ("jsbach")
       model_config%model_scheme = MODEL_JSBACH
       CALL message(TRIM(routine), 'Use model_scheme JSBACH')
+      IF (.NOT. use_soil_phys_jsbach) THEN  ! different from default
+        CALL message(TRIM(routine), 'use_soil_phys_jsbach is set to FALSE, however, this option is not used for MODEL_JSBACH.')
+      ELSE
+        use_soil_phys_jsbach = .FALSE.  ! Set it to false, even though this switch (and model%config%use_soil_phys_jsbach) should not be used for MODEL_JSBACH
+      END IF
     CASE ("quincy")
       model_config%model_scheme = MODEL_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme QUINCY')
+      IF (use_soil_phys_jsbach) THEN
+        CALL message(TRIM(routine), 'Using JSBACH soil physics')
+      ELSE
+        CALL message(TRIM(routine), 'Using SPQ soil physics')
+      END IF
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Selected model_scheme '//TRIM(model_scheme)//' not available.')
     END SELECT
@@ -271,13 +320,16 @@ CONTAINS
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id
     model_config%usecase                    = usecase
+    model_config%npft                       = npft
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
 #ifndef __NO_QUINCY__
+    model_config%use_soil_phys_jsbach       = use_soil_phys_jsbach
     model_config%force_c_isotopes           = force_c_isotopes
     ! organise elements
     model_config%include_nitrogen           = include_nitrogen
@@ -330,6 +382,13 @@ CONTAINS
     ! quincy - end
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
+    model_config%is_single_site             = is_single_site
+    model_config%single_site_name           = TRIM(single_site_name)
+    model_config%single_site_shortname      = TRIM(single_site_shortname)
+    model_config%single_site_lonlat(1:2)    = single_site_lonlat(1:2)
+
+    IF (is_single_site .AND. .NOT. jsbach_runs_standalone()) &
+        & CALL finish(routine, 'Single site only allowed in standalone experiment')
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -30,7 +30,7 @@ MODULE mo_jsb4_forcing
   USE mo_math_constants,         ONLY: pi
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util_string,            ONLY: tolower, int2string, real2string
+  USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
   USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
@@ -57,7 +57,7 @@ MODULE mo_jsb4_forcing
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
     &       forcing_options
 
-  REAL(wp), SAVE :: delta_time, time_step_len
+  REAL(wp), SAVE :: delta_time
   INTEGER,  SAVE :: time_steps_per_day
 
   LOGICAL, SAVE :: lstart, lresume
@@ -810,6 +810,7 @@ CONTAINS
     ALLOCATE(forcing_input(no_of_models))
     ALLOCATE(forcing_options(no_of_models))
 
+    CALL message('', '')
     CALL message(routine, 'Allocated forcing_input and forcing_options ('//TRIM(int2string(no_of_models))//')')
 
   END SUBROUTINE setup_forcing
@@ -818,14 +819,14 @@ CONTAINS
   !>
   !> Initialize and configure reading the forcing data (read namelist, set options...)
   !>
-  SUBROUTINE init_forcing(model_id, namelist_filename, dtime, steplen)
+  SUBROUTINE init_forcing(model_id, namelist_filename, dtime)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
     USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
 
     INTEGER,  INTENT(in) :: model_id
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    REAL(wp), INTENT(in) :: dtime, steplen
+    REAL(wp), INTENT(in) :: dtime
 
     TYPE(t_input_file) :: input_file
 
@@ -921,10 +922,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
 
+    CALL message('', '')
+
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
     delta_time    = dtime
-    time_step_len = steplen
     time_steps_per_day = 86400/INT(delta_time)
     ! Assertion: delta_time needs to be smaller or equal 86400
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
@@ -1227,6 +1229,8 @@ CONTAINS
         & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
 
+    CALL message('', '')
+
   END SUBROUTINE init_forcing
 
   ! ======================================================================================================= !
@@ -1449,7 +1453,11 @@ CONTAINS
       ! check timeseries
       IF (my_process_is_stdio()) THEN
         IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
-          WRITE(message_text,*) ' Reading forcing for ', ydate
+          IF (model%config%is_single_site) THEN
+            WRITE(message_text,*) ' Reading forcing for ', ydate, '(site '//model%config%single_site_shortname//')'
+          ELSE
+            WRITE(message_text,*) ' Reading forcing for ', ydate
+          END IF
           CALL message('----- ', message_text)
         END IF
         !Assertion: currentTimeStep needs to be contained in the file
@@ -1907,7 +1915,7 @@ CONTAINS
   !>
   SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
@@ -1928,7 +1936,7 @@ CONTAINS
         CALL finish(TRIM(routine), TRIM(message_text))
       ELSE
 #endif
-        qsat(ic) = qsat_water(temp(ic), pressure(ic), use_convect_tables=.TRUE.)
+        qsat(ic) = qsat_mixed(temp(ic), pressure(ic))
 #ifndef _OPENACC
       ENDIF
 #endif
@@ -1941,7 +1949,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
@@ -1958,7 +1966,7 @@ CONTAINS
 !          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
 !        CALL finish(TRIM(routine), TRIM(message_text))
     ELSE
-      qsat = qsat_water(temp, pressure, use_convect_tables=.TRUE.)
+      qsat = qsat_mixed(temp, pressure)
     ENDIF
 
   END SUBROUTINE sat_specific_humidity_scalar
@@ -2057,8 +2065,7 @@ CONTAINS
   !
   SUBROUTINE vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair, vpress)
 
-    ! USE mo_phy_schemes, ONLY: sat_pres_water
-    USE mo_phy_schemes, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_phy_schemes, ONLY: sat_pres_mixed
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
@@ -2084,7 +2091,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
 
-        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
+        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds in convect tables -> consistency check
 #ifndef _OPENACC
         IF (Tmin(ic,ib) + tmelt < 50._wp .OR. Tmin(ic,ib) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
@@ -2098,11 +2105,8 @@ CONTAINS
         ENDIF
 #endif
 
-        !jsb3: rdv = eps
-        evapo_sat_min = tlucua(INT(1000._wp * (Tmin(ic,ib) + tmelt)))/rdv ! saturation pressure at minimum temperature
-        evapo_sat     = tlucua(INT(1000._wp * (Tair(ic,ib) + tmelt)))/rdv ! saturation pressure at actual temperature
-        ! evapo_sat_min = sat_pres_water(Tmin(i,j) + tmelt) ! saturation pressure at minimum temperature
-        ! evapo_sat     = sat_pres_water(Tair(i,j) + tmelt) ! saturation pressure at actual temperature
+        evapo_sat_min = sat_pres_mixed(Tmin(ic,ib) + tmelt) ! saturation pressure at minimum temperature
+        evapo_sat     = sat_pres_mixed(Tair(ic,ib) + tmelt) ! saturation pressure at actual temperature
         e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
         vpress(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 

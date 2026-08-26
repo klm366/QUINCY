@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -124,7 +124,7 @@ CONTAINS
     INTEGER  :: i, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nacs, max_age
     REAL(wp) :: dtime
-    REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
     REAL(wp), DIMENSION(options%nc) :: current_fract
     REAL(wp), ALLOCATABLE :: ac_ubound(:)
@@ -207,11 +207,13 @@ CONTAINS
       current_child => current_child%Get_next_sibling_tile()
     END DO
 
-    ! Allocate area vectors
-    ALLOCATE(initial_area(nc, nr_of_tiles))
-    ALLOCATE(lost_area(nc, nr_of_tiles))
-    ALLOCATE(gained_area(nc, nr_of_tiles))
+    ! Init area vectors
+    dsl4jsb_Get_lcc_area_matrix(initial_area)
+    dsl4jsb_Get_lcc_area_matrix(lost_area)
+    dsl4jsb_Get_lcc_area_matrix(gained_area)
     initial_area(:,:) = 0.0_wp
+    lost_area(:,:) = 0.0_wp
+    gained_area(:,:) = 0.0_wp
 
     !>
     !> 2. loop including init, start, end, dealloc moving area only from one age class to the next
@@ -282,12 +284,7 @@ CONTAINS
     END DO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes
 
     !>
-    !> 6. Deallocate area vectors
-    !>
-    DEALLOCATE(lost_area, gained_area, initial_area, ac_ubound)
-
-    !>
-    !> 7. Further actions specific for ageing lcc process: shift fracts in fract_per_age vector
+    !> 6. Further actions specific for ageing lcc process: shift fracts in fract_per_age vector
     !>
     CALL recalc_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
@@ -322,7 +319,9 @@ CONTAINS
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    CALL weighted_by_fract%BeginAggregate()
     dsl4jsb_Aggregate_onChunk(FAGE_, mean_age, weighted_by_fract)
+    CALL weighted_by_fract%EndAggregate()
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

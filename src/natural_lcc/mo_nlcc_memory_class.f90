@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -15,7 +15,6 @@ MODULE mo_nlcc_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
-  USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model

@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -23,7 +23,7 @@ MODULE mo_q_veg_plant_characteristics
 
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -43,7 +43,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: SPQ_, VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, TURB_
+    USE mo_jsb_process_class,               ONLY: VEG_, RAD_, Q_ASSIMI_, Q_PHENO_, TURB_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
     USE mo_jsb_physical_constants,          ONLY: rhoh2o, grav
@@ -60,7 +60,6 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
-    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -68,9 +67,9 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_canopy_q_assimi  !< Vertical grid
-    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_sb          !< Vertical grid
+    TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
-    INTEGER                           :: nsoil_sb               !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: nsoil_w                !< number of soil layers as used/defined by the SB_ process
     REAL(wp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
     REAL(wp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
     REAL(wp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
@@ -89,8 +88,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_plant_characteristics'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
-    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
-    dsl4jsb_Def_mt2L2D :: veg_growth_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_ASSIMI_)
@@ -99,17 +96,15 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soa_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
+    dsl4jsb_Real2D_onChunk      :: wtr_soil_root_pot
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: lai_max
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
     ! RAD_ 3D
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
@@ -120,7 +115,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: lai
     dsl4jsb_Real2D_onChunk      :: sai
-    dsl4jsb_Real2D_onChunk      :: mean_leaf_age
     dsl4jsb_Real2D_onChunk      :: fract_fpc
     dsl4jsb_Real2D_onChunk      :: dphi
     dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
@@ -154,9 +148,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model                 => Get_model(tile%owner_model_id)
     vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
-    vgrid_soil_sb         => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w          => Get_vgrid('soil_depth_water')
     ncanopy               =  vgrid_canopy_q_assimi%n_levels
-    nsoil_sb              =  vgrid_soil_sb%n_levels
+    nsoil_w               =  vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -168,33 +162,28 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
-    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_air_tfrac_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soa_tphen_mavg)       ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_ps_tfrac_mavg)   ! in
     dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, beta_soil_gs_tfrac_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(Q_ASSIMI_, wtr_soil_root_pot)         ! in
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, lai_max)                    ! in
-    ! SPQ_ 2D
-    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
     ! VEG 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                       ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                             ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! CASE "plant" & "land": out / other Cases: in
+    dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                             ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)                       ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, diameter)                             ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, height)                               ! inout (only calculated for trees)
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                                  ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, sai)                                  ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, mean_leaf_age)                        ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, fract_fpc)                            ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dphi)                                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)                     ! in
@@ -207,13 +196,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, rough_veg_star)                       ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                      ! inout (in case of optimality, else out)
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_oth_cl)                      ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)               ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, cumm_lai_cl)                    ! out
@@ -266,30 +255,25 @@ CONTAINS
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
       lai(ic)      = veg_pool_mt(ix_leaf, ixC, ic) * lctlib_sla
-      dens_ind(ic) = dens_ind(ic) + delta_dens_ind(ic)
 
-      ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
-      delta_dens_ind(ic) = 0.0_wp
+      IF (lctlib_growthform == itree) THEN
+        dens_ind(ic) = MAX(0.0_wp, dens_ind(ic) + delta_dens_ind(ic))
+        ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
+        delta_dens_ind(ic) = 0.0_wp
 
-      IF (dens_ind(ic) > eps8 .AND. lctlib_growthform == itree) THEN
-        diameter(ic)  = calc_diameter_from_woody_biomass(lctlib_allom_k1                     , &
-          &                                              lctlib_allom_k2                     , &
-          &                                              lctlib_wood_density                 , &
-          &                                              veg_pool_mt(ix_sap_wood, ixC, ic)   , &
-          &                                              veg_pool_mt(ix_heart_wood, ixC, ic) , &
-          &                                              dens_ind(ic))
-        height(ic)    = calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter(ic))
+        ! In CANOPY mode dens_ind is zero and height is a pft specific lctlib constant
+        IF (dens_ind(ic) > eps8) THEN
+          diameter(ic)  = calc_diameter_from_woody_biomass(lctlib_allom_k1                     , &
+            &                                              lctlib_allom_k2                     , &
+            &                                              lctlib_wood_density                 , &
+            &                                              veg_pool_mt(ix_sap_wood, ixC, ic)   , &
+            &                                              veg_pool_mt(ix_heart_wood, ixC, ic) , &
+            &                                              dens_ind(ic))
+          height(ic)    = calc_height_from_diameter(lctlib_allom_k1, lctlib_allom_k2, diameter(ic))
+        END IF
       END IF
 
-      IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
-        mean_leaf_age(ic) = (mean_leaf_age(ic) + dtime / one_day) &
-          &                * (1._wp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
-          &                - mean_leaf_age(ic) * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)
-      ELSE
-        mean_leaf_age(ic) = 0.0_wp
-      END IF
-
-      dphi(ic) = w_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
+      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -335,7 +319,7 @@ CONTAINS
 #endif
 
       !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2) DEFAULT(PRESENT)
-      DO is = 1, nsoil_sb
+      DO is = 1, nsoil_w
         DO ic = 1, nc
           root_fraction_sl(ic,is) = root_fraction_sl(ic,is) + delta_root_fraction_sl(ic,is)
         END DO
@@ -370,16 +354,16 @@ CONTAINS
                              lctlib_t_jmax_omega                                      , &
                              flag_optimal_Nfraction                                   , & ! Q_ASSIMI_ config
                              canopy_cond_scheme                                       , & ! Q_ASSIMI_ config (medlyn/ballberry)
-                             leaf_nitrogen(:)                                         , &
+                             leaf_nitrogen(:)                                         , & ! in
                              lai(:)                                                   , &
-                             ppfd_sunlit_tfrac_mavg_cl(:,:)                           , &
+                             ppfd_sunlit_tfrac_mavg_cl(:,:)                           , & ! inout
                              ppfd_shaded_tfrac_mavg_cl(:,:)                           , &
                              fleaf_sunlit_tfrac_mavg_cl(:,:)                          , &
-                             fn_rub_cl(:,:)                                           , &
+                             fn_rub_cl(:,:)                                           , & ! out
                              fn_et_cl(:,:)                                            , &
                              fn_pepc_cl(:,:)                                          , &
-                             fn_chl_cl(:,:)                                           , &
-                             fn_oth_cl(:,:)                                           , & ! in
+                             fn_chl_cl(:,:)                                           , & ! inout (in case of optimality, else out)
+                             fn_oth_cl(:,:)                                           , & ! out
                              lai_cl(:,:)                                              , & ! out
                              cumm_lai_cl(:,:)                                         , & ! out
                              leaf_nitrogen_cl(:,:)                                    , & ! out

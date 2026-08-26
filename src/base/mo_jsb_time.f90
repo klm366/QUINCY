@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,11 +16,13 @@ MODULE mo_jsb_time
 
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
+  USE mo_jsb_control,    ONLY: jsbach_runs_standalone
   USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_previous, get_time_next, &
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
+                               is_time_ltrig_rad_m1, get_asselin_coef, &
+                               cache_time_interpolation_weights, get_time_interpolation_weights
 
   IMPLICIT NONE
   PRIVATE
@@ -33,9 +35,16 @@ MODULE mo_jsb_time
             get_year_length, get_month_length, get_day_length, get_year_day
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
             get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
-  PUBLIC :: get_time_interpolation_weights
+  PUBLIC :: cache_time_interpolation_weights, get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
+  PUBLIC :: execute_quincy_sb_accelerator_this_timestep
+  PUBLIC :: executed_quincy_sb_accelerator_previous_timestep
+
+  LOGICAL, SAVE :: execute_quincy_sb_accelerator_this_timestep = .FALSE.
+    !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator should be executed this timestep
+  LOGICAL, SAVE :: executed_quincy_sb_accelerator_previous_timestep = .FALSE.
+    !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator has been executed in the previous timestep
 
   TYPE(t_datetime), POINTER, SAVE :: start_date
   TYPE(t_datetime), POINTER, SAVE :: final_date
@@ -291,7 +300,7 @@ CONTAINS
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      dt_loc = get_time_dt(model_id)
+      dt_loc = get_time_dt(model_id, jsbach_runs_standalone())
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
@@ -312,7 +321,7 @@ CONTAINS
     IF (PRESENT(dt)) THEN
       dt_loc = dt
     ELSE IF (PRESENT(model_id)) THEN
-      dt_loc = get_time_dt(model_id)
+      dt_loc = get_time_dt(model_id, jsbach_runs_standalone())
     ELSE
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF

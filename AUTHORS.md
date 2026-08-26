@@ -3,21 +3,26 @@ title: Authors
 ---
 ## ICON-Land Authors
 
+- Ana Bastos
 - Cheng Gong
 - Christian Reick
 - Daniel Goll
 - Dmitry Alexeev
 - Erich Roeckner
 - Fabrice Lacroix
+- Francisco Jose Cuesta-Valero
 - Freja Vamborg
 - Georgii Nerobelov
+- Hideki Ninomiya
 - Jan Engel
 - Julia Nabel
 - Karolina Slominska-Durdasiak
 - Lin Yu
 - Marvin Heidkamp
 - Melanie Thurner
+- Moritz Waldmann
 - Philipp de Vrese
+- Pinhsin Hu
 - Rainer Schneck
 - Reiner Schnur
 - Roland Wirth

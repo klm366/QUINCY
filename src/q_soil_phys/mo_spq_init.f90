@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -22,11 +22,7 @@ MODULE mo_spq_init
   USE mo_exception,               ONLY: message_text, finish, message
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
-  USE mo_jsb_process_class,       ONLY: SPQ_
-
-#ifdef __QUINCY_STANDALONE__
-  USE mo_qs_process_init_util,    ONLY: init_spq_soil_properties_spp1685_sites
-#endif
+  USE mo_jsb_process_class,       ONLY: SPQ_, SEB_, SSE_, HYDRO_, Q_ASSIMI_
 
   IMPLICIT NONE
   PRIVATE
@@ -52,29 +48,37 @@ CONTAINS
   !> Intialize SPQ_ process
   !>
   SUBROUTINE spq_init(tile)
-
-    USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
+    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: get_model
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_init'
 
+    model  => Get_model(tile%owner_model_id)
+    !> QUINCY with SPQ_ process
+    !>
+    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
+
 #ifdef __QUINCY_STANDALONE__
-    CALL spq_qs_read_init_vars(tile)
-    CALL spq_init_ic_bc(tile)
-    CALL spq_finalize_init_vars()
-#else
-    ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-      CALL spq_read_init_vars(tile)
-    END IF
-
-    CALL spq_init_ic_bc(tile)
-
-    IF (tile%Is_last_process_tile(SPQ_)) THEN
+      CALL spq_qs_read_init_vars(tile)
+      CALL spq_init_ic_bc(tile)
       CALL spq_finalize_init_vars()
-    END IF
+#else
+      ! call only at root tile, i.e., the only tile without associated parent tile (to avoid unnessary i/o)
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL spq_read_init_vars(tile)
+      END IF
+
+      CALL spq_init_ic_bc(tile)
+
+      IF (tile%Is_last_process_tile(SPQ_)) THEN
+        CALL spq_finalize_init_vars()
+      END IF
 #endif
+    END IF
   END SUBROUTINE spq_init
 
   ! ======================================================================================================= !
@@ -97,14 +101,18 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(SPQ_)
     dsl4jsb_Use_memory(SPQ_)
+    dsl4jsb_Use_memory(SEB_)
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER         :: model              !< the model
     TYPE(t_jsb_grid),       POINTER         :: hgrid              !< Horizontal grid
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb      !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_w       !< Vertical grid
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_snow_spq     !< Vertical grid snow
-    INTEGER                                 :: nsoil_sb           !< number of soil layers as used/defined by the SB_ process
+    INTEGER                                 :: nsoil_w            !< number of soil layers (water)
     INTEGER                                 :: nsnow              !< number of snow layers
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: soil_awc
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
@@ -115,122 +123,139 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: sand_spq_init_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: silt_spq_init_sl
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: clay_spq_init_sl
-    CHARACTER(len=3)                        :: site_ID_spp1685
     INTEGER                                 :: is, ic, iblk
     INTEGER                                 :: nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':spq_init_ic_bc'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SPQ_)
     dsl4jsb_Def_memory(SPQ_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onDomain    :: elevation
-    dsl4jsb_Real2D_onDomain    :: soil_depth
-    dsl4jsb_Real2D_onDomain    :: root_depth
-    dsl4jsb_Real2D_onDomain    :: t_srf_new
-    dsl4jsb_Real2D_onDomain    :: t_srf_old
-    dsl4jsb_Real2D_onDomain    :: temp_srf_eff_4
+    ! SEB_ 2D
+    dsl4jsb_Real2D_onDomain    :: t
+    dsl4jsb_Real2D_onDomain    :: t_old
     dsl4jsb_Real2D_onDomain    :: qsat_star
-    dsl4jsb_Real2D_onDomain    :: s_star
-    dsl4jsb_Real2D_onDomain    :: w_skin
-    dsl4jsb_Real2D_onDomain    :: w_soil_root
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain    :: t_soil_sl
+    dsl4jsb_Real3D_onDomain    :: bulk_dens_sl
+    dsl4jsb_Real3D_onDomain    :: sand_sl
+    dsl4jsb_Real3D_onDomain    :: silt_sl
+    dsl4jsb_Real3D_onDomain    :: clay_sl
+    ! HYDRO_ 2D
+    dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
     dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
-    dsl4jsb_Real2D_onDomain    :: w_soil_root_theta
-    dsl4jsb_Real2D_onDomain    :: w_soil_root_pot
-    dsl4jsb_Real2D_onDomain    :: num_sl_above_bedrock
-    ! SPQ_ 3D
-    dsl4jsb_Real3D_onDomain    :: soil_depth_sl          ! (soil_depth_sl == soil_lay_width_sl)
+    dsl4jsb_Real2D_onDomain    :: wtr_skin
+    dsl4jsb_Real2D_onDomain    :: wtr_rootzone_rel
+    dsl4jsb_Real2D_onDomain    :: wtr_plant_avail_rel
+    dsl4jsb_Real2D_onDomain    :: wtr_rootzone
+    dsl4jsb_Real2D_onDomain    :: root_depth
+    ! HYDRO_ 3D
+    dsl4jsb_Real3D_onDomain    :: soil_depth_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
-    dsl4jsb_Real3D_onDomain    :: bulk_dens_sl
+    dsl4jsb_Real3D_onDomain    :: ice_soil_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_pwp_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_sat_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_pot_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_sl
+    ! SPQ_ 2D
+    dsl4jsb_Real2D_onDomain    :: elevation
+    dsl4jsb_Real2D_onDomain    :: soil_depth
+    dsl4jsb_Real2D_onDomain    :: temp_srf_eff_4
+    dsl4jsb_Real2D_onDomain    :: s_star
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onDomain    :: heat_capa_sl
     dsl4jsb_Real3D_onDomain    :: therm_cond_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_pwp_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_fc_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_sat_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_pot_sl
-    dsl4jsb_Real3D_onDomain    :: w_ice_sl
     dsl4jsb_Real3D_onDomain    :: saxtonA
     dsl4jsb_Real3D_onDomain    :: saxtonB
     dsl4jsb_Real3D_onDomain    :: saxtonC
     dsl4jsb_Real3D_onDomain    :: kdiff_sat_sl
-    dsl4jsb_Real3D_onDomain    :: sand_sl
-    dsl4jsb_Real3D_onDomain    :: silt_sl
-    dsl4jsb_Real3D_onDomain    :: clay_sl
-    dsl4jsb_Real3D_onDomain    :: volume_min_sl
     dsl4jsb_Real3D_onDomain    :: t_snow_snl
-    dsl4jsb_Real3D_onDomain    :: t_soil_sl
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Real2D_onDomain    :: wtr_soil_root_pot
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_active(SPQ_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model          => Get_model(tile%owner_model_id)
     hgrid          => Get_grid(model%grid_id)
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
+    vgrid_soil_w   => Get_vgrid('soil_depth_water')
     vgrid_snow_spq => Get_vgrid('snow_layer_spq')
     nblks          =  hgrid%nblks
     nproma         =  hgrid%nproma
-    nsoil_sb       =  vgrid_soil_sb%n_levels
+    nsoil_w        =  vgrid_soil_w%n_levels
     nsnow          =  vgrid_snow_spq%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SPQ_)
     dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_ASSIMI_)
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(soil_awc(nproma, nblks))
     ALLOCATE(hlp2(nproma, nblks))
-    ALLOCATE(hlp1(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_pwp_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_fc_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(theta_sat_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(sand_spq_init_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(clay_spq_init_sl(nproma, nsoil_sb, nblks))
-    ALLOCATE(silt_spq_init_sl(nproma, nsoil_sb, nblks))
+    ALLOCATE(hlp1(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_pwp_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_fc_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(theta_sat_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(sand_spq_init_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(clay_spq_init_sl(nproma, nsoil_w, nblks))
+    ALLOCATE(silt_spq_init_sl(nproma, nsoil_w, nblks))
     ! ----------------------------------------------------------------------------------------------------- !
+    ! SEB_ 2D
+    dsl4jsb_Get_var2D_onDomain(SEB_, t)
+    dsl4jsb_Get_var2D_onDomain(SEB_, t_old)
+    dsl4jsb_Get_var2D_onDomain(SEB_, qsat_star)
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)                  ! in
+    dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)
+    ! HYDRO_ 2D
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   num_sl_above_bedrock)   ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_pwp)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   w_soil_root_fc)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_skin)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone_rel)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_plant_avail_rel)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   wtr_rootzone)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,   root_depth)
+    ! HYDRO_ 3D
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_depth_sl)              ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_width_sl)          ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_center_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_lbound_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   ice_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_pwp_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_fc_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_sat_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_pot_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_,   wtr_soil_sl)
     ! SPQ_ 2D
     dsl4jsb_Get_var2D_onDomain(SPQ_, elevation)
     dsl4jsb_Get_var2D_onDomain(SPQ_, soil_depth)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, t_srf_new)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, t_srf_old)
     dsl4jsb_Get_var2D_onDomain(SPQ_, temp_srf_eff_4)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, qsat_star)
     dsl4jsb_Get_var2D_onDomain(SPQ_, s_star)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_skin)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root_pwp)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root_fc)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root_theta)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, w_soil_root_pot)
-    dsl4jsb_Get_var2D_onDomain(SPQ_, num_sl_above_bedrock)
     ! SPQ_ 3D
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_depth_sl)              ! out   (soil_depth_sl == soil_lay_width_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_width_sl)          ! out
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_depth_center_sl)   ! out
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_depth_ubound_sl)   ! out
-    dsl4jsb_Get_var3D_onDomain(SPQ_, soil_lay_depth_lbound_sl)   ! out
-    dsl4jsb_Get_var3D_onDomain(SPQ_, bulk_dens_sl)
     dsl4jsb_Get_var3D_onDomain(SPQ_, heat_capa_sl)
     dsl4jsb_Get_var3D_onDomain(SPQ_, therm_cond_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_soil_pwp_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_soil_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_soil_pot_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, w_ice_sl)
     dsl4jsb_Get_var3D_onDomain(SPQ_, saxtonA)
     dsl4jsb_Get_var3D_onDomain(SPQ_, saxtonB)
     dsl4jsb_Get_var3D_onDomain(SPQ_, saxtonC)
     dsl4jsb_Get_var3D_onDomain(SPQ_, kdiff_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, sand_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, silt_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, clay_sl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, volume_min_sl)
     dsl4jsb_Get_var3D_onDomain(SPQ_, t_snow_snl)
-    dsl4jsb_Get_var3D_onDomain(SPQ_, t_soil_sl)
+    ! Q_ASSIMI_ 2D
+    dsl4jsb_Get_var2D_onDomain(Q_ASSIMI_,   wtr_soil_root_pot)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 snow init
@@ -248,7 +273,7 @@ CONTAINS
     !>
     ! NOTE: soil_depth_to_layers_2d() returns a 3D variable
     soil_depth_sl(:,:,:) = soil_depth_to_layers_2d(soil_depth(:,:), &     ! Total soil depth until bedrock (from textures), 2D variable
-      &                                            vgrid_soil_sb%dz(:))   ! Soil layer thicknesses from namelist
+      &                                            vgrid_soil_w%dz(:))   ! Soil layer thicknesses from namelist
     ! pass these values to a SPQ_ variable with a correct name
     soil_lay_width_sl(:,:,:) = soil_depth_sl(:,:,:)
 
@@ -257,7 +282,7 @@ CONTAINS
     ! i)  lower & upper boundary
     ! ii) depth at the center of each layer
     DO iblk = 1,nblks
-      DO is = 1,nsoil_sb
+      DO is = 1,nsoil_w
         ! lower & upper boundary
         IF (is == 1) THEN
           soil_lay_depth_lbound_sl(:, is, iblk) = 0.0_wp
@@ -282,7 +307,7 @@ CONTAINS
     !>
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,nsoil_sb
+        DO is = 1,nsoil_w
           IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
             num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
           ELSE
@@ -297,40 +322,20 @@ CONTAINS
 
     !>   3.1 init with one site-specific value for all soil layers
     !>
-    bulk_dens_sl(:,:,:)   = SPREAD(spq_init_vars%soil_bulk_density(:,:), DIM = 2, ncopies = nsoil_sb)
+    bulk_dens_sl(:,:,:)   = SPREAD(spq_init_vars%soil_bulk_density(:,:), DIM = 2, ncopies = nsoil_w)
     heat_capa_sl(:,:,:)   = soil_heat_cap
     therm_cond_sl(:,:,:)  = soil_therm_cond
-    sand_sl(:,:,:)        = SPREAD(spq_init_vars%soil_sand(:,:), DIM = 2, ncopies = nsoil_sb)
-    silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_sb)
-    clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_sb)
-    volume_min_sl(:,:,:)  = 1._wp
+    sand_sl(:,:,:)        = SPREAD(spq_init_vars%soil_sand(:,:), DIM = 2, ncopies = nsoil_w)
+    silt_sl(:,:,:)        = SPREAD(spq_init_vars%soil_silt(:,:), DIM = 2, ncopies = nsoil_w)
+    clay_sl(:,:,:)        = SPREAD(spq_init_vars%soil_clay(:,:), DIM = 2, ncopies = nsoil_w)
     ! land2atmosphere
     !   these variables are initialized with the mem%Add_var() routine in addition (same values) !
     t_soil_sl(:,:,:)      = 273.15_wp
-    t_srf_new(:,:)        = 273.15_wp
-    t_srf_old(:,:)        = 273.15_wp
+    t(:,:)                = 273.15_wp
+    t_old(:,:)            = 273.15_wp
     temp_srf_eff_4(:,:)   = 273.15_wp ** 4.0_wp
     qsat_star(:,:)        = 0.0075_wp   ! value from JSBACH
     s_star(:,:)           = 2.9E5_wp    ! value from JSBACH
-
-#ifdef __QUINCY_STANDALONE__
-    !>     3.1.1 soil-layer specific init for sites of the "SPP 1685" site-set
-    !>
-    !>     works only with 15 soil layer
-    !>
-    IF (model%config%flag_spp1685) THEN
-      DO iblk = 1,nblks
-        CALL init_spq_soil_properties_spp1685_sites( &
-          & nproma, &                           ! in
-          & nsoil_sb, &
-          & model%config%lon, &                 ! in ('site_longitude')
-          & bulk_dens_sl(:, :, iblk), &         ! out
-          & sand_sl(:, :, iblk), &
-          & silt_sl(:, :, iblk), &
-          & clay_sl(:, :, iblk) )               ! out
-      END DO
-    END IF
-#endif
 
     !>   3.2 ensure a certain minimum proportion for sand, clay and silt
     !>    needed for the Saxton equations
@@ -349,7 +354,7 @@ CONTAINS
     DO iblk = 1,nblks
       CALL calc_soil_texture_saxton_compatible( &
         & nproma, &                         ! in
-        & nsoil_sb, &                       ! in
+        & nsoil_w, &                        ! in
         & sand_spq_init_sl(:, :, iblk), &   ! inout
         & silt_spq_init_sl(:, :, iblk), &   ! inout
         & clay_spq_init_sl(:, :, iblk) )    ! inout
@@ -431,14 +436,16 @@ CONTAINS
 
     !>   5.1 water in the surface reservoir [m]
     !>
-    w_skin(:,:) = 0.0_wp
+    wtr_skin(:,:) = 0.0_wp
 
     !>   5.2 adjust initial water amount to prescribed theta
     !>
-    w_soil_root_theta(:,:)  = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
-    w_soil_root(:,:)        = w_soil_root_pwp(:,:) &
-      &                     + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
-    w_soil_root_pot(:,:)    = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:, 1, :)
+    wtr_rootzone_rel(:,:)   = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
+    wtr_plant_avail_rel(:,:) = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
+    wtr_rootzone(:,:)       = w_soil_root_pwp(:,:) &
+      &                       + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
+    wtr_soil_root_pot(:,:)  = saxtonA(:, 1, :) * (MIN(w_soil_root_fc,wtr_rootzone(:,:)) / root_depth(:,:)) &
+      &                       ** saxtonB(:, 1, :)
 
     !>   5.3 root fraction
     !>    root_fraction_sl(:,:,:) is a variable of veg_mem and depends on the init of root_depth(:,:)
@@ -447,16 +454,16 @@ CONTAINS
 
     !> 6.0 soil water and ice pwp, fc and sat per layer depth
     !>
-    w_soil_pwp_sl(:,:,:)  = 0.0_wp
-    w_soil_fc_sl(:,:,:)   = 0.0_wp
-    w_soil_sat_sl(:,:,:)  = 0.0_wp
+    wtr_soil_pwp_sl(:,:,:)  = 0.0_wp
+    wtr_soil_fc_sl(:,:,:)   = 0.0_wp
+    wtr_soil_sat_sl(:,:,:)  = 0.0_wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
         DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
           IF (soil_depth_sl(ic, is, iblk) > 0.0_wp) THEN
-            w_soil_pwp_sl(ic, is, iblk) = theta_pwp_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
-            w_soil_fc_sl(ic, is, iblk)  = theta_fc_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
-            w_soil_sat_sl(ic, is, iblk) = theta_sat_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
+            wtr_soil_pwp_sl(ic, is, iblk) = theta_pwp_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
+            wtr_soil_fc_sl(ic, is, iblk)  = theta_fc_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
+            wtr_soil_sat_sl(ic, is, iblk) = theta_sat_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
           ENDIF
         ENDDO
       ENDDO
@@ -465,16 +472,16 @@ CONTAINS
     !>   6.1 adjust initial water amount to prescribed theta
     !>   avoid water stress (i.e., dry soil) of plants at the first timestep
     !>
-    w_soil_sl(:,:,:) = w_soil_pwp_sl(:,:,:) &
-      &                + (dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_fc_sl(:,:,:) - w_soil_pwp_sl(:,:,:)))
+    wtr_soil_sl(:,:,:) = wtr_soil_pwp_sl(:,:,:) &
+      &                  + (dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (wtr_soil_fc_sl(:,:,:) - wtr_soil_pwp_sl(:,:,:)))
 
     !>   6.2 soil water potential per layer
     !>
     WHERE(soil_depth_sl(:,:,:) > eps8)
-      hlp1(:,:,:)          = MIN(w_soil_fc_sl(:,:,:), w_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
-      w_soil_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
+      hlp1(:,:,:)          = MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
+      wtr_soil_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
     ELSEWHERE
-      w_soil_pot_sl(:,:,:) = 0.0_wp
+      wtr_soil_pot_sl(:,:,:) = 0.0_wp
     ENDWHERE
 
     !> get elevation
@@ -491,16 +498,16 @@ CONTAINS
     DEALLOCATE(clay_spq_init_sl)
     DEALLOCATE(silt_spq_init_sl)
 
-    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_srf_old(:,:), t_srf_new(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(soil_depth(:,:), root_depth(:,:), t_old(:,:), t(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(temp_srf_eff_4(:,:), qsat_star(:,:), s_star(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_skin(:,:), w_soil_root(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_soil_root_theta(:,:), w_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_skin(:,:), wtr_rootzone(:,:), w_soil_root_pwp(:,:), w_soil_root_fc(:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_rootzone_rel(:,:), wtr_plant_avail_rel(:), wtr_soil_root_pot(:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_depth_sl(:,:,:), soil_lay_width_sl(:,:,:), soil_lay_depth_center_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:), bulk_dens_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), w_soil_pwp_sl(:,:,:), w_soil_fc_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(w_soil_sat_sl(:,:,:), w_soil_sl(:,:,:), w_soil_pot_sl(:,:,:), w_ice_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(heat_capa_sl(:,:,:), therm_cond_sl(:,:,:), wtr_soil_pwp_sl(:,:,:), wtr_soil_fc_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(wtr_soil_sat_sl(:,:,:), wtr_soil_sl(:,:,:), wtr_soil_pot_sl(:,:,:), ice_soil_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(saxtonA(:,:,:), saxtonB(:,:,:), saxtonC(:,:,:), kdiff_sat_sl(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:), volume_min_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(sand_sl(:,:,:), silt_sl(:,:,:), clay_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(t_snow_snl(:,:,:), t_soil_sl(:,:,:), elevation(:,:)) ASYNC(1)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Done with tile '//TRIM(tile%name)//' ...')
@@ -537,10 +544,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_qs_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
@@ -549,8 +556,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & spq_init_vars%soil_sand               (nproma, nblks),       &
@@ -617,11 +624,11 @@ CONTAINS
     REAL(wp), POINTER           :: ptr_2D(:, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
-    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     TYPE(t_input_file)          :: input_file
     INTEGER                     :: nproma
     INTEGER                     :: nblks
-    INTEGER                     :: nsoil_sb
+    INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':spq_read_init_vars'
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
@@ -630,8 +637,8 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nproma = hgrid%Get_nproma()
     nblks  = hgrid%Get_nblks()
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    nsoil_sb      =  vgrid_soil_sb%n_levels
+    vgrid_soil_w  => Get_vgrid('soil_depth_water')
+    nsoil_w       =  vgrid_soil_w%n_levels
 
     ALLOCATE( &
       & spq_init_vars%soil_sand               (nproma, nblks),       &
@@ -662,7 +669,7 @@ CONTAINS
       & fill_array = spq_init_vars%soil_sand)
     ! convert from % to [0,1]
     spq_init_vars%soil_sand(:,:) = spq_init_vars%soil_sand(:,:) / 100.0_wp
-    spq_init_vars%soil_sand(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.3_wp, ptr_2D > 0.0_wp))
+    spq_init_vars%soil_sand(:,:) = MIN(1.0_wp, MERGE(spq_init_vars%soil_sand(:,:), 0.3_wp, spq_init_vars%soil_sand(:,:) > 0.0_wp))
 
     !> silt
     !>
@@ -671,7 +678,7 @@ CONTAINS
       & fill_array = spq_init_vars%soil_silt)
     ! convert from % to [0,1]
     spq_init_vars%soil_silt(:,:) = spq_init_vars%soil_silt(:,:) / 100.0_wp
-    spq_init_vars%soil_silt(:,:) = MIN(1.0_wp, MERGE(ptr_2D, 0.4_wp, ptr_2D > 0.0_wp))
+    spq_init_vars%soil_silt(:,:) = MIN(1.0_wp, MERGE(spq_init_vars%soil_silt(:,:), 0.4_wp, spq_init_vars%soil_silt(:,:) > 0.0_wp))
 
     !> clay
     !>
@@ -724,21 +731,21 @@ CONTAINS
   !>
   SUBROUTINE calc_soil_texture_saxton_compatible( &
     & nproma, &
-    & nsoil_sb, &
+    & nsoil_w, &
     & sand_sl, &
     & silt_sl, &
     & clay_sl )
 
     INTEGER,                                INTENT(in)    :: nproma        !< dimensions
-    INTEGER,                                INTENT(in)    :: nsoil_sb      !< number of soil layers
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: sand_sl       !< sand proportion per layer
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: silt_sl       !< silt proportion per layer
-    REAL(wp), DIMENSION(nproma, nsoil_sb),  INTENT(inout) :: clay_sl       !< clay proportion per layer
+    INTEGER,                                INTENT(in)    :: nsoil_w       !< number of soil layers
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: sand_sl       !< sand proportion per layer
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: silt_sl       !< silt proportion per layer
+    REAL(wp), DIMENSION(nproma, nsoil_w),   INTENT(inout) :: clay_sl       !< clay proportion per layer
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nproma, nsoil_sb) :: hlp_sand_sl, &
+    REAL(wp), DIMENSION(nproma, nsoil_w)  :: hlp_sand_sl, &
                                              hlp_silt_sl, &
                                              hlp_clay_sl
-    REAL(wp), DIMENSION(nproma, nsoil_sb) :: sand_original_sl, &
+    REAL(wp), DIMENSION(nproma, nsoil_w)  :: sand_original_sl, &
                                              silt_original_sl, &
                                              clay_original_sl
     REAL(wp)                              :: min_prop_soil_texture, &
