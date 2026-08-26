@@ -619,6 +619,8 @@ CONTAINS
           grnd_hflx(ic) = grnd_hflx_soil(ic)
           hcap_grnd(ic) = hcap_grnd_soil(ic)
         END IF
+        ! Add remaining phase change energy to ground heat flux to close energy balance
+        grnd_hflx(ic) = grnd_hflx(ic) + le_pc_remain(ic) / dtime
       END DO
       !$ACC END PARALLEL LOOP
     END IF
