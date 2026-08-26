@@ -78,24 +78,16 @@ fi
 # remapping to ICON grid and rescaling
 # - Remapping from 0.25 degree lat-lon grid to ICON grid
 # - In LUH3, land-use transitions are given as the fraction of each grid-cell that transitions from one land-use
-#   state to another in a given year. JSBACH needs the transition rates relative to the vegetated fraction of the grid cell.
-#   Therefore, the transition rates from LUH3 need to be scaled with land * fract_veg * veg_ratio_max.
+#   state to another in a given year. Bare lands (e.g. deserts) are included in natural vegetation in LUH3, but
+#   in JSBACH, bare soil is implicit. Therefore, the transition rates from LUH3 need to be scaled with veg_ratio_max.
 # ------------------
 
 # -----------------------------------
 #  1. find variables for scaling
 # -----------------------------------
-# veg_ratio_max, land and fract_veg are constant in time in the initial files, so we only need to extract
-# them once from the bc fraction file.
-
-[[ -f veg_vrm.nc ]] && ${rm} veg_vrm.nc
+# veg_ratio_max is constant in time in the bc files; we only need to extract it once.
+[[ -f vrm.nc ]] && ${rm} vrm.nc
 ${cdo} -selvar,veg_ratio_max ${file_bc_frac} vrm.nc
-${cdo} -selvar,land ${file_bc_frac} land.nc
-${cdo} -selvar,fract_veg ${file_bc_frac} fract_veg.nc
-${cdo} -mul land.nc fract_veg.nc veg.nc
-${cdo} -mul veg.nc vrm.nc veg_vrm.nc
-${rm} land.nc fract_veg.nc veg.nc vrm.nc
-
 var_list=$(${cdo} -showvar ${luh3_trans_root}_${pft_tag}_${year}.nc)
 
 if [[ ! -f wgt025.nc ]]; then
@@ -121,16 +113,18 @@ for year in ${year_list}; do
   #  3. scaling of transitions
   # -----------------------------------
 
-  # divide ${atmGridID}_trans_${year}.nc by veg_vrm.nc for all variables:
+  # In JSBACH bare soil is implicit. Therefore, cover fractions are scaled up by veg_ratio_max (elsewhere)
+  # and this scaling is applied (here) to the transitions as well.
+  # Divide ${atmGridID}_trans_${year}.nc by veg_ratio_max for all variables:
   # - when veg_vrm is zero, then set the result to zero instead of NaN
   # - retain NaN when the original value is NaN
-  # - when the result is >1, set it to 1 (this concerns <300 grid cells with very low veg_vrm in JSB and
+  # - when the result is >1, set it to 1 (this applies to a number of grid cells with very low veg_ratio_max in JSB and
   #   relatively high transition rates in the LUH3 dataset)
 
   for var in ${var_list}; do
     {
     ${cdo} -selvar,${var} ${atmGridID}_trans_${year}.nc tmp_${var}.nc
-    ${cdo} -ifthenelse veg_vrm.nc -div tmp_${var}.nc veg_vrm.nc veg_vrm.nc tmp2_${var}.nc
+    ${cdo} -ifthenelse vrm.nc -div tmp_${var}.nc vrm.nc vrm.nc tmp2_${var}.nc
     ${cdo} -expr,"${var}=(${var}>1)?1:${var}" tmp2_${var}.nc tmp_scaled_${year}_${var}.nc
     ${rm} tmp_${var}.nc tmp2_${var}.nc
     } &  # comment out '&' for serial processing
@@ -151,7 +145,8 @@ for year in ${year_list}; do
 
   echo "${prog}:     ${file_bc_trans}_${pft_tag}_${year}.nc             done"
 done
-${rm} veg_vrm.nc
+
+${rm} vrm.nc
 
 echo "${prog}:  done"
 

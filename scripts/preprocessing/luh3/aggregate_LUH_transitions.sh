@@ -53,11 +53,11 @@ targetGrid="global_0.25"
 #          therefore a remapping here makes sense to ensure that all 0.25 grids used have the same orientation!
 
 tag="CMIP7_forcings"
-version="v3.1.1"
+version="3-1-1"
 
-mainTransFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${version}/multiple-transitions_input4MIPs_landState_CMIP_UofMD-landState-3-1-1_gn_0850-2023.nc
-mainStatesFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${version}/multiple-states_input4MIPs_landState_CMIP_UofMD-landState-3-1-1_gn_0850-2024.nc
-fixedInputFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${version}/multiple-static_input4MIPs_landState_CMIP_UofMD-landState-3-1-1_gn.nc
+mainTransFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-transitions_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2023.nc
+mainStatesFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-states_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2024.nc
+fixedInputFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-static_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn.nc
 
 #outfolder=./YOUROUTPUTFOLDER
 outfolder=/work/bm0891/m300218/LUH3/prepare_transitions
@@ -66,7 +66,7 @@ outfolder=/work/bm0891/m300218/LUH3/prepare_transitions
 echo "--> ${scriptName}"
 
 # Some global attributes to be set
-luh3_preprocessing="Aggregated LUH transitions (using ${scriptName}) and ${tag} LUH data ${version}"
+luh3_preprocessing="Aggregated LUH transitions (using ${scriptName}) and ${tag} LUH data version ${version}"
 luh3_preprocessing="${luh3_preprocessing}; contact: a.naumann@lmu.de"
 luh3_comment="Urban is treated as pasture."
 luh3_comment="${luh3_comment} Rangelands on potential forests are treated as pasture (LUH static data: fstnf = 1), else: natural vegetation"
