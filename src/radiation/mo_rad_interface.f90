@@ -36,7 +36,7 @@ MODULE mo_rad_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_
+  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_, SB_, VEG_
 
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
@@ -48,6 +48,8 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(SB_)
+  dsl4jsb_Use_memory(VEG_)
 #ifdef __QUINCY_STANDALONE__
 #else
   ! Use of processes in this module
@@ -59,11 +61,6 @@ MODULE mo_rad_interface
   ! Use of process memories
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
-#endif
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SB_, VEG_
-  dsl4jsb_Use_memory(SB_)
-  dsl4jsb_Use_memory(VEG_)
 #endif
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -357,12 +354,10 @@ CONTAINS
     !!
     ELSE
       dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(SEB_,    t_old)          ! in
       END SELECT
-#endif
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
@@ -382,7 +377,6 @@ CONTAINS
         & lw_net    = lw_srf_net(:)     & ! out
         & )
 
-#ifndef __NO_QUINCY__
       ! re-calculate rad_srf_net for QUINCY
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
@@ -392,8 +386,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
       END SELECT
-#endif
-    END IF
+    END IF  ! NOT LAKES
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -471,10 +464,8 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
       CALL update_radiation_par_jsb(tile, options)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       CALL update_radiation_par_quincy(tile, options)
-#endif
     END SELECT
 
   END SUBROUTINE update_radiation_par
@@ -483,7 +474,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculates PAR (Photosynthetically Active Photon Flux Density)
   !>
-#ifndef __NO_QUINCY__
   SUBROUTINE update_radiation_par_quincy(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -616,7 +606,7 @@ CONTAINS
 
     !$ACC END DATA
   END SUBROUTINE update_radiation_par_quincy
-#endif
+
   ! ================================================================================================================================
   !>
   !> Implementation to update the photosynthetically active radiation
@@ -894,9 +884,7 @@ CONTAINS
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
-#ifndef __NO_QUINCY__
     USE mo_rad_process,         ONLY: calc_canopy_radiation_budget
-#endif
     USE mo_jsb_time,            ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
     USE mo_jsb_math_constants,  ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
@@ -930,13 +918,11 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SB_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SB_)
 #endif
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
@@ -1056,13 +1042,11 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     model_scheme = model%config%model_scheme
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       vgrid_soil_w  => Get_vgrid('soil_depth_water')
       nsoil_w       =  vgrid_soil_w%n_levels
     END SELECT
-#endif
 
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
@@ -1102,10 +1086,8 @@ CONTAINS
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_memory(PHENO_)
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(VEG_)
-#endif
       END SELECT
     END IF
 
@@ -1174,7 +1156,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(SB_)
         dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)      ! in
@@ -1203,8 +1184,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
-#endif
+        !$ACC END PARALLEL
       END SELECT
     END IF   ! perparations for alb_soil_scheme
 
@@ -1227,7 +1207,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var2D_onChunk(SEB_,   t)                   ! in
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1239,7 +1218,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_noon)           ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_noon)          ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir_noon)          ! out
-#endif
     END SELECT
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
@@ -1510,10 +1488,8 @@ CONTAINS
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
 #endif
-#ifndef __NO_QUINCY__
           CASE (MODEL_QUINCY)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(sla)
-#endif
           END SELECT
           AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
           AlbedoLitterNIR_param    = dsl4jsb_Lctlib_param(AlbedoLitterNIR)
@@ -1606,7 +1582,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
           ncanopy               =  vgrid_canopy_q_assimi%n_levels
@@ -1670,7 +1645,6 @@ CONTAINS
           END DO
           !$ACC END PARALLEL LOOP
 
-#endif
         END SELECT  ! quincy / jsbach
       END IF      ! NOT use_alb_veg_simple
     END IF      ! IF (tile%is_vegetation)
@@ -1679,11 +1653,10 @@ CONTAINS
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly
     !! but for vegetation, bare and glacier, the "land albedo" is calculated
     !!
-#ifndef __NO_QUINCY__
     IF (model_scheme == MODEL_QUINCY) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     END IF
-#endif
+
     IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_vegetation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -1694,7 +1667,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-#ifndef __NO_QUINCY__
     ! calculate albedo and albedo_noon for all tiles
     !
     IF (model_scheme == MODEL_QUINCY) THEN
@@ -1718,7 +1690,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-#endif
 
     !$ACC EXIT DATA DELETE(l_day, temperature_surface) ASYNC(acc_stream)
     DEALLOCATE(l_day, temperature_surface)
@@ -1793,10 +1764,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
-#ifndef __NO_QUINCY__
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_noon,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_noon,           weighted_by_fract)
-#endif
 
     CASE (MODEL_JSBACH)
 #ifndef __QUINCY_STANDALONE__
@@ -1836,7 +1805,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for RAD_
   !>
-#ifndef __NO_QUINCY__
   SUBROUTINE update_time_average_radiation(tile, options)
 
     USE mo_kind,                    ONLY: wp
@@ -2048,16 +2016,6 @@ CONTAINS
 
   END SUBROUTINE update_time_average_radiation
 
-#else
-
-  SUBROUTINE update_time_average_radiation(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-  END SUBROUTINE update_time_average_radiation
-
-#endif
   ! ======================================================================================================= !
   !> aggregate: time moving averages and daytime averages for RAD_
   !>

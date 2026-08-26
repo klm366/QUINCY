@@ -815,16 +815,10 @@ CONTAINS
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
-#ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
     USE mo_quincy_model_config,       ONLY: QCANOPY
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
-    dsl4jsb_Use_processes A2L_, HYDRO_, SPQ_
-    dsl4jsb_Use_memory(SPQ_)
-    dsl4jsb_Use_config(SPQ_)
-#else
     dsl4jsb_Use_processes A2L_, HYDRO_
-#endif
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -854,12 +848,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: evapopot
     dsl4jsb_Real2D_onDomain :: co2_air
     dsl4jsb_Real2D_onDomain :: co2_air_mol
-    dsl4jsb_Real2D_onDomain :: elevation
-#ifndef __NO_QUINCY__
     ! quincy
-    dsl4jsb_Def_memory(SPQ_)
-    dsl4jsb_Def_config(SPQ_)
-
     dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c13
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c14
@@ -867,7 +856,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
-#endif
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
@@ -881,11 +869,11 @@ CONTAINS
     INTEGER :: nc, ics, ice, ic
     INTEGER :: global_seconds_day, current_year
 
-    ! IQ spin-up accelerator model configurations
+    ! IQJ spin-up accelerator model configurations
     INTEGER :: accelerator_max_executions !< bookkeeping configurations for the iq spin-up accelerator: max number of executions
     INTEGER :: accelerator_frequency      !< bookkeeping configurations for the iq spin-up accelerator: frequency of executions
     INTEGER :: accelerator_start_year     !< bookkeeping configurations for the iq spin-up accelerator: start year of executions
-    ! IQ: further configuration
+    ! IQJ: further configuration
     LOGICAL :: flag_snow = .TRUE. !< quincy boolean indicating if simulations should include snow (else read snow is added to rain)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_one_timestep'
@@ -903,10 +891,11 @@ CONTAINS
       l_shift_one_timestep = .TRUE.
     END IF
 
-    CALL getPTStringFromSeconds(-dtime, dtime_string)
-    dtime_mtime      => newTimedelta(dtime_string)
-    datetime_old     => newDatetime(datetime_new)
-    datetime_old     =  datetime_new + dtime_mtime
+    CALL getPTStringFromSeconds(-dtime, dtime_string) ! ATTN: dtime with negative sign!
+    dtime_mtime  => newTimedelta(dtime_string)
+    datetime_old => newDatetime(datetime_new)
+    datetime_old =  datetime_new + dtime_mtime ! Substract dtime from datetime_new to get datetime_old at beginning of the time step
+    ! TODO old_old is not used anymore and should be deleted
     datetime_old_old => newDatetime(datetime_old)
     datetime_old_old =  datetime_old + dtime_mtime
     CALL deallocateTimedelta(dtime_mtime)
@@ -970,61 +959,40 @@ CONTAINS
       ALLOCATE(evapo_act2pot(nproma, nblks))
       !$ACC ENTER DATA CREATE(evapo_act2pot)
 
-      ! run always but not with "quincy and SPQ_"
-#ifndef __NO_QUINCY__
-      IF (model%config%model_scheme == MODEL_JSBACH .OR. model%config%use_soil_phys_jsbach) THEN
-#endif
-        dsl4jsb_Get_memory(HYDRO_)
-        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
-        dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
+      dsl4jsb_Get_memory(HYDRO_)
+      dsl4jsb_Get_var2d_onDomain(HYDRO_, evapotrans)
+      dsl4jsb_Get_var2d_onDomain(HYDRO_, evapopot)
 
-        IF (is_time_experiment_start(datetime_old)) THEN
+      IF (is_time_experiment_start(datetime_old)) THEN
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO iblk = 1, nblks
-            DO ic = 1, nproma
-              evapo_act2pot(ic, iblk) = 1._wp
-            END DO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            evapo_act2pot(ic, iblk) = 1._wp
           END DO
-          !$ACC END PARALLEL LOOP
+        END DO
+        !$ACC END PARALLEL LOOP
 
-        ELSE
+      ELSE
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO iblk = 1, nblks
-            DO ic = 1, nproma
-              evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
-                &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
-            END DO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+        DO iblk = 1, nblks
+          DO ic = 1, nproma
+            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
+              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
           END DO
-          !$ACC END PARALLEL LOOP
+        END DO
+        !$ACC END PARALLEL LOOP
 
-        END IF
-#ifndef __NO_QUINCY__
-      END IF  ! use_soil_phys_jsbach
+      END IF
 
-      ! if quincy
       IF (model%config%model_scheme == MODEL_QUINCY) THEN
        ! Allocate and enter data for C13 and C14 based on configuration flags
         ALLOCATE(co2_air_dc13(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_dc13)
         ALLOCATE(co2_air_Dc14(nproma, nblks))
         !$ACC ENTER DATA CREATE(co2_air_Dc14)
-
-        ! with SPQ_ process
-        IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-          ! Note: if neither qair nor rh are given as forcing (i.e. forcing_options(model_id)%type_of_qair_forcing = NONE,
-          !       which so far never is the case), this would need to be calculated
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-          DO iblk = 1, nblks
-            DO ic = 1, nproma
-              evapo_act2pot(ic, iblk) = 1._wp
-            END DO
-          END DO
-          !$ACC END PARALLEL LOOP
-        END IF
       END IF
-#endif
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
@@ -1060,24 +1028,14 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
           & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
           & )
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
-        IF (model%config%use_soil_phys_jsbach) THEN
-          dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)
-        ELSE
-          dsl4jsb_Get_memory(SPQ_)
-          dsl4jsb_Get_config(SPQ_)
-          flag_snow = dsl4jsb_Config(SPQ_)%flag_snow
-          dsl4jsb_Get_var2D_onDomain(SPQ_,   elevation)
-        END IF
-
         CALL get_standalone_driver( &
           ! in
           & model_id,                                                                  &
           & model%config%model_scheme,                                                 &
           & flag_snow,                                                                 &
           & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & elevation(:,:),                                                            &  ! elevation from HYDRO_ or SPQ_
+          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
           & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
@@ -1097,7 +1055,6 @@ CONTAINS
           & co2_air_dc13,                                                              &
           & co2_air_Dc14                                                               &
           & )
-#endif
       END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
@@ -1111,14 +1068,6 @@ CONTAINS
       ENDDO
       !$ACC END PARALLEL LOOP
 
-      !> Check that the QUINCY code has been compiled (--enable-quincy configure flag)
-      !> if the ICON-Land QUINCY model is selected to run.
-      !>
-#ifdef __NO_QUINCY__
-      IF (model%config%model_scheme == MODEL_QUINCY) &
-        &  CALL finish(routine, 'The ICON-Land QUINCY model requires the --enable-quincy compile flag. Stop.')
-#endif
-#ifndef __NO_QUINCY__
       ! --------------------------------------------------------------------------------------------------- !
       !> code specific to the QUINCY model
       !>
@@ -1174,7 +1123,6 @@ CONTAINS
         !$ACC END PARALLEL LOOP
 
       END SELECT
-#endif
 
       !$ACC WAIT(1)
 

@@ -1,4 +1,4 @@
-!> helper routines for vegetation (QUINCY)
+!> QUINCY helper routines for vegetation
 !>
 !> ICON-Land
 !>
@@ -19,7 +19,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_veg_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_jsb_control,           ONLY: debug_on
@@ -201,7 +201,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           seed_bed_growth_mt(ix_elem,ic)     = zero
@@ -214,7 +214,7 @@ CONTAINS
             veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 

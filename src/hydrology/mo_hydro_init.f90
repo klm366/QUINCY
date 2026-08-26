@@ -171,16 +171,12 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
-    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
 
 #ifdef __QUINCY_STANDALONE__
-    model  => Get_model(tile%owner_model_id)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      CALL qs_hydro_read_init_vars(tile)
-      CALL qs_hydro_init_ic_bc(tile)
-      CALL hydro_finalize_init_vars()
-    END IF
+    CALL qs_hydro_read_init_vars(tile)
+    CALL qs_hydro_init_ic_bc(tile)
+    CALL hydro_finalize_init_vars()
 #else
     ! Read initial and boundary condition data by the top tile, only.
     ! Note: this requires that the init routines in mo_jsb_model_init:jsbach_init are called starting
@@ -598,7 +594,7 @@ CONTAINS
     root_depth(:,:)       = 0._wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
           hlp1(ic, is, iblk) = soil_lay_width_sl(ic, is, iblk) &
             &                     * (theta_fc_sl(ic, is, iblk) - theta_pwp_sl(ic, is, iblk))
           soil_awc(ic, iblk)    = soil_awc(ic, iblk) + hlp1(ic, is, iblk)
@@ -650,7 +646,7 @@ CONTAINS
     wtr_soil_sat_sl(:,:,:)  = 0.0_wp
     DO iblk = 1,nblks
       DO ic = 1,nproma
-        DO is = 1,INT(num_sl_above_bedrock(ic, iblk))
+        DO is = 1,NINT(num_sl_above_bedrock(ic, iblk))
           IF (soil_depth_sl(ic, is, iblk) > 0.0_wp) THEN
             wtr_soil_pwp_sl(ic, is, iblk) = theta_pwp_sl(ic, is, iblk) * soil_depth_sl(ic, is, iblk)
             wtr_soil_fc_sl(ic, is, iblk)  = theta_fc_sl(ic, is, iblk)  * soil_depth_sl(ic, is, iblk)
@@ -1307,7 +1303,6 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       ! HYDRO_ 2D
@@ -1318,7 +1313,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_ubound_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_,   soil_lay_depth_center_sl)
     END SELECT
-#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -1396,7 +1390,6 @@ CONTAINS
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         ! pass these values to a HYDRO_ variable with an improved name
@@ -1441,11 +1434,10 @@ CONTAINS
             END DO
           END DO
         END DO
-      END SELECT
 
-      !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
-      !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
-#endif
+        !$ACC UPDATE DEVICE(soil_lay_width_sl(:,:,:), soil_lay_depth_lbound_sl(:,:,:)) ASYNC(1)
+        !$ACC UPDATE DEVICE(soil_lay_depth_ubound_sl(:,:,:), soil_lay_depth_center_sl(:,:,:), num_sl_above_bedrock(:,:)) ASYNC(1)
+      END SELECT
 
       ! -------------------------------------------------------------------------------------------------- !
       !>

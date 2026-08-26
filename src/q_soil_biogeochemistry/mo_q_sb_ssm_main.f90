@@ -16,7 +16,7 @@
 !>#### main routines for the SSM (simple soil model), calculating the soil biogeochemical pools
 !>
 MODULE mo_q_sb_ssm_main
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
   USE mo_jsb_control,             ONLY: debug_on
@@ -716,7 +716,7 @@ CONTAINS
     !>
     asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
           &                         TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
           &                         sb_loss_mt(ix_soluable_litter, ixC, ic, is) + sb_loss_mt(ix_polymeric_litter, ixC, ic, is), &
@@ -1174,7 +1174,7 @@ CONTAINS
     !> run calc
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         km1_uptake_nh4_act(ic, is)         = km1_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km1_uptake_no3_act(ic, is)         = km1_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km1_uptake_po4_act(ic, is)         = km1_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
@@ -1318,7 +1318,7 @@ CONTAINS
     ENDIF
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         !> 2.1 inorganic plant N uptake
         !!
         !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
@@ -1538,7 +1538,7 @@ CONTAINS
     !> run calc
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
                                    MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
@@ -1960,7 +1960,7 @@ CONTAINS
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !! weathering rate is composed of a background rate (frac_background_weath_mineral) and pH/root biomass regulated rate
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         weathering_po4(ic, is) = vmax_weath_mineral_act_sl(ic, is) * po4_primary(ic, is) &
           &                   * (frac_background_weath_mineral + fine_root_carbon_sl(ic, is) &
           &                   / (km_rootc_weath_po4 + fine_root_carbon_sl(ic, is))) * dtime
@@ -1980,7 +1980,7 @@ CONTAINS
     !!
     IF (flag_sb_interactive_p) THEN
       DO ic = 1,nc
-        DO is = 1,INT(num_sl_above_bedrock(ic))
+        DO is = 1,NINT(num_sl_above_bedrock(ic))
           hlp1(ic, is) = km_dip_biochem_po4_act(ic, is) / (km_dip_biochem_po4_act(ic, is) + po4_solute(ic, is))
           IF (fine_root_carbon_sl(ic, is) > eps8) THEN
             hlp2(ic, is) = fine_root_carbon_sl(ic, is) / (km_rootc_biochem_po4 + fine_root_carbon_sl(ic, is))
@@ -2459,7 +2459,7 @@ CONTAINS
     !>1.0 case of dynamic N loss calculations, following Zaehle et al. 2011
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! nitrification rate to produce NO3, NOy and N2O from NH4 [mol m-3 timestep-1]
         nitrification_noy(ic, is)   = f_nit_noy * nitrification_no3(ic, is)
         nitrification_n2o(ic, is)   = f_nit_n2o * nitrification_no3(ic, is)
@@ -2640,7 +2640,7 @@ CONTAINS
     !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1.
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! fraction of NH4 that is consumed
         IF (nh4_solute(ic, is) > eps8) THEN
           hlp1(ic, is) = MAX((plant_uptake_nh4_local_sl(ic, is) + mycorrhiza_uptake_nh4_local_sl(ic, is) + &
@@ -2661,7 +2661,7 @@ CONTAINS
     !> 1.1 15N fluxes involving ammonium
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_nh4_n15_sl(ic, is)      = plant_uptake_nh4_local_sl(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
           &                                    eta_plant_uptake_nh4 * hlp2(ic, is))
@@ -2686,7 +2686,7 @@ CONTAINS
     !> 1.2 contrain 15NH4 fluxes to available 15NH4
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = plant_uptake_nh4_n15_sl(ic, is) + mycorrhiza_uptake_nh4_n15_sl(ic, is) &
           &            + microbial_uptake_nh4_n15_sl(ic, is) + nitrification_no3_n15(ic, is) &
           &            + nitrification_noy_n15(ic, is) + nitrification_n2o_n15(ic, is)
@@ -2716,7 +2716,7 @@ CONTAINS
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NO3 that is consumed
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         IF (no3_solute(ic, is) > eps8) THEN
            hlp1(ic, is) = MAX((plant_uptake_no3_local_sl(ic, is) + mycorrhiza_uptake_no3_local_sl(ic, is) + &
                             microbial_uptake_no3_local_sl(ic, is) + denitrification_noy_local(ic, is) + &
@@ -2735,7 +2735,7 @@ CONTAINS
     !> 2.1 N15 fluxes involving NO3
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_no3_n15_sl(ic, is)      = plant_uptake_no3_local_sl(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
           &                                                    eta_plant_uptake_no3 * hlp2(ic, is))
@@ -2760,7 +2760,7 @@ CONTAINS
     !> 2.2 constrain 15NO3 fluxes to available 15NO3
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = plant_uptake_no3_n15_sl(ic, is) + mycorrhiza_uptake_no3_n15_sl(ic, is) &
           &            + microbial_uptake_no3_n15_sl(ic, is) + denitrification_noy_n15(ic, is) &
           &            + denitrification_n2o_n15(ic, is) + denitrification_n2_n15(ic, is)
@@ -2788,7 +2788,7 @@ CONTAINS
     !> 3.0 15N signal of asymbiotic fixation
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         asymb_n_fixation_n15(ic, is) = asymb_n_fixation_local(ic, is) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
       ENDDO
     ENDDO
@@ -2884,7 +2884,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         !>1.0 formation of fast SOM from litter
         !>
         ! calculate 15N mineralised during litter decay, remainder enters fast pool

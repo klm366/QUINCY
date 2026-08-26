@@ -16,7 +16,7 @@
 !>#### initialization of soil-biogeochemistry memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_sb_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: finish, message
@@ -294,6 +294,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    qmax_po4_om_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    volume_min_sl)
     ! ----------------------------------------------------------------------------------------------------- !
+
+    !>0.7 preserve soil P pools during model spin-up, disable P weathering
+    !>
+    dsl4jsb_Config(SB_)%l_exclude_weathering = model%config%l_spinup
 
     !>0.8 apply calibration of soil-biogeochemistry constants if enabled
     !>
@@ -759,7 +763,7 @@ CONTAINS
       & variable_name='TAXOUSDA_10km',  &
       & fill_array = sb_init_vars%usda_taxonomy_class)
     sb_init_vars%usda_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
-    sb_init_vars%usda_taxonomy_class_int(:,:) = INT(sb_init_vars%usda_taxonomy_class(:,:))
+    sb_init_vars%usda_taxonomy_class_int(:,:) = NINT(sb_init_vars%usda_taxonomy_class(:,:))
 
     !> NWRB taxonomy soil class
     !>
@@ -767,7 +771,7 @@ CONTAINS
       & variable_name='TAXNWRB',   &
       & fill_array = sb_init_vars%nwrb_taxonomy_class)
     sb_init_vars%nwrb_taxonomy_class(:,:)     = MERGE(ptr_2D, 1.0_wp, ptr_2D > 1.0_wp)
-    sb_init_vars%nwrb_taxonomy_class_int(:,:) = INT(sb_init_vars%nwrb_taxonomy_class(:,:))
+    sb_init_vars%nwrb_taxonomy_class_int(:,:) = NINT(sb_init_vars%nwrb_taxonomy_class(:,:))
 
     !> qmax organic fine particle
     !>
@@ -882,7 +886,7 @@ CONTAINS
     USE mo_q_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, &
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
-    USE mo_spq_util,                      ONLY: calc_qmax_texture
+    USE mo_sb_util,                       ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
     USE mo_sb_constants,                  ONLY: def_sb_pool_metabol_litter, def_sb_pool_simple_struct_litter, &
@@ -1330,7 +1334,7 @@ CONTAINS
       &                                         calc_qmax_bulk_density_correction, calc_Psorption_parameter, &
       &                                         calc_fast_po4
     USE mo_q_sb_jsm_transport,            ONLY: calc_bioturbation_rate
-    USE mo_spq_util,                      ONLY: calc_qmax_texture
+    USE mo_sb_util,                       ONLY: calc_qmax_texture
     USE mo_isotope_util,                  ONLY: calc_mixing_ratio_N15N14
     USE mo_veg_constants,                 ONLY: ITREE
     USE mo_sb_constants                   ! ..

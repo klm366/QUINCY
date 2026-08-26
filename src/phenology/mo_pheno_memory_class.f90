@@ -134,7 +134,7 @@ CONTAINS
   !> initialize memory (variables) for the process: phenology
   !>
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: MINIMUM, BASIC, FULL  ! MEDIUM
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -196,7 +196,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        & output_level=MINIMUM,                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
@@ -209,7 +209,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        & output_level=MINIMUM,                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_fpc_max', mem%fract_fpc_max,                    &

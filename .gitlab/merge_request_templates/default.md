@@ -43,11 +43,10 @@
     * if you find side effect please add an explanation and docu
 * compile with NAG / nvhpc at levante and run:
   * JSBACH:
-    * [ ] land_jsbach_R2B4_test with `--enable-quincy` CPU (NAG, nvcpu)
-    * [ ] land_jsbach_R2B4_test with `--enable-quincy` GPU
-    * [ ] land_jsbach_R2B4_test with `--disable-quincy` CPU (NAG)
-    * [ ] atm_nwp_jsbach_test with `--disable-quincy` CPU (NAG) note: needs to set 80 GB of mem
-    * [ ] aes_amip_test with `--disable-quincy` CPU (NAG)
+    * [ ] land_jsbach_R2B4_test with CPU (NAG, nvcpu)
+    * [ ] land_jsbach_R2B4_test with GPU
+    * [ ] atm_nwp_jsbach_test with CPU (NAG) note: needs to set 80 GB of mem
+    * [ ] aes_amip_test with CPU (NAG)
   * QUINCY with JSBACH soil-physics enabled:
     * [ ] exp.land_quincy_canopy_R2B4_test (NAG)
     * [ ] exp.land_quincy_canopy_R2B4_test with gpu.nvhpc
@@ -58,15 +57,11 @@
     * [ ] exp.land_quincy_standalone_test_2y (NAG)
     * [ ] results of a quincy land CN simulation with and without restart are identical (NAG)
       * any additional info
-  * QUINCY with SPQ_ enabled:
-    * [ ] exp.land_quincy_standalone_test_2m_spq (NAG)
 * [ ] no water-balance issue
   * provide details about the test simulation
 
 #### associated merge requests
 * ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
-  * brief summary of IQ test simulations
+  * brief summary of QS test simulations
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository
-
-closes issue [add link (full url) to issue]
