@@ -40,7 +40,7 @@ MODULE mo_q_dinsect_init
     IMPLICIT NONE
 
     PRIVATE
-    PUBLIC :: dinsect_init
+    PUBLIC :: dinsect_init, read_bb_dist_fraction, read_df_dist_fraction
 
     CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dinsect_init'
 
@@ -132,6 +132,72 @@ MODULE mo_q_dinsect_init
 
   END SUBROUTINE dinsect_init
 
+
+  ! ====================================================================================================== !
+  !
+  !> Reading of this year to be consumed by bark beetle in grid-cell area from input file
+  !
+  SUBROUTINE read_df_dist_fraction(model_id, current_datetime)
+    USE mo_io_units,              ONLY: filename_max
+    USE mo_jsb_time_iface,        ONLY: t_datetime
+    USE mo_jsb_time,              ONLY: is_time_experiment_start, get_year
+    USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_jsb_class,             ONLY: Get_model
+    dsl4jsb_Use_config(Q_DINSECT_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),            POINTER :: model
+    TYPE(t_jsb_grid),             POINTER :: hgrid
+    CLASS(t_jsb_tile_abstract),   POINTER :: tile
+    CHARACTER(len=:), ALLOCATABLE         :: fullpath
+
+    dsl4jsb_Def_config(Q_DINSECT_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
+
+    dsl4jsb_Real2D_onDomain :: dinsect_df_dist_fraction_read
+    ! -------------------------------------------------------------------------------------------------- !
+    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    INTEGER                     :: current_year
+    TYPE(t_input_file)          :: input_file
+    CHARACTER(len=filename_max) :: fname
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
+    ! -------------------------------------------------------------------------------------------------- !
+    model => Get_model(model_id)
+    CALL model%Get_top_tile(tile)
+
+    dsl4jsb_Get_config(Q_DINSECT_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
+    dsl4jsb_Get_var2D_onDomain(Q_DINSECT_, dinsect_df_dist_fraction_read)
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    current_year  = get_year(current_datetime)
+
+    !>
+    !> Assertion: routine currently expects filenames with 4 digits
+    !>
+    IF ( current_year > 9999) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+    ELSE IF (current_year < 1000) THEN
+      CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
+                                  //' for years < 1000 leading zeros are expected.')
+    END IF
+    WRITE (fname,'(a,a,I4.4,a)') &
+      & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_filename_prefix), '_', current_year, ".nc"
+
+    fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_path) // fname
+
+    input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
+    ptr_2D => input_file%Read_2d(variable_name='dist_fract', fill_array = dinsect_df_dist_fraction_read(:,:))
+    CALL input_file%Close()
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
+
+  END SUBROUTINE read_df_dist_fraction
+
   ! ====================================================================================================== !
   !
   !> Reading of this year to be consumed by bark beetle in grid-cell area from input file
@@ -144,8 +210,6 @@ MODULE mo_q_dinsect_init
     USE mo_jsb_class,             ONLY: Get_model
     dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_memory(Q_DINSECT_)
-    ! USE mo_q_syl_config_class,    ONLY: CONST_HARV, REF_HARV, TRANS_HARV
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -173,43 +237,21 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Get_memory(Q_DINSECT_)
     dsl4jsb_Get_var2D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
 
-    IF (.NOT. dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
-      ! No reading necessary if constant harvest
-      RETURN
-    END IF
-    ! IF (dsl4jsb_Config(Q_DINSECT_)%harvest_scheme == CONST_HARV) THEN
-    !   ! No reading necessary if constant harvest
-    !   RETURN
-    ! END IF
-
-    ! IF (dsl4jsb_Config(Q_DINSECT_)%harvest_scheme == REF_HARV &
-    !     & .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
-    !   ! In case of a reference harvest file, reading is only necessary at the beginning of the experiment
-    !   RETURN
-    ! END IF
-
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+    current_year  = get_year(current_datetime)
 
-    ! IF (dsl4jsb_Config(Q_DINSECT_)%harvest_scheme == REF_HARV) THEN
-    !   ! search a file not ending on a year ...
-    !   WRITE (fname,'(a,a)') &
-    !     & TRIM(dsl4jsb_Config(Q_DINSECT_)%harvest_filename_prefix), ".nc"
-    ! ELSE
-      ! search a file ending on the current year
-      current_year  = get_year(current_datetime)
+    !>
+    !> Assertion: routine currently expects filenames with 4 digits
+    !>
+    IF ( current_year > 9999) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+    ELSE IF (current_year < 1000) THEN
+      CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
+                                  //' for years < 1000 leading zeros are expected.')
+    END IF
+    WRITE (fname,'(a,a,I4.4,a)') &
+      & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
 
-      !>
-      !> Assertion: routine currently expects filenames with 4 digits
-      !>
-      IF ( current_year > 9999) THEN
-        CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
-      ELSE IF (current_year < 1000) THEN
-        CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
-                                    //' for years < 1000 leading zeros are expected.')
-      END IF
-      WRITE (fname,'(a,a,I4.4,a)') &
-        & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
-    ! END IF
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
 
     input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)

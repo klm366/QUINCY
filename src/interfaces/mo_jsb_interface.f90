@@ -39,7 +39,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DINSECT_
 
   IMPLICIT NONE
   PRIVATE
@@ -605,12 +605,14 @@ CONTAINS
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
-
     USE mo_alcc_init,           ONLY : read_land_use_data
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
+    USE mo_q_dinsect_init,      ONLY : read_bb_dist_fraction, read_df_dist_fraction
     USE mo_jsb_math_constants,  ONLY : eps1
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Use_config(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -624,8 +626,10 @@ CONTAINS
                                                     !< given its intervall and its the start year
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(Q_DINSECT_)
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
@@ -635,6 +639,9 @@ CONTAINS
       CALL finish(routine, 'should not be called inside OMP parallel region!')
     END IF
     model => Get_model(model_id)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_DINSECT_)
+    ! ----------------------------------------------------------------------------------------------------- !
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
@@ -655,6 +662,20 @@ CONTAINS
           END IF
           IF (model%processes(Q_AGR_)%p%config%active) THEN
             CALL read_fertiliser_input(model_id, current_datetime)
+          END IF
+        END IF
+      END IF
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+        IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+          IF (model%processes(Q_DINSECT_)%p%config%active) THEN
+            IF (.NOT. dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
+              CALL read_bb_dist_fraction(model_id, current_datetime)
+            END IF
+            IF (.NOT. dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_df_from_namelist) THEN
+              CALL read_df_dist_fraction(model_id, current_datetime)
+            END IF
           END IF
         END IF
       END IF
