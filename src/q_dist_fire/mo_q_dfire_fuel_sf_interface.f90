@@ -30,7 +30,7 @@ MODULE mo_q_dfire_fuel_sf_interface
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_q_dfire_fuel_sf_tasks
-  PUBLIC :: update_q_dfire_sf_fuel, update_q_dfire_sf_impacts
+  PUBLIC :: update_q_dfire_sf_fuel, update_q_dfire_sf_impacts, update_q_dfire_sf_update
 
 
   ! ======================================================================================================= !
