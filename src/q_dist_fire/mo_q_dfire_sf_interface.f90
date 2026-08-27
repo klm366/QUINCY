@@ -27,7 +27,7 @@ MODULE mo_q_dfire_sf_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_q_dfire_tasks
+  PUBLIC :: Register_q_dfire_sf_tasks
   PUBLIC :: update_time_average_q_dist_fire, update_q_dfire_sf_dynamics
 
   ! ======================================================================================================= !
@@ -74,13 +74,13 @@ CONTAINS
   !>
   !> Register tasks: Q_DFIRE_SF_ process
   !>
-  SUBROUTINE Register_q_dfire_tasks(this, model_id)
+  SUBROUTINE Register_q_dfire_sf_tasks(this, model_id)
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_q_dfire_sf_dynamics(model_id))
     CALL this%Register_task(tsk_time_average_q_dist_fire(model_id))
-  END SUBROUTINE Register_q_dfire_tasks
+  END SUBROUTINE Register_q_dfire_sf_tasks
 
   ! ======================================================================================================= !
   !>
