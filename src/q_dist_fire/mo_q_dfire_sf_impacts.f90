@@ -90,7 +90,7 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: VEG_, HYDRO_, Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_
+    USE mo_jsb_process_class,       ONLY: SB_, VEG_, HYDRO_, Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_
     ! ----------------------------------------------------------------------------------------------------- !
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -103,6 +103,8 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_DFIRE_SF_)
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -155,6 +157,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
 
     REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
+
+    INTEGER, ALLOCATABLE                  :: dead_elements(:) !< List of dead element indices
+    INTEGER, ALLOCATABLE                  :: live_elements(:) !< List of live element indices
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -221,6 +226,8 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_SF_)
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(VEG_)
@@ -249,6 +256,8 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(VEG_)
@@ -385,6 +394,23 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Dead and Live elements to apply back into the model:
+    ! flag_sb_interactive_n and flag_sb_interactive_p
+    ! flag_veg_interactive_n and flag_veg_interactive_p
+    dead_elements = [ixC, ixC13, ixC14]
+    IF (dsl4jsb_Config(SB_)%flag_sb_interactive_n) THEN
+      dead_elements = [dead_elements, [ixN, ixN15]]
+    ENDIF
+    IF (dsl4jsb_Config(SB_)%flag_sb_interactive_p) THEN
+      dead_elements = [dead_elements, [ixP]]
+    ENDIF
+    live_elements = [ixC, ixC13, ixC14]
+    IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_n) THEN
+      live_elements = [live_elements, [ixN, ixN15]]
+    ENDIF
+    IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_p) THEN
+      live_elements = [live_elements, [ixP]]
+    ENDIF
 
     ! calc tree mortality
     IF (lctlib%growthform == itree) THEN
