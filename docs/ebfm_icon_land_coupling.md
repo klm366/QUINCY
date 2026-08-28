@@ -32,7 +32,7 @@ Division of labour on ice-covered cells (decided 2026-08-22):
   as a diagnostic, `ebm_*`).
 * EBFM is conceptually "the glacier tile engine" of ICON-Land: it provides the surface/firn
   *state*, ICON-Land computes the *fluxes* from it. This is the same pattern as the ICON
-  atmosphere–ocean coupling (ocean provides SST, atmosphere computes fluxes).
+  atmosphere-ocean coupling (ocean provides SST, atmosphere computes fluxes).
 
 In ICON-Land the coupling is implemented by the process `lice` (land ice, `jsb_lice_nml`), which
 runs `ON_TILE_` on a dedicated tile `lice`; its variables are aggregated to the `land` and `box`
@@ -56,30 +56,30 @@ authoritative (no JSBACH glacier there). The fractions are produced by
 of the Elmer XIOS restart with the EBFM definition `h > 1 m`) and by [`elmer_scripts/postprocess_elmer.py`](https://gitlab.dkrz.de/m300792/mkexp_coupled_experiments/-/blob/ebfm_jsbach_coupling/elmer_scripts/postprocess_elmer.py)
 after every run chunk (from Elmer's `sftgif`; `--no-lice-tile` restores the old single-glacier-tile
 files). They are conservative area fractions (CDO `genycon` with `CDO_REMAP_NORM=destarea`, the
-same normalisation as YAC's `icefract`; requires CDO ≥ 2.6, older versions ignore `destarea` — the
+same normalisation as YAC's `icefract`; requires CDO >= 2.6, older versions ignore `destarea` - the
 generated weights are checked): `cov` = part of the ICON cell covered by the mesh, `ice` =
-part covered by ice-covered mesh cells; relative to the land tile (`land_abs = notsea · fract_land`):
-`fract_lice = ice / land_abs`, `fract_glac = (1 − cov / land_abs) · fract_glac_master`,
-`fract_veg = 1 − fract_glac − fract_lice` (all clipped to [0, 1]). The nearest-neighbour 0/1
+part covered by ice-covered mesh cells; relative to the land tile (`land_abs = notsea * fract_land`):
+`fract_lice = ice / land_abs`, `fract_glac = (1 - cov / land_abs) * fract_glac_master`,
+`fract_veg = 1 - fract_glac - fract_lice` (all clipped to [0, 1]). The nearest-neighbour 0/1
 variant of the old post-processing is available with `--method nn`. The ice fraction `icefract` received from EBFM at run time is a consistency diagnostic
 (`lice_glac_fract_diff`) until dynamic tile fractions are implemented.
 
 #### Generating the fraction file for a grid
 
-`lice_fractions.py` has no resolution setting of its own — the target resolution is defined
+`lice_fractions.py` has no resolution setting of its own - the target resolution is defined
 entirely by two inputs, which must be on the **same ICON grid**:
 
-* `--icon-grid`: the target grid file. The CDO weights (Elmer mesh → this grid) are generated for
+* `--icon-grid`: the target grid file. The CDO weights (Elmer mesh -> this grid) are generated for
   exactly its cells; the Elmer side (`--elmer-file`, static mesh) is resolution-independent.
 * `--master`: the `bc_land_frac` file **for that same grid**. The output is a modified copy of it
   (`fract_glac`/`fract_veg` rewritten, `fract_lice` added), so it inherits the master's grid and
-  all other variables — for a `jsbach_pfts` setup use the 12pfts master, so the PFT fractions are
+  all other variables - for a `jsbach_pfts` setup use the 12pfts master, so the PFT fractions are
   carried along. There is no explicit consistency check between master and grid; a mismatch fails
   with a CDO/NCO dimension error rather than silently.
 
 The `--workdir` caches the Elmer grid description and the remap weights under fixed names
-(no resolution tag) — use a **separate workdir per ICON grid**. `destarea` weights need
-**CDO ≥ 2.6** (e.g. `module load cdo/2.6.0-gcc-11.2.0`); the script checks the generated weights
+(no resolution tag) - use a **separate workdir per ICON grid**. `destarea` weights need
+**CDO >= 2.6** (e.g. `module load cdo/2.6.0-gcc-11.2.0`); the script checks the generated weights
 and aborts on older versions, which silently fall back to `fracarea`. Weight generation is a
 one-off per grid (cached; expect it to take considerably longer at R2B8 than at R2B4).
 
@@ -96,7 +96,7 @@ elmer_scripts/lice_fractions.py \
 ```
 
 Example for the high-res R2B8-R2B9 config (`jsbach_pfts`, grid 0054, 12pfts master, reference
-year 1990 — see `terradt-R2B8_R2B9`):
+year 1990 - see `terradt-R2B8_R2B9`):
 
 ```bash
 elmer_scripts/lice_fractions.py \
@@ -118,7 +118,7 @@ Established 2026-08-23 from the Elmer XIOS restart file and the EBFM code (to be
 EBFM developers):
 
 * The Elmer/EBFM mesh is **static** and covers essentially **all of Greenland** (372 241 cells,
-  2.06·10⁶ km², vs. 2.17·10⁶ km² for Greenland), ice-covered or not: 1.78·10⁶ km² have an ice
+  2.06 x 10^6 km^2, vs. 2.17 x 10^6 km^2 for Greenland), ice-covered or not: 1.78 x 10^6 km^2 have an ice
   thickness > 1 m (the ice sheet), 60 787 mesh cells are ice-free. Only ice thickness, surface
   elevation and the ice mask `sftgif` evolve on it. The mesh coverage used for `fract_lice`
   (`cov`) is therefore the fixed Greenland domain; only its ice-covered part changes with time.
@@ -141,47 +141,47 @@ ice-free/ice-covered cells be initialised on both sides?
 
 Restart legs work (verified 2026-08-23 with a 2-day `coupled_ebfm` run, restart after day 1):
 ICON restarts bit-exact from the multifile restart, which carries all `lice` process variables
-(incl. `hcap_sub`) and — with SSE off on the lice tile — no SSE variables for that tile; the
+(incl. `hcap_sub`) and - with SSE off on the lice tile - no SSE variables for that tile; the
 surface temperature evolves smoothly across the restart boundary. The EBFM command in the mpmd
 configuration takes its `--start-time`/`--end-time` from the leg dates
 (`${start_date_ebfm}`/`${end_date_ebfm}`, defined per leg in the run templates), so every leg
 launches EBFM over the correct interval. **EBFM restarts** (since 2026-08-24): the
 `coupled_ebfm(_elmer)` setups pass `--restart-dir ${ebfm_restart_dir}` (a persistent directory
-`ebfm_restart/` next to `work/`, defined per leg in the run templates) — the first leg only
-writes, continuation legs also pass `--restart-init` and read `restart_<start>.nc` — so the firn
+`ebfm_restart/` next to `work/`, defined per leg in the run templates) - the first leg only
+writes, continuation legs also pass `--restart-init` and read `restart_<start>.nc` - so the firn
 state survives restart legs (verified: `t_sub` continuous across the leg boundary; note that only
 *partitioned* EBFM runs cannot write restarts). Two sharp edges: the restart files are large
 (~0.9 GB per leg at the Greenland mesh, one file per leg, no automatic cleanup), and EBFM refuses
-to overwrite an existing restart file — re-running a leg requires deleting its
+to overwrite an existing restart file - re-running a leg requires deleting its
 `restart_<end>.nc` first.
 
 ### EBFM output
 
 EBFM output is enabled in coupled runs (2026-08-24; previously it was skipped): every leg writes
-`Output/model_output.nc` in its run directory — daily records (`freqout = 8` at a 3 h step) of the
+`Output/model_output.nc` in its run directory - daily records (`freqout = 8` at a 3 h step) of the
 forcing, the diagnostic energy balance (incl. `ebm_Tsurf`/`ebm_melt`/`ebm_Emelt` next to the
 ICON-Land-driven `Tsurf`/`melt`), the firn/mass-balance fields and the `sub*` profiles, on the
 unstructured Elmer mesh with `lat`/`lon` coordinate variables (CF `coordinates` attribute). The
 tile fractions of ICON-Land (`group:jsb_tile_fractions`, incl. `fract_lice`) are written once per
 experiment (a single snapshot at `$INITIAL_DATE`) to the separate stream `lnd_fract_2d_inst` for
-evaluation (e.g. weighting per-tile variables) — the fractions are constant, and the files carry
+evaluation (e.g. weighting per-tile variables) - the fractions are constant, and the files carry
 no time axis, so per-leg files would collide in the intake catalog (identical keys).
 
 ## Exchanged fields
 
 | couple | direction | fields | YAC settings |
 |---|---|---|---|
-| `atm2ebfm` | ICON-A → EBFM | `tas`, `sfcwind`, `pr_snow`, `pr`, `rsds`, `rlds`, `clt`, `sfcpres`, `huss` (forcing) | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn |
-| `ebfm2land` | EBFM → ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface–first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` | PT3H, `none`, `src_lag 0`, `tgt_lag 0` (configurable: `land.lag`), conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
-| `land2ebfm` | ICON-Land → EBFM | `t_srf`, `melt`, `evapotrans` (negative upward) of the `lice` tile | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn, YAC source mask `fract_lice > 0` |
+| `atm2ebfm` | ICON-A -> EBFM | `tas`, `sfcwind`, `pr_snow`, `pr`, `rsds`, `rlds`, `clt`, `sfcpres`, `huss` (forcing) | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn |
+| `ebfm2land` | EBFM -> ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface-first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` | PT3H, `none`, `src_lag 0`, `tgt_lag 0` (configurable: `land.lag`), conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
+| `land2ebfm` | ICON-Land -> EBFM | `t_srf`, `melt`, `evapotrans` (negative upward) of the `lice` tile | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn, YAC source mask `fract_lice > 0` |
 
-Conventions: fluxes positive into the surface in both models; ICON-Land sends kg m⁻² s⁻¹,
+Conventions: fluxes positive into the surface in both models; ICON-Land sends kg m-2 s-1,
 EBFM converts to m w.e. per time step; EBFM sends its mass fields per unit ice area.
 
 ## Timing
 
 YAC matches the n-th put event of the source with the n-th get event of the target. Each side
-advances its own event clock with every put/get call, pre-advanced by `lag × own time step`, and
+advances its own event clock with every put/get call, pre-advanced by `lag x own time step`, and
 an event fires when the clock is a multiple of the coupling period.
 
 * `atm2ebfm` / `land2ebfm` (lag 1/1): ICON puts after every step (stamped with the end-of-step
@@ -262,10 +262,10 @@ concurrently: ICON integrates the next 3 h while EBFM is idle (waiting for the n
 
 | field | status |
 |---|---|
-| `icefract` | received, diagnostics only (`icefract_valid`, `glac_fract_diff` = `icefract - fract_lice`); changing `fract_lice` at run time needs the LCC framework (water conservation) — later |
+| `icefract` | received, diagnostics only (`icefract_valid`, `glac_fract_diff` = `icefract - fract_lice`); changing `fract_lice` at run time needs the LCC framework (water conservation) - later |
 | `albedo` | used in `update_albedo` (RAD) of the `lice` tile: EBFM's broadband albedo for both bands where EBFM provides data, JSBACH's glacier albedo otherwise (one step before each radiation step) |
-| `t_sub`, `ghf_cond`, `hcap_sub` | `t_sub` additionally initialises the surface temperature of the lice tile at experiment start (in `interface_lice_get`, cold starts only): the SEB memory initval is a constant 280 K, which otherwise melts ~5 mm w.e. during the first coupling window while the surface relaxes. Used in the SEB of the `lice` tile: ground heat flux `ghf_cond · (t_sub − t_srf_old)` and surface-layer heat capacity `hcap_sub` replace SSE's `grnd_hflx`/`hcap_grnd`; **SSE is switched off (`SKIP_`) on the lice tile** (the firn energetics are EBFM's). Note: SSE variables with `l_aggregate_all` are diluted by the lice fraction in land/box aggregates (diagnostics only). |
-| `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P − E that JSBACH uses on glacier tiles. The residual P + E − runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb`. Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
+| `t_sub`, `ghf_cond`, `hcap_sub` | `t_sub` additionally initialises the surface temperature of the lice tile at experiment start (in `interface_lice_get`, cold starts only): the SEB memory initval is a constant 280 K, which otherwise melts ~5 mm w.e. during the first coupling window while the surface relaxes. Used in the SEB of the `lice` tile: ground heat flux `ghf_cond * (t_sub - t_srf_old)` and surface-layer heat capacity `hcap_sub` replace SSE's `grnd_hflx`/`hcap_grnd`; **SSE is switched off (`SKIP_`) on the lice tile** (the firn energetics are EBFM's). Note: SSE variables with `l_aggregate_all` are diluted by the lice fraction in land/box aggregates (diagnostics only). |
+| `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P - E that JSBACH uses on glacier tiles. The residual P + E - runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb`. Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
 | `smb`, `snowmass` | received, diagnostics |
 
 ## Configuration
