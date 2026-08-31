@@ -64,8 +64,6 @@ MODULE mo_q_dinsect_memory_class
     !                                compen_defoli_scale        , &   !< 0~1 0: no compensatory feeding; 1: completely compensatory feeding
     !------------------------------------------------------------------------------------------------------ !
     TYPE(t_jsb_var_real2d)          ::  &
-                                    defoliator_effects_triggered, &         !< the flag of calculating timelasting defoliator effects. Currenly, once triggered from 0 to 1, it will keep unchanged.
-                                    barkbeetle_effects_triggered, &         !< the flag of calculating timelasting bark beetle effects. Currenly, once triggered from 0 to 1, it will keep unchanged.
                                     defoliated_state, &                    !< the flag for notifying this timestep is under defoliation (1.0_wp) or not (0.0_wp).
                                     dinsect_year_since_start, &            !< the number of years since the start of insect disturbance
                                     dinsect_defoliator_resp_c, &           !< the respiration of defoliator [mol C/m2/timestep]
@@ -373,28 +371,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> 2.0 2D & 3D variables
       !>
-
-      CALL mem%Add_var('defoliator_effects_triggered', mem%defoliator_effects_triggered, &
-        & hgrid, surface, &
-        & t_cf('defoliator_effects_triggered', 'unitless, > 0 means triggered', 'defoliator_effects_triggered'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('barkbeetle_effects_triggered', mem%barkbeetle_effects_triggered, &
-        & hgrid, surface, &
-        & t_cf('barkbeetle_effects_triggered', 'unitless, > 0 means triggered', 'barkbeetle_effects_triggered'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('dinsect_bb_mort_dt', mem%dinsect_bb_mort_dt, &
         & hgrid, surface, &

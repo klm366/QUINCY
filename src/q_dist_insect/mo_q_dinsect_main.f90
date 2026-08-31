@@ -114,8 +114,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Def_memory(Q_PHENO_)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
-  dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
-  dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_df_mort_dt            ! disturbed fraction caused by defoliator [fraction/timestep]
@@ -172,8 +170,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   ! Q_DINSECT_ 2D
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_df_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
@@ -326,8 +322,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Def_memory(VEG_)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
-  dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
-  dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_bb_mort_dt            ! mortality rate caused by bark beetle [fraction/timestep]
@@ -380,8 +374,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   ! Q_DINSECT_ 2D
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_mort_dt) ! out
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
@@ -514,8 +506,6 @@ SUBROUTINE update_dinsect_pools(tile, options)
   dsl4jsb_Def_memory(VEG_)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
-  dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
-  dsl4jsb_Real2D_onChunk      :: barkbeetle_effects_triggered
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_bb_mort_dt            ! mortality rate caused by bark beetle [fraction/timestep]
@@ -568,8 +558,6 @@ SUBROUTINE update_dinsect_pools(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   ! Q_DINSECT_ 2D
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_mort_dt) ! out
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
