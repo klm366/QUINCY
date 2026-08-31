@@ -129,6 +129,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
+  dsl4jsb_Real3D_onChunk      :: dinsect_df_dist_fraction_read ! defoliator disturbance fraction [fraction/day]
   ! Q_PHENO_
   dsl4jsb_Real2D_onChunk      :: growing_season               !< Growing season indicator (1 = growing, 0 = not growing)
   ! ----------------------------------------------------------------------------------------------------- !
@@ -188,6 +189,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
+  dsl4jsb_Get_var3D_onChunk(Q_DINSECT_, dinsect_df_dist_fraction_read) ! in
   ! Q_PHENO_
   dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season) ! in
 
@@ -220,7 +222,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
     dinsect_df_mort_dt = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_df_forcing_dist_frac(doy) / (one_day / dtime) ! distribute DF outbreak accross the whole day
   ELSE
-    dinsect_df_mort_dt = 0.0_wp
+    dinsect_df_mort_dt = dinsect_df_dist_fraction_read(:,doy) / (one_day / dtime)
   ENDIF
   !<  ------------------  2.2 determine the defoliation  ----------------------------------
 
