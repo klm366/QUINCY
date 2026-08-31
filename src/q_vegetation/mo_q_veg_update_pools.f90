@@ -521,16 +521,6 @@ CONTAINS
           IF (model%config%is_element_used(id_elem)) THEN
             ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
             DO ix_comp = 1, nr_of_veg_bgcm_comp
-
-              !> add fast litter from bark beetle outbreak to normal litterfall
-              SELECT CASE(model%config%qmodel_id)
-              CASE(QLAND)   ! only be conducted when QLAND
-                IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-                  veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
-                  & dinsect_fast_litter_mt(ix_comp, ix_elem, ic)
-                END IF
-              END SELECT
-
               veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)
               veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) + veg_growth_mt(ix_comp, ix_elem, ic)
             END DO
@@ -550,14 +540,6 @@ CONTAINS
           END IF
         END DO
       END DO
-
-      !>  Update insect disturbance
-      SELECT CASE(model%config%qmodel_id)
-      CASE(QLAND)   ! only be conducted when QLAND
-        IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-          veg_pool_mt(:,:,:) = veg_pool_mt(:,:,:) - dinsect_veg_extract_mt(:,:,:)
-        END IF
-      END SELECT
 
       !>    1.8.1 ensure veg_pool does not become negative - quick-fix and debug
       !>
