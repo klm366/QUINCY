@@ -81,7 +81,7 @@ MODULE mo_q_dinsect_memory_class
                                     dinsect_total_mort_dt                  !< Disturbance fraction mortality caused by all insects disturbances [fraction/timestep]
     TYPE(t_jsb_var_real2d)          :: &
                                     dinsect_pool_total_c                   !< Total carbon from insect pools [mol C/m2/timestep]
-    TYPE(t_jsb_var_real2d)          :: &
+    TYPE(t_jsb_var_real3d)          :: &
                                     dinsect_bb_dist_fraction_read, &       !< Bark beetle fraction read from netcdf file [fraction/day]
                                     dinsect_df_dist_fraction_read          !< Defoliator fraction read from netcdf file [fraction/day]
 
@@ -175,6 +175,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),                POINTER :: surface                        !< Vertical grid
     TYPE(t_jsb_vgrid),                POINTER :: vgrid_soil_w                   !< Vertical grid
     TYPE(t_jsb_vgrid),                POINTER :: vgrid_canopy_q_assimi          !< Vertical grid
+    TYPE(t_jsb_vgrid),                POINTER :: vgrid_days_in_year             !< Vertical grid
     CHARACTER(len=30)                         :: unit_dinsect_pool              !< unit of element var
     CHARACTER(len=30)                         :: unit_dinsect_flux              !< unit of element var
     INTEGER                                   :: elem_idx_map(LAST_ELEM_ID)     !< element mapper ID -> IND
@@ -191,6 +192,7 @@ CONTAINS
     surface       => Get_vgrid('surface')
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
+    vgrid_days_in_year  => Get_vgrid('q_days_in_year')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
 
@@ -429,7 +431,7 @@ CONTAINS
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('dinsect_bb_dist_fraction_read', mem%dinsect_bb_dist_fraction_read, &
-        & hgrid, surface, &
+        & hgrid, surface, vgrid_days_in_year, &
         & t_cf('dinsect_bb_dist_fraction_read', 'fraction day-1', 'dinsect_bb_dist_fraction_read'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &

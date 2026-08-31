@@ -222,9 +222,9 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(Q_DINSECT_)
 
-    dsl4jsb_Real2D_onDomain :: dinsect_bb_dist_fraction_read
+    dsl4jsb_Real3D_onDomain :: dinsect_bb_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(wp),           POINTER :: ptr_3D(:,:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
@@ -235,7 +235,7 @@ MODULE mo_q_dinsect_init
 
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
-    dsl4jsb_Get_var2D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
+    dsl4jsb_Get_var3D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
     current_year  = get_year(current_datetime)
@@ -255,7 +255,7 @@ MODULE mo_q_dinsect_init
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
 
     input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
-    ptr_2D => input_file%Read_2d(variable_name='dist_fract', fill_array = dinsect_bb_dist_fraction_read(:,:))
+    ptr_3D => input_file%Read_2d_time(variable_name='dist_fract', fill_array = dinsect_bb_dist_fraction_read)
 
     CALL input_file%Close()
 

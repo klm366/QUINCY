@@ -97,6 +97,7 @@ CONTAINS
     !< Defined as 366 due to leap years. It is ignored for non-leap years.
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
     REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_days_in_year  !< Vertical grid used for days in year
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dinsect_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -158,6 +159,12 @@ CONTAINS
     config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac
 
     CALL close_nml(nml_handler)
+
+    ! includes leap year. Ignored when not required.
+    vgrid_days_in_year  => new_vgrid('q_days_in_year', ZAXIS_GENERIC, 366, &
+      & long_name='days in year', &
+      & units='d')
+    CALL register_vgrid(vgrid_days_in_year)
   END SUBROUTINE Init_dinsect_config
 
 #endif
