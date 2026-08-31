@@ -461,6 +461,7 @@ CONTAINS
         IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
           CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY, new, decoupled from update_dinsect_effects
           CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY, new, decoupled from update_dinsect_effects
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_pools") ! LAND ONLY, new, decoupled from update_dinsect_effects
         ENDIF
       ENDIF
 
