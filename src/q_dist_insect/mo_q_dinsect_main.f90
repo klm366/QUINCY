@@ -387,7 +387,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliator_effects_triggered) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, barkbeetle_effects_triggered) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_mort_dt) ! inout
+  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_mort_dt) ! out
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, is_insect_year) ! inout
@@ -416,7 +416,8 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
     ! (fake) read input data (daily), import from namelist, apply same data to every year
     dinsect_bb_mort_dt(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
   ELSE
-    dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:,1) / (one_day / dtime)
+    ! load netcdf data
+    dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:,doy) / (one_day / dtime)
   ENDIF
 
   ! ======================================================================================================= !
