@@ -105,7 +105,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Def_mt1L2D :: dinsect_dropping_mt
   dsl4jsb_Def_mt2L2D :: dinsect_veg_extract_mt
   dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
-  dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
   dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Def_config(Q_DINSECT_)
@@ -164,7 +163,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_VEG_EXTRACT_ID, dinsect_veg_extract_mt)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_SLOW_LITTER_ID, dinsect_slow_litter_mt)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_FAST_LITTER_ID, dinsect_fast_litter_mt)
-  dsl4jsb_Get_mt1L2D(DINSECT_BGCM_SEEDB_FASTL_ID, dinsect_seedb_fastl_mt)
 
   dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DEADSAPWOOD_ID, dinsect_deadsapwood_mt)
   dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DEADHEARTWOOD_ID, dinsect_deadheartwood_mt)
@@ -322,7 +320,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Def_mt1L2D :: dinsect_dropping_mt
   dsl4jsb_Def_mt2L2D :: dinsect_veg_extract_mt
   dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
-  dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
   dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Def_config(Q_DINSECT_)
@@ -376,7 +373,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_VEG_EXTRACT_ID, dinsect_veg_extract_mt)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_SLOW_LITTER_ID, dinsect_slow_litter_mt)
   dsl4jsb_Get_mt2L2D(DINSECT_BGCM_FAST_LITTER_ID, dinsect_fast_litter_mt)
-  dsl4jsb_Get_mt1L2D(DINSECT_BGCM_SEEDB_FASTL_ID, dinsect_seedb_fastl_mt)
 
   dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DEADSAPWOOD_ID, dinsect_deadsapwood_mt)
   dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DEADHEARTWOOD_ID, dinsect_deadheartwood_mt)
@@ -439,7 +435,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
          & dinsect_veg_extract_mt(:,:,:)          , & ! inout (flux)
          & dinsect_slow_litter_mt(:,:,:)          , & ! inout (flux)
          & dinsect_fast_litter_mt(:,:,:)          , & ! inout (flux)
-         & dinsect_seedb_fastl_mt(:,:)            , & ! inout (flux)
          & dinsect_barkbeetle_labile_c(:)         , & ! inout
          & dinsect_barkbeetle_labile_c13(:)       , & ! inout
          & dinsect_barkbeetle_labile_c14(:)       , & ! inout

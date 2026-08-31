@@ -87,7 +87,6 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
-    dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_DINSECT_)
@@ -167,7 +166,6 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
-    dsl4jsb_Get_mt1L2D(DINSECT_BGCM_SEEDB_FASTL_ID, dinsect_seedb_fastl_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season)         ! in
@@ -355,8 +353,7 @@ CONTAINS
             & rfr_ratio_boc_tvegdyn_mavg(:)       , &
             & seed_bed_pool_mt(:,:)               , & ! in
             & veg_establishment_mt(:,:)           , &   ! inout
-            & dsl4jsb_Config(Q_DINSECT_)%dinsect_online, & ! in
-            & dinsect_seedb_fastl_mt(:,:)) ! inout
+            & dsl4jsb_Config(Q_DINSECT_)%dinsect_online) ! in
         ELSE
           ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
           hlp1(:) = 0.0_wp
@@ -818,8 +815,7 @@ CONTAINS
     & rfr_ratio_boc_tvegdyn_mavg  , &
     & seed_bed_pool_mt            , &
     & veg_establishment_mt        , &
-    & dinsect_online              , &
-    & dinsect_seedb_fastl_mt      )
+    & dinsect_online              )
 
     USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist, &
       &                                       rfr_ratio_toc
@@ -837,7 +833,6 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
     REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
     REAL(wp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
-    REAL(wp),                 INTENT(inout) :: dinsect_seedb_fastl_mt(:,:)!< bgcm flux: fast litter seed bed due to insect disturbance, which will add to veg_litterfall_mt
     LOGICAL,                  INTENT(in)    :: dinsect_online              !< if insect disturbance is online
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem              !< loop over bgcm elements

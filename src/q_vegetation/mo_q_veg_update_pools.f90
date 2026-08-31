@@ -97,7 +97,6 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
     dsl4jsb_Def_mt2L2D :: dinsect_veg_extract_mt
     dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
-    dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
@@ -275,7 +274,6 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_VEG_EXTRACT_ID, dinsect_veg_extract_mt)
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_FAST_LITTER_ID, dinsect_fast_litter_mt)
-    dsl4jsb_Get_mt1L2D(DINSECT_BGCM_SEEDB_FASTL_ID, dinsect_seedb_fastl_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -537,13 +535,6 @@ CONTAINS
               veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) + veg_growth_mt(ix_comp, ix_elem, ic)
             END DO
           END IF
-
-          SELECT CASE(model%config%qmodel_id)
-            CASE(QLAND)   ! only be conducted when QLAND
-              IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-                seed_bed_litterfall_mt(ix_elem, ic) = seed_bed_litterfall_mt(ix_elem, ic) + dinsect_seedb_fastl_mt(ix_elem, ic)
-              END IF
-          END SELECT
 
           seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) - seed_bed_litterfall_mt(ix_elem, ic)
           seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) + seed_bed_growth_mt(ix_elem, ic)
