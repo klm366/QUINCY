@@ -544,8 +544,8 @@ CONTAINS
 
     !< Transfer SB impacts into spitfire fluxes
     !< Residue is transfered through sb_fire_litter_ash and veg_fire_litterfall
-    CALL calc_sf_feedback_dead(emissions_dead_in_m3, &
-                              residue_dead_in_m3, &
+    CALL calc_sf_feedback_dead(dead_elements, live_elements, &
+                              emissions_dead_in_m3, residue_dead_in_m3, &
                               sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), & ! todo: create flux pool with top layer only
                               sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
                               veg_fire_emissions_mt, veg_fire_litterfall_mt, &
@@ -553,7 +553,8 @@ CONTAINS
 
     !< Transfer VEG impacts into spitfire fluxes
     !< Residue is transfered through veg_litterfall
-    CALL calc_sf_feedback_live(emissions_live_el, &
+    CALL calc_sf_feedback_live(live_elements, &
+                              emissions_live_el, &
                               residue_live_el, &
                               veg_fire_emissions_mt, &
                               veg_fire_litterfall_mt, &

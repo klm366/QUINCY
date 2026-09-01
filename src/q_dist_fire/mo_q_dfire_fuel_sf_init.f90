@@ -209,8 +209,8 @@ CONTAINS
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
 
-    ! Mark process as successfully initialized
-    CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Set_init_status_true
+    ! Mark process as successfully initialized, MR 428
+    !CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Set_init_status_true
   END SUBROUTINE q_dfire_fuel_sf_init
 
 #endif

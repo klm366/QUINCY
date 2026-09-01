@@ -304,8 +304,8 @@ CONTAINS
     ic_pop_dens = dfire_init_vars%pop_dens(1,1)
     a_nd = dfire_init_vars%a_nd(1,1)
 #endif
-    ! Mark process as successfully initialized
-    CALL model%processes(Q_DFIRE_SF_)%p%Set_init_status_true
+    ! Mark process as successfully initialized, MR 428
+    !CALL model%processes(Q_DFIRE_SF_)%p%Set_init_status_true
   END SUBROUTINE q_dfire_sf_init
 
 

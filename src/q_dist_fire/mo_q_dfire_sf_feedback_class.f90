@@ -164,7 +164,7 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_feedback_live(lix, emissions, residue, veg_fire_emissions_mt, veg_litterfall_mt, mask)
 
-    INTEGER, INTENT(in)                   :: lix                          !< Live fuel element indices (flag_veg_interactive_n, flag_veg_interactive_p)
+    INTEGER, INTENT(in)                   :: lix(:)                       !< Live fuel element indices (flag_veg_interactive_n, flag_veg_interactive_p)
     REAL(wp), INTENT(in)                  :: emissions(:,:,:)             !< Live emissions (#nc,#n live pools,#elems) [mol/m2]
     REAL(wp), INTENT(in)                  :: residue(:,:,:)               !< Residue from live emissions (#nc,#n live pools,#elems) [mol/m2]
     REAL(wp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
@@ -206,7 +206,7 @@ CONTAINS
         veg_litterfall_mt(ix_sap_wood,lix,inc) = veg_litterfall_mt(ix_sap_wood,lix,inc) + &
                                                       residue(inc,t_sf_fuel_live_fuel_sap_wood_ix,lix)
         veg_litterfall_mt(ix_heart_wood,lix,inc) = veg_litterfall_mt(ix_heart_wood,lix,inc) + &
-                                                      residue(inc,t_sf_fuel_live_fuel_heart_wood_ix,lixº  º ºº)
+                                                      residue(inc,t_sf_fuel_live_fuel_heart_wood_ix,lix)
       END IF
     END DO
 
