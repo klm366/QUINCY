@@ -25,7 +25,7 @@ MODULE mo_q_dfire_sf_init
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
-  USE mo_jsb_process_class,       ONLY: Q_DFIRE_SF_, SB_, A2L_
+  USE mo_jsb_process_class,       ONLY: Q_DFIRE_SF_, SB_, A2L_, Q_DFIRE_FUEL_SF_
 
   IMPLICIT NONE
   PRIVATE
@@ -147,6 +147,10 @@ CONTAINS
     hgrid  => Get_grid(model%grid_id)
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
+    CALL model%processes(SB_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
+    CALL model%processes(A2L_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
@@ -300,7 +304,8 @@ CONTAINS
     ic_pop_dens = dfire_init_vars%pop_dens(1,1)
     a_nd = dfire_init_vars%a_nd(1,1)
 #endif
-
+    ! Mark process as successfully initialized
+    CALL model%processes(Q_DFIRE_SF_)%p%Set_init_status_true
   END SUBROUTINE q_dfire_sf_init
 
 
