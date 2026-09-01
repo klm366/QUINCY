@@ -79,16 +79,13 @@ CONTAINS
       ! jsbach 11 PFTs + forest age-classes
       CALL init_usecase_pfts_with_forest_age_classes(model)
 
-#ifndef __NO_QUINCY__
-
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
       CALL init_usecase_quincy_13_pfts(model)
 
    ! QUINCY 15 pfts (incl. shrubs)
     CASE ('quincy_13pS_pfts')
-       CALL init_usecase_quincy_13pS_pfts(model)
-#endif
+      CALL init_usecase_quincy_13pS_pfts(model)
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -775,7 +772,7 @@ CONTAINS
       &                              'TrP:  C4 pasture',                            &
       &                              'TeC:  C3 crop',                               &
       &                              'TrC:  C4 crop',                               &
-      &                              'BSO:  bare soil'                              ]
+      &                              'BSO:  bare soil' ]
     ! index of PFT (columns) in the lctlib file
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13 /)
     CHARACTER(len=*), PARAMETER   :: routine = modname//':init_usecase_quincy_13_pfts'
@@ -953,7 +950,7 @@ CONTAINS
       &                              'TrC:  C4 crop',                               &
       &                              'BSO:  bare soil',                             &
       &                              'CSH:  low needle-leaved shrubs',              &
-      &                              'BSH:  broadleaved deciduous shrubs'          ]
+      &                              'BSH:  broadleaved deciduous shrubs' ]
 
     ! index of PFT (columns) in the lctlib file
     INTEGER, PARAMETER            :: pft_ids(npft) = (/ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 /)
