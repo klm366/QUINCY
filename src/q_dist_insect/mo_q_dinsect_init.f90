@@ -232,7 +232,11 @@ MODULE mo_q_dinsect_init
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    CALL model%processes(VEG_)%p%Test_init_status_asked_by(Q_DINSECT_)    !< Test if process dependency is already initialized
+    CALL model%processes(SB_)%p%Test_init_status_asked_by(Q_DINSECT_)    !< Test if process dependency is already initialized
+    CALL model%processes(Q_PHENO_)%p%Test_init_status_asked_by(Q_DINSECT_)    !< Test if process dependency is already initialized
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
     dsl4jsb_Get_var3D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
@@ -258,6 +262,9 @@ MODULE mo_q_dinsect_init
     ptr_3D => input_file%Read_2d_time(variable_name='dist_fract', fill_array = dinsect_bb_dist_fraction_read)
 
     CALL input_file%Close()
+
+    ! Mark process as successfully initialized
+    CALL model%processes(Q_DINSECT_)%p%Set_init_status_true
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
