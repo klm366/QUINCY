@@ -158,8 +158,8 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
 
-    INTEGER, ALLOCATABLE                  :: dead_elements(:) !< List of dead element indices
-    INTEGER, ALLOCATABLE                  :: live_elements(:) !< List of live element indices
+    INTEGER, ALLOCATABLE, SAVE            :: dead_elements(:) !< List of dead element indices
+    INTEGER, ALLOCATABLE, SAVE            :: live_elements(:) !< List of live element indices
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -397,19 +397,21 @@ CONTAINS
     ! Dead and Live elements to apply back into the model:
     ! flag_sb_interactive_n and flag_sb_interactive_p
     ! flag_veg_interactive_n and flag_veg_interactive_p
-    dead_elements = [ixC, ixC13, ixC14]
-    IF (dsl4jsb_Config(SB_)%flag_sb_interactive_n) THEN
-      dead_elements = [dead_elements, [ixN, ixN15]]
-    ENDIF
-    IF (dsl4jsb_Config(SB_)%flag_sb_interactive_p) THEN
-      dead_elements = [dead_elements, [ixP]]
-    ENDIF
-    live_elements = [ixC, ixC13, ixC14]
-    IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_n) THEN
-      live_elements = [live_elements, [ixN, ixN15]]
-    ENDIF
-    IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_p) THEN
-      live_elements = [live_elements, [ixP]]
+    IF (.NOT. ALLOCATED(dead_elements)) THEN ! init once
+      dead_elements = [ixC, ixC13, ixC14]
+      IF (dsl4jsb_Config(SB_)%flag_sb_interactive_n) THEN
+        dead_elements = [dead_elements, [ixN, ixN15]]
+      ENDIF
+      IF (dsl4jsb_Config(SB_)%flag_sb_interactive_p) THEN
+        dead_elements = [dead_elements, [ixP]]
+      ENDIF
+      live_elements = [ixC, ixC13, ixC14]
+      IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_n) THEN
+        live_elements = [live_elements, [ixN, ixN15]]
+      ENDIF
+      IF (dsl4jsb_Config(VEG_)%flag_veg_interactive_p) THEN
+        live_elements = [live_elements, [ixP]]
+      ENDIF
     ENDIF
 
     ! calc tree mortality
