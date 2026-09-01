@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: wp
-  USE mo_exception,    ONLY: message_text, finish
+  USE mo_exception,    ONLY: message_text, finish, message
   USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
@@ -1498,7 +1498,6 @@ CONTAINS
          IF(lctlib(i)%naturalVegFlag .OR. lctlib(i)%cropFlag .OR. lctlib(i)%PastureFlag) THEN
 
            npft = npft + 1 ! count PFTs
-
            ! Check consistency with PhenologyTypes (only for jsbach usecases)
            IF (usecase == 'jsbach_lite' .OR. usecase == 'jsbach_pfts') THEN
              IF(lctlib(i)%naturalVegFlag .AND. &
@@ -1704,12 +1703,11 @@ CONTAINS
     END IF
 
     IF(npft > nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))
-
     !> Throw away values for glacier (first column) for jsbach model usecases (mo_jsb_usecases)
     !>
     SELECT CASE (usecase)
     ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
-    CASE ('quincy_13_pfts')
+    CASE ('quincy_13_pfts', 'quincy_13pS_pfts')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
     ! jsbach_lite & jsbach_pfts
