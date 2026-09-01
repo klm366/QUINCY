@@ -54,7 +54,7 @@ MODULE mo_q_dfire_sf_impacts
 
   USE mo_q_dfire_sf_damage_class, ONLY: calc_sf_tree_damage
   USE mo_q_dfire_sf_util,         ONLY: real2logical
-  USE mo_q_dfire_sf_classes,      ONLY: t_sf_tree_damage, create_t_sf_prob_mort
+  USE mo_q_dfire_sf_classes,      ONLY: t_sf_tree_damage
 
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_live_fuel_consumption, &
                                               sf_calc_dead_fuel_consumption, &
@@ -423,12 +423,9 @@ CONTAINS
       live_tree_fuel_cls(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
       ! ref vars and init to 0
-      ! prob_mort = t_sf_tree_damage(nc, pm_fire, pm_tau, tau_l, tau_c, &
-      !                          bark_thickness, pm_prop_ck, scorch_height, &
-      !                          crown_length )
-      prob_mort = create_t_sf_prob_mort(nc, pm_fire, pm_tau, tau_l, tau_c, &
+      prob_mort = t_sf_tree_damage(nc, pm_fire, pm_tau, tau_l, tau_c, &
                                 bark_thickness, pm_prop_ck, scorch_height, &
-                                crown_length)
+                                crown_length )
 
       !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
       w_oi = SUM(dead_fuel_fcl, DIM=2) !< 2= dead fuel pools index, fuel class only
