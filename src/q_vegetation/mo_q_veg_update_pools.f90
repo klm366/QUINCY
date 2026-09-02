@@ -30,6 +30,8 @@ MODULE mo_q_veg_update_pools
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
     &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_PP_CROP_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_MYCO_EXPORT_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: DINSECT_BGCM_VEG_EXTRACT_ID, DINSECT_BGCM_FAST_LITTER_ID, &
+    &                                   DINSECT_BGCM_SEEDB_FASTL_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -50,7 +52,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_DINSECT_, Q_AGR_, Q_SYL_, ALCC_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -59,6 +61,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -66,6 +69,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -91,6 +95,8 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: dinsect_veg_extract_mt
+    dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
@@ -109,6 +115,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: prod_decay_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
@@ -116,6 +123,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -208,6 +216,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: veg_products_decay_c13
     dsl4jsb_Real2D_onChunk      :: veg_products_decay_c14
     dsl4jsb_Real2D_onChunk      :: veg_products_decay_n15
+    ! Q_DINSECT_2D
+    dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c
+    dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13
+    dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14
+    dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c
+    dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13
+    dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -225,6 +240,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
@@ -232,6 +248,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
@@ -255,6 +272,8 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
+    dsl4jsb_Get_mt2L2D(DINSECT_BGCM_VEG_EXTRACT_ID, dinsect_veg_extract_mt)
+    dsl4jsb_Get_mt2L2D(DINSECT_BGCM_FAST_LITTER_ID, dinsect_fast_litter_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
@@ -370,6 +389,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_c14)             ! out
       dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_decay_n15)             ! out
     END IF
+    ! Q_DINSECT_2D
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoliator_resp_c)      ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoliator_resp_c13)    ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoliator_resp_c14)    ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c)    ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13)  ! in
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14)  ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 0.8 get number of bgcm compartments
@@ -499,8 +525,9 @@ CONTAINS
               veg_pool_mt(ix_comp, ix_elem, ic) = veg_pool_mt(ix_comp, ix_elem, ic) + veg_growth_mt(ix_comp, ix_elem, ic)
             END DO
           END IF
-        seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) - seed_bed_litterfall_mt(ix_elem, ic)
-        seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) + seed_bed_growth_mt(ix_elem, ic)
+
+          seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) - seed_bed_litterfall_mt(ix_elem, ic)
+          seed_bed_pool_mt(ix_elem, ic) = seed_bed_pool_mt(ix_elem, ic) + seed_bed_growth_mt(ix_elem, ic)
         END DO
       END DO
 
@@ -833,6 +860,23 @@ CONTAINS
         net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
         net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
       END IF
+
+      ! If defoliator is online, subtract the respiration flux from net biosphere production. Unit: mol m-2 timestep-1
+      IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - & ! defoliator
+        & (dinsect_defoliator_resp_c(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+        & (dinsect_defoliator_resp_c13(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+        & (dinsect_defoliator_resp_c14(ic) * 1000000.0_wp / dtime)
+
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - & ! bark beetle
+        & (dinsect_barkbeetle_labile_c(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+        & (dinsect_barkbeetle_labile_c13(ic) * 1000000.0_wp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+        & (dinsect_barkbeetle_labile_c14(ic) * 1000000.0_wp / dtime)
+      ENDIF ! dinsect_online
     END DO
     !$ACC END PARALLEL LOOP
 

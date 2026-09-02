@@ -50,6 +50,7 @@ CONTAINS
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, SEB_, TURB_, HYDRO_, VEG_, SSE_, RAD_, Q_ASSIMI_, Q_AGR_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: Q_DINSECT_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                ONLY: Get_vgrid, Get_grid
     USE mo_q_veg_respiration,       ONLY: temperature_response_respiration, calc_maintenance_respiration
@@ -61,6 +62,7 @@ CONTAINS
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
@@ -69,6 +71,7 @@ CONTAINS
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -107,6 +110,7 @@ CONTAINS
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
@@ -115,6 +119,7 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -275,6 +280,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
     dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     dsl4jsb_Real3D_onChunk      :: delta_root_fraction_sl
+    ! Q_DINSECT_ 2D
+    dsl4jsb_Real2D_onChunk      :: defoliated_state
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
     ics       = options%ics
@@ -299,6 +306,7 @@ CONTAINS
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
@@ -307,6 +315,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -477,6 +486,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)          ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)                   ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, delta_root_fraction_sl)             !   out
+    ! Q_DINSECT_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state)               ! in
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.8 calculate temperature of fine roots
@@ -953,6 +964,8 @@ CONTAINS
       & veg_litterfall_mt(:,:,:)               , &
       & veg_reserve_use_mt(:,:)                , &
       & veg_pool_mt(:,:,:)                     , & ! in
+      & dsl4jsb_Config(Q_DINSECT_)%dinsect_online , & ! in
+      & defoliated_state(:)                    , & ! in
       & n_processing_respiration(:)            , & ! inout
       & maint_respiration_c13(:)               , &
       & maint_respiration_c14(:)               , &
@@ -3027,6 +3040,8 @@ CONTAINS
                                 veg_litterfall_mt             , &
                                 veg_reserve_use_mt            , &
                                 veg_pool_mt                   , &
+                                dinsect_online                , &
+                                defoliated_state              , &
                                 n_processing_respiration      , &
                                 maint_respiration_c13         , &
                                 maint_respiration_c14         , &
@@ -3050,10 +3065,12 @@ CONTAINS
                                                maint_respiration_leaf       , & !< foliar maintenance respiration
                                                growth_req_p                 , & !< moles P required for a unit of N growth under current allocation fractions
                                                growth_req_n                     !< moles N required for a unit of C growth under current allocation fractions
-    REAL(wp),                 INTENT(in)    :: veg_frac_alloc_mt(:,:,:)         !< fractional allocation to pools
+    REAL(wp),                 INTENT(inout) :: veg_frac_alloc_mt(:,:,:)         !< fractional allocation to pools
     REAL(wp),                 INTENT(in)    :: veg_litterfall_mt(:,:,:)
     REAL(wp),                 INTENT(in)    :: veg_reserve_use_mt(:,:)
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)               !< labile pool size of the plant
+    LOGICAL,                  INTENT(in)    :: dinsect_online                    !< a flag to indicate if dinsect is online or not
+    REAL(wp),                 INTENT(inout) :: defoliated_state(:)              !< a flag to indicate if the plant is in defoliation stage
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                maint_respiration_c13        , & !< maintenance respiration
                                                maint_respiration_c14        , & !< maintenance respiration
@@ -3068,6 +3085,7 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: hlp1
     REAL(wp)                    :: hlp2
+    REAL(wp)                    :: f_leaf_alloc, renorm_alloc
     INTEGER :: ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning'
     !------------------------------------------------------------------------------------------------------ !
@@ -3165,7 +3183,33 @@ CONTAINS
 
 
     !> 5.0 partition growth to tissue types
+    !! A reminder from yma: please check the writing style of code block above, all with "WHERE" statement, I will delete this line afterwards
     !!
+    !> If it's in defoliation stage, the allocation fraction of leaves is set to 0.
+    IF (dinsect_online) THEN
+
+        DO ic = 1, nc
+            IF (defoliated_state(ic) > eps8) THEN
+                f_leaf_alloc = veg_frac_alloc_mt(ix_leaf, ixC, ic)
+                veg_frac_alloc_mt(ix_leaf, :, ic) = 0.0_wp
+                ! Renormalize non-leaf fractions so labile outflow (-G) matches structural influx (+G)
+                IF (f_leaf_alloc > eps8 .AND. f_leaf_alloc < 1.0_wp - eps8) THEN
+                    renorm_alloc = 1.0_wp / (1.0_wp - f_leaf_alloc)
+                    veg_frac_alloc_mt(ix_fine_root, :, ic)   = veg_frac_alloc_mt(ix_fine_root, :, ic)   * renorm_alloc
+                    veg_frac_alloc_mt(ix_coarse_root, :, ic) = veg_frac_alloc_mt(ix_coarse_root, :, ic) * renorm_alloc
+                    veg_frac_alloc_mt(ix_sap_wood, :, ic)    = veg_frac_alloc_mt(ix_sap_wood, :, ic)    * renorm_alloc
+                    veg_frac_alloc_mt(ix_fruit, :, ic)       = veg_frac_alloc_mt(ix_fruit, :, ic)       * renorm_alloc
+                END IF
+            END IF
+        END DO
+
+        !> Stop the growth of leaves (for deciduous trees: only during the outbreak stage,
+        !> for needleleaf trees: also for the rest time of the year)
+        defoliated_state(:) = 0.0_wp  ! Reset until next time dinsect reactivates it.
+
+    END IF
+
+
     veg_growth_mt(ix_leaf, :, :)        = veg_growth_mt(ix_leaf, :, :)        &
       &                                   + veg_frac_alloc_mt(ix_leaf, :, :)        * veg_growth_mt(ix_labile, :, :)
     veg_growth_mt(ix_fine_root, :, :)   = veg_growth_mt(ix_fine_root, :, :)   &

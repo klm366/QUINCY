@@ -48,6 +48,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_syl_memory_class,   ONLY: t_q_syl_memory
   USE mo_q_agr_memory_class,   ONLY: t_q_agr_memory
   USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
+  USE mo_q_dinsect_memory_class, ONLY: t_q_dinsect_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
 
@@ -97,6 +98,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_agr_config_class,    ONLY: t_q_agr_config
   USE mo_q_pheno_interface,     ONLY: Register_q_pheno_tasks
   USE mo_q_pheno_config_class,  ONLY: t_q_pheno_config
+  USE mo_q_dinsect_interface,   ONLY: Register_dinsect_tasks
+  USE mo_q_dinsect_config_class,ONLY: t_q_dinsect_config
   USE mo_q_veg_interface,       ONLY: Register_veg_tasks_quincy
   USE mo_veg_config_class,      ONLY: t_veg_config
   USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
@@ -105,7 +108,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DINSECT_
 
   IMPLICIT NONE
   PRIVATE
@@ -233,6 +236,9 @@ CONTAINS
     CASE (Q_PHENO_)
       CALL Register_q_pheno_tasks(return_ptr, model_id)
       ALLOCATE(t_q_pheno_config::return_ptr%config)
+    CASE (Q_DINSECT_)
+      CALL Register_dinsect_tasks(return_ptr, model_id)
+      ALLOCATE(t_q_dinsect_config::return_ptr%config)
     CASE (VEG_)
       CALL Register_veg_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
@@ -287,6 +293,7 @@ CONTAINS
     USE mo_q_syl_memory_class,   ONLY: max_no_of_q_syl_vars => max_no_of_vars
     USE mo_q_agr_memory_class,   ONLY: max_no_of_q_agr_vars => max_no_of_vars
     USE mo_q_pheno_memory_class, ONLY: max_no_of_q_pheno_vars => max_no_of_vars
+    USE mo_q_dinsect_memory_class, ONLY: max_no_of_q_dinsect_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
     INTEGER, INTENT(in) :: iproc                   !< Process ID
@@ -362,6 +369,9 @@ CONTAINS
     CASE (Q_PHENO_)
       ALLOCATE(t_q_pheno_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_q_pheno_vars
+    CASE (Q_DINSECT_)
+      ALLOCATE(t_q_dinsect_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_q_dinsect_vars
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars

@@ -28,7 +28,8 @@ MODULE mo_q_veg_dynamics
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID, &
-    &                                   VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_SEED_BED_GROWTH_ID
+    &                                   VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_SEED_BED_GROWTH_ID, &
+    &                                   DINSECT_BGCM_SEEDB_FASTL_ID
 
   IMPLICIT NONE
 
@@ -52,16 +53,18 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_AGR_, Q_PHENO_, HYDRO_, Q_SYL_, Q_DINSECT_
     USE mo_veg_constants,         ONLY: itree, rfr_ratio_toc, k_r2fr_chl
 
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_config(Q_AGR_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -86,11 +89,13 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -109,6 +114,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
+    ! Q_DINSECT_ 2D
+    dsl4jsb_Real2D_onChunk      :: dinsect_total_mort_dt
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
     dsl4jsb_Real3D_onChunk      :: fn_chl_cl
@@ -144,11 +151,13 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -188,6 +197,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)         ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)    ! inout
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)   ! inout
+
+    ! Q_DINSECT_ 2D
+    dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt)        ! in
+    ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp)        ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c13)    ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, herbivory_leaf_resp_c14)    ! out
@@ -228,6 +241,7 @@ CONTAINS
         & dtime                                           , &
         & model%config%elements_index_map(:)              , &
         & model%config%is_element_used(:)                 , &
+        & dsl4jsb_Config(Q_DINSECT_)%dinsect_online       , & ! in
         & lctlib%growthform                               , &
         & lctlib%k1_mort_greff                            , &
         & TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
@@ -236,6 +250,7 @@ CONTAINS
         & lai_tvegdyn_mavg(:)                             , &
         & fpc(:)                                          , &
         & veg_pool_mt(:,:,:)                              , & ! in
+        & dinsect_total_mort_dt(:)                        , & ! in
         & veg_litterfall_mt(:,:,:)                        , & ! inout
         & mortality_rate(:)                               )   ! out
     END IF
@@ -337,7 +352,8 @@ CONTAINS
             & fpc(:)                              , &
             & rfr_ratio_boc_tvegdyn_mavg(:)       , &
             & seed_bed_pool_mt(:,:)               , & ! in
-            & veg_establishment_mt(:,:)           )   ! inout
+            & veg_establishment_mt(:,:)           , &   ! inout
+            & dsl4jsb_Config(Q_DINSECT_)%dinsect_online) ! in
         ELSE
           ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
           hlp1(:) = 0.0_wp
@@ -449,6 +465,7 @@ CONTAINS
     & dtime                     , &
     & elements_index_map        , &
     & is_element_used           , &
+    & is_dinsect_online         , &
     & lctlib_growthform         , &
     & lctlib_k1_mort_greff      , &
     & veg_dynamics_scheme       , &
@@ -457,6 +474,7 @@ CONTAINS
     & lai_tvegdyn_mavg          , &
     & fpc                       , &
     & veg_pool_mt               , &
+    & dinsect_total_mort_dt     , &
     & veg_litterfall_mt         , &
     & mortality_rate )
 
@@ -467,6 +485,7 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: dtime                      !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
+    LOGICAL,                  INTENT(in)    :: is_dinsect_online          !< is DINSECT module coupled with VEG
     INTEGER,                  INTENT(in)    :: lctlib_growthform          !< lctlib paramter
     REAL(wp),                 INTENT(in)    :: lctlib_k1_mort_greff       !< lctlib paramter
     CHARACTER(len=*),         INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population
@@ -475,6 +494,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
+    REAL(wp), DIMENSION(nc),  INTENT(in)    :: dinsect_total_mort_dt      !< addtional mortality rate due to insect outbreak [fraction/timestep]
     REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
     REAL(wp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -588,6 +608,14 @@ CONTAINS
         END DO
       END DO
     END DO
+    !< add new mortality from bark beetle outbreak, only when online is True.
+    IF (is_dinsect_online) THEN
+      DO ic = 1, nc
+
+        mortality_rate(ic) = MIN((mortality_rate(ic) + dinsect_total_mort_dt(ic)), 1.0_wp)
+
+      END DO
+    END IF
   END SUBROUTINE calc_veg_mortality
 
   ! ======================================================================================================= !
@@ -786,7 +814,8 @@ CONTAINS
     & fpc                         , &
     & rfr_ratio_boc_tvegdyn_mavg  , &
     & seed_bed_pool_mt            , &
-    & veg_establishment_mt         )
+    & veg_establishment_mt        , &
+    & dinsect_online              )
 
     USE mo_veg_constants,               ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist, &
       &                                       rfr_ratio_toc
@@ -804,8 +833,10 @@ CONTAINS
     REAL(wp), DIMENSION(nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
     REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
     REAL(wp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
+    LOGICAL,                  INTENT(in)    :: dinsect_online              !< if insect disturbance is online
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem              !< loop over bgcm elements
+    INTEGER                     :: ic                 !< loop over nc
     INTEGER                     :: ix_elem            !< index of element in bgcm, used for looping
     REAL(wp), DIMENSION(nc)     :: establishment_rate
     REAL(wp), DIMENSION(nc)     :: tc
@@ -845,6 +876,7 @@ CONTAINS
     WHERE(establishment_rate(:) < eps8)
       establishment_rate(:) = 0.0_wp
     ENDWHERE
+
     ! calc vegetation establishment
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID

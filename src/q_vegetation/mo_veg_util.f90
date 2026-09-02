@@ -1111,14 +1111,16 @@ CONTAINS
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_
+    USE mo_jsb_process_class,     ONLY: VEG_, SB_, HYDRO_, L2A_, Q_DINSECT_
     USE mo_jsb_time,              ONLY: executed_quincy_sb_accelerator_previous_timestep
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(L2A_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
     REAL(wp),                   INTENT(in)    :: dtime          !< timestep length
@@ -1136,7 +1138,9 @@ CONTAINS
     dsl4jsb_Def_memory(L2A_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk :: veg_pool_total_c
     dsl4jsb_Real2D_onChunk :: veg_products_total_c
@@ -1145,6 +1149,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_total_c
     dsl4jsb_Real3D_onChunk :: sb_pool_total_c
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real2D_onChunk :: dinsect_pool_total_c
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(L2A_)) RETURN
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1162,7 +1167,9 @@ CONTAINS
     dsl4jsb_Get_memory(L2A_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ALLOCATE(q_total_c_new(grid%nproma))
@@ -1179,6 +1186,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(VEG_, net_biosphere_production)
       dsl4jsb_Get_var2D_onChunk(L2A_, q_c_conservation_test)
       dsl4jsb_Get_var2D_onChunk(L2A_, q_total_c)
+      dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c)
       dsl4jsb_Get_var3D_onChunk(SB_, sb_pool_total_c)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
 
@@ -1191,6 +1199,10 @@ CONTAINS
           IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
             dsl4jsb_Get_var2D_onChunk(VEG_, veg_products_total_c)
             q_total_c_new(ic) = q_total_c_new(ic) + veg_products_total_c(ic)
+          END IF
+
+          IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
+            q_total_c_new(ic) = q_total_c_new(ic) + dinsect_pool_total_c(ic)
           END IF
 
           IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
@@ -1208,6 +1220,11 @@ CONTAINS
                 & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp), NEW_LINE('a'),                   &
                 & ' on lat =',    lat(ic,iblk), ' and lon =', lon(ic,iblk), NEW_LINE('a'),                           &
                 & ' with veg ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
+
+                IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+                  WRITE(message_text,*) TRIM(message_text), ' and insects ', dinsect_pool_total_c(ic)
+                ENDIF
+
                IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
                  WRITE(message_text,*) TRIM(message_text),' and products ', veg_products_total_c(ic)
                END IF

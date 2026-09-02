@@ -31,6 +31,7 @@ MODULE mo_q_sb_update_pools
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
+  USE mo_lnd_bgcm_store_class,    ONLY: DINSECT_BGCM_DROPPING_ID
 
   IMPLICIT NONE
 
@@ -59,7 +60,8 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, &
+       & Q_DINSECT_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
@@ -73,6 +75,7 @@ CONTAINS
     USE mo_sb_util,                ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(Q_DINSECT_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)
@@ -80,6 +83,7 @@ CONTAINS
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
@@ -116,6 +120,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
+    dsl4jsb_Def_mt1L2D :: dinsect_dropping_mt
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
     dsl4jsb_Def_mt2L3D :: sb_loss_mt
@@ -126,11 +131,14 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_DINSECT_)
+
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_DINSECT_)
     ! Declare pointers to variables in memory
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
@@ -372,12 +380,14 @@ CONTAINS
     ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(Q_DINSECT_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_DINSECT_)
 
     ! Allocate bgcm matrices
     nr_elements     = model%config%nr_of_used_elements
@@ -389,6 +399,7 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
+    dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DROPPING_ID, dinsect_dropping_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
@@ -957,7 +968,12 @@ CONTAINS
                    volatilisation_nh4(:,:) + transport_nh4_assoc(:,:) - &
                    lateral_loss_nh4_solute_sl(:,:) ) * dtime / 1.e6_wp
       hlp1(:,1) = hlp1(:,1) + (nhx_deposition(:) + fertiliser_nh4(:)) &
-        &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
+                   &                     / 1.e6_wp / soil_depth_sl(:,1) * dtime
+      !calculate the effect of N from dropping of defoliator
+      IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)) THEN
+          hlp1(:,1) = hlp1(:,1) + dinsect_dropping_mt(ixN,:) / soil_depth_sl(:,1) / 1.e6_wp * dtime ! defoliator
+      END IF
+
       hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_wp
 
       CALL calc_langmuir_kinetics(dtime, hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
@@ -1021,7 +1037,10 @@ CONTAINS
                                        weathering_po4(:,:), &
                                        occlusion_po4(:,:), &
                                        slow_exchange_po4(:,:), &
-                                       fast_exchange_po4(:,:))
+                                       fast_exchange_po4(:,:), &
+                                       dsl4jsb_Config(Q_DINSECT_)%dinsect_online, &
+                                       dinsect_dropping_mt(ixP,:), &
+                                       soil_depth_sl(:,:))
 
       ! DO not update the primary and the occlusion pool during model-spinup
       !  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
@@ -1306,7 +1325,10 @@ CONTAINS
                                    weathering_po4, &
                                    occlusion_po4, &
                                    slow_exchange_po4, &
-                                   fast_exchange_po4)
+                                   fast_exchange_po4, &
+                                   dinsect_online, &
+                                   dinsect_dropping_P, &
+                                   soil_depth_sl)
 
     USE mo_sb_constants
     USE mo_jsb_math_constants,  ONLY: eps4, eps8
@@ -1320,6 +1342,7 @@ CONTAINS
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
+    LOGICAL,                                          INTENT(in)    :: dinsect_online                !< T: insect effects will be coupled with soil processes
     REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
                                                                        km_adsorpt_po4_act, &         !< half saturation of po4 sorption capacity, [mol P/ m3]
                                                                        qmax_fast_po4_act, &          !< maximum sorption capacity of fast_assoc_po4, [mol P/ m3]
@@ -1340,6 +1363,8 @@ CONTAINS
                                                                        microbial_uptake_po4_sl, &    !< microbial PO4 uptake [micro-mol P / m3 / s]
                                                                        gross_mineralisation_po4, &   !< gross mineralisation of PO4 [micro-mol P / m3 / s]
                                                                        net_mineralisation_po4        !< net mineralisation of PO4 [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: dinsect_dropping_P            !< P litter from dropping of defoliator
+    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: soil_depth_sl                 !<
     REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
@@ -1412,6 +1437,12 @@ CONTAINS
                        transport_po4_solute(ic,is) - lateral_loss_po4_solute_sl(ic,is) + p_deposition_sl(ic,is) - &
                        (plant_uptake_po4_sl(ic,is) + mycorrhiza_uptake_po4_sl(ic,is) + slow_exchange_po4(ic,is)) + &
                        transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
+
+          ! 2.2 calculate the effects on litter P from droppings of defoliator
+          IF (dinsect_online) THEN
+            hlp1(:,1) = hlp1(:,1) + dinsect_dropping_P(:) / soil_depth_sl(:,1) * dtime / 1000000._wp ! defoliator
+          END IF
+
           hlp2(ic,is) = ( - transport_po4_assoc_fast(ic,is)) * dtime / 1000000._wp
 
           IF (flag_arr(ic,is)) THEN

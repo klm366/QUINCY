@@ -18,13 +18,15 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DINSECT_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(Q_DINSECT_)
+#ifndef __NO_QUINCY__
   dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
@@ -163,6 +165,7 @@ CONTAINS
     USE mo_rad_init,            ONLY: rad_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
+    USE mo_q_dinsect_init,      ONLY: dinsect_init
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
     USE mo_q_syl_init,          ONLY: q_syl_init
@@ -195,6 +198,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
 
@@ -213,6 +217,7 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
+    dsl4jsb_Get_config(Q_DINSECT_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -401,6 +406,9 @@ CONTAINS
       IF (model%config%qmodel_id == QLAND) THEN
         CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
       END IF
+      IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+        CALL model%Queue_task(Q_DINSECT_, "reset_dinsect_fluxes") ! LAND ONLY
+      ENDIF
 
       IF (is_time_restart(get_time_start())) THEN
         !-- derive plant characteristics from restart variables
@@ -448,6 +456,15 @@ CONTAINS
           CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
         END IF
       END IF
+
+      IF (model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(Q_DINSECT_)%flag_dinsect) THEN
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_defoliator") ! LAND ONLY, new, decoupled from update_dinsect_effects
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_barkbeetle") ! LAND ONLY, new, decoupled from update_dinsect_effects
+          CALL model%Queue_task(Q_DINSECT_, "update_dinsect_pools") ! LAND ONLY, new, decoupled from update_dinsect_effects
+          CALL model%Queue_task(VEG_, "plant_characteristics")    ! LAND or PLANT; if Q_SYL_ or Q_AGR_ active
+        ENDIF
+      ENDIF
 
       CALL model%Queue_task(RAD_,       "surface_radiation")
       CALL model%Queue_task(Q_PHENO_,   "q_phenology")
@@ -639,6 +656,12 @@ CONTAINS
             CALL q_agr_init(tile)
           END IF
         END IF
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (tile%Is_process_active(Q_DINSECT_)) THEN
+            CALL dinsect_init(tile)
+          END IF
+        END IF
+#endif
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
