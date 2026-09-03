@@ -123,7 +123,7 @@ CONTAINS
 
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
-    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, check_freezethaw
+    USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_snow_abcoeff, get_num_thaw_cycles
     USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newyear, is_newday
@@ -174,8 +174,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: le_pc_remain
-    dsl4jsb_Real2D_onChunk :: thaw_cycle
-    dsl4jsb_Real2D_onChunk :: thaw_cycle_prev
+    dsl4jsb_Real2D_onChunk :: n_thaw_cycle
+    dsl4jsb_Real2D_onChunk :: n_thaw_cycle_prev
     dsl4jsb_Real3D_onChunk :: t_soil_sl_max
     dsl4jsb_Real3D_onChunk :: t_soil_sl_min
 
@@ -269,8 +269,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_srf)           ! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_cycle)      ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_cycle_prev) ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle)    ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle_prev) ! out
     dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_max)   ! out
     dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_min)   ! out
 
@@ -564,12 +564,12 @@ CONTAINS
       !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
 
-      CALL check_freezethaw(                  &
+      CALL get_num_thaw_cycles(               &
         & nc, nsoil, lstart,                  &
         & new_year, new_day,                  &
         & t_soil_sl,                          &
         & t_soil_sl_max, t_soil_sl_min,       &
-        & thaw_cycle, thaw_cycle_prev)
+        & n_thaw_cycle, n_thaw_cycle_prev)
 
       CALL calc_snow_abcoeff(     &
         ! in
@@ -677,8 +677,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_cycle,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_cycle_prev,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle_prev,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_min,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_max,         weighted_by_fract)
 

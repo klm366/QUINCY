@@ -256,7 +256,7 @@ CONTAINS
 
     CALL mem%Add_var('bclimit_min_snow', mem%bclimit_min_snow,                            &
       & hgrid, surface,                                                                   &
-      & t_cf('bclimit_min_snow', '', 'bclimit_min_snow'),                                 &
+      & t_cf('bclimit_min_snow', 'm', 'PFT-specific minimum required snow depth'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &

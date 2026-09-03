@@ -1115,8 +1115,9 @@ CONTAINS
     IF (thaw_depth < soil_depth) THEN    ! active layer depth < soil depth --> permafrost
       DO is = 1,nsoil
         isp1 = MIN(is+1,nsoil)
-!         IF ((thaw_depth_sl(is) > minimum_layer_thickness) .AND. (thaw_depth_sl(isp1) > minimum_layer_thickness) .AND. (t_soil_sl(is) > tmelt) .AND. (t_soil_sl(isp1) > tmelt)) THEN
-        IF ((permafrost_layer(is) < permafrost_threshold) .AND. (permafrost_layer(isp1) < permafrost_threshold) .AND. (t_soil_sl(is) > tmelt)) THEN
+        IF ((permafrost_layer(is)   < permafrost_threshold) .AND. &
+          & (permafrost_layer(isp1) < permafrost_threshold) .AND. &
+          & (t_soil_sl(is)          > tmelt)) THEN
           diff_coeff(is) = cryo_max *                               &
                            MIN(1._wp, wtr_rel_sl(is)) *             &
                            MIN(1._wp, (n_thaw_cycle / 40._wp))*     &

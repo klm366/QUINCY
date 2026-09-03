@@ -21,8 +21,8 @@ set -e
 ### multi-file restart files, concatinate the patches using "cdo collgrid".
 ###
 ### This script can create a restart file for the single and multi-layer yasso versions of
-### ICON-LAND. Note that the multi-layer version ($use_vertical_carbon == true) requires you
-### to provide a grid file that also contains the vertical soil grid dimension `soillev``,
+### Jsbach. Note that the multi-layer version ($VERTICAL_YASSO == true) requires you
+### to provide a grid file that also contains the vertical soil grid dimension "soillev",
 ### e.g. ic_land_soil.nc instead of the icon_grid_*.nc file.
 ###
 ### Note: Tested with nco version 5.0.1 and cdo version 2.4.2
@@ -35,17 +35,17 @@ which ncatted || {
 }
 
 ### User Interface
-EXP=picontrol              # Experiment name, just used in the file names
-YEAR=2920                  # Restart file year, just used in the file names
-use_vertical_carbon=false  # T: Simulation done with carbon on soil layers
+EXP=picontrol         # Experiment name, just used in the file names
+YEAR=2920             # Restart file year, just used in the file names
+VERTICAL_YASSO=false  # T: Simulation done with carbon on soil layers
 INFILE=/work/mh1496/m220053/equilibrateC/${EXP}/${EXP}_restart_atm_${YEAR}0101T000000Z_eqC.nc
 OUTFILE=/work/mh1496/m220053/equilibrateC/${EXP}/ic_land_carbon_${EXP}_${YEAR}.nc
-# Grid file (also needs to provide vertical grid information if use_vertical_carbon == true)
+# Grid file (also needs to provide vertical grid information if "VERTICAL_YASSO == true")
 GRIDFILE=/pool/data/ICON/grids/public/edzw/icon_grid_0030_R02B05_G.nc
 
 PROCESS="carbon"
 
-if [[ ${use_vertical_carbon} == true ]]; then
+if [[ ${VERTICAL_YASSO} == true ]]; then
    ### Variables for multi-layer yasso
    VARNAME_LIST="c_green       c_woods        c_reserve
                  c_acid_ag1    c_water_ag1    c_ethanol_ag1    c_nonsoluble_ag1
@@ -97,7 +97,7 @@ ncks -C -x -v time  ${OUTFILE}.tmp1 ${OUTFILE}.tmp2  # Delete variable time
 ncwa -O -a time     ${OUTFILE}.tmp2 ${OUTFILE}.tmp3  # Delete dimension time
 
 ### Set horizontal (and vertical) grids
-if [[ ${use_vertical_carbon} == true ]]; then
+if [[ ${VERTICAL_YASSO} == true ]]; then
    cdo setzaxis,${ZGRIDDES} -setgrid,${GRIDFILE} ${OUTFILE}.tmp3 ${OUTFILE}
    rm -f ${ZGRIDDES}
 else

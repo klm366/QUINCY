@@ -49,12 +49,12 @@ MODULE mo_sse_memory_class
       & vol_heat_cap_sl,      & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
       & heat_cond_sl,         & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
       & t_soil_sl,            & !< Temperature of soil layers [K]
-      & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
-      & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
+      & t_soil_acoef,         & !< Soil A coefficient of Richtmyer and Morton scheme
+      & t_soil_bcoef,         & !< Soil B coefficient of Richtmyer and Morton scheme
       & snow_depth_sl,        & !< Depth of snow layers [m]
       & t_snow,               & !< Temperature of snow layers [K]
-      & t_snow_acoef,         & !< Snow A coefficient of Richtmeyer and Morton scheme
-      & t_snow_bcoef,         & !< Snow B coefficient of Richtmeyer and Morton scheme
+      & t_snow_acoef,         & !< Snow A coefficient of Richtmyer and Morton scheme
+      & t_snow_bcoef,         & !< Snow B coefficient of Richtmyer and Morton scheme
       & t_soil_sl_max,        & !< Soil temperature daily maximum [K]
       & t_soil_sl_min           !< Soil temperature daily minimum [K]
 
@@ -64,8 +64,8 @@ MODULE mo_sse_memory_class
       & grnd_hflx,            & !< ground heat flux
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
-      & thaw_cycle,           & !< Freeze-thaw cycle number this year
-      & thaw_cycle_prev         !< Freeze-thaw cycle number prev year
+      & n_thaw_cycle,         & !< Number of freeze-thaw cycles
+      & n_thaw_cycle_prev       !< Number of freeze-thaw cycles in previous year
 
     ! soil physical properties
     TYPE(t_jsb_var_real3d) :: &
@@ -322,16 +322,16 @@ CONTAINS
         & initval_r = 0.0_wp)
     END SELECT
 
-    CALL mem%Add_var( 'thaw_cycle', mem%thaw_cycle,                          &
+    CALL mem%Add_var( 'n_thaw_cycle', mem%n_thaw_cycle,                      &
       & hgrid, surface,                                                      &
-      & t_cf('thaw_cycle', '', 'Number of freeze-thaw cycles'),              &
+      & t_cf('n_thaw_cycle', '', 'Number of freeze-thaw cycles'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, initval_r = 0.0_wp,                                  &
       & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
-    CALL mem%Add_var( 'thaw_cycle_prev', mem%thaw_cycle_prev,                &
+    CALL mem%Add_var( 'n_thaw_cycle_prev', mem%n_thaw_cycle_prev,            &
       & hgrid, surface,                                                      &
-      & t_cf('thaw_cycle_prev', '', 'Number of freeze-thaw cycles prev year'),  &
+      & t_cf('n_thaw_cycle_prev', '', 'Number of freeze-thaw cycles in previous year'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, initval_r = 0.0_wp,                                  &
       & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)

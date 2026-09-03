@@ -399,7 +399,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: soil_depth                 !< Soil depth until bedrock [m]
     dsl4jsb_Real3D_onChunk :: soil_depth_sl              !< Soil layer depth until bedock [m]
 
-    dsl4jsb_Real2D_onChunk :: thaw_cycle_prev            !< Number of thaw cycles during last year [-]
+    dsl4jsb_Real2D_onChunk :: n_thaw_cycle_prev          !< Number of thaw cycles during last year [-]
 
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
@@ -574,7 +574,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox )     ! inout
-    dsl4jsb_Get_var2D_onChunk(SSE_,     thaw_cycle_prev)            ! in
+    dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)          ! in
 
     lstart   = is_time_experiment_start(options%current_datetime)
     lresume  = is_time_restart(options%current_datetime)
@@ -914,7 +914,7 @@ CONTAINS
             &  precip                       = precip_15d_yDay_climbuf(ic),              & ! in
             &  t_soil_sl                    = t_soil_sl_15d_yDay_climbuf(ic,:),         & ! in
             &  wtr_soil_rel_sl              = wtr_soil_rel_sl_15d_yDay_climbuf(ic,:),   & ! in
-            &  n_thaw_cycle                 = thaw_cycle_prev(ic),                      & ! in
+            &  n_thaw_cycle                 = n_thaw_cycle_prev(ic),                    & ! in
                !
             &  frac_inun                    = frac_inun_loc(ic),                        & ! in
                !

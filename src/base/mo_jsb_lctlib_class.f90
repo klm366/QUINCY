@@ -124,7 +124,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
     REAL(wp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
     REAL(wp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
-    REAL(wp) :: bclimit_min_snow          !< PFT-specific minimum snow depth [m]
+    REAL(wp) :: bclimit_min_snow          !< PFT-specific minimum required snow depth [m]
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
     REAL(wp) :: moist_extinction          !< PFT specific moisture of extinction
@@ -715,7 +715,7 @@ CONTAINS
           CASE ('bclimit_min_gdd')                              ! PFT-specific minimum growing degree days (at or above 5 deg C)
              READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_gdd
              exists_bclimit_min_gdd = .TRUE.
-          CASE ('bclimit_min_snow')                              ! PFT-specific minimum snow depth
+          CASE ('bclimit_min_snow')                              ! PFT-specific minimum required snow depth
              READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_snow
              exists_bclimit_min_snow = .TRUE.
           CASE ('gdd_base')                                     ! PFT-specific GDD base
