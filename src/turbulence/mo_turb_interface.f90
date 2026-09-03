@@ -24,7 +24,7 @@ MODULE mo_turb_interface
 
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, jsbach_runs_standalone, acc_stream
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish
 

@@ -16,7 +16,7 @@ MODULE mo_fage_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: wp => jp
   USE mo_exception,          ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model

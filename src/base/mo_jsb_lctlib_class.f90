@@ -20,7 +20,7 @@
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
-  USE mo_kind,         ONLY: wp
+  USE mo_kind,         ONLY: wp => jp
   USE mo_exception,    ONLY: message_text, finish
   USE mo_util,         ONLY: int2string
 

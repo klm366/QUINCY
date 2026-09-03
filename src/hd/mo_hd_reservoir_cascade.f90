@@ -15,7 +15,7 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
   USE mo_jsb_time,    ONLY: get_day_length
   USE mo_jsb_control, ONLY: acc_stream
 

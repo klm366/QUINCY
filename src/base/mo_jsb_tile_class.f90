@@ -28,7 +28,7 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on, acc_stream, acc_async_sync
-  USE mo_kind,                ONLY: wp, dp
+  USE mo_kind,                ONLY: wp => jp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN

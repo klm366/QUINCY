@@ -18,7 +18,7 @@
 MODULE mo_lnd_bgcm_store_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN

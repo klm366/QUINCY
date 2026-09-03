@@ -29,7 +29,7 @@
 MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: wp => jp
   USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 

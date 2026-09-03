@@ -14,7 +14,7 @@
 MODULE mo_alcc_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: wp => jp
   USE mo_exception,          ONLY: finish, message, message_text
   USE mo_jsb_control,        ONLY: debug_on
 

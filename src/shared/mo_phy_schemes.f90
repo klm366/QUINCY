@@ -16,7 +16,7 @@
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: wp => jp
   USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, sat_pres_mixed, potential_temperature
 #ifndef __NO_AES__
   USE mo_jsb_surface_exchange_iface, ONLY: sfc_exchange_coefficients
@@ -44,7 +44,7 @@ MODULE mo_phy_schemes
   !     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
   !     & km, kh, interp_fac_2m, interp_fac_10m               &
   !     & )
-  !     IMPORT :: wp
+  !     IMPORT :: wp => jp
 
   !     REAL(wp), INTENT(in) :: &
   !       dz,        &

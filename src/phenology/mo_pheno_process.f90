@@ -14,7 +14,7 @@
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
 
-   USE mo_kind, ONLY: wp
+   USE mo_kind, ONLY: wp => jp
 
    IMPLICIT NONE
    PRIVATE

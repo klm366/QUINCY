@@ -16,7 +16,7 @@
 MODULE mo_jsb_physical_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: wp => jp
 
   ! Most constants are used from host model (ICON) via the adapter file mo_physical_constants_iface in mo_util_jsbach.f90:
   !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90

@@ -14,7 +14,7 @@
 MODULE mo_jsb_model_final
 #ifndef __NO_JSBACH__
 
-  ! USE mo_kind,             ONLY: wp
+  ! USE mo_kind,             ONLY: wp => jp
   ! USE mo_exception,        ONLY: message, finish
 
   ! USE mo_jsb_class,        ONLY: Get_model

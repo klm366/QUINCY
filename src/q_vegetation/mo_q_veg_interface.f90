@@ -20,7 +20,7 @@
 MODULE mo_q_veg_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: wp => jp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model

@@ -18,7 +18,7 @@
 MODULE mo_q_veg_dynamics
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: wp => jp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message

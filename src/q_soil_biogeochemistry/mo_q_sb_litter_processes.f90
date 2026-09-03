@@ -18,7 +18,7 @@
 MODULE mo_q_sb_litter_processes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: wp => jp
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE

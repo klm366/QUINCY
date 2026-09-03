@@ -32,7 +32,7 @@
 MODULE mo_hydro_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: wp => jp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_control,      ONLY: jsbach_runs_standalone

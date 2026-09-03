@@ -20,7 +20,7 @@ MODULE mo_nlcc_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: wp => jp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model

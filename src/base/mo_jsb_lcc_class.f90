@@ -17,7 +17,7 @@
 MODULE mo_jsb_lcc_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_util,                ONLY: one_of, int2string
   USE mo_exception,           ONLY: finish, message
   USE mo_jsb_control,         ONLY: debug_on

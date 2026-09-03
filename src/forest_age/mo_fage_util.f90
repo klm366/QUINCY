@@ -15,7 +15,7 @@
 MODULE mo_fage_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: wp => jp
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE

@@ -19,7 +19,7 @@ MODULE mo_lnd_bgcm_store
 #ifndef __NO_JSBACH__
 
   USE mo_exception,             ONLY: finish, message
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: wp => jp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_util,                  ONLY: int2string
   USE mo_lnd_bgcm_store_class,  ONLY: t_lnd_bgcm_store_abstract

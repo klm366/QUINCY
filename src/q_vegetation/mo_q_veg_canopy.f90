@@ -18,7 +18,7 @@
 MODULE mo_q_veg_canopy
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: wp => jp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
   USE mo_exception,                   ONLY: message_text, finish
   USE mo_q_assimi_process,            ONLY: calc_photosynthesis

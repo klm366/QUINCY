@@ -16,7 +16,7 @@
 MODULE mo_jsb_impl_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: wp => jp
 
   IMPLICIT NONE
   PUBLIC

@@ -15,7 +15,7 @@ MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: acc_stream
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
 
   IMPLICIT NONE
   PRIVATE

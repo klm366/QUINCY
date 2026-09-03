@@ -37,7 +37,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_plant_characteristics(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: wp => jp
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options

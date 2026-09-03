@@ -15,7 +15,7 @@ MODULE mo_nlcc_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_physical_constants, ONLY: tmelt
 

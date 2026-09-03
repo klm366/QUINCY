@@ -28,7 +28,7 @@ MODULE mo_jsb4_forcing
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi
-  USE mo_kind,                   ONLY: wp, dp
+  USE mo_kind,                   ONLY: wp => jp, dp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv

@@ -15,7 +15,7 @@ MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
   USE mo_exception,       ONLY: finish
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: wp => jp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY

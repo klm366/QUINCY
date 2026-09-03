@@ -17,7 +17,7 @@
 MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_jsb_control, ONLY: acc_stream

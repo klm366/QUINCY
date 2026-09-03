@@ -18,7 +18,7 @@
 MODULE mo_q_veg_update_pools_on_harvest
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_time,            ONLY: is_newyear, is_newday

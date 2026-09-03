@@ -43,7 +43,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_veg_pools(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: wp => jp
     USE mo_jsb_impl_constants,              ONLY: test_false_true
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract

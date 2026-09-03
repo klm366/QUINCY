@@ -18,7 +18,7 @@ MODULE mo_jsb_model_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: wp => jp
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread, Is_omp_inside_serial
 

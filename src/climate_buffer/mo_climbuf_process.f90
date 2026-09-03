@@ -19,7 +19,7 @@
 MODULE mo_climbuf_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   IMPLICIT NONE

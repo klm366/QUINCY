@@ -23,7 +23,7 @@ MODULE mo_jsbach_model
 #ifndef __NO_JSBACH__
 
   USE mo_exception,   ONLY: message, message_text, finish
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: wp => jp
   USE mo_util_string, ONLY: int2string, real2string
 
   USE mtime,        ONLY: datetime, newDatetime, datetimeToString, timedelta, newTimedelta, getPTStringFromSeconds, &

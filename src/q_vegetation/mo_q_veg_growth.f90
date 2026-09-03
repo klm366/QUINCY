@@ -18,7 +18,7 @@
 MODULE mo_q_veg_growth
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: wp => jp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
   USE mo_jsb_math_constants,      ONLY: eps8
@@ -1010,7 +1010,7 @@ CONTAINS
                                                  growing_season) &
                                                  RESULT(kstar_labile)
 
-    USE mo_kind,                   ONLY: wp
+    USE mo_kind,                   ONLY: wp => jp
     USE mo_jsb_impl_constants,     ONLY: test_false_true
     USE mo_jsb_physical_constants, ONLY: Tzero
     USE mo_veg_constants,          ONLY: lambda_labile_temp  , &
@@ -1114,7 +1114,7 @@ CONTAINS
                                               n_processing_respiration, &
                                               veg_exudation_carbon)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: wp => jp
     USE mo_quincy_model_config,     ONLY: QPLANT
     USE mo_jsb_physical_constants,  ONLY: Tzero, molar_mass_C, molar_mass_N
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
@@ -2286,7 +2286,7 @@ CONTAINS
     & veg_reserve_use_mt                    , &
     & phi_phenology_base                    )
     !------------------------------------------------------------------------------------------------------ !
-    USE mo_kind,                  ONLY: wp
+    USE mo_kind,                  ONLY: wp => jp
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_jsb_impl_constants,    ONLY: test_false_true
     USE mo_veg_constants,         ONLY: tau_labile, k_labphen_grass, k_labphen_tree, &
@@ -2549,7 +2549,7 @@ CONTAINS
                                               target_labile_pool_nitrogen, &
                                               target_labile_pool_phosphorus) RESULT(beta_sinklim_ps)
 
-    USE mo_kind,                          ONLY: wp
+    USE mo_kind,                          ONLY: wp => jp
     USE mo_jsb_math_constants,            ONLY: eps8
     USE mo_veg_constants,                 ONLY: beta_sinklim_ps_min, k_sinklim_ps, lambda_sinklim_ps, k_cnp_sinklim_ps
 
@@ -2619,7 +2619,7 @@ CONTAINS
     &   actual_nutrient) &
     &   RESULT (f_demand)
 
-    USE mo_kind,                        ONLY: wp
+    USE mo_kind,                        ONLY: wp => jp
     USE mo_jsb_math_constants,          ONLY: eps8
     USE mo_veg_constants,               ONLY: k_f_demand, omega_nutrient_demand
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3039,7 +3039,7 @@ CONTAINS
                                 maint_respiration             , &
                                 growth_respiration  )
     !------------------------------------------------------------------------------------------------------ !
-    USE mo_kind,                  ONLY: wp
+    USE mo_kind,                  ONLY: wp => jp
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
     !------------------------------------------------------------------------------------------------------ !
@@ -3297,7 +3297,7 @@ CONTAINS
                                             root_fraction_sl                 , &
                                             delta_root_fraction_sl)
 
-    USE mo_kind,                   ONLY: wp
+    USE mo_kind,                   ONLY: wp => jp
     USE mo_jsb_math_constants,     ONLY: one_year, one_day, eps8, zero
     USE mo_jsb_physical_constants, ONLY: Tzero
 

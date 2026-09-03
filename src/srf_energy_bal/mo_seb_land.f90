@@ -19,7 +19,7 @@
 MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: wp => jp
   USE mo_exception, ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH

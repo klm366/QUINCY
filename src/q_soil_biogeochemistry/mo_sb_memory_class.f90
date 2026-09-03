@@ -18,7 +18,7 @@
 MODULE mo_sb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: wp => jp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
 

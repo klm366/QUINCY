@@ -18,7 +18,7 @@
 MODULE mo_q_sb_jsm_processes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_math_constants,  ONLY: one_day, eps4, eps8
   USE mo_lnd_bgcm_idx

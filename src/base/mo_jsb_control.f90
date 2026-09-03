@@ -18,7 +18,7 @@
 MODULE mo_jsb_control
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: wp => jp
   USE mo_io_units,  ONLY: filename_max
   USE mo_exception, ONLY: finish
   USE mo_util,      ONLY: int2string

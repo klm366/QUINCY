@@ -18,7 +18,7 @@
 MODULE mo_q_assimi_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: wp => jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
