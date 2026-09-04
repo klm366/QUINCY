@@ -762,10 +762,7 @@ CONTAINS
                                           tot_dead_fuel_grass)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    !> Eq. 8 from Thonicke et al. (2010)
-    WHERE(moisture_extinction > 0._wp)
-      fdi = max(0._wp, 1._wp  - (fuel_moisture(:, df_sf_omega_o_idx) / moisture_extinction))
-    ENDWHERE
+    CALL calc_fire_danger_index(nc, fuel_moisture(:, df_sf_omega_o_idx), moisture_extinction, fdi, mask=has_fire_conditions)
 
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (fdi > 1.e-6_wp)
@@ -874,12 +871,32 @@ CONTAINS
         mask) ! optional
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    !> Eq. 8 from Thonicke et al. (2010)
-    WHERE(moisture_extinction > 0._wp)
-      fdi = max(0._wp, 1._wp  - (fuel_moisture%val / moisture_extinction))
-    ENDWHERE
+    CALL calc_fire_danger_index(nc, fuel_moisture%val, moisture_extinction, fdi, mask=mask)
 
   END SUBROUTINE calc_sf_dynamics_for_oberhagemann
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate Fire Danger Index (FDI)
+  !> Eq. 8 from Thonicke et al. (2010)
+  !>
+  PURE SUBROUTINE calc_fire_danger_index(nc, fuel_moisture, moisture_extinction, fdi, mask)
+    INTEGER, INTENT(in)   :: nc
+    REAL(wp), INTENT(in)  :: fuel_moisture(nc)
+    REAL(wp), INTENT(in)  :: moisture_extinction(nc)
+    REAL(wp), INTENT(out) :: fdi(nc)
+    LOGICAL, INTENT(in), OPTIONAL :: mask(nc)
+
+    LOGICAL :: active_mask(nc)
+
+    active_mask = .TRUE.
+    IF (PRESENT(mask)) active_mask = mask
+
+    fdi = 0._wp
+    WHERE (active_mask .AND. moisture_extinction > 0._wp)
+      fdi = MAX(0._wp, 1._wp - (fuel_moisture / moisture_extinction))
+    END WHERE
+  END SUBROUTINE calc_fire_danger_index
 
   ! ======================================================================================================= !
   !>
