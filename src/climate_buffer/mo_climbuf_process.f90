@@ -45,8 +45,8 @@ CONTAINS
     & min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
     & temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
     & gdd5_sum_year, gdd5_prev_year, &
-    & max_snow_year, max_snow_prev_year, &
-    & max_thaw_year, max_thaw_prev_year, &
+    & max_snow_of_yr, max_snow_prev_year, &
+    & max_thaw_of_yr, max_thaw_prev_year, &
     & max_wind_of_day, max_wind_yDay, max_wind_4yr, &
     & q_rel_air_14d, q_rel_air_14d_yDay)
 
@@ -82,9 +82,9 @@ CONTAINS
       & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [kg m-2 s-1]
       & gdd5_sum_year,          & !< Current number of growing degree days of this year
       & gdd5_prev_year,         & !< Growing degree days of previous year
-      & max_snow_year,          & !< Maximum snow depth in current year [m]
+      & max_snow_of_yr,         & !< Maximum snow depth in current year [m]
       & max_snow_prev_year,     & !< Maximum snow depth in previous year [m]
-      & max_thaw_year,          & !< Maximum soil column thaw depth in current year [m]
+      & max_thaw_of_yr,         & !< Maximum soil column thaw depth in current year [m]
       & max_thaw_prev_year,     & !< Maximum soil column thaw depth in previous year [m]
       & max_wind_of_day,        & !< Current maximum wind speed of the day [m s-1]
       & max_wind_yDay,          & !< Maximum wind speed of the previous day [m s-1]
@@ -131,20 +131,21 @@ CONTAINS
     !-- Snow depth
     !  ---------------------
     IF (.NOT. new_year .OR. lstart) THEN
-       max_snow_year = MAX(max_snow_year, snow_depth)
+       max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
     ELSE
-       max_snow_prev_year = max_snow_year
-       max_snow_year = 0._wp
-       max_snow_year = MAX(max_snow_year, snow_depth)
+       max_snow_prev_year = max_snow_of_yr
+       max_snow_of_yr = 0._wp
+       max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
     ENDIF
 
     !-- Soil thaw depth
+    !  ---------------------
     IF (.NOT. new_year .OR. lstart) THEN
-      max_thaw_year = MAX(max_thaw_year, thaw_depth)
+      max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
     ELSE
-      max_thaw_prev_year = max_thaw_year
-      max_thaw_year = 0._wp
-      max_thaw_year = MAX(max_thaw_year, thaw_depth)
+      max_thaw_prev_year = max_thaw_of_yr
+      max_thaw_of_yr = 0._wp
+      max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
     ENDIF
 
     !-- Multi-year minimum and maximum monthly mean temperatures

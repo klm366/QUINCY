@@ -502,13 +502,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm_ta) ! out
 
     IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
-          !SIZE CLASS 1
+      !SIZE CLASS 1 - originating from non-woody biomass
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg1_sl)      ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_1_sl)             ! inout
-      !SIZE CLASS 2
+      !SIZE CLASS 2 - originating from woody biomass
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg2_sl)            ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg2_sl)           ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl)         ! inout

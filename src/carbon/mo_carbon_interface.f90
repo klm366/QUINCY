@@ -586,9 +586,9 @@ CONTAINS
 
     ! Put a comment on the screen...
     IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
-                                                           'update_C_NPP_pot_allocation: First time step of new day')
+                                                           'First time step of new day')
     IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
-                                                           'update_C_NPP_pot_allocation: First time step of new year')
+                                                           'First time step of new year')
 
     ! Initializations
 
@@ -834,7 +834,7 @@ CONTAINS
 
       ! clear C from frozen pools if requested
       IF ((dsl4jsb_Config(CARBON_)%on_soillev) .AND. (dsl4jsb_Config(CARBON_)%clear_frozen) .AND. (lresume .OR. lstart)) THEN
-        CALL message(TRIM(routine), 'update_C_NPP_pot_allocation: Clearing frozen C')
+        CALL message(TRIM(routine), 'Clearing frozen C')
         DO ic = 1, nc
           DO is = 1, nsoil
             IF (permafrost_period_sl_climbuf(ic,is) > permafrost_threshold) THEN

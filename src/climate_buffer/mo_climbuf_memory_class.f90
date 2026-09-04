@@ -67,9 +67,9 @@ MODULE mo_climbuf_memory_class
     & precip_15d_yDay,          & !< 15-day precipitation at the end of previous day [kg m-2 s-1]
     & gdd_sum_year,             & !< Current number of growing degree days in this year
     & gdd_prev_year,            & !< Growing degree days of the previous year
-    & max_snow_year,            & !< Maximum snow depth in current year [m]
+    & max_snow_of_yr,           & !< Maximum snow depth in current year [m]
     & max_snow_prev_year,       & !< Maximum snow depth in previous year [m]
-    & max_thaw_year,            & !< Maximum soil column thaw depth in current year [m]
+    & max_thaw_of_yr,           & !< Maximum soil column thaw depth in current year [m]
     & max_thaw_prev_year          !< Maximum soil column thaw depth in previous year [m]
 
   TYPE(t_jsb_var_real3d) ::     &
@@ -100,7 +100,7 @@ CONTAINS
   !>
   SUBROUTINE Init_climbuf_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: MEDIUM !, FULL, NONE, BASIC
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -269,9 +269,9 @@ CONTAINS
         & lrestart=.TRUE., initval_r=0.0_wp)
     END IF
 
-    CALL mem%Add_var('max_snow_year', mem%max_snow_year,                                  &
+    CALL mem%Add_var('max_snow_of_yr', mem%max_snow_of_yr,                                &
       & hgrid, surface,                                                                   &
-      & t_cf('max_snow_year', 'm', 'Maximum snow depth in current year'),                 &
+      & t_cf('max_snow_of_yr', 'm', 'Maximum snow depth in current year'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & lrestart=.TRUE., initval_r=0.0_wp)
@@ -284,11 +284,12 @@ CONTAINS
       & output_level=MEDIUM,                                                              &
       & lrestart=.TRUE., initval_r=0.0_wp)
 
-    CALL mem%Add_var('max_thaw_year', mem%max_thaw_year,                                  &
+    CALL mem%Add_var('max_thaw_of_yr', mem%max_thaw_of_yr,                                &
       & hgrid, surface,                                                                   &
-      & t_cf('max_thaw_year', 'm', 'Maximum thaw depth in current year'),                 &
+      & t_cf('max_thaw_of_yr', 'm', 'Maximum thaw depth in current year'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=max_depth)
 
     CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,                        &

@@ -78,7 +78,7 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
 
-  !   parameters for Yasso peat
+  ! Parameters for Yasso peat
   REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp !< Bulk density of acrotelm peat: 0.035 g/cm3, based on
                                                              !< Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
                                                              !<  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
@@ -112,7 +112,7 @@ MODULE mo_carbon_constants
     & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus  /)
 
   ! ------------------------------------------------------------------------------------------
-  ! parameters for vertical YASSO
+  ! Parameters for vertical YASSO
   !
 
   ! decomposition modifier parameters for temperature and depth modifier
@@ -124,18 +124,18 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: d_oxic = 1.0_wp            !< decomposition modifier for oxic decomposition
 
   ! Yasso parameters (Tuomi '11)
-  ! parameters for temperature dependence
+  ! Parameters for temperature dependence
   REAL(wp), PARAMETER   :: temp_p1     = 0.095_wp   !< first  order temperature dependence [1/C]
   REAL(wp), PARAMETER   :: temp_p2     = -0.0014_wp !< second order temperature dependence [1/C]
-  ! parameter for precipitation dependence
+  ! Parameter for precipitation dependence
   REAL(wp), PARAMETER   :: precip_p1   = -1.21_wp   !< first  order precipitation dependence [a/m]
-  ! parameters for size dependence
+  ! Parameters for size dependence
   REAL(wp), PARAMETER   :: size_p1     = -1.71_wp   !< first  order size dependence [1/cm]
   REAL(wp), PARAMETER   :: size_p2     = 0.86_wp    !< second order size dependence [1/cm]
   REAL(wp), PARAMETER   :: size_p3     = -0.306_wp  !< size dependence power [ ]
   REAL(wp), PARAMETER   :: d_size_leaf = 1.0_wp     !< leaf litter is not size dependent
 
-  ! parameters for moisture dependence, DAYCENT formulation
+  ! Parameters for moisture dependence, DAYCENT formulation
   REAL(wp), PARAMETER   :: moist_p_a = 0.575_wp
   REAL(wp), PARAMETER   :: moist_p_b = 1.5_wp
   REAL(wp), PARAMETER   :: moist_p_d = 3.0_wp

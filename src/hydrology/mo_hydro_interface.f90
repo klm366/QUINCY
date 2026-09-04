@@ -1454,7 +1454,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond           !< Amount of ice in the pond reservoir [m water equivalent]
     dsl4jsb_Real2D_onChunk :: weq_pond           !< Water/ice content of the pond reservoir [m water equiv.]
 
-    dsl4jsb_Real2D_onChunk :: max_thaw_year      !< Maximum thaw depth in current year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_of_yr     !< Maximum thaw depth in current year [m]
     dsl4jsb_Real2D_onChunk :: max_thaw_prev_year !< Maximum thaw depth of previous year [m]
     dsl4jsb_Real2D_onChunk :: steepness          !< Parameter representing subgrid scale slopes []
     dsl4jsb_Real2D_onChunk :: soil_depth         !< Soil depth until bedrock [m]
@@ -1603,7 +1603,7 @@ CONTAINS
 
     IF (model%processes(CLIMBUF_)%p%config%active) THEN
       dsl4jsb_Get_memory(CLIMBUF_)
-      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_year)      ! in
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_of_yr)     ! in
       dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
 
       ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
@@ -1614,7 +1614,7 @@ CONTAINS
       DO ic = 1, nc
         depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
         l_pf_soil(ic)   = (max_thaw_prev_year(ic) < depth_thrsh(ic) .AND. &
-          &                max_thaw_year(ic)      < depth_thrsh(ic))
+          &                max_thaw_of_yr(ic)     < depth_thrsh(ic))
       END DO
       !$ACC END PARALLEL LOOP
     ELSE IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
