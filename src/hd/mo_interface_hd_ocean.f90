@@ -14,7 +14,8 @@
 MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp => jp, &   !< wp := working-precision of jsbach
+    &                               wp_icon => wp !< wp_icon := working-precision of ICON
   USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -149,6 +150,7 @@ CONTAINS
 
     ! Local variables
 
+    REAL(wp_icon), ALLOCATABLE :: discharge_ocean_buf(:,:) !< buffer for discharge_ocean, needed when `wp!=wp_icon`
     LOGICAL :: write_coupler_restart
     INTEGER :: n
 
@@ -176,9 +178,14 @@ CONTAINS
 
     !$ACC UPDATE HOST(discharge_ocean)
 
+    ALLOCATE(discharge_ocean_buf(SIZE(discharge_ocean,1),SIZE(discharge_ocean,2)))
+    discharge_ocean_buf(:,:) = REAL(discharge_ocean, KIND=wp)
+
     CALL cpl_put_field( &
       & routine, field_id_river_runoff, 'river_runoff', grid%ntotal, &
-      & discharge_ocean, write_restart=write_coupler_restart)
+      & discharge_ocean_buf, write_restart=write_coupler_restart)
+
+    DEALLOCATE(discharge_ocean_buf)
 
     IF ( write_coupler_restart ) &
       & CALL message(routine, 'YAC says it is put for restart')
