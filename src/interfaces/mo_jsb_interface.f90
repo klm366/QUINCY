@@ -19,7 +19,8 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp => jp, &   !< wp := working-precision of jsbach
+    &                               wp_icon => wp !< wp_icon := working-precision of ICON
   USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util,         ONLY: int2string
 
@@ -144,9 +145,9 @@ CONTAINS
       & ice
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
-    REAL(wp), INTENT(in) :: &
+    REAL(wp_icon), INTENT(in) :: &
       & dtime
-    REAL(wp), INTENT(in) ::    &
+    REAL(wp_icon), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
       & rain              (:), &
@@ -167,7 +168,7 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    REAL(wp), INTENT(in), OPTIONAL :: &
+    REAL(wp_icon), INTENT(in), OPTIONAL :: &
       & DEBUG_VAR         (:), &
       ! MODEL_QUINCY
       & nhx_deposition    (:), &
@@ -188,7 +189,7 @@ CONTAINS
       & t_bcoef_ice       (:), &
       & q_acoef_ice       (:), &
       & q_bcoef_ice       (:)
-    REAL(wp), INTENT(out) ::   &
+    REAL(wp_icon), INTENT(out) ::   &
       & t_srf             (:), &
       & t_eff_srf         (:), &
       & qsat_srf          (:), &
@@ -209,7 +210,7 @@ CONTAINS
       & alb_nir_dif       (:), &
       & CO2_flux          (:)
     ! For lakes:
-    REAL(wp), INTENT(out), OPTIONAL ::   &
+    REAL(wp_icon), INTENT(out), OPTIONAL ::   &
       & t_lwtr            (:), &
       & qsat_lwtr         (:), &
       & s_lwtr            (:), &
@@ -226,7 +227,7 @@ CONTAINS
       & albedo_lice       (:), &
       & ice_fract_lake    (:)
     ! For standalone jsbach:
-    REAL(wp), INTENT(out), OPTIONAL :: &
+    REAL(wp_icon), INTENT(out), OPTIONAL :: &
       & evapopot(:)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -254,7 +255,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
+      & dtime=REAL(dtime,KIND=wp), alpha=MERGE(1._wp, REAL(cvdifts,KIND=wp), jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -436,9 +437,9 @@ CONTAINS
       & ice
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
-    REAL(wp), INTENT(in) :: &
+    REAL(wp_icon), INTENT(in) :: &
       & dtime
-    REAL(wp), INTENT(in) ::    &
+    REAL(wp_icon), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
       & press_air         (:), &
@@ -462,7 +463,7 @@ CONTAINS
       ! & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    REAL(wp), INTENT(out), OPTIONAL ::   &
+    REAL(wp_icon), INTENT(out), OPTIONAL ::   &
       & t_srf             (:), &
       & t_srf_rad         (:), &
       & t_srf_eff         (:), &
@@ -503,7 +504,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, alpha=1._wp)
+      & dtime=REAL(dtime,KIND=wp), alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
