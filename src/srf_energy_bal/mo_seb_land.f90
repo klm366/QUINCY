@@ -797,7 +797,7 @@ CONTAINS
           le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = surface_dry_static_energy(tmelt, &
+          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
           CALL surface_temp_implicit(alpha, dtime,                & ! in
@@ -850,7 +850,7 @@ CONTAINS
           le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = surface_dry_static_energy(tmelt, &
+          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
           CALL surface_temp_implicit(alpha, dtime,                & ! in
@@ -982,7 +982,7 @@ CONTAINS
               & dt_sk_dt_srf(ic),                                   & ! out
               & le_phase_change(ic))                                  ! out
           ELSE
-            s_melt = surface_dry_static_energy(tmelt, &
+            s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
               & q_effective(qsat_star(ic), q_air(ic),   &
               & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
             CALL surface_temp_implicit(                             & ! in
@@ -1171,7 +1171,7 @@ CONTAINS
                 & dt_sk_dt_srf(ic),                                   & ! out
                 & le_phase_change(ic))                                  ! out
             ELSE
-              s_melt = surface_dry_static_energy(tmelt, &
+              s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
                 & q_effective(qsat_star(ic), q_air(ic),   &
                 & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
               CALL surface_temp_implicit(                             & ! in
