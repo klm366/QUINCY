@@ -561,7 +561,7 @@ CONTAINS
 
     IF (model_scheme == MODEL_QUINCY) THEN
       ! Update local time and the daytime counter
-      CALL update_local_time_and_daytime_counter(global_seconds_day, dtime, lon, swpar_srf_down, &
+      CALL update_local_time_and_daytime_counter(global_seconds_day, dtime, lon, swpar_srf_down_ptr, &
           &                                      daytime_counter_ptr, daylength_prev_day_ptr, local_time_day_seconds_ptr)
     END IF
   END SUBROUTINE update_atm2land
