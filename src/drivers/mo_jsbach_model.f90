@@ -147,7 +147,6 @@ CONTAINS
     USE mo_alloc_patches,           ONLY: destruct_patches, destruct_comm_patterns
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
-    USE mo_verrou,                  ONLY: verrou_start, verrou_stop
 
     USE mo_derived_variable_handling, ONLY: update_statistics
     ! ----------------------------------------------------------------------------------------------------- !
@@ -647,7 +646,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> 17.1 run ICON-Land for one timestep
       !>
-      CALL verrou_start()
       DO jg = 1,no_models
         CALL run_one_timestep( &
           & jg, &                   ! model
@@ -655,7 +653,6 @@ CONTAINS
           & dtime, &                ! length of timestep in seconds
           & mtime_current)          ! ..
       END DO
-      CALL verrou_stop()
 
       ! update accumulated values
       CALL update_statistics(lacc=.TRUE.)

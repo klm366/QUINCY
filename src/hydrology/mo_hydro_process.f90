@@ -21,7 +21,6 @@ MODULE mo_hydro_process
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_jsb_control, ONLY: acc_stream
-  !USE mo_verrou,      ONLY: verrou_start, verrou_stop
 
   IMPLICIT NONE
   PRIVATE
@@ -1476,7 +1475,6 @@ CONTAINS
     ! vertical transport calculation to find out the residual (resulting from computational
     ! precision errors).
 
-!CALL verrou_stop()
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       ! Sum up surface fluxes of this time step (for water conservation test)
@@ -1499,7 +1497,6 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
-!CALL verrou_start()
 
     ! ----------------------------------------------------
     !  Vertical movement of mobile water through the soil
@@ -1617,7 +1614,6 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
 
-!CALL verrou_stop()
     ! Water transport conservation test
     ! ----------------------------------
     ! Second part: We subtract the current total soil moisture from the state calculated above,
@@ -1636,7 +1632,6 @@ CONTAINS
       wtr_transp_residual(ic) = wtr_transp_residual(ic) - drain_bot(ic)
       wtr_soilhyd_res(ic) = wtr_transp_residual(ic)
     END DO
-!CALL verrou_start()
 
     ! ------------------------------------
     !  Handling of water transport errors
