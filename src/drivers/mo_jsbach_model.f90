@@ -403,7 +403,7 @@ CONTAINS
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, REAL(dtime,KIND=wp))
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -625,7 +625,7 @@ CONTAINS
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
-        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
+        lprint_timestep = MOD(jstep,timesteps_per_day(REAL(dtime,KIND=wp),1)) == 0
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
@@ -650,7 +650,7 @@ CONTAINS
         CALL run_one_timestep( &
           & jg, &                   ! model
           & p_patch(jg)%nblks_c, &  ! ..
-          & dtime, &                ! length of timestep in seconds
+          & REAL(dtime,KIND=wp), &  ! length of timestep in seconds
           & mtime_current)          ! ..
       END DO
 
