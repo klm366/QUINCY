@@ -695,7 +695,7 @@ CONTAINS
           &      'Volumetric fraction of organic material in soil layer'),     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & lrestart=dsl4jsb_Config(CARBON_)%update_soil_props,                &
+          & lrestart=.NOT. dsl4jsb_Config(HYDRO_)%l_socmap,                    &
           & lrestart_cont=.TRUE., initval_r=0.0_wp )
       END IF
 

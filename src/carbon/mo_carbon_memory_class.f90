@@ -312,7 +312,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c  => Get_vgrid('soil_depth_carbon')
     END IF
 
@@ -1062,7 +1062,7 @@ CONTAINS
       & prefix, suffix,                                                           &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ! Soil level pools for vertical C separation
       ! Yasso 1: Green carbon pools
       CALL mem%Add_var('c_acid_bg1_sl', mem%c_acid_bg1_sl,                        &

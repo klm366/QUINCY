@@ -185,7 +185,7 @@ CONTAINS
     ! Initialize the C Pools
     invar_3D = .false.
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
       nsoil = soil_c%n_levels
     END IF
@@ -195,7 +195,7 @@ CONTAINS
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
-    IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       CALL message(TRIM(routine), 'Reading 1D carbon pools for total soil column.')
       DO i=1,npools
         invar_name = 'carbon_'//TRIM(Cpool_name_2d(i))//'_'//TRIM(tile%name)

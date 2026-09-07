@@ -436,7 +436,7 @@ CONTAINS
     dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Prepare soil grid information for vertical yasso
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
       nsoil = soil_c%n_levels
 
@@ -529,7 +529,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_herb_2_atm_ta )      ! out
 
     ! Variables for vertical YASSO
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       !SIZE CLASS 1
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
@@ -642,7 +642,7 @@ CONTAINS
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
 
     ! Get information about the maximum thaw depth on soil layers
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
       max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
@@ -673,7 +673,7 @@ CONTAINS
       & soil_respiration_oxic = soil_respiration_oxic(:),                         &
       & soil_respiration_anox = soil_respiration_anox(:))
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ! Recalc per tile variables on soil levels
       CALL recalc_per_tile_vars(tile, options,                                                      &
         & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
@@ -769,7 +769,7 @@ CONTAINS
       MiscPar(ROOT_DIST_BETA)       = dsl4jsb_Lctlib_param(root_dist_beta)
 
       ! Check whether optional values were read from lctlib
-      IF (MiscPar(ROOT_DIST_BETA) < -990._wp .AND. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      IF (MiscPar(ROOT_DIST_BETA) < -990._wp .AND. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         CALL finish(TRIM(routine), 'ROOT_DIST_BETA is required in lctlib file for simulations ' // &
           & 'using vertically stratified yasso scheme')
       END IF
@@ -831,8 +831,9 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! clear C from frozen pools if requested
-      IF ((dsl4jsb_Config(CARBON_)%on_soillev) .AND. (dsl4jsb_Config(CARBON_)%clear_frozen) .AND. (lresume .OR. lstart)) THEN
-        CALL message(TRIM(routine), 'Clearing frozen C')
+      IF ((dsl4jsb_Config(CARBON_)%vertical_yasso) .AND. (dsl4jsb_Config(CARBON_)%remove_permafrost_carbon) &
+        &  .AND. (lresume .OR. lstart)) THEN
+        CALL message(TRIM(routine), 'Removing carbon from permafrost affected soil layers')
         DO ic = 1, nc
           DO is = 1, nsoil
             IF (permafrost_period_sl_climbuf(ic,is) > permafrost_threshold) THEN
@@ -852,7 +853,7 @@ CONTAINS
       END IF
 
       ! Calculate soil carbon pools
-      IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         DO ic = 1, nc
           CALL calc_soil_c( &
             & sec_per_day,                                                                  & ! in
@@ -1041,7 +1042,7 @@ CONTAINS
         & soil_respiration_oxic = soil_respiration_oxic(:),     &
         & soil_respiration_anox = soil_respiration_anox(:))
 
-      IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         ! Recalc per tile variables on soil levels
         CALL recalc_per_tile_vars(tile, options,                                                      &
           & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
@@ -1065,9 +1066,9 @@ CONTAINS
       CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
         & current_fluxes(:), cconservation_calcCpools(:))
 
-      ! Update relative soil carbon content on soil layers
-      IF (dsl4jsb_Config(CARBON_)%on_soillev .AND. dsl4jsb_Config(CARBON_)%update_soil_props &
-        & .AND. dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      ! Update relative soil carbon content on soil layers (if not prescribed by map)
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso .AND. dsl4jsb_Config(HYDRO_)%l_organic &
+        & .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
         !$ACC LOOP SEQ
         DO is = 1, nsoil
@@ -1136,7 +1137,7 @@ CONTAINS
     END IF
 
     !$ACC END DATA
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       DEALLOCATE(layer_depth)
       DEALLOCATE(layer_thick)
       DEALLOCATE(soil_depth_thaw)
@@ -1253,7 +1254,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_ta,      weighted_by_fract)
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ! variables on soil levels
       ! bg1
       dsl4jsb_Aggregate_onChunk(CARBON_, c_acid_bg1_sl_ta,         weighted_by_fract)
@@ -1485,7 +1486,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl )
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl )
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl )
@@ -1534,7 +1535,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       DO ic = 1, nc
         c_acid_bg1_sl(ic,:)       = c_acid_bg1_sl(ic,:)       * refarea_scaling
         c_water_bg1_sl(ic,:)      = c_water_bg1_sl(ic,:)      * refarea_scaling
@@ -1566,7 +1567,7 @@ CONTAINS
       & c_into_humus_1_sum    = c_into_humus_1_sum(:),                            &
       & c_into_humus_2_sum    = c_into_humus_2_sum(:))
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       CALL recalc_per_tile_vars(tile, options,                                                    &
       & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
       & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
@@ -1695,7 +1696,7 @@ CONTAINS
   dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates)
   dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_c_green_2_herb)
 
-  IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+  IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl )
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl )
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl )
@@ -1733,7 +1734,7 @@ CONTAINS
   & cflux_c_green_2_herb = cflux_c_green_2_herb(:), NPP_act_yDayMean = NPP_act_yDayMean(:), &
   & NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
-  IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+  IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
     CALL recalc_per_tile_vars(tile, options,                                                    &
     & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
     & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
@@ -1969,7 +1970,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic_ta )     ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox_ta )   ! opt out
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg1_sl_ta )      ! opt out

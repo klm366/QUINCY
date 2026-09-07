@@ -1170,7 +1170,7 @@ CONTAINS
       !>    D: Further soil data
       !>
       !>     - Volumetric fraction of soil organic matter for each soil layer
-      IF (dsl4jsb_Config(HYDRO_)%l_socmap .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         DO isoil = 1,nsoil_input_file
           CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
             &  default=0._wp, ilay=isoil, layer_name='soillev')
@@ -1508,7 +1508,7 @@ CONTAINS
       END DO
 
       !>     - Soil organic carbon fraction
-      IF (dsl4jsb_Config(HYDRO_)%l_socmap .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
@@ -1692,9 +1692,9 @@ CONTAINS
 
         SELECT CASE (model%config%model_scheme)
         CASE (MODEL_JSBACH)
-          ! Use neither SOC from maps nor interactively computed SOC by carbon module
+          ! Use neither SOC from maps nor interactively computed SOC by vertical yasso carbon module
           IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap &
-            & .AND. .NOT. dsl4jsb_Config(CARBON_)%update_soil_props) THEN
+            & .AND. .NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
 
             ! Initialize with zero
             dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
@@ -1715,6 +1715,11 @@ CONTAINS
                 dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
               END IF
             END IF ! is_vegetation
+            CALL message(TRIM(routine), 'Soil organic fraction is initialized from forest fraction (uppermost soil layer only).')
+          ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap &
+            &  .AND. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+            ! SOC will be computed within vertical yasso carbon module
+            CALL message(TRIM(routine), 'Soil organic fraction is computed by the vertical yasso carbon module.')
           END IF ! l_socmap
         CASE (MODEL_QUINCY)
           ! Not using organic soil fractions from a map

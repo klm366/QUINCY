@@ -501,7 +501,7 @@ CONTAINS
     ! Tile average (ta) variable required for the carbon conservation test
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm_ta) ! out
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       !SIZE CLASS 1 - originating from non-woody biomass
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
@@ -539,7 +539,7 @@ CONTAINS
               CALL recalc_carbon_per_tile_vars(tile, options)
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-              IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+              IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
                 CALL relocate_carbon_damage(                 &
                   & damaged_fract(:),                        & ! in
                   & lctlib_LeafLit_coef(1:5),                & ! in
@@ -692,7 +692,7 @@ CONTAINS
               CALL recalc_carbon_per_tile_vars(tile, options)
               CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-              IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+              IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
                 CALL relocate_carbon_fire(                    &
                   & burned_fract(:),                          & ! in, only for windbreak
                   & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
