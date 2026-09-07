@@ -30,7 +30,7 @@ CONTAINS
   !> Orchestrates setting up the ICON-Land model structure
 
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
-    USE mo_kind,                ONLY: wp => jp
+    USE mo_kind,                ONLY: wp
     USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted

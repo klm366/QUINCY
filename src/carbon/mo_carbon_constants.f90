@@ -14,7 +14,7 @@
 MODULE mo_carbon_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp => jp
+  USE mo_kind,                   ONLY: wp
   USE mo_jsb_varlist,            ONLY: VARNAME_LEN
   USE mo_jsb_physical_constants, ONLY: amco2  !< Molar weight of CO2 [g/mol]
 

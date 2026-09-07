@@ -14,7 +14,7 @@
 MODULE mo_jsb_math_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp => jp
+  USE mo_kind,                  ONLY: wp
   USE mo_math_constants,        ONLY: pi, deg2rad
 
   IMPLICIT NONE

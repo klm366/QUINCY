@@ -29,7 +29,7 @@
 MODULE mo_acc_util
 
 #ifdef _ICON_STYLE_
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 #endif
 
@@ -699,7 +699,7 @@ END MODULE mo_acc_util
 MODULE mo_acc_util
 
 #ifdef _ICON_STYLE_
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: finish
 #endif
 

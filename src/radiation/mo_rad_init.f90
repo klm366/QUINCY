@@ -14,7 +14,7 @@
 MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp => jp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 

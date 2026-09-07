@@ -26,7 +26,7 @@ MODULE mo_hydro_config_class
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_util,               ONLY: real2string, tolower
   USE mo_io_units,           ONLY: filename_max
-  USE mo_kind,               ONLY: wp => jp
+  USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_sse_config_class,   ONLY: max_soil_layers

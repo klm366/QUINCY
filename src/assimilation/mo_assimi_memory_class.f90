@@ -15,7 +15,7 @@
 MODULE mo_assimi_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp => jp
+  USE mo_kind,                   ONLY: wp
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 

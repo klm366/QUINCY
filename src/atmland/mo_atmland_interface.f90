@@ -15,7 +15,7 @@ MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
   USE mo_exception,       ONLY: finish
-  USE mo_kind,            ONLY: wp => jp, &   !< wp := working-precision of jsbach
+  USE mo_kind,            ONLY: wp, &   !< wp := working-precision of jsbach
     &                           wp_icon => wp !< wp_icon := working-precision of ICON
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream

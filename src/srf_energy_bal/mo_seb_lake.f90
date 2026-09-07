@@ -18,7 +18,7 @@
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model

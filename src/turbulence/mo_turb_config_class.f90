@@ -16,7 +16,7 @@ MODULE mo_turb_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,              ONLY: wp => jp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_control,       ONLY: debug_on

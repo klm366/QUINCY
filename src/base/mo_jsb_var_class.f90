@@ -14,7 +14,7 @@
 MODULE mo_jsb_var_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp => jp, dp
+  USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish, message
   USE mo_jsb_varlist_iface, ONLY: VARNAME_LEN
 

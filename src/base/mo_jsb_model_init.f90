@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
 
-  USE mo_kind,             ONLY: wp => jp
+  USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start

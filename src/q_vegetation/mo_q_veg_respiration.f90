@@ -40,7 +40,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_kind,                    ONLY: wp => jp
+    USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
 
@@ -89,7 +89,7 @@ CONTAINS
                                                         coarse_root_nitrogen)   &
                                                         RESULT(maint_respiration)
 
-    USE mo_kind,                    ONLY: wp => jp
+    USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood, k_maint_resp_suppress
 

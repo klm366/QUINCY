@@ -15,7 +15,7 @@ MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model

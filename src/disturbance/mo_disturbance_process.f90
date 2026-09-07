@@ -18,7 +18,7 @@
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
 
   IMPLICIT NONE
   PRIVATE

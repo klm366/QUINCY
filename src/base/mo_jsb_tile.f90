@@ -26,7 +26,7 @@
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 

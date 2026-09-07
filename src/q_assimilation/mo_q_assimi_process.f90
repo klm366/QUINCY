@@ -18,7 +18,7 @@
 MODULE mo_q_assimi_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp => jp
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, message_text, finish

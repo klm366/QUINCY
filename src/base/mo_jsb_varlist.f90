@@ -14,7 +14,7 @@
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp => jp
+  USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D

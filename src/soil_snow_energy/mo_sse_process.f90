@@ -17,7 +17,7 @@ MODULE mo_sse_process
   USE mo_jsb_control,            ONLY: acc_stream
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_exception, ONLY: message, finish
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
 
   IMPLICIT NONE
   PRIVATE

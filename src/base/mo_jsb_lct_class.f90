@@ -39,7 +39,7 @@
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp => jp
+  USE mo_kind,      ONLY: wp
   USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE

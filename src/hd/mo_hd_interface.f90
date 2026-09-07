@@ -18,7 +18,7 @@ MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,             ONLY: wp => jp
+  USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
   USE mo_fortran_tools,    ONLY: assert_acc_device_only

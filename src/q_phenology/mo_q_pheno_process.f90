@@ -18,7 +18,7 @@
 MODULE mo_q_pheno_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp => jp
+  USE mo_kind,                 ONLY: wp
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &

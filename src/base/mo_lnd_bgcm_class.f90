@@ -16,7 +16,7 @@
 MODULE mo_lnd_bgcm_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
   USE mo_util,                ONLY: int2string
   USE mo_exception,           ONLY: message, message_text, finish
   USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_p, t_jsb_var_real2d, t_jsb_var_real3d

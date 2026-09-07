@@ -14,7 +14,7 @@
 MODULE mo_sse_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp => jp
+  USE mo_kind,                    ONLY: wp
   USE mo_jsb_physical_constants,  ONLY: ks, ki, clw, cs, ci, rhoh2o, dens_snow, dens_ice
 
   IMPLICIT NONE

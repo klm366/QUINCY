@@ -18,7 +18,7 @@
 MODULE mo_q_sb_jsm_transport
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp => jp
+  USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: one_day, eps8, eps4
   USE mo_lnd_bgcm_idx

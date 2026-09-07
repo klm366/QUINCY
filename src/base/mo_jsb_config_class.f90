@@ -22,7 +22,7 @@ MODULE mo_jsb_config_class
   !> @TODO `filename_max` and explicit string length definitions should not be needed with
   !>       `CHARACTER(len=:), ALLOCATABLE :: ` syntax.
   !>
-  USE mo_kind,               ONLY: wp => jp
+  USE mo_kind,               ONLY: wp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish, message_text

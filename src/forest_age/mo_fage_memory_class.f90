@@ -15,7 +15,7 @@
 MODULE mo_fage_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp => jp
+  USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model

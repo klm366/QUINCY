@@ -20,7 +20,7 @@ MODULE mo_q_assimi_config_class
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp => jp
+  USE mo_kind,              ONLY: wp
   USE mo_jsb_math_constants,ONLY: eps4
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config

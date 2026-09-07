@@ -16,7 +16,7 @@
 MODULE mo_q_assimi_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp => jp
+  USE mo_kind,        ONLY: wp
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
@@ -129,7 +129,7 @@ CONTAINS
   !> calculate time moving averages and daytime averages for Q_ASSIMI_
   !>
   SUBROUTINE calculate_time_average_q_assimilation(tile, options)
-    USE mo_kind,                    ONLY: wp => jp
+    USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: test_false_true

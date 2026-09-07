@@ -28,7 +28,7 @@ MODULE mo_assimi_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start, get_previous_year_length
-  USE mo_kind,            ONLY: wp => jp
+  USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid

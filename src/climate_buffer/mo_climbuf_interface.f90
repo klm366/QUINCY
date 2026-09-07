@@ -22,7 +22,7 @@ MODULE mo_climbuf_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,               ONLY: wp => jp
+  USE mo_kind,               ONLY: wp
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, &
     &                              is_newyear, is_newmonth, is_newday, &

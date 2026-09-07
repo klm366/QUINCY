@@ -26,7 +26,7 @@ MODULE mo_hydro_interface
   ! Use of basic structures
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start
-  USE mo_kind,               ONLY: wp => jp
+  USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH

@@ -27,7 +27,7 @@
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp => jp
+  USE mo_kind,        ONLY: wp
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop    ! Functions from timer infrastructure
 

@@ -14,7 +14,7 @@
 MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                ONLY: wp => jp, &   !< wp := working-precision of jsbach
+  USE mo_kind,                ONLY: wp, &   !< wp := working-precision of jsbach
     &                               wp_icon => wp !< wp_icon := working-precision of ICON
   USE mo_exception,           ONLY: finish, message
 

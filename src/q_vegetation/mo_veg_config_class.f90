@@ -23,7 +23,7 @@ MODULE mo_veg_config_class
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 

@@ -18,7 +18,7 @@
 !!
 MODULE mo_read_icon_trafo
 
-!   USE mo_kind,               ONLY: wp => jp
+!   USE mo_kind,               ONLY: wp
 
   IMPLICIT NONE
 

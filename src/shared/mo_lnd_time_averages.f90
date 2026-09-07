@@ -18,7 +18,7 @@
 MODULE mo_lnd_time_averages
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp => jp
+  USE mo_kind,                    ONLY: wp
 
 
   IMPLICIT NONE
@@ -79,7 +79,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_kind,                ONLY: wp => jp
+    USE mo_kind,                ONLY: wp
     USE mo_jsb_math_constants,  ONLY: one_day, one_year
 
     IMPLICIT NONE

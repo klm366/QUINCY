@@ -16,7 +16,7 @@
 MODULE mo_iq_atm2land_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp => jp
+  USE mo_kind,                  ONLY: wp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8
 
   IMPLICIT NONE

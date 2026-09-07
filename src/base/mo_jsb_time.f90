@@ -14,7 +14,7 @@
 MODULE mo_jsb_time
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,           ONLY: wp => jp
+  USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_control,    ONLY: jsbach_runs_standalone
   USE mo_jsb_time_iface, ONLY: & ! Uses the mtime library

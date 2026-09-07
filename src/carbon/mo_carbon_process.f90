@@ -15,7 +15,7 @@ MODULE mo_carbon_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,      ONLY: acc_stream
-  USE mo_kind,             ONLY: wp => jp
+  USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &

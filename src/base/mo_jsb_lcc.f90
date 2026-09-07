@@ -30,7 +30,7 @@ MODULE mo_jsb_lcc
 
   USE mo_exception,           ONLY: finish, message, message_text
   USE mo_util,                ONLY: int2string, one_of, tolower
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
 
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN

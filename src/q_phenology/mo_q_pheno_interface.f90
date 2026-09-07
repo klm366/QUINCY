@@ -19,7 +19,7 @@ MODULE mo_q_pheno_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_kind,               ONLY: wp => jp
+  USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model

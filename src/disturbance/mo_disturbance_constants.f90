@@ -14,7 +14,7 @@
 MODULE mo_disturbance_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp => jp
+  USE mo_kind, ONLY: wp
 
   IMPLICIT NONE
   PUBLIC

@@ -25,7 +25,7 @@ MODULE mo_rad_interface
 
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, acc_stream
-  USE mo_kind,                ONLY: wp => jp
+  USE mo_kind,                ONLY: wp
   USE mo_exception,           ONLY: message, message_text, finish
 
   USE mo_jsb_control,         ONLY: jsbach_runs_standalone
@@ -1807,7 +1807,7 @@ CONTAINS
   !>
   SUBROUTINE update_time_average_radiation(tile, options)
 
-    USE mo_kind,                    ONLY: wp => jp
+    USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on

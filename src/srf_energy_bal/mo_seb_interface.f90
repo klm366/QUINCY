@@ -22,7 +22,7 @@ MODULE mo_seb_interface
 
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
-  USE mo_kind,            ONLY: wp => jp
+  USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model

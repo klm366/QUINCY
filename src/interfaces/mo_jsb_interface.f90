@@ -19,7 +19,7 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp => jp, &   !< wp := working-precision of jsbach
+  USE mo_kind,                ONLY: wp, &   !< wp := working-precision of jsbach
     &                               wp_icon => wp !< wp_icon := working-precision of ICON
   USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util,         ONLY: int2string

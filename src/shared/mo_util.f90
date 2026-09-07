@@ -16,7 +16,7 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp => jp
+  USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
   USE mo_util_string,     ONLY: toupper, tolower, int2string, real2string, logical2string, separator, one_of_str => one_of
   USE mo_math_utilities,  ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
