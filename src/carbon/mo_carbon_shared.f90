@@ -429,15 +429,15 @@ CONTAINS
     !! implementation: Tea Thum (FMI), Petri Raeisaenen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
-    USE mo_carbon_constants, ONLY: days_per_year, sec_per_year, i_lctlib_humus,      &
-                               & i_pool_acid_ag, i_pool_water_ag, i_pool_ethanol_ag, &
-                               & i_pool_nonsoluble_ag,                               &
-                               & i_pool_acid_bg, i_pool_water_bg, i_pool_ethanol_bg, &
-                               & i_pool_nonsoluble_bg, i_pool_humus,                 &
-                               & i_flux_resp_total, i_flux_2_humus_ag,               &
-                               & i_flux_2_humus_bg, i_flux_from_humus_diag,          &
-                               & i_flux_resp_litter_ag, i_flux_resp_litter_bg,       &
-                               & i_rel_flux_AWEN, i_flux_from_humus, i_flux_litter_2_humus
+    USE mo_carbon_constants, ONLY: days_per_year, sec_per_year, LCT_HUMUS, &
+                   & POOL_ACID_AG, POOL_WATER_AG, POOL_ETHANOL_AG,         &
+                   & POOL_NONSOLUBLE_AG,                                   &
+                   & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG,         &
+                   & POOL_NONSOLUBLE_BG, POOL_HUMUS,                       &
+                   & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG,                     &
+                   & FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,                &
+                   & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG,             &
+                   & REL_FLUX_AWEN, FLUX_FROM_HUMUS, FLUX_LITTER_2_HUMUS
     USE mo_jsb_physical_constants, ONLY: tmelt
     IMPLICIT NONE
 
@@ -651,17 +651,17 @@ CONTAINS
     temp   = Weather(1) - Tmelt                ! K -> C
 
     !   initialize yasso pools (AWEN + humus)
-    c_acid_ag        = Yasso_in_pools(i_pool_acid_ag)
-    c_water_ag       = Yasso_in_pools(i_pool_water_ag)
-    c_ethanol_ag     = Yasso_in_pools(i_pool_ethanol_ag)
-    c_nonsoluble_ag  = Yasso_in_pools(i_pool_nonsoluble_ag)
+    c_acid_ag        = Yasso_in_pools(POOL_ACID_AG)
+    c_water_ag       = Yasso_in_pools(POOL_WATER_AG)
+    c_ethanol_ag     = Yasso_in_pools(POOL_ETHANOL_AG)
+    c_nonsoluble_ag  = Yasso_in_pools(POOL_NONSOLUBLE_AG)
 
-    c_acid_bg        = Yasso_in_pools(i_pool_acid_bg)
-    c_water_bg       = Yasso_in_pools(i_pool_water_bg)
-    c_ethanol_bg     = Yasso_in_pools(i_pool_ethanol_bg)
-    c_nonsoluble_bg  = Yasso_in_pools(i_pool_nonsoluble_bg)
+    c_acid_bg        = Yasso_in_pools(POOL_ACID_BG)
+    c_water_bg       = Yasso_in_pools(POOL_WATER_BG)
+    c_ethanol_bg     = Yasso_in_pools(POOL_ETHANOL_BG)
+    c_nonsoluble_bg  = Yasso_in_pools(POOL_NONSOLUBLE_BG)
 
-    c_humus          = Yasso_in_pools(i_pool_humus)
+    c_humus          = Yasso_in_pools(POOL_HUMUS)
 
     !   store sum of the AWEN pools before decomposition
     Pseudo_litter_green = c_acid_ag          &
@@ -845,7 +845,7 @@ CONTAINS
       &                          c_2_litter, 1.0_wp - fract_aboveground, Lit_coefV)
 
     ! Cflx_litter_2_humus is not only required for distribution, but possibly also as output for the eq script
-    CAflx_litter_2_humus = Lit_coefV(i_lctlib_humus) * c_2_litter * ts_per_year
+    CAflx_litter_2_humus = Lit_coefV(LCT_HUMUS) * c_2_litter * ts_per_year
 
     ! compute d_litter_green; this is given by the change in AWEN pools
     !          Flx                 Pool(t)                   Pool(t+1)
@@ -867,36 +867,36 @@ CONTAINS
     ENDIF
 
     ! 4.1 Write pools into the output array
-    Yasso_out(i_pool_acid_ag)       = c_acid_ag
-    Yasso_out(i_pool_water_ag)      = c_water_ag
-    Yasso_out(i_pool_ethanol_ag)    = c_ethanol_ag
-    Yasso_out(i_pool_nonsoluble_ag) = c_nonsoluble_ag
-    Yasso_out(i_pool_acid_bg)       = c_acid_bg
-    Yasso_out(i_pool_water_bg)      = c_water_bg
-    Yasso_out(i_pool_ethanol_bg)    = c_ethanol_bg
-    Yasso_out(i_pool_nonsoluble_bg) = c_nonsoluble_bg
-    Yasso_out(i_pool_humus)         = c_humus
+    Yasso_out(POOL_ACID_AG)       = c_acid_ag
+    Yasso_out(POOL_WATER_AG)      = c_water_ag
+    Yasso_out(POOL_ETHANOL_AG)    = c_ethanol_ag
+    Yasso_out(POOL_NONSOLUBLE_AG) = c_nonsoluble_ag
+    Yasso_out(POOL_ACID_BG)       = c_acid_bg
+    Yasso_out(POOL_WATER_BG)      = c_water_bg
+    Yasso_out(POOL_ETHANOL_BG)    = c_ethanol_bg
+    Yasso_out(POOL_NONSOLUBLE_BG) = c_nonsoluble_bg
+    Yasso_out(POOL_HUMUS)         = c_humus
 
     ! 4.2 Write respiration into the output array
-    Yasso_out(i_flux_resp_total)    = CAflx_respiration * years_per_ts ! convert back to daily
+    Yasso_out(FLUX_RESP_TOTAL)    = CAflx_respiration * years_per_ts ! convert back to daily
 
     IF (.NOT. PRESENT(redFact_Nlimit)) THEN
       ! the routine might have been called to diagnose the nutrient demand, so we give out
       ! 1. flux for immobilisation: this is the sum of all carbon coming from the non-humus pools to humus
-      Yasso_out(i_flux_2_humus_ag)      =  CAflx_2_humusAG * years_per_ts !  per timestep ! the flux is positive
-      Yasso_out(i_flux_2_humus_bg)      =  CAflx_2_humusBG * years_per_ts !  per timestep ! the flux is positive
+      Yasso_out(FLUX_2_HUMUS_AG)      =  CAflx_2_humusAG * years_per_ts !  per timestep ! the flux is positive
+      Yasso_out(FLUX_2_HUMUS_BG)      =  CAflx_2_humusBG * years_per_ts !  per timestep ! the flux is positive
       ! 2. flux for mineralisation:  this is the flux from humus to atmosphere
-      Yasso_out(i_flux_from_humus_diag) = -CAflx_from_humus * years_per_ts !  per timestep ! sign CHECKED!
+      Yasso_out(FLUX_FROM_HUMUS_DIAG) = -CAflx_from_humus * years_per_ts !  per timestep ! sign CHECKED!
       ! ... as well as all fluxes from AWEN pools to atmosphere
-      Yasso_out(i_flux_resp_litter_ag)  = -CAflx_resp_from_litter_ag * years_per_ts ! per timestep ! the flux is negative
-      Yasso_out(i_flux_resp_litter_bg)  = -CAflx_resp_from_litter_bg * years_per_ts ! per timestep ! the flux is negative
+      Yasso_out(FLUX_RESP_LITTER_AG)  = -CAflx_resp_from_litter_ag * years_per_ts ! per timestep ! the flux is negative
+      Yasso_out(FLUX_RESP_LITTER_BG)  = -CAflx_resp_from_litter_bg * years_per_ts ! per timestep ! the flux is negative
       ! 3. decomposition rate for Npool litter green
-      Yasso_out(i_rel_flux_AWEN)        =  d_litter_green
+      Yasso_out(REL_FLUX_AWEN)        =  d_litter_green
     ENDIF
 
     ! 4.3 Write diagnostics to determine equilibrium of humus pools
-    Yasso_out(i_flux_from_humus)     = -CAflx_from_humus * years_per_ts
-    Yasso_out(i_flux_litter_2_humus) = (CAflx_2_humus + CAflx_litter_2_humus) * years_per_ts
+    Yasso_out(FLUX_FROM_HUMUS)     = -CAflx_from_humus * years_per_ts
+    Yasso_out(FLUX_LITTER_2_HUMUS) = (CAflx_2_humus + CAflx_litter_2_humus) * years_per_ts
 
   END SUBROUTINE yasso
 
@@ -910,8 +910,8 @@ CONTAINS
   SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
                                      litter, fraction, coefficients)
   !$ACC ROUTINE SEQ
-    USE mo_carbon_constants, ONLY:   i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol,    &
-                                     i_lctlib_nonsoluble, i_lctlib_humus
+    USE mo_carbon_constants, ONLY:   LCT_ACID, LCT_WATER, LCT_ETHANOL,    &
+                     LCT_NONSOLUBLE, LCT_HUMUS
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(INOUT)             :: c_acid        !< yasso acid pool
@@ -924,11 +924,11 @@ CONTAINS
     REAL(wp), DIMENSION(5), INTENT(IN)  :: coefficients  !< litter coefficient (acid vs water vs ...) [ ]
     ! -------------------------------------------------------------------------------------------------- !
 
-    CALL add_litter_to_yasso_pool(c_acid,       litter, fraction, coefficients(i_lctlib_acid))
-    CALL add_litter_to_yasso_pool(c_water,      litter, fraction, coefficients(i_lctlib_water))
-    CALL add_litter_to_yasso_pool(c_ethanol,    litter, fraction, coefficients(i_lctlib_ethanol))
-    CALL add_litter_to_yasso_pool(c_nonsoluble, litter, fraction, coefficients(i_lctlib_nonsoluble))
-    CALL add_litter_to_yasso_pool(c_humus,      litter, fraction, coefficients(i_lctlib_humus))
+    CALL add_litter_to_yasso_pool(c_acid,       litter, fraction, coefficients(LCT_ACID))
+    CALL add_litter_to_yasso_pool(c_water,      litter, fraction, coefficients(LCT_WATER))
+    CALL add_litter_to_yasso_pool(c_ethanol,    litter, fraction, coefficients(LCT_ETHANOL))
+    CALL add_litter_to_yasso_pool(c_nonsoluble, litter, fraction, coefficients(LCT_NONSOLUBLE))
+    CALL add_litter_to_yasso_pool(c_humus,      litter, fraction, coefficients(LCT_HUMUS))
 
   END SUBROUTINE distribute_yasso_litter
 

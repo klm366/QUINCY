@@ -84,12 +84,12 @@ CONTAINS
       soilResp_anox_sl                        &
       )
 
-    USE mo_carbon_constants,       ONLY: fract_green_aboveGround, fract_wood_aboveGround,                        &
-                                         i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,   &
-                                         i_lctlib_humus,                                                         &
-                                         i_f_resp, i_f_2_humus, i_f_f_humus,                                     &
-                                         i_m_litter, i_m_humus,                                                  &
-                                         i_WoodLitSize, i_RootDistBeta, i_FracInunMin,                           &
+    USE mo_carbon_constants,       ONLY: fract_green_aboveGround, fract_wood_aboveGround,    &
+                                         LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,   &
+                                         LCT_HUMUS,                                          &
+                                         F_RESP, F_2_HUMUS, F_F_HUMUS,                       &
+                                         M_LITTER, M_HUMUS,                                  &
+                                         WOODLITSIZE, ROOT_DIST_BETA, FRAC_INUN_MIN,         &
                                          d_oxic, d_anox, d_size_leaf, permafrost_threshold !, sec_per_year, sec_per_day
     USE mo_carbon_shared,          ONLY: distribute_yasso_litter
 
@@ -199,7 +199,7 @@ CONTAINS
     soilResp_oxic_sl(:)   = 0._wp
     soilResp_anox_sl(:)   = 0._wp
 
-    root_dist_sl = determine_root_dist(max_depth_sl, layer_depth, MiscPar(i_RootDistBeta), t_soil_sl, permafrost_layer)
+    root_dist_sl = determine_root_dist(max_depth_sl, layer_depth, MiscPar(ROOT_DIST_BETA), t_soil_sl, permafrost_layer)
 
     frac_inun_loc = frac_inun
 
@@ -223,7 +223,7 @@ CONTAINS
     d_temp_sl   = get_modifier_temp(t_soil_sl)
     d_water_sl  = get_modifier_water(wtr_soil_rel_sl)
     d_depth_sl  = get_modifier_depth(layer_depth)
-    d_size_wood = get_modifier_size(MiscPar(i_WoodLitSize))
+    d_size_wood = get_modifier_size(MiscPar(WOODLITSIZE))
 
     ! -------------------------------
     ! call YASSO for dry / oxic areas
@@ -233,8 +233,8 @@ CONTAINS
     ! ag pools
 
     ! rate modifiers YASSO call for oxic
-    Y_in_mod(i_m_litter) = d_temp * d_water * d_size_leaf * d_oxic
-    Y_in_mod(i_m_humus)  = 0._wp   ! no humus above ground
+    Y_in_mod(M_LITTER) = d_temp * d_water * d_size_leaf * d_oxic
+    Y_in_mod(M_HUMUS)  = 0._wp   ! no humus above ground
 
     ! C pools input
     CALL input_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
@@ -245,12 +245,12 @@ CONTAINS
     CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
                             c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
-    soilResp_oxic              = soilResp_oxic      + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-    c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+    soilResp_oxic              = soilResp_oxic      + Y_out_fluxes(F_RESP) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
+    c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
 
     ! call YASSO for inundated / anoxic
     IF (frac_inun_loc > EPSILON(1._wp)) THEN
-      Y_in_mod(i_m_litter) = d_temp * d_water * d_size_leaf * d_anox
+      Y_in_mod(M_LITTER) = d_temp * d_water * d_size_leaf * d_anox
 
       ! call YASSO for anoxic
       CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -258,8 +258,8 @@ CONTAINS
       CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
                               c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
-      soilResp_anox            = soilResp_anox + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-      c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
+      c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
     END IF
 
     ! -----------------
@@ -267,8 +267,8 @@ CONTAINS
 
     DO is = 1, nsoil
       ! rate modifiers YASSO call for oxic
-      Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_oxic * resp_rate_modifier
-      Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
+      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_oxic * resp_rate_modifier
+      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),  &
@@ -279,14 +279,14 @@ CONTAINS
       CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
                               c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
       ! Fluxes
-      soilResp_oxic_sl(is)     = soilResp_oxic_sl(is)  + Y_out_fluxes(i_f_resp) / delta_time_C     ! respiration
-      c_decomp_humus_1_sum     = c_decomp_humus_1_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-      c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      soilResp_oxic_sl(is)     = soilResp_oxic_sl(is)  + Y_out_fluxes(F_RESP) / delta_time_C     ! respiration
+      c_decomp_humus_1_sum     = c_decomp_humus_1_sum  + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
+      c_into_humus_1_sum       = c_into_humus_1_sum    + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
 
       ! call YASSO for inundated / anoxic
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
-        Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_anox * resp_rate_modifier
-        Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
+        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_anox * resp_rate_modifier
+        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
 
         ! call YASSO for anoxic
         CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -294,9 +294,9 @@ CONTAINS
         CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
                                 c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
         ! Fluxes
-        soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-        c_decomp_humus_1_sum   = c_decomp_humus_1_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-        c_into_humus_1_sum     = c_into_humus_1_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+        soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
+        c_decomp_humus_1_sum   = c_decomp_humus_1_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
+        c_into_humus_1_sum     = c_into_humus_1_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
       END IF
     END DO
     ! some C goes from ag to humus -- accounted for here
@@ -308,8 +308,8 @@ CONTAINS
     ! ag pools
 
     ! rate modifiers YASSO call for oxic
-    Y_in_mod(i_m_litter) = d_temp * d_water * d_size_wood * d_oxic
-    Y_in_mod(i_m_humus) = 0._wp   ! no humus above ground
+    Y_in_mod(M_LITTER) = d_temp * d_water * d_size_wood * d_oxic
+    Y_in_mod(M_HUMUS) = 0._wp   ! no humus above ground
 
     ! C pools input
     CALL input_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2,  &
@@ -320,12 +320,12 @@ CONTAINS
     CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
                             c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
-    soilResp_oxic              = soilResp_oxic + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-    c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+    soilResp_oxic              = soilResp_oxic + Y_out_fluxes(F_RESP) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
+    c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
 
     IF (frac_inun_loc > EPSILON(1._wp)) THEN
       ! call YASSO for inundated / anoxic
-      Y_in_mod(i_m_litter) = d_temp * d_water * d_size_wood * d_anox
+      Y_in_mod(M_LITTER) = d_temp * d_water * d_size_wood * d_anox
 
       ! call YASSO for anoxic
       CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -333,16 +333,16 @@ CONTAINS
       CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
                               c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
-      soilResp_anox            = soilResp_anox + Y_out_fluxes(i_f_resp) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
-      c_into_humus_2_sum       = c_into_humus_2_sum + Y_out_fluxes(i_f_2_humus)          ! decomposition into humus
+      soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C             ! respiration XXX SO FAR DOESN'T GO ANYWHERE
+      c_into_humus_2_sum       = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
     END IF
 
     ! -----------------
     ! YASSO bg call: All layers
     DO is = 1, nsoil
       ! rate modifiers, YASSO call for oxic
-      Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_oxic * resp_rate_modifier
-      Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
+      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_oxic * resp_rate_modifier
+      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
@@ -353,14 +353,14 @@ CONTAINS
       CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
                               c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
       ! Fluxes
-      soilResp_oxic_sl(is)     = soilResp_oxic_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-      c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-      c_into_humus_2_sum       = c_into_humus_2_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+      soilResp_oxic_sl(is)     = soilResp_oxic_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
+      c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
+      c_into_humus_2_sum       = c_into_humus_2_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
 
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
         ! call YASSO for inundated / anoxic
-        Y_in_mod(i_m_litter) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_anox * resp_rate_modifier
-        Y_in_mod(i_m_humus)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
+        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_anox * resp_rate_modifier
+        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
 
         ! call YASSO for anoxic
         CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -370,9 +370,9 @@ CONTAINS
                                 c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .true., Y_out_pools)
 
         ! Fluxes
-        soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(i_f_resp) / delta_time_C      ! respiration
-        c_decomp_humus_2_sum   = c_decomp_humus_2_sum + Y_out_fluxes(i_f_f_humus)        ! decomposition of humus
-        c_into_humus_2_sum     = c_into_humus_2_sum   + Y_out_fluxes(i_f_2_humus)        ! decomposition into humus
+        soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
+        c_decomp_humus_2_sum   = c_decomp_humus_2_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
+        c_into_humus_2_sum     = c_into_humus_2_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
       END IF
     END DO
     ! some C goes from ag to humus -- accounted for here
@@ -380,9 +380,9 @@ CONTAINS
     tmp_out_humus   = 0._wp
 
     c_into_humus_1_sum   = c_into_humus_1_sum   +  &
-                           LeafLit_coefV(i_lctlib_humus) * leafLitter * delta_time_C
+                           LeafLit_coefV(LCT_HUMUS) * leafLitter * delta_time_C
     c_into_humus_2_sum   = c_into_humus_2_sum   +  &
-                           WoodLit_coefV(i_lctlib_humus) * woodLitter * delta_time_C
+                           WoodLit_coefV(LCT_HUMUS) * woodLitter * delta_time_C
 
     ! soil respiration: ag respiration is really part of top soil layer respiration
     soilResp_oxic_sl(1)     = soilResp_oxic_sl(1) + soilResp_oxic
@@ -461,9 +461,9 @@ CONTAINS
 
   SUBROUTINE yasso_minimal(Y_in_pools, Y_in_mod, Y_out_pools, Y_out_fluxes,                                 &
                            A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
-    USE mo_carbon_constants, ONLY: i_y_acid, i_y_water, i_y_ethanol, i_y_nonsoluble, i_y_humus, &
-                                   i_f_resp, i_f_2_humus, i_f_f_humus, i_f_litresp,             &
-                                   i_m_litter, i_m_humus, sec_per_year, sec_per_day
+    USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
+                     F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,                         &
+                     M_LITTER, M_HUMUS, sec_per_year, sec_per_day
 
     REAL(wp), DIMENSION(5),  INTENT(IN)  :: Y_in_pools       ! Yasso pools IN [mol(c)/m2]
     REAL(wp), DIMENSION(2),  INTENT(IN)  :: Y_in_mod         ! Yasso rate modifiers IN
@@ -576,20 +576,20 @@ CONTAINS
 
     ! INPUTS
     ! a) pools
-    c_acid       = Y_in_pools(i_y_acid)
-    c_water      = Y_in_pools(i_y_water)
-    c_ethanol    = Y_in_pools(i_y_ethanol)
-    c_nonsoluble = Y_in_pools(i_y_nonsoluble)
-    c_humus      = Y_in_pools(i_y_humus)
+    c_acid       = Y_in_pools(Y_ACID)
+    c_water      = Y_in_pools(Y_WATER)
+    c_ethanol    = Y_in_pools(Y_ETHANOL)
+    c_nonsoluble = Y_in_pools(Y_NONSOLUBLE)
+    c_humus      = Y_in_pools(Y_HUMUS)
 
     ! b) decomposition modifiers
     ! decomposition rate is reference decomposition rate * modifier
     ! with modifier function(temperature, water, size, etc) set externally
-    d_acid       = ref_decomp_rate_acid       * Y_in_mod(i_m_litter)
-    d_water      = ref_decomp_rate_water      * Y_in_mod(i_m_litter)
-    d_ethanol    = ref_decomp_rate_ethanol    * Y_in_mod(i_m_litter)
-    d_nonsoluble = ref_decomp_rate_nonsoluble * Y_in_mod(i_m_litter)
-    d_humus      = ref_decomp_rate_humus      * Y_in_mod(i_m_humus)
+    d_acid       = ref_decomp_rate_acid       * Y_in_mod(M_LITTER)
+    d_water      = ref_decomp_rate_water      * Y_in_mod(M_LITTER)
+    d_ethanol    = ref_decomp_rate_ethanol    * Y_in_mod(M_LITTER)
+    d_nonsoluble = ref_decomp_rate_nonsoluble * Y_in_mod(M_LITTER)
+    d_humus      = ref_decomp_rate_humus      * Y_in_mod(M_HUMUS)
 
     ! 2. Calculate fluxes
     !   annual loss fluxes (negative values):
@@ -660,22 +660,22 @@ CONTAINS
                       + CAflx_2_humus) * years_per_ts)
 
     ! 4.1 Write pools into the output array
-    Y_out_pools(i_y_acid)       = c_acid
-    Y_out_pools(i_y_water)      = c_water
-    Y_out_pools(i_y_ethanol)    = c_ethanol
-    Y_out_pools(i_y_nonsoluble) = c_nonsoluble
-    Y_out_pools(i_y_humus)      = c_humus
+    Y_out_pools(Y_ACID)       = c_acid
+    Y_out_pools(Y_WATER)      = c_water
+    Y_out_pools(Y_ETHANOL)    = c_ethanol
+    Y_out_pools(Y_NONSOLUBLE) = c_nonsoluble
+    Y_out_pools(Y_HUMUS)      = c_humus
 
     ! 4.2 Write respiration into the output array
-    Y_out_fluxes(i_f_resp)     = CAflx_respiration * years_per_ts ! convert back to daily
+    Y_out_fluxes(F_RESP)     = CAflx_respiration * years_per_ts ! convert back to daily
 
     ! the routine might have been called to diagnose the nutrient demand, so we give out
     ! 1. flux for immobilisation: this is the sum of all carbon coming from the non-humus pools to humus
-    Y_out_fluxes(i_f_2_humus)  =  CAflx_2_humus * years_per_ts !  per timestep ! the flux is positive
+    Y_out_fluxes(F_2_HUMUS)  =  CAflx_2_humus * years_per_ts !  per timestep ! the flux is positive
     ! 2. flux for mineralisation:  this is the flux from humus to atmosphere
-    Y_out_fluxes(i_f_f_humus)  = -CAflx_from_humus * years_per_ts !  per timestep ! sign CHECKED!
+    Y_out_fluxes(F_F_HUMUS)  = -CAflx_from_humus * years_per_ts !  per timestep ! sign CHECKED!
     ! ... as well as all fluxes from AWEN pools to atmosphere
-    Y_out_fluxes(i_f_litresp)  = -CAflx_resp_from_litter * years_per_ts ! per timestep ! the flux is negative
+    Y_out_fluxes(F_LITRESP)  = -CAflx_resp_from_litter * years_per_ts ! per timestep ! the flux is negative
   END SUBROUTINE yasso_minimal
 
   ! ---------------------------------------------------------------------------------------------------------
@@ -741,8 +741,8 @@ CONTAINS
 
   PURE SUBROUTINE input_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,      &
                                     cpool_nonsoluble, cpool_humus, YASSO_in)
-    USE mo_carbon_constants,  ONLY: i_y_acid, i_y_water,                         &
-                                    i_y_ethanol, i_y_nonsoluble, i_y_humus
+    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, &
+      & Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
     REAL(wp), INTENT(in)  :: cpool_acid
     REAL(wp), INTENT(in)  :: cpool_water
@@ -751,11 +751,11 @@ CONTAINS
     REAL(wp), INTENT(in)  :: cpool_humus
     REAL(wp), INTENT(out) :: YASSO_in(5)
 
-    YASSO_in(i_y_acid)       = cpool_acid
-    YASSO_in(i_y_water)      = cpool_water
-    YASSO_in(i_y_ethanol)    = cpool_ethanol
-    YASSO_in(i_y_nonsoluble) = cpool_nonsoluble
-    YASSO_in(i_y_humus)      = cpool_humus
+    YASSO_in(Y_ACID)       = cpool_acid
+    YASSO_in(Y_WATER)      = cpool_water
+    YASSO_in(Y_ETHANOL)    = cpool_ethanol
+    YASSO_in(Y_NONSOLUBLE) = cpool_nonsoluble
+    YASSO_in(Y_HUMUS)      = cpool_humus
   END SUBROUTINE input_YASSO_pools
 
   ! ---------------------------------------------------------------------------------------------------------
@@ -763,8 +763,8 @@ CONTAINS
   PURE SUBROUTINE output_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,         &
                                      cpool_nonsoluble, cpool_humus, plus, YASSO_out)
 
-    USE mo_carbon_constants,  ONLY: i_y_acid, i_y_water,                             &
-                                    i_y_ethanol, i_y_nonsoluble, i_y_humus
+    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER,                             &
+                    Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
     REAL(wp), INTENT(inout)  :: cpool_acid
     REAL(wp), INTENT(inout)  :: cpool_water
@@ -775,17 +775,17 @@ CONTAINS
     REAL(wp), INTENT(in)     :: YASSO_out(5)
 
     IF (plus) THEN
-      cpool_acid       = cpool_acid       + YASSO_out(i_y_acid)
-      cpool_water      = cpool_water      + YASSO_out(i_y_water)
-      cpool_ethanol    = cpool_ethanol    + YASSO_out(i_y_ethanol)
-      cpool_nonsoluble = cpool_nonsoluble + YASSO_out(i_y_nonsoluble)
-      cpool_humus      = cpool_humus      + YASSO_out(i_y_humus)
+      cpool_acid       = cpool_acid       + YASSO_out(Y_ACID)
+      cpool_water      = cpool_water      + YASSO_out(Y_WATER)
+      cpool_ethanol    = cpool_ethanol    + YASSO_out(Y_ETHANOL)
+      cpool_nonsoluble = cpool_nonsoluble + YASSO_out(Y_NONSOLUBLE)
+      cpool_humus      = cpool_humus      + YASSO_out(Y_HUMUS)
     ELSE
-      cpool_acid       = YASSO_out(i_y_acid)
-      cpool_water      = YASSO_out(i_y_water)
-      cpool_ethanol    = YASSO_out(i_y_ethanol)
-      cpool_nonsoluble = YASSO_out(i_y_nonsoluble)
-      cpool_humus      = YASSO_out(i_y_humus)
+      cpool_acid       = YASSO_out(Y_ACID)
+      cpool_water      = YASSO_out(Y_WATER)
+      cpool_ethanol    = YASSO_out(Y_ETHANOL)
+      cpool_nonsoluble = YASSO_out(Y_NONSOLUBLE)
+      cpool_humus      = YASSO_out(Y_HUMUS)
     END IF
   END SUBROUTINE output_YASSO_pools
 

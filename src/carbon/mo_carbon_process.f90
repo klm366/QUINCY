@@ -18,8 +18,8 @@ MODULE mo_carbon_process
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
-                               & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                               & i_lctlib_nonsoluble, i_lctlib_humus,             &
+                               & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
+                               & LCT_NONSOLUBLE, LCT_HUMUS,                       &
                                & molarMassCO2_kg
   USE mo_carbon_shared,    ONLY: yasso, distribute_yasso_litter
 
@@ -208,16 +208,16 @@ CONTAINS
     Weather(1) = temp
     Weather(2) = precip
 
-    LeafLit_coefV(i_lctlib_acid)       = LeafLit_coef_acid
-    LeafLit_coefV(i_lctlib_water)      = LeafLit_coef_water
-    LeafLit_coefV(i_lctlib_ethanol)    = LeafLit_coef_ethanol
-    LeafLit_coefV(i_lctlib_nonsoluble) = LeafLit_coef_nonsoluble
-    LeafLit_coefV(i_lctlib_humus)      = LeafLit_coef_humus
-    WoodLit_coefV(i_lctlib_acid)       = WoodLit_coef_acid
-    WoodLit_coefV(i_lctlib_water)      = WoodLit_coef_water
-    WoodLit_coefV(i_lctlib_ethanol)    = WoodLit_coef_ethanol
-    WoodLit_coefV(i_lctlib_nonsoluble) = WoodLit_coef_nonsoluble
-    WoodLit_coefV(i_lctlib_humus)      = WoodLit_coef_humus
+    LeafLit_coefV(LCT_ACID)       = LeafLit_coef_acid
+    LeafLit_coefV(LCT_WATER)      = LeafLit_coef_water
+    LeafLit_coefV(LCT_ETHANOL)    = LeafLit_coef_ethanol
+    LeafLit_coefV(LCT_NONSOLUBLE) = LeafLit_coef_nonsoluble
+    LeafLit_coefV(LCT_HUMUS)      = LeafLit_coef_humus
+    WoodLit_coefV(LCT_ACID)       = WoodLit_coef_acid
+    WoodLit_coefV(LCT_WATER)      = WoodLit_coef_water
+    WoodLit_coefV(LCT_ETHANOL)    = WoodLit_coef_ethanol
+    WoodLit_coefV(LCT_NONSOLUBLE) = WoodLit_coef_nonsoluble
+    WoodLit_coefV(LCT_HUMUS)      = WoodLit_coef_humus
 
     Yasso_out(1:18)     = 0.0_wp           ! array to store the Yasso pools/fluxes
     sizeZero            = 0.0_wp           ! Green litter by definition has size 0
