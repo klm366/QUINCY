@@ -316,8 +316,9 @@ for var in ${var_list}; do
 done
 wait
 
+
 # Further process soil texture data (needs to be done outside the above parallel loop)
-#                -------------------
+# --------
 if [[ ${var_list} == *"FR_SAND"* || ${var_list} == *"FR_SILT"* || ${var_list} == *"FR_CLAY"* ]]; then
   if [[ -f ${atmGridID}_SUB_FR_SAND_MASK.nc \
      && -f ${atmGridID}_SUB_FR_SILT_MASK.nc \
@@ -383,9 +384,10 @@ ${cdo} -setattribute,maxmoist@long_name="Maximum amount of soil moisture" -setat
     ${atmGridID}_maxmoist.nc
 
 # qmax organic fine particle
+# --------
 # sb_init_vars%qmax_org_fine_particle
 # create based on NWRB taxonomy soil class (TAXNWRB)
-qmaxVarName=qmax_org   # needs to be added to 'var_list' !
+qmaxVarName=qmax_org   # needs to be member of 'var_list', see below variable merging into output file
 qmaxInputFile=${quincyInputDataDir}/TAXNWRB.soilgrid.3600.1800.nc
 qmaxDefaultVal=6.5537
 # set values based on category as documented in https://gitlab.dkrz.de/quincy-community/quincy-model-developers/qs-development/-/blob/develop/contrib/forcing_scripts/qmax_org_values_per_nwrb_category_20180515.csv
@@ -395,7 +397,7 @@ ${cdoQ} -chname,TAXNWRB,${qmaxVarName} -remaplaf,"${icon_grid}" "Q_max_org_value
 
 
 # Merge newly calculated variables (*.nc files) to the bc soil file
-# -------------
+# --------
 # remove temporary file_bc_soil file (from previous runs)
 [[ -f ${file_bc_soil}.tmp ]] && ${rm} ${file_bc_soil}.tmp
 # loop over variable list
@@ -414,6 +416,8 @@ ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}.tmp \
        ${path_bc}/${file_bc_soil}.nc
 
 # Clean up
+# --------
+# remove tmp files from current directory (${work_dir})
 if [[ ${clean_up} == true ]]; then
   ${rm} *.tmp*
 fi
