@@ -20,7 +20,7 @@ MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: jp, &   !< jp := working-precision of jsbach
-    &                               wp_icon => jp !< wp_icon := working-precision of ICON
+    &                               wp      !< wp := working-precision of ICON
   USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util,         ONLY: int2string
 
@@ -145,9 +145,9 @@ CONTAINS
       & ice
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
-    REAL(wp_icon), INTENT(in) :: &
+    REAL(wp), INTENT(in) :: &
       & dtime
-    REAL(wp_icon), INTENT(in) ::    &
+    REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
       & rain              (:), &
@@ -168,7 +168,7 @@ CONTAINS
       & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    REAL(wp_icon), INTENT(in), OPTIONAL :: &
+    REAL(wp), INTENT(in), OPTIONAL :: &
       & DEBUG_VAR         (:), &
       ! MODEL_QUINCY
       & nhx_deposition    (:), &
@@ -189,7 +189,7 @@ CONTAINS
       & t_bcoef_ice       (:), &
       & q_acoef_ice       (:), &
       & q_bcoef_ice       (:)
-    REAL(wp_icon), INTENT(out) ::   &
+    REAL(wp), INTENT(out) ::   &
       & t_srf             (:), &
       & t_eff_srf         (:), &
       & qsat_srf          (:), &
@@ -210,7 +210,7 @@ CONTAINS
       & alb_nir_dif       (:), &
       & CO2_flux          (:)
     ! For lakes:
-    REAL(wp_icon), INTENT(out), OPTIONAL ::   &
+    REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_lwtr            (:), &
       & qsat_lwtr         (:), &
       & s_lwtr            (:), &
@@ -227,7 +227,7 @@ CONTAINS
       & albedo_lice       (:), &
       & ice_fract_lake    (:)
     ! For standalone jsbach:
-    REAL(wp_icon), INTENT(out), OPTIONAL :: &
+    REAL(wp), INTENT(out), OPTIONAL :: &
       & evapopot(:)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -437,9 +437,9 @@ CONTAINS
       & ice
     TYPE(t_datetime), POINTER, INTENT(in) :: &
       & current_datetime
-    REAL(wp_icon), INTENT(in) :: &
+    REAL(wp), INTENT(in) :: &
       & dtime
-    REAL(wp_icon), INTENT(in) ::    &
+    REAL(wp), INTENT(in) ::    &
       & t_air             (:), &
       & q_air             (:), &
       & press_air         (:), &
@@ -463,7 +463,7 @@ CONTAINS
       ! & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    REAL(wp_icon), INTENT(out), OPTIONAL ::   &
+    REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_srf             (:), &
       & t_srf_rad         (:), &
       & t_srf_eff         (:), &

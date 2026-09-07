@@ -16,7 +16,7 @@ MODULE mo_atmland_interface
 
   USE mo_exception,       ONLY: finish
   USE mo_kind,            ONLY: jp, &   !< jp := working-precision of jsbach
-    &                           wp_icon => jp !< wp_icon := working-precision of ICON
+    &                           wp      !< wp := working-precision of ICON
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
@@ -101,7 +101,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(jp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
-    REAL(wp_icon), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
+    REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,   &
       & CO2_air, co2_dC13, co2_dC14,                                                                               &
@@ -584,7 +584,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(wp_icon), OPTIONAL, INTENT(out) ::                                          &
+    REAL(wp), OPTIONAL, INTENT(out) ::                                          &
       & t_srf(:), t_srf_rad(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                 &
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &

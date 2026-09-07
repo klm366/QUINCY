@@ -15,7 +15,7 @@ MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: jp, &   !< jp := working-precision of jsbach
-    &                               wp_icon => jp !< wp_icon := working-precision of ICON
+    &                               wp      !< wp := working-precision of ICON
   USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -150,7 +150,7 @@ CONTAINS
 
     ! Local variables
 
-    REAL(wp_icon), ALLOCATABLE :: discharge_ocean_buf(:,:) !< buffer for discharge_ocean, needed when `jp!=wp_icon`
+    REAL(wp), ALLOCATABLE :: discharge_ocean_buf(:,:) !< buffer for discharge_ocean, needed when `jp!=wp`
     LOGICAL :: write_coupler_restart
     INTEGER :: n
 
