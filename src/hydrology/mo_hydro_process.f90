@@ -865,7 +865,7 @@ CONTAINS
     CALL soilhyd( &
       &    nc, l_fract, l_pf_soil, lat, lon, nsoil, dtime, k_brock,                    &
       &    enforce_water_budget, slope, soilhydmodel, interpol_mean, hydro_scale,      &
-      &    bot_drain_mode, model_scheme, w_soil_wilt_fract,                            &
+      &    model_scheme, bot_drain_mode, w_soil_wilt_fract,                            &
       &    soil_depth_sl, wtr_wres_sl, wtr_p_wilt_sl, wtr_field_cap_sl, wtr_wsat_sl,   &
       &    hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,          &
       &    vol_wres_sl, bclapp_sl, matric_pot_sl, pore_size_index_sl,                  &
