@@ -157,7 +157,7 @@ CONTAINS
       CALL tile%Get_fraction(fract=cf_correction(:,:))   ! veg tile fraction
     ELSE
       ! With absolute fractions, scaling is not required
-      cf_correction(:,:) = 1.0_wp
+      cf_correction(:,:) = 1.0_jp
     END IF
 
     ! Read land use data
@@ -198,16 +198,16 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), fill_array = cf_target_year(:,i_tile,:))
 
         ! Scale target fractions (required in case of relative fractions (default),
-        ! - in case of absolute fractions the cf_correction has been set to 1.0_wp above)
+        ! - in case of absolute fractions the cf_correction has been set to 1.0_jp above)
         cf_target_year(:,i_tile,:) = cf_target_year(:,i_tile,:) * cf_correction
 
         ! Assert: fractions >= 0 and < 1
-        IF (ANY(cf_target_year(:,i_tile,:) < 0.0_wp)) THEN
+        IF (ANY(cf_target_year(:,i_tile,:) < 0.0_jp)) THEN
           CALL finish(TRIM(routine), &
             & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for ' &
             & // TRIM(current_tile%name)//'. Please check.')
         END IF
-        IF (ANY(cf_target_year(:,i_tile,:) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+        IF (ANY(cf_target_year(:,i_tile,:) > 1.0_jp + max_tolerated_cf_mismatch)) THEN
           CALL finish(TRIM(routine), &
             & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for ' &
             & // TRIM(current_tile%name)//'. Please check.')
@@ -245,28 +245,28 @@ CONTAINS
         DEALLOCATE(nlcc_tile)
       END IF
 
-      ! Cover fractions must not exceed 1.0_wp
-      cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_wp)
+      ! Cover fractions must not exceed 1.0_jp
+      cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_jp)
 
       CALL input_file%Close()
 
       ! Assert: sum of absolute fractions needs to be <=1
       ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
-      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_jp + max_tolerated_cf_mismatch)) THEN
         CALL finish(TRIM(routine), &
           & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
-          & // ' sum to > 1.0_wp. Please check.')
+          & // ' sum to > 1.0_jp. Please check.')
       END IF
       ! Correct remaining mismatches
-      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp)) THEN
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_jp)) THEN
         ALLOCATE(target_cf(npft))
         DO iblk = 1, nblks
           DO ic = 1, nproma
             target_cf(:) = cf_target_year(ic,:,iblk)
             cf_sum = SUM(target_cf(:))
-            IF (cf_sum > 1.0_wp) THEN
+            IF (cf_sum > 1.0_jp) THEN
               i_max_area = MAXLOC(target_cf(:), DIM=1)
-              cf_target_year(ic,i_max_area,iblk) = cf_target_year(ic,i_max_area,iblk) - (cf_sum - 1.0_wp)
+              cf_target_year(ic,i_max_area,iblk) = cf_target_year(ic,i_max_area,iblk) - (cf_sum - 1.0_jp)
             END IF
           END DO
         END DO

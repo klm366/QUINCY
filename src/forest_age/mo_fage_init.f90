@@ -105,7 +105,7 @@ CONTAINS
     ! Distribution of age fractions - needs to comply with the fractions in the age classes (mo_jsb_tile - Init_tile)
     IF (dsl4jsb_Config(FAGE_)%init_ac_fracts_scheme == 'allFirst') THEN
       ! all fracts to youngest age
-      dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._wp
+      dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._jp
 
       ALLOCATE(tile_fract(grid%nproma, grid%nblks))
       CALL tile%Get_fraction(fract=tile_fract(:,:))
@@ -122,7 +122,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(FAGE_, mean_age) = get_mean_age(dsl4jsb_var3D_onDomain(FAGE_, fract_per_age))
     ELSE
       !Only one age -> for now initialise age with zero later e.g. from file
-      dsl4jsb_var2D_onDomain(FAGE_, mean_age) = 0._wp
+      dsl4jsb_var2D_onDomain(FAGE_, mean_age) = 0._jp
     END IF
 
   END SUBROUTINE fage_init_ic

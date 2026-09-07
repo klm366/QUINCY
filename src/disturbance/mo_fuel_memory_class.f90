@@ -75,7 +75,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & loutput=.TRUE., output_level=BASIC,                                                                       &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_jp ) ! initval taken from JSBACH3
 
   END SUBROUTINE Init_fuel_memory
 

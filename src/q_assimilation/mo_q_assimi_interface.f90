@@ -330,7 +330,7 @@ CONTAINS
     CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
     REAL(jp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
     REAL(jp)                          :: ftranspiration_sum_mult(options%nc)      !< SUM(ftranspiration_sl) across soil layers
-                                                                                  !! multiplied by 1.E6_wp to avoide precision issues at some grid cells
+                                                                                  !! multiplied by 1.E6_jp to avoide precision issues at some grid cells
     INTEGER                           :: iblk, ics, ice
     INTEGER                           :: nc, ic, is
     INTEGER                           :: nsoil
@@ -367,8 +367,8 @@ CONTAINS
     ! init ftranspiration_sum with zero
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      ftranspiration_sum(ic)      = 0.0_wp
-      ftranspiration_sum_mult(ic) = 0.0_wp
+      ftranspiration_sum(ic)      = 0.0_jp
+      ftranspiration_sum_mult(ic) = 0.0_jp
     END DO
     !$ACC END PARALLEL LOOP
     ! calc ftranspiration_sum across soil layers
@@ -382,7 +382,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         ftranspiration_sum(ic)      = ftranspiration_sum(ic)      + ftranspiration_sl(ic, is)
-        ftranspiration_sum_mult(ic) = ftranspiration_sum_mult(ic) + ftranspiration_sl(ic, is) * 1.E6_wp
+        ftranspiration_sum_mult(ic) = ftranspiration_sum_mult(ic) + ftranspiration_sl(ic, is) * 1.E6_jp
       END DO
     END DO
     !$ACC END PARALLEL
@@ -393,14 +393,14 @@ CONTAINS
         IF (ftranspiration_sum(ic) > eps8) THEN
           ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
         ELSE IF (ftranspiration_sum_mult(ic) > eps8) THEN
-          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) * 1.E6_wp / ftranspiration_sum_mult(ic)
+          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) * 1.E6_jp / ftranspiration_sum_mult(ic)
         ELSE
         ! this may lead to a detectable mass balance error in the water balance
         ! the code cannot deal with fractions of a bare tile larger than 0.9999 (E-14)
           IF (is == 1) THEN
-            ftranspiration_sl(ic, is) = 1.0_wp
+            ftranspiration_sl(ic, is) = 1.0_jp
           ELSE
-            ftranspiration_sl(ic, is) = 0.0_wp
+            ftranspiration_sl(ic, is) = 0.0_jp
           END IF
         END IF
       END DO

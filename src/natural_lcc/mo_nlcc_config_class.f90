@@ -83,7 +83,7 @@ CONTAINS
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
     init_nlcc           = .FALSE.
-    accelerate_nlcc     = 1._wp
+    accelerate_nlcc     = 1._jp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -101,7 +101,7 @@ CONTAINS
     config%init_nlcc         = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
     config%accelerate_nlcc   = accelerate_nlcc
-    IF (accelerate_nlcc /= 1._wp) THEN
+    IF (accelerate_nlcc /= 1._jp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
       CALL message(TRIM(routine), message_text)
     END IF

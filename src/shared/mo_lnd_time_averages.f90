@@ -31,25 +31,25 @@ MODULE mo_lnd_time_averages
   !!   but can also be 'week' or 'year'
   !!
   ! generic memory time-scales (in days):
-    REAL(jp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
-    REAL(jp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
-    REAL(jp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
+    REAL(jp),SAVE :: mavg_period_weekly            = 7.0_jp               !< 7 days; constant across the model
+    REAL(jp),SAVE :: mavg_period_monthly           = 30.0_jp              !< 30 days; constant across the model
+    REAL(jp),SAVE :: mavg_period_yearly            = 365.0_jp             !< 365 days
 
   ! specific memory time-scales (in days):
-    REAL(jp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
-    REAL(jp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF)
-    REAL(jp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
-    REAL(jp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
-    REAL(jp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
-    REAL(jp),SAVE :: mavg_period_tresidual         = 365.0_wp * 30.0_wp   !< memory time-scale for SOM spinup accelarator (SB_)
-    REAL(jp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
-    REAL(jp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
-    REAL(jp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
-    REAL(jp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
-    REAL(jp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
-    REAL(jp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
-    REAL(jp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes
-    REAL(jp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
+    REAL(jp),SAVE :: mavg_period_tsoa              = 2.0_jp               !< memory time_scale for state of acclimation
+    REAL(jp),SAVE :: mavg_period_tuptake           = 3.0_jp               !< nutrient uptake processes (demand, BNF)
+    REAL(jp),SAVE :: mavg_period_tlabile           = 7.0_jp               !< labile pool
+    REAL(jp),SAVE :: mavg_period_tphen             = 7.0_jp               !< phenological processes
+    REAL(jp),SAVE :: mavg_period_tenzyme           = 7.0_jp               !< memory time-scale for enzyme allocation (SB_)
+    REAL(jp),SAVE :: mavg_period_tresidual         = 365.0_jp * 30.0_jp   !< memory time-scale for SOM spinup accelarator (SB_)
+    REAL(jp),SAVE :: mavg_period_tfrac             = 10.0_jp              !< leaf N fractions
+    REAL(jp),SAVE :: mavg_period_tcnl              = 20.0_jp              !< leaf stoichiometry
+    REAL(jp),SAVE :: mavg_period_talloc            = 30.0_jp              !< biomass allocation
+    REAL(jp),SAVE :: mavg_period_tacclim           = 30.0_jp              !< respiration acclimation
+    REAL(jp),SAVE :: mavg_period_tmic              = 30.0_jp              !< microbial community acclimation
+    REAL(jp),SAVE :: mavg_period_tgrowth           = 365.0_jp             !< vegetation growth
+    REAL(jp),SAVE :: mavg_period_tvegdyn           = 365.0_jp             !< vegetation dynamics processes
+    REAL(jp),SAVE :: mavg_period_talloc_dynamic    = 365.0_jp * 30.0_jp   !< biomass allocation for empirical dynamic allocation (30 years)
   !!----------------------------------------------------------------------------------------------------
 
 
@@ -110,23 +110,23 @@ CONTAINS
 
     !> 1.2 avg_period_unit: calc period length in seconds
     !!
-    avg_period2seconds = one_day  ! (one_day == 86400._wp seconds)
+    avg_period2seconds = one_day  ! (one_day == 86400._jp seconds)
     IF(l_do_calc .AND. PRESENT(avg_period_unit)) THEN
       SELECT CASE(avg_period_unit)
       !CASE('day')
       ! nothing to do, as 'avg_period2seconds = one_day' is set by default anyway
       CASE('week')
-        avg_period2seconds = avg_period2seconds * 7.0_wp
+        avg_period2seconds = avg_period2seconds * 7.0_jp
       CASE('year')
-        avg_period2seconds = avg_period2seconds * one_year ! (one_year == 365.0_wp days)
+        avg_period2seconds = avg_period2seconds * one_year ! (one_year == 365.0_jp days)
       END SELECT  ! select SLM model !
     END IF
 
     !> 2.0 calc weight of the new_value and calc the new_avg
     !! calc the new average as weighted mean of the current_avg and the new_value weighted by new_value_weight
     IF(l_do_calc) THEN
-      new_value_weight = 1.0_wp / (avg_period_length * avg_period2seconds / dtime )  ! dtime: length of one time step in seconds
-      new_avg = (current_avg * (1.0_wp - new_value_weight)) + (new_value * new_value_weight)
+      new_value_weight = 1.0_jp / (avg_period_length * avg_period2seconds / dtime )  ! dtime: length of one time step in seconds
+      new_avg = (current_avg * (1.0_jp - new_value_weight)) + (new_value * new_value_weight)
     ELSE
       new_avg = current_avg
     END IF

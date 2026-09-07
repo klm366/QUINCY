@@ -121,9 +121,9 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1,nblks
         DO ic = 1,nproma
-          IF (config_lai_max > 0.0_wp) THEN ! value is set in config script
+          IF (config_lai_max > 0.0_jp) THEN ! value is set in config script
             ! use configuration script value but constrain to plausbile values between 0.1 and 10
-            lai_max(ic,ib) = MAX(0.1_wp, MIN(10.0_wp, config_lai_max))
+            lai_max(ic,ib) = MAX(0.1_jp, MIN(10.0_jp, config_lai_max))
           ELSE ! use lctlib parameter if config%lai_max was not set (i.e., -1.0)
             lai_max(ic,ib) = lctlib_lai_max
           END IF
@@ -143,7 +143,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1,nblks
         DO ic = 1,nproma
-          lai_max(ic,ib)        = 1.0_wp
+          lai_max(ic,ib)        = 1.0_jp
           growing_season(ic,ib) = false
         END DO
       END DO

@@ -135,16 +135,16 @@ MODULE mo_pheno_process
      ! CONTENT
 
      ! Determine if heat summation for summergreen has to start with zero. Note, this is exactly the same as for evergreens.
-     IF  (growth_phase_SG < -0.5_wp                   & ! we are during REST PHASE ...
-        .AND. heat_sum_SG < -1._wp                    & ! and heat summation has not yet started...
+     IF  (growth_phase_SG < -0.5_jp                   & ! we are during REST PHASE ...
+        .AND. heat_sum_SG < -1._jp                    & ! and heat summation has not yet started...
         .AND.                                         & ! and ...
          (                                            & ! ..
-            (lat >= 0._wp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ...
+            (lat >= 0._jp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ...
             .OR.                                      & !   or ...
-            (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ...
+            (lat <  0._jp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ...
          )                                            &
          ) THEN                                         ! then  =>
-           heat_sum_SG = 0._wp                          !          heat summation has to start, so initialize it by zero
+           heat_sum_SG = 0._jp                          !          heat summation has to start, so initialize it by zero
      END IF
 
      ! To do only at first time step of a day:
@@ -152,15 +152,15 @@ MODULE mo_pheno_process
      IF (is_newday) THEN
 
         ! Eventually update counter for days since last begin of growth phase. Note, this is the same as for evergreens.
-        IF(days_since_growth_begin_SG > 0.0_wp .AND. days_since_growth_begin_SG < 365.0_wp) THEN
-           days_since_growth_begin_SG = days_since_growth_begin_SG + 1.0_wp
+        IF(days_since_growth_begin_SG > 0.0_jp .AND. days_since_growth_begin_SG < 365.0_jp) THEN
+           days_since_growth_begin_SG = days_since_growth_begin_SG + 1.0_jp
         END IF
 
         ! If heat summation for summergreen has started count chill_days_EG or increase heat_sum_SG.
         ! Note, this is the same as for evergreens.
-        IF(heat_sum_SG > -1._wp) THEN                                            ! heat summation has started ..
+        IF(heat_sum_SG > -1._jp) THEN                                            ! heat summation has started ..
            IF(pseudo_soil_temp < pheno_param_jsbach%SG%alternation_temp) THEN ! the day is a chill day ..
-              chill_days_SG = chill_days_SG + 1._wp                     ! then => increment chill days counter
+              chill_days_SG = chill_days_SG + 1._jp                     ! then => increment chill days counter
                                                                         !         and limit the number of chill days to prevent
                                                                         !         values beyond any limit in polar regions
               chill_days_SG = MIN(chill_days_SG, pheno_param_jsbach%EG_SG%max_chill_days)
@@ -179,19 +179,19 @@ MODULE mo_pheno_process
         !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
         !    0.0  .. during growth phase (i.e. some weeks after spring event)
         !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
-        IF (growth_phase_SG < -0.5_wp ) THEN                                  ! IF we are in the REST PHASE
-           IF (heat_sum_SG > -1._wp                                            & ! if heat summation has already started ...
+        IF (growth_phase_SG < -0.5_jp ) THEN                                  ! IF we are in the REST PHASE
+           IF (heat_sum_SG > -1._jp                                            & ! if heat summation has already started ...
                    .AND.                                                       & ! and ...
                heat_sum_SG - pheno_param_jsbach%SG%heat_sum_min >                      & ! criticality condition is fulfilled ..
                pheno_param_jsbach%SG%heat_sum_range * EXP(-chill_days_SG / pheno_param_jsbach%SG%chill_decay_const)) THEN
-                 growth_phase_SG = 0._wp                                          ! --> growth phase starts
-                 days_since_growth_begin_SG = 1.0_wp                              ! start counting days since begin of growth phase
-                 heat_sum_SG = -99._wp                                            ! --> set heat_sum to a value smaller than -1 to
+                 growth_phase_SG = 0._jp                                          ! --> growth phase starts
+                 days_since_growth_begin_SG = 1.0_jp                              ! start counting days since begin of growth phase
+                 heat_sum_SG = -99._jp                                            ! --> set heat_sum to a value smaller than -1 to
                                                                                   ! indicate that heat summation is no more needed
-                 chill_days_SG = 0._wp                                            ! --> reset chill days count
+                 chill_days_SG = 0._jp                                            ! --> reset chill days count
            END IF
 
-        ELSE IF (growth_Phase_SG > 0.5_wp) THEN                               ! IF we are in the VEGETATIVE PHASE
+        ELSE IF (growth_Phase_SG > 0.5_jp) THEN                               ! IF we are in the VEGETATIVE PHASE
            IF (previous_day_temp_mean < pseudo_soil_temp                       & ! Check end of vegetative phase
                                                                                  ! mean day temperature is smaller than soil temp.
                       .AND.                                                    & ! and ..
@@ -199,18 +199,18 @@ MODULE mo_pheno_process
                       .AND.                                                    & ! and ..
               days_since_growth_begin_SG > pheno_param_jsbach%SG%minLength_gvPhase)    & ! growth + vegetative phase have lasted the
                                            THEN                                  ! minimum time ..
-                    growth_phase_SG = -1._wp                                     ! --> rest phase starts
+                    growth_phase_SG = -1._jp                                     ! --> rest phase starts
            ELSE
               IF (days_since_growth_begin_SG > pheno_param_jsbach%SG%maxLength_gvPhase) & ! if growth + vegetative phase has reached
                                                                                   ! maximum length
                                        THEN                                       ! then =>
-                    growth_phase_SG = -1._wp                                      ! --> rest phase starts
+                    growth_phase_SG = -1._jp                                      ! --> rest phase starts
               END IF
            END IF
 
-        ELSE IF (growth_Phase_SG > -0.5_wp .AND. growth_Phase_SG < 0.5_wp ) THEN   ! IF we are in the GROWTH PHASE
+        ELSE IF (growth_Phase_SG > -0.5_jp .AND. growth_Phase_SG < 0.5_jp ) THEN   ! IF we are in the GROWTH PHASE
            IF(days_since_growth_begin_SG > pheno_param_jsbach%SG%growthPhaseLength) THEN   ! if growth phase of SGs has ended
-                    growth_phase_SG = 1.0_wp                                       ! --> vegetative phase starts
+                    growth_phase_SG = 1.0_jp                                       ! --> vegetative phase starts
            END IF
         END IF
      END IF ! from is_newday
@@ -218,20 +218,20 @@ MODULE mo_pheno_process
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
-     IF (growth_Phase_SG < -0.5_wp) THEN                                      ! if we are in the REST PHASE
+     IF (growth_Phase_SG < -0.5_jp) THEN                                      ! if we are in the REST PHASE
         xtmp = pheno_param_jsbach%SG%shedRate_rest
         lai =  get_letItDie(timeStep_in_days,lai,xtmp)
-     ELSE IF(growth_Phase_SG > 0.5_wp) THEN                                   ! if we are in the VEGETATIVE PHASE
+     ELSE IF(growth_Phase_SG > 0.5_jp) THEN                                   ! if we are in the VEGETATIVE PHASE
         xtmp = pheno_param_jsbach%SG%shedRate_veget
         lai  = get_letItDie(timeStep_in_days,lai,xtmp)
-     ELSE IF (growth_Phase_SG > -0.5_wp .AND. growth_Phase_SG < 0.5_wp ) THEN ! if we are in the GROWTH PHASE
+     ELSE IF (growth_Phase_SG > -0.5_jp .AND. growth_Phase_SG < 0.5_jp ) THEN ! if we are in the GROWTH PHASE
         IF (lai < pheno_param_jsbach%all%laiSeed) THEN  ! if lai is smaller as pheno_param_jsbach%all%laiSeed then
                                                 ! at least set it to pheno_param_jsbach%all%laiSeed but stay below laiMax
-           lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed)
+           lai = MIN(LaiMax_corrected-EPSILON(1.0_jp),pheno_param_jsbach%all%laiSeed)
         ENDIF
         IF(lai > pheno_param_jsbach%all%LAI_negligible) THEN ! if lai is not negligible then let it grow (otherwise there is nothing to do)
            grRate = pheno_param_jsbach%SG%growthRate
-           lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
+           lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_jp, LaiMax_corrected)
         END IF
      END IF
 
@@ -288,17 +288,17 @@ MODULE mo_pheno_process
      ! CONTENT
 
      ! Determine if HEAT SUMMATION FOR EVERGREEN HAS TO START from zero.  Note, this is nearly the same as for summergreens.
-     IF ( growth_phase_EG > 0.5_wp                   & ! we are during vegetative phase (Note: there is no rest phase for EG)
+     IF ( growth_phase_EG > 0.5_jp                   & ! we are during vegetative phase (Note: there is no rest phase for EG)
          .AND.                                       & ! and ..
-         heat_sum_EG < -1._wp                        & ! heat summation has not yet started
+         heat_sum_EG < -1._jp                        & ! heat summation has not yet started
          .AND.                                       & ! and ..
          (                                           & ! ..
-           (lat >= 0._wp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ..
+           (lat >= 0._jp .AND. day_of_year == 1)     & ! we are at northern hemisphere at January 1 ..
            .OR.                                      & ! or ..
-           (lat <  0._wp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ..
+           (lat <  0._jp .AND. day_of_year == 183)   & ! we are at southern hemisphere at July 2 (July 1 in leap years) ..
          )                                           & ! ..
         ) THEN                                          ! --> heat summation has to start,
-         heat_sum_EG = 0._wp                            !     so initialize it by zero
+         heat_sum_EG = 0._jp                            !     so initialize it by zero
      END IF
 
      ! To do only at first time step of a day:
@@ -306,15 +306,15 @@ MODULE mo_pheno_process
      IF (is_newday) THEN
          ! Eventually update counter for days since last begin of growth phase (stop counting after 365 days).
          ! Note, this is the same as for summergreens.
-         IF(days_since_growth_begin_EG > 0.0_wp .AND. days_since_growth_begin_EG < 365.0_wp) THEN
-            days_since_growth_begin_EG = days_since_growth_begin_EG + 1.0_wp
+         IF(days_since_growth_begin_EG > 0.0_jp .AND. days_since_growth_begin_EG < 365.0_jp) THEN
+            days_since_growth_begin_EG = days_since_growth_begin_EG + 1.0_jp
          END IF
 
          ! If heat summation for evergreen has started count chill_days_EG or increase heat_sum_EG.
          ! Note, this is the same as for summergreens.
-         IF(heat_sum_EG > -1.0_wp ) THEN                                           ! heat summation has started
+         IF(heat_sum_EG > -1.0_jp ) THEN                                           ! heat summation has started
             IF(pseudo_soil_temp < pheno_param_jsbach%EG%alternation_temp ) THEN    ! the day is a chill day ..
-               chill_days_EG = chill_days_EG + 1._wp                                                  ! --> increment chill days counter
+               chill_days_EG = chill_days_EG + 1._jp                                                  ! --> increment chill days counter
                chill_days_EG = &                                                                      !     limit the number of chill days to prevent
                     MIN(chill_days_EG, pheno_param_jsbach%EG_SG%max_chill_days)                       !     values beyond any limit in polar regions
             ELSE                                                                                      ! increase heat sum:
@@ -330,23 +330,23 @@ MODULE mo_pheno_process
          ! DOES NOT EXIST FOR EVERGREEN:   -1.0  .. during rest phase (i.e. from autumn event to spring event)
          !  -99 .. Heat summation has not yet started (at all or because growth phase started)
 
-         IF(growth_phase_EG < 0.5_wp ) THEN                                               ! evergreens are during GROWTH
+         IF(growth_phase_EG < 0.5_jp ) THEN                                               ! evergreens are during GROWTH
             IF(days_since_growth_begin_EG > pheno_param_jsbach%EG%growthPhaseLength) THEN ! growth phase of EGs has ended
-               growth_phase_EG = 1.0_wp                                                   ! --> vegetative phase starts
+               growth_phase_EG = 1.0_jp                                                   ! --> vegetative phase starts
             END IF
          ELSE                                                                     ! everergreen are in VEGETATIVE PHASE
-            IF(heat_sum_EG > -1._wp                                             & ! if heat summation has started ..
+            IF(heat_sum_EG > -1._jp                                             & ! if heat summation has started ..
                  .AND.                                                          & ! and ..
                heat_sum_EG - pheno_param_jsbach%EG%heat_sum_min >               & ! criticality condition is fulfilled ..
                pheno_param_jsbach%EG%heat_sum_range * EXP(-chill_days_EG /      & ! ..
                pheno_param_jsbach%EG%chill_decay_const)) THEN                     ! ..
-               growth_phase_EG = 0._wp                                            ! --> growth phase starts
-               days_since_growth_begin_EG = 1._wp                                 ! --> reinitialize counter for days since
+               growth_phase_EG = 0._jp                                            ! --> growth phase starts
+               days_since_growth_begin_EG = 1._jp                                 ! --> reinitialize counter for days since
                                                                                   !     growth phase begin
-               heat_sum_EG = -99._wp                                              ! --> set heat_sum to a value smaller than
+               heat_sum_EG = -99._jp                                              ! --> set heat_sum to a value smaller than
                                                                                   !     -1 to indicate that heat summation is
                                                                                   !     no more needed
-               chill_days_EG = 0._wp                                              ! --> reset chill days count
+               chill_days_EG = 0._jp                                              ! --> reset chill days count
             END IF
          END IF
      END IF ! from is_newday
@@ -354,15 +354,15 @@ MODULE mo_pheno_process
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
-     IF(ABS(growth_phase_EG) < EPSILON(1.0_wp)) THEN    ! we are during the GROWTH PHASE
+     IF(ABS(growth_phase_EG) < EPSILON(1.0_jp)) THEN    ! we are during the GROWTH PHASE
         IF (lai < pheno_param_jsbach%all%laiSeed) THEN
            ! start growth at least with seed value smaller than laiMax
-           lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed)
+           lai = MIN(LaiMax_corrected-EPSILON(1.0_jp),pheno_param_jsbach%all%laiSeed)
         END IF
         IF(lai > pheno_param_jsbach%all%LAI_negligible) THEN
            ! otherwise nothing to do
            grRate = pheno_param_jsbach%EG%growthRate
-           lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
+           lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_jp, LaiMax_corrected)
         END IF
      ELSE                                   ! we are during the VEGETATIVE PHASE
         xtmp = pheno_param_jsbach%EG%shedRate_vegetative
@@ -442,7 +442,7 @@ MODULE mo_pheno_process
      ! NPP mask needed for crop growth phase and harvest
      ! R: In JSBACH3 we check grass or crop:
      !    IF (pheno_type_of_tile(...) == 4 .OR. pheno_type_of_tile(...) == 5) THEN ! R: grass and crop
-     !       IF (previous_day_NPP_pot_rate_ca(...) > 0.0_wp) positive_NPP(...) = .true.
+     !       IF (previous_day_NPP_pot_rate_ca(...) > 0.0_jp) positive_NPP(...) = .true.
      !
      !    NPP_positive is only used to decide if the mean day temperature shall be added to the
      !    heat sum for crops (heat_sum_CRP and heat_sum_winter), which are only used to decide
@@ -454,7 +454,7 @@ MODULE mo_pheno_process
      !    needed by crops to honor temperatures...
 
 
-     IF (previous_day_NPP_pot_rate_ca > - 1.E-10_wp) THEN
+     IF (previous_day_NPP_pot_rate_ca > - 1.E-10_jp) THEN
        NPP_positive = .TRUE.  ! Do not set to zero, as crops could never grow then...
      ELSE
        NPP_positive = .FALSE.
@@ -483,79 +483,79 @@ MODULE mo_pheno_process
 
 
         ! At the beginning of spring:
-        IF (lat >= 0._wp .AND. day_of_year == 70      & ! we are at northern hemisphere at March 11 (March 10 in leap years)
+        IF (lat >= 0._jp .AND. day_of_year == 70      & ! we are at northern hemisphere at March 11 (March 10 in leap years)
            .OR.                                       & ! or ..
-           lat <  0._wp .AND. day_of_year == 252      & ! we are at southern hemisphere at September 9 (September 8 in leap years) ..
+           lat <  0._jp .AND. day_of_year == 252      & ! we are at southern hemisphere at September 9 (September 8 in leap years) ..
            ) THEN
-             heat_sum_CRP = 0._wp                         ! => heat summation has to start, so initialize it by zero
-             IF (ABS(growth_phase_CRP) < 1.5_wp) THEN     ! if there are no winter crops at all (neither in rest nor in growth) ..
-                growth_phase_CRP = -1._wp                 !     => crop phase is set to rest phase of summer crops
+             heat_sum_CRP = 0._jp                         ! => heat summation has to start, so initialize it by zero
+             IF (ABS(growth_phase_CRP) < 1.5_jp) THEN     ! if there are no winter crops at all (neither in rest nor in growth) ..
+                growth_phase_CRP = -1._jp                 !     => crop phase is set to rest phase of summer crops
              END IF
         END IF
 
         ! At the beginning of summer:
-        IF (lat >= 0._wp .AND. day_of_year == 172     & ! we are at northern hemisphere at June 21 (June 20 in leap years)
+        IF (lat >= 0._jp .AND. day_of_year == 172     & ! we are at northern hemisphere at June 21 (June 20 in leap years)
            .OR.                                       & ! or ..
-           lat <  0._wp .AND. day_of_year == 354      & ! we are at southern hemisphere at December 21 (December 20 in leap years)
+           lat <  0._jp .AND. day_of_year == 354      & ! we are at southern hemisphere at December 21 (December 20 in leap years)
            ) THEN
 
-             IF (ABS(growth_phase_CRP) < 1.5_wp .AND.           &         ! if there are no winter crops at all (neither in rest nor in
+             IF (ABS(growth_phase_CRP) < 1.5_jp .AND.           &         ! if there are no winter crops at all (neither in rest nor in
                  heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest & ! growth) and the heat sum is enough for harvesting
                  ) THEN
-                 heat_sum_CRP = 0._wp                               ! then heat summation has to start again, so initialize it by
-                 growth_phase_CRP = 1._wp                           ! zero and crop phase is set to growth phase of double cropping
+                 heat_sum_CRP = 0._jp                               ! then heat summation has to start again, so initialize it by
+                 growth_phase_CRP = 1._jp                           ! zero and crop phase is set to growth phase of double cropping
                                                                     ! (crops already have been harvested try double cropping.)
-             ELSE IF (growth_phase_CRP > 1.5_wp) THEN             ! if there are winter crops still in the growing phase ..
-                growth_phase_CRP = -2._wp                         ! => then switch to the rest phase of winter crops
+             ELSE IF (growth_phase_CRP > 1.5_jp) THEN             ! if there are winter crops still in the growing phase ..
+                growth_phase_CRP = -2._jp                         ! => then switch to the rest phase of winter crops
              END IF
-             IF (heat_sum_winter > 0._wp)  THEN              ! Heat sum for winter is multiplied by -1 to indicate ..
-                heat_sum_winter = -1._wp * heat_sum_winter   ! => that there is no heat summation during summer
+             IF (heat_sum_winter > 0._jp)  THEN              ! Heat sum for winter is multiplied by -1 to indicate ..
+                heat_sum_winter = -1._jp * heat_sum_winter   ! => that there is no heat summation during summer
              END IF
         END IF
 
         ! In autumn:
-        IF (lat >= 0._wp .AND. day_of_year == 289    & ! we are at northern hemisphere at October 16 (October 15 in leap
+        IF (lat >= 0._jp .AND. day_of_year == 289    & ! we are at northern hemisphere at October 16 (October 15 in leap
            .OR.                                      & ! years) or ..
-           lat <  0._wp .AND. day_of_year == 105     & ! we are at southern hemisphere at April 15 (April 14 in leap years)
+           lat <  0._jp .AND. day_of_year == 105     & ! we are at southern hemisphere at April 15 (April 14 in leap years)
            ) THEN
 
             ! If there are winter crops and they were not harvested last winter or spring and summer crops would have been
             ! harvested already  --> crop phase is SET TO REST PHASE OF SUMMER CROPS
-            IF (ABS(growth_phase_CRP) > 1.5_wp .AND.      &                             ! winter crops in growth phase..
+            IF (ABS(growth_phase_CRP) > 1.5_jp .AND.      &                             ! winter crops in growth phase..
                 ABS(heat_sum_winter) < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &  ! and they are not ready for harvest..
                 heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN            ! and summer crops are ready for harvest..
-                   growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
+                   growth_phase_CRP = -1._jp                                            ! => rest phase of summer crops
             END IF
 
             ! If there are winter crops and summer crops would have been harvested already twice
             ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
-            IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                                 ! winter crops in growth phase..
-               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
+            IF (ABS(growth_phase_CRP) > 1.5_jp .AND. &                                 ! winter crops in growth phase..
+               heat_sum_CRP > 2.0_jp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
                                                                                        ! already twice..
-                  growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
+                  growth_phase_CRP = -1._jp                                            ! => rest phase of summer crops
             END IF
             ! If there is no double cropping and summer crops are still not harvested and winter crops would have been harvested
             ! last spring and it is still warm then try winter crops --> crop phase is SET TO REST PHASE OF WINTER CROPS
             ! R: Note, here was an error in the "IF-Tree" in the JSBACH3 version! As I corrected this error there is a difference
             !    between JSBACH3 and 4 here! However, the error only inhibited winter crops, so it wasn't so bad...
-            IF (ABS(growth_phase_CRP - 1._wp) > 0.5_wp .AND. &                         ! growth_phase_CRP is not 1 (growth phase sec. crop)
+            IF (ABS(growth_phase_CRP - 1._jp) > 0.5_jp .AND. &                         ! growth_phase_CRP is not 1 (growth phase sec. crop)
                 heat_sum_CRP < pheno_param_jsbach%CRP%heat_sum_harvest .AND. &         ! and summer crops are not ready for harvest..
                 ABS(heat_sum_winter) > pheno_param_jsbach%CRP%heat_sum_harvest .AND. & ! and winter crops are ready for harvest..
                 pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN              ! it is warm enough..
-                    growth_phase_CRP = -2._wp                                          ! => growth phase of winter crops
+                    growth_phase_CRP = -2._jp                                          ! => growth phase of winter crops
             END IF
-            heat_sum_winter = EPSILON(1._wp) ! heat summation for winter crops has to start anyway
+            heat_sum_winter = EPSILON(1._jp) ! heat summation for winter crops has to start anyway
         END IF ! is_newday
 
        ! Each time step:
        ! increase heat sum
-       temp_min_max = (previous_day_temp_min + previous_day_temp_max) / 2.0_wp
+       temp_min_max = (previous_day_temp_min + previous_day_temp_max) / 2.0_jp
        IF(temp_min_max > pheno_param_jsbach%CRP%gdd_temp .AND.      & ! it is warm enough to count gdd ..
           NPP_positive) THEN                                          ! and yesterdays productivity of a crop or grass type is
                                                                       ! positive
              heat_sum_CRP = heat_sum_CRP + temp_min_max - pheno_param_jsbach%CRP%gdd_temp ! => add mean day temp. excess above critical
                                                                                           !    temperature to the heat sum for summer crops
-             IF (heat_sum_winter > 0._wp) THEN                           ! additionally, if we are in the growing period of
+             IF (heat_sum_winter > 0._jp) THEN                           ! additionally, if we are in the growing period of
                                                                          ! winter crops
                 heat_sum_winter = heat_sum_winter + temp_min_max - pheno_param_jsbach%CRP%gdd_temp  ! => add mean day temperature excess
                                                                                                     !    above critical temperature to
@@ -565,18 +565,18 @@ MODULE mo_pheno_process
 
        ! set growth phase for crops
        IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN             ! it is warm enough for crop growth ..
-          IF (ABS(growth_phase_CRP) < 1.5_wp) THEN                              ! .. and if there are no winter crops ..
+          IF (ABS(growth_phase_CRP) < 1.5_jp) THEN                              ! .. and if there are no winter crops ..
              IF (heat_sum_CRP > pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! .. and the heat sum for summer crops is high enough
-                growth_phase_CRP = -1._wp                                       ! => crops are harvested,  i.e. rest phase starts,
+                growth_phase_CRP = -1._jp                                       ! => crops are harvested,  i.e. rest phase starts,
              ELSE
-                IF (growth_phase_CRP < 0.5_wp) growth_phase_CRP = 0._wp   ! => crops are still in the growth phase ..
+                IF (growth_phase_CRP < 0.5_jp) growth_phase_CRP = 0._jp   ! => crops are still in the growth phase ..
              END IF
           ELSE                                                          ! .. but if there are winter crops and
              IF (heat_sum_winter > pheno_param_jsbach%CRP%heat_sum_harvest .OR. &   ! .. the heat sum for winter crops is high enough
-                 heat_sum_winter < 0._wp) THEN                                      ! .. or their rest period (summer) started
-                    growth_phase_CRP = -2._wp                                       ! => crops are harvested, i.e. rest phase starts,
+                 heat_sum_winter < 0._jp) THEN                                      ! .. or their rest period (summer) started
+                    growth_phase_CRP = -2._jp                                       ! => crops are harvested, i.e. rest phase starts,
              ELSE
-                growth_phase_CRP = 2._wp                                    ! => crops are still in the growth phase
+                growth_phase_CRP = 2._jp                                    ! => crops are still in the growth phase
              END IF
           END IF
        END IF
@@ -584,13 +584,13 @@ MODULE mo_pheno_process
 
      !!!!!!!! FINALLY, what it is all for:
      ! Update the output variable lai
-     IF (ABS(lat) > 30._wp) THEN     ! We are outside the TROPICS
+     IF (ABS(lat) > 30._jp) THEN     ! We are outside the TROPICS
 
         ! If crops are in the growth phase and there is sufficient water in upper soil layer, then there are good growth
         ! conditions. (Note: addition of 0.001 for numerical reasons)
-        IF(growth_phase_CRP > -0.5_wp                           & ! there is ANY growth phase of any crop..
+        IF(growth_phase_CRP > -0.5_jp                           & ! there is ANY growth phase of any crop..
                   .AND.                                         &
-           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp & ! soil water is above wilt point
+           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_jp & ! soil water is above wilt point
            ) THEN
 
                 ! If also temperature is fine growth should start at least with seed value ( < laiMax) if upper soil layer
@@ -598,14 +598,14 @@ MODULE mo_pheno_process
                 IF(pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp) THEN ! it is warm enough
                    IF(lai < pheno_param_jsbach%all%laiSeed .AND.           & ! the lai is smaller than lai of seed..
                       w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN   ! and a critical fract. of soil water bucket level is reached
-                      lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed) ! => at least with seed value ( < laiMax)
+                      lai = MIN(LaiMax_corrected-EPSILON(1.0_jp),pheno_param_jsbach%all%laiSeed) ! => at least with seed value ( < laiMax)
                    ENDIF
 
                    ! If also yesterdays net production is positive let it grow
-                   IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN
+                   IF (previous_day_NPP_pot_rate_ca > 0._jp) THEN
                       grRate = pheno_param_jsbach%CRP%leafAlloc_fract * lctlib_specificLeafArea_C * & ! => grRate is high depending on NPP
-                                 MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / MAX(lai,1.E-6_wp)         !    and is in units of 1/days
-                      lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_wp, LaiMax_corrected)
+                                 MAX(0.0_jp,NPP_pot_rate_ca) * 86400.0_jp / MAX(lai,1.E-6_jp)         !    and is in units of 1/days
+                      lai = get_letItGrow(timeStep_in_days, lai, grRate, 0.0_jp, LaiMax_corrected)
                    ELSE                                                                ! else ..
                       xtmp = pheno_param_jsbach%CRP%shedRate_growth
                       lai = get_letItDie(timeStep_in_days,lai,xtmp)                           ! do a tiny bit of leaf shedding
@@ -625,20 +625,20 @@ MODULE mo_pheno_process
         !  (addition of 0.001 for numerical reasons)
         IF (pseudo_soil_temp > pheno_param_jsbach%CRP%crit_temp         & ! it is warm enough..
                   .AND.                                         &
-           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp & ! and soil water is above wilt point
+           w_soil_filling > pheno_param_jsbach%all%wilt_point + 1E-3_jp & ! and soil water is above wilt point
           ) THEN
                ! growth should start at least with with seed value ( < laiMax) if upper soil layer has at least a little bit
                ! water
                IF(lai < pheno_param_jsbach%all%laiSeed .AND.             & ! the lai is smaller than lai of seed..
                   w_soil_filling > pheno_param_jsbach%CRP%sproud) THEN     ! and a critical fraction of soil water bucket level is reached
-                     lai = MIN(LaiMax_corrected-EPSILON(1.0_wp),pheno_param_jsbach%all%laiSeed)
+                     lai = MIN(LaiMax_corrected-EPSILON(1.0_jp),pheno_param_jsbach%all%laiSeed)
                ENDIF
 
                ! If yesterdays net production is positive let it grow
-               IF(previous_day_NPP_pot_rate_ca > 0._wp ) THEN
+               IF(previous_day_NPP_pot_rate_ca > 0._jp ) THEN
                   grRate = pheno_param_jsbach%CRP%leafAlloc_fract * lctlib_specificLeafArea_C *  &  ! => growth rate
-                                MAX(0.0_wp,NPP_pot_rate_ca) * 86400.0_wp / MAX(lai,1.E-6_wp)        !    .. is in units of 1/days
-                  lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
+                                MAX(0.0_jp,NPP_pot_rate_ca) * 86400.0_jp / MAX(lai,1.E-6_jp)        !    .. is in units of 1/days
+                  lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_jp, LaiMax_corrected)
                ELSE
                   xtmp = pheno_param_jsbach%CRP%shedRate_growth
                   lai = get_letItDie(timeStep_in_days,lai,xtmp)     ! .. do a tiny bit of leaf shedding
@@ -697,7 +697,7 @@ MODULE mo_pheno_process
      !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil,jp)
      average_filling = w_soil_filling
 
-     IF (average_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp) THEN  ! IF soil water is above wilt point
+     IF (average_filling > pheno_param_jsbach%all%wilt_point + 1E-3_jp) THEN  ! IF soil water is above wilt point
                                                                               ! (Note: addition of 1E-3_dp for numerical reasons)
         IF (lai < pheno_param_jsbach%all%laiSeed &                              ! IF LAI dropped below seed value..
                    .AND.                 &
@@ -705,7 +705,7 @@ MODULE mo_pheno_process
                lai = MIN(LaiMax_corrected-EPSILON(1.0),pheno_param_jsbach%all%laiSeed) ! => then start growth at least with seed value
                                                                                        ! but smaller than LAIMax
         END IF
-        IF(previous_day_NPP_pot_rate_ca > 0._wp) THEN   ! If yesterdays net production is positive
+        IF(previous_day_NPP_pot_rate_ca > 0._jp) THEN   ! If yesterdays net production is positive
            grRate = pheno_param_jsbach%RG%growthRate
            xtmp   = get_shedRate_RG(average_filling)
            lai    = get_letItGrow(timeStep_in_days, lai, grRate, xtmp, LaiMax_corrected) ! start growing.
@@ -758,19 +758,19 @@ MODULE mo_pheno_process
 
      IF (t_air_in_Celcius > pheno_param_jsbach%GRS%crit_temp   & ! IF temperature is fine..
                       .AND.                                    & ! and..
-         w_soil_filling > pheno_param_jsbach%all%wilt_point  + 1E-3_wp & ! there is sufficient moisture in upper soil layer
+         w_soil_filling > pheno_param_jsbach%all%wilt_point  + 1E-3_jp & ! there is sufficient moisture in upper soil layer
         ) THEN                                                           ! (Note: addition of 1E-3_dp for numerical reasons)
 
           IF(lai < pheno_param_jsbach%all%laiSeed) THEN
              lai = MIN(LaiMax_corrected-EPSILON(1.0),pheno_param_jsbach%all%laiSeed) ! start growth at least with seed, value, but smaller
                                                                                      ! than laiMax.
           ENDIF
-          IF (previous_day_NPP_pot_rate_ca > 0._wp) THEN                    ! If yesterdays net production is positive
+          IF (previous_day_NPP_pot_rate_ca > 0._jp) THEN                    ! If yesterdays net production is positive
              xtmp = pheno_param_jsbach%GRS%growthRate
-             lai  = get_letItGrow(timeStep_in_days, lai, xtmp, 0.0_wp, LaiMax_corrected)    ! let it grow
+             lai  = get_letItGrow(timeStep_in_days, lai, xtmp, 0.0_jp, LaiMax_corrected)    ! let it grow
           ELSE
              xtmp = pheno_param_jsbach%GRS%shedRate_growth
-             lai  = get_letItGrow(timeStep_in_days, lai, 0.0_wp, xtmp, LaiMax_corrected)    ! no growth only a bit of leaf shedding
+             lai  = get_letItGrow(timeStep_in_days, lai, 0.0_jp, xtmp, LaiMax_corrected)    ! no growth only a bit of leaf shedding
           END IF
      ELSE                                                        ! IF temperature is not fine...
         xtmp = pheno_param_jsbach%GRS%shedRate_drySeason
@@ -860,11 +860,11 @@ MODULE mo_pheno_process
     ENDIF
 
     ! recalculate correction factor for the canopy cover
-    veg_fract_correction = 1.0_wp - exp(-maxLAI_allom / lctlib_clumpinessFactor )
+    veg_fract_correction = 1.0_jp - exp(-maxLAI_allom / lctlib_clumpinessFactor )
 
     ! reset tracking variables
-    veg_carbon_at_max_green = 0.0_wp
-    current_max_green = 0.0_wp
+    veg_carbon_at_max_green = 0.0_jp
+    current_max_green = 0.0_jp
 
   END SUBROUTINE derive_maxLai_according_to_allometric_relationships
 
@@ -886,7 +886,7 @@ MODULE mo_pheno_process
      REAL(jp), intent(in)    :: c_green, c_woods, c_reserve
      REAL(jp), intent(inout) :: current_max_green, veg_carbon_at_max_green
 
-     IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN
+     IF (current_max_green + EPSILON(1.0_jp) .LT. c_green) THEN
        current_max_green = c_green
        veg_carbon_at_max_green = c_green + c_woods + c_reserve
      ENDIF
@@ -948,7 +948,7 @@ MODULE mo_pheno_process
 
     numerator = hlp1
     denominator = hlp2 + EXP(-hlp1*timeStep_in_days) * (hlp1 - hlp2)
-    IF(ABS(ABS(numerator) - ABS(denominator)) <= 100._wp * EPSILON(1.0_wp)) THEN !! This prevents zero/zero divisions
+    IF(ABS(ABS(numerator) - ABS(denominator)) <= 100._jp * EPSILON(1.0_jp)) THEN !! This prevents zero/zero divisions
        get_letItGrow = x
     ELSE
        get_letItGrow = x * numerator / denominator
@@ -991,7 +991,7 @@ MODULE mo_pheno_process
 
     !$ACC ROUTINE SEQ
 
-    get_foliage_projected_cover = fpc_max * (1._wp - EXP(-lai/clumpiness))
+    get_foliage_projected_cover = fpc_max * (1._jp - EXP(-lai/clumpiness))
 
   END FUNCTION get_foliage_projected_cover
 

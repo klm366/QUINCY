@@ -570,16 +570,16 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR
       DO ic=1,nc
         runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)
-        infilt(ic)   = 0._wp
-        drainage(ic) = 0._wp
-        weq_snow(ic) = 0._wp            ! Later updated in lake energy balance
+        infilt(ic)   = 0._jp
+        drainage(ic) = 0._jp
+        weq_snow(ic) = 0._jp            ! Later updated in lake energy balance
         evapo_snow(ic) = evapopot(ic)   ! TODO: check why this is set to evapopot
       END DO
       !$ACC END PARALLEL LOOP
       IF (use_tmx) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR
         DO ic=1,nc
-          q_snocpymlt(ic) = 0._wp       ! no canopy on lake ice --> no heat release from canopy snow
+          q_snocpymlt(ic) = 0._jp       ! no canopy on lake ice --> no heat release from canopy snow
         END DO
         !$ACC END PARALLEL LOOP
       END IF
@@ -689,7 +689,7 @@ CONTAINS
     IF (is_experiment_start) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        weq_snow(ic) = 0._wp
+        weq_snow(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -702,7 +702,7 @@ CONTAINS
     !   Thus, we switch the sign now to make the hydrology equations more intuitive.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      le_pc_remain(ic) = -1._wp * le_phase_change(ic)
+      le_pc_remain(ic) = -1._jp * le_phase_change(ic)
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -730,9 +730,9 @@ CONTAINS
           & runoff_glac(ic),                 & ! out
           & pme_glacier = runoff(ic)         & ! out, P-E ... used as runoff for HD model
           & )
-        infilt(ic)   = 0._wp
-        drainage(ic) = 0._wp
-        weq_snow_soil(ic) = 0._wp
+        infilt(ic)   = 0._jp
+        drainage(ic) = 0._jp
+        weq_snow_soil(ic) = 0._jp
         evapo_snow(ic) = evapopot(ic)
         snow_soil_dens(ic) = dens_snow
       END DO
@@ -767,10 +767,10 @@ CONTAINS
           wpi_wres_soil_sl_tmp(ic,is)      = vol_wres_sl(ic,is)      * soil_depth_sl(ic,is)
           ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
           !       necessary. WHY?
-          IF (wpi_wsat_soil_sl_tmp(ic,is) > 0._wp) THEN
+          IF (wpi_wsat_soil_sl_tmp(ic,is) > 0._jp) THEN
             wpi_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
           ELSE
-            wpi_soil_sl_tmp(ic,is) = 0._wp
+            wpi_soil_sl_tmp(ic,is) = 0._jp
           END IF
         END DO
       END DO
@@ -778,7 +778,7 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        wtr_soil(ic) = 0._wp
+        wtr_soil(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -827,7 +827,7 @@ CONTAINS
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1,nc
-          skinres_canopy_max(ic) = 0._wp
+          skinres_canopy_max(ic) = 0._jp
         END DO
         !$ACC END PARALLEL LOOP
       END IF
@@ -838,13 +838,13 @@ CONTAINS
         IF (tile%contains_soil) THEN
           skinres_max(ic) =  config_w_skin_max + skinres_canopy_max(ic)
         ELSE
-          skinres_max(ic) = 0._wp
+          skinres_max(ic) = 0._jp
         END IF
         ! Note: Transpiration is not defined on tiles without vegetation, we thus need this local variable.
         IF (tile%is_vegetation) THEN
           trans_tmp(ic) = transpiration(ic)
         ELSE
-          trans_tmp(ic) = 0._wp
+          trans_tmp(ic) = 0._jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -871,7 +871,7 @@ CONTAINS
       DO isnow = nsnow, 1, -1
         !$ACC LOOP GANG VECTOR
         DO ic = 1, nc
-          IF (snow_depth_sl(ic, isnow) > EPSILON(1.0_wp)) THEN
+          IF (snow_depth_sl(ic, isnow) > EPSILON(1.0_jp)) THEN
             IF (isnow == nsnow) THEN
               ! Initialize with weighted average of snow layer temperature for the lowest snow layer
               t_snow_mean(ic) = t_snow(ic, isnow) * (snow_depth_sl(ic, isnow) / total_snow_depth(ic))
@@ -991,7 +991,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is = 1, nsoil
           DO ic = 1, nc
-            wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_wp
+            wtr_soil_pot_sl(ic, is) = mpot_act_sl(ic, is) * grav / 1000.0_jp
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -1005,7 +1005,7 @@ CONTAINS
     IF (tile%is_glacier) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
-          weq_snow(ic) = 0._wp
+          weq_snow(ic) = 0._jp
       END DO
       !$ACC END LOOP
     ELSE IF (tile%is_bare) THEN
@@ -1295,19 +1295,19 @@ CONTAINS
         DO ic=1,nc
           IF (fract_org_sl(ic,is) > thresh_org) THEN
             ! Connected flow pathways consisting of organic material only exist
-            N_perc = (1._wp - thresh_org)**(-beta_perc)
-            fract_perc(ic,is)  = MIN(1._wp, N_perc * fract_org_sl(ic,is) * (fract_org_sl(ic,is)-thresh_org)**beta_perc)
-            fract_uncon(ic,is) = 1._wp - fract_perc(ic,is)
+            N_perc = (1._jp - thresh_org)**(-beta_perc)
+            fract_perc(ic,is)  = MIN(1._jp, N_perc * fract_org_sl(ic,is) * (fract_org_sl(ic,is)-thresh_org)**beta_perc)
+            fract_uncon(ic,is) = 1._jp - fract_perc(ic,is)
           ELSE
             ! No connected organic matter pathways exist, and flow passes mineral and organic soil components in series
-            fract_perc(ic,is)  = 0._wp
-            fract_uncon(ic,is) = 1._wp
+            fract_perc(ic,is)  = 0._jp
+            fract_uncon(ic,is) = 1._jp
           END IF
 
-          IF (fract_org_sl(ic,is) > 0._wp) THEN
+          IF (fract_org_sl(ic,is) > 0._jp) THEN
             hyd_cond_sat_uncon(ic,is) = fract_uncon(ic,is)                                           &
-              &                       * ( (1._wp - fract_org_sl(ic,is)) / hyd_cond_sat_sl(ic,is)     &
-              &                            + (fract_org_sl(ic,is) - fract_perc(ic,is)) / hyd_cond_sat_org(ic,is) )**(-1._wp)
+              &                       * ( (1._jp - fract_org_sl(ic,is)) / hyd_cond_sat_sl(ic,is)     &
+              &                            + (fract_org_sl(ic,is) - fract_perc(ic,is)) / hyd_cond_sat_org(ic,is) )**(-1._jp)
             hyd_cond_sat_sl(ic,is)    = fract_uncon(ic,is) * hyd_cond_sat_uncon(ic,is)  &
               &                       + fract_perc(ic,is) * hyd_cond_sat_org(ic,is)
           END IF
@@ -1320,19 +1320,19 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is=1,nsoil
         DO ic=1,nc
-          vol_porosity_sl   (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_porosity_sl   (ic,is) &
+          vol_porosity_sl   (ic,is) = (1._jp - fract_org_sl(ic,is)) * vol_porosity_sl   (ic,is) &
             &                       + fract_org_sl(ic,is) * vol_porosity_org(ic,is)
-          bclapp_sl         (ic,is) = (1._wp - fract_org_sl(ic,is)) * bclapp_sl         (ic,is) &
+          bclapp_sl         (ic,is) = (1._jp - fract_org_sl(ic,is)) * bclapp_sl         (ic,is) &
             &                       + fract_org_sl(ic,is) * bclapp_org(ic,is)
-          matric_pot_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * matric_pot_sl     (ic,is) &
+          matric_pot_sl     (ic,is) = (1._jp - fract_org_sl(ic,is)) * matric_pot_sl     (ic,is) &
             &                       + fract_org_sl(ic,is) * matric_pot_org(ic,is)
-          pore_size_index_sl(ic,is) = (1._wp - fract_org_sl(ic,is)) * pore_size_index_sl(ic,is) &
+          pore_size_index_sl(ic,is) = (1._jp - fract_org_sl(ic,is)) * pore_size_index_sl(ic,is) &
             &                       + fract_org_sl(ic,is) * pore_size_index_org(ic,is)
-          vol_field_cap_sl  (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_field_cap_sl  (ic,is) &
+          vol_field_cap_sl  (ic,is) = (1._jp - fract_org_sl(ic,is)) * vol_field_cap_sl  (ic,is) &
             &                       + fract_org_sl(ic,is) * vol_field_cap_org(ic,is)
-          vol_p_wilt_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_p_wilt_sl     (ic,is) &
+          vol_p_wilt_sl     (ic,is) = (1._jp - fract_org_sl(ic,is)) * vol_p_wilt_sl     (ic,is) &
             &                       + fract_org_sl(ic,is) * vol_p_wilt_org(ic,is)
-          vol_wres_sl       (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_wres_sl       (ic,is) &
+          vol_wres_sl       (ic,is) = (1._jp - fract_org_sl(ic,is)) * vol_wres_sl       (ic,is) &
             &                       + fract_org_sl(ic,is) * vol_wres_org(ic,is)
         END DO
       END DO
@@ -1571,7 +1571,7 @@ CONTAINS
     DO is = 1, nsoil
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
-        IF (soil_depth_sl(ic, is) > 0._wp) THEN
+        IF (soil_depth_sl(ic, is) > 0._jp) THEN
           last_soil_layer(ic) = is
         END IF
       END DO
@@ -1597,7 +1597,7 @@ CONTAINS
     ! tile fraction, e.g. not over complete ocean cells.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      l_fract(ic) = tile_fract(ic) > 0._wp
+      l_fract(ic) = tile_fract(ic) > 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1606,7 +1606,7 @@ CONTAINS
     ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
+      depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_jp)
       l_pf_soil(ic)   = (thaw_depth_max_ym1(ic) < depth_thrsh(ic) .AND. &
         &                thaw_depth_max(ic)     < depth_thrsh(ic))
     END DO
@@ -1786,18 +1786,18 @@ CONTAINS
             IF (ABS(wtr_transp_down_sl(ic, is)) > eps8) THEN ! diagnosed upwards and downwards fluxes both contain spurious fluxes of < E-8, which are ignored here
               wtr_flux_in_m = wtr_transp_down_sl(ic, is) * dtime / rhoh2o
             ELSE
-              wtr_flux_in_m = 0.0_wp
+              wtr_flux_in_m = 0.0_jp
             END IF
             frac_wtr_transp_down_sl(ic, is) = &
               &  MIN( MAX( wtr_flux_in_m / wtr_soil_old_sl(ic, is), frac_wtr_vertical_transport_up_max), &
-              &       frac_wtr_vertical_transport_down_max) * 1000._wp / dtime
+              &       frac_wtr_vertical_transport_down_max) * 1000._jp / dtime
             ! lateral (i.e., horizontal)
             wtr_flux_in_m = drainage_sl(ic, is) * dtime / rhoh2o
             IF (is == last_soil_layer(ic)) THEN
               wtr_flux_in_m = wtr_flux_in_m + drainage_lowest_soil_layer(ic) * dtime / rhoh2o
             END IF
             frac_w_lat_loss_sl(ic, is) = &
-              &  MIN( MAX(wtr_flux_in_m / wtr_soil_old_sl(ic, is), 0.0_wp), frac_w_lat_loss_max) * 1000._wp / dtime
+              &  MIN( MAX(wtr_flux_in_m / wtr_soil_old_sl(ic, is), 0.0_jp), frac_w_lat_loss_max) * 1000._jp / dtime
             ! ensure the sum of the two fractions would not increase beyond frac_w_lat_loss_max
             hlp1 = frac_wtr_transp_down_sl(ic, is) + frac_w_lat_loss_sl(ic, is)
             IF (hlp1 > frac_w_lat_loss_max) THEN
@@ -1805,8 +1805,8 @@ CONTAINS
               frac_w_lat_loss_sl(ic, is)      = frac_w_lat_loss_sl(ic, is) * frac_w_lat_loss_max / hlp1
             END IF
           ELSE
-            frac_wtr_transp_down_sl(ic, is) = 0.0_wp
-            frac_w_lat_loss_sl(ic, is)      = 0.0_wp
+            frac_wtr_transp_down_sl(ic, is) = 0.0_jp
+            frac_w_lat_loss_sl(ic, is)      = 0.0_jp
           END IF
         END DO
       END DO
@@ -2200,7 +2200,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          wtr_soil_avail_sl(ic ,is) = MAX(wtr_soil_sl(ic, is) - wtr_soil_pot_scool_sl_min(ic, is), 0.0_wp)
+          wtr_soil_avail_sl(ic ,is) = MAX(wtr_soil_sl(ic, is) - wtr_soil_pot_scool_sl_min(ic, is), 0.0_jp)
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -2242,7 +2242,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          wtr_soil_inaccessible_sl(ic, is) = 0.0_wp
+          wtr_soil_inaccessible_sl(ic, is) = 0.0_jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -2252,13 +2252,13 @@ CONTAINS
     !$ACC   PRIVATE(hlp1)
     DO is = 1, nsoil
       DO ic = 1, nc
-        IF(wpi_fcap_soil_sl(ic, is) > 0.0_wp) THEN
+        IF(wpi_fcap_soil_sl(ic, is) > 0.0_jp) THEN
           hlp1 = wpi_pwp_soil_sl(ic, is) / wpi_fcap_soil_sl(ic, is)
         ELSE
-          hlp1 = 0.0_wp
+          hlp1 = 0.0_jp
         END IF
-        wtr_soil_avail_max_sl(ic, is) = MAX(wpi_fcap_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is), 0.0_wp)
-        wtr_soil_pwp_sl(ic, is) = MAX(wpi_pwp_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is) * hlp1, 0.0_wp)
+        wtr_soil_avail_max_sl(ic, is) = MAX(wpi_fcap_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is), 0.0_jp)
+        wtr_soil_pwp_sl(ic, is) = MAX(wpi_pwp_soil_sl(ic, is) - wtr_soil_inaccessible_sl(ic, is) * hlp1, 0.0_jp)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -2276,11 +2276,11 @@ CONTAINS
     !
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic= 1, nc
-      IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
-        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
+      IF (wtr_rootzone_avail_max(ic) > 0._jp) THEN
+        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._jp)
       ELSE
         ! wpi_rootzone_max is zero for glacier tiles
-        wtr_rootzone_rel(ic) = 0._wp
+        wtr_rootzone_rel(ic) = 0._jp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -2309,11 +2309,11 @@ CONTAINS
       !
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        IF ((wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)) > 0.0_wp) THEN
-          wtr_plant_avail_rel(ic) = MIN(MAX(wtr_rootzone_avail(ic) - wtr_rootzone_pwp(ic), 0.0_wp) &
-            &                       / (wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)), 1.0_wp)
+        IF ((wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)) > 0.0_jp) THEN
+          wtr_plant_avail_rel(ic) = MIN(MAX(wtr_rootzone_avail(ic) - wtr_rootzone_pwp(ic), 0.0_jp) &
+            &                       / (wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)), 1.0_jp)
         ELSE
-          wtr_plant_avail_rel(ic) = 0.0_wp
+          wtr_plant_avail_rel(ic) = 0.0_jp
         END IF
         ! for diagnostic purposes: report QUINCY relative plant available water as JSB water stress
         water_stress(ic) = wtr_plant_avail_rel(ic)
@@ -2689,7 +2689,7 @@ CONTAINS
             q_air = q_bcoef(ic)                                   ! Old moisture at lowest atmospheric level
             heat_tcoef = ch(ic)                                   ! Transfer coefficient; TODO: distinguish between wtr and ice?
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic)) ! Potential evaporation
-            evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
+            evapopot  (ic) = (1._jp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
           !$ACC END PARALLEL LOOP
         ELSE
@@ -2699,7 +2699,7 @@ CONTAINS
             q_air = q_acoef_ice(ic) * qsat_lice(ic) + q_bcoef_ice(ic) ! New moisture at lowest atmospheric level by back-substitution
             heat_tcoef = heat_transfer_coef(drag_ice(ic), dtime, alpha)    ! Transfer coefficient
             evapo_ice (ic) = heat_tcoef * (q_air - qsat_lice(ic))          ! Potential evaporation
-            evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
+            evapopot  (ic) = (1._jp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
           END DO
           !$ACC END PARALLEL LOOP
         END IF
@@ -2754,7 +2754,7 @@ CONTAINS
           heat_tcoef = ch(ic)  ! Transfer coefficient
 
           ! Compute effective air moisture and surface saturation humidity
-          q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
+          q_air_eff      = q_effective( 0._jp, q_air, 1._jp, 0._jp)
           qsat_srf_eff   = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))
           evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  ! Evapotranspiration
           evapotrans(ic)     = evapotrans_lnd(ic)
@@ -2773,7 +2773,7 @@ CONTAINS
           heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)    ! Transfer coefficient for heat
 
           ! Compute effective air moisture and surface saturation humidity
-          q_air_eff      = q_effective( 0._wp, q_air, 1._wp, 0._wp)
+          q_air_eff      = q_effective( 0._jp, q_air, 1._jp, 0._jp)
           qsat_srf_eff   = q_effective(qsat_star(ic), q_air, fact_qsat_srf(ic), fact_q_air(ic))
           evapotrans_lnd(ic) = heat_tcoef * (q_air_eff - qsat_srf_eff)  ! Evapotranspiration
           evapotrans(ic)     = evapotrans_lnd(ic)
@@ -3085,8 +3085,8 @@ CONTAINS
 
 #ifndef _OPENACC
     ! Test sanity of the surface temperature to prevent the unspecific "lookup table overflow" error message
-    IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
-      IF (ANY(t(:) < 50._wp)) THEN
+    IF (ANY(t(:) < 50._jp .OR. t(:) > 400._jp)) THEN
+      IF (ANY(t(:) < 50._jp)) THEN
         ic = MINLOC(t(:), DIM=1)
       ELSE
         ic = MaxLOC(t(:), DIM=1)
@@ -3125,7 +3125,7 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1,nc
-        skinres_canopy_max(ic) = 0._wp
+        skinres_canopy_max(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -3136,15 +3136,15 @@ CONTAINS
       IF (tile%contains_soil) THEN
         skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
       ELSE
-        skinres_max(ic) = 0._wp
+        skinres_max(ic) = 0._jp
       END IF
 
       !> Glaciers are entirely covered with snow. They do not have a wet fraction.
       !> Note: Although glaciers are snow covered, snow depth and the amount
       !> of snow on glaciers is zero.
       IF (tile%is_glacier) THEN
-        fract_snow(ic)      = 1._wp
-        fract_snow_soil(ic) = 1._wp
+        fract_snow(ic)      = 1._jp
+        fract_snow_soil(ic) = 1._jp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -3428,7 +3428,7 @@ CONTAINS
     IF (tile_contains_soil) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        weq_soil(ic)        = 0._wp
+        weq_soil(ic)        = 0._jp
         wtr_latflow_res(ic) = wtr_latflow_res_srf(ic)
       END DO
 
@@ -3455,7 +3455,7 @@ CONTAINS
           &            + weq_soil(ic) + wtr_latflow_res(ic))       &
           &          * tile_area          ! m -> m^3
       ELSE
-        weq_land_new = 0._wp
+        weq_land_new = 0._jp
       END IF
 
       !  Calculate the water balance error
@@ -3474,12 +3474,12 @@ CONTAINS
       !> The threshold indicating a water balance error depends on model resolution and time step. It
       !> is defined such, that a violation in all grid cells would lead to a 10 cm sea level rise or fall
       !> after 1000 years.
-      wb_threshold = 1.0e-11_wp * tile_area * dtime
+      wb_threshold = 1.0e-11_jp * tile_area * dtime
 
       IF (ABS(weq_balance_err(ic)) > wb_threshold) THEN
         n_errors = n_errors + 1       ! Count number of water balance issues on this chunk
         error_idx(n_errors) = ic      ! Index of the respective grid cell (on chunk)
-        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_wp  ! Count water budget issues per cell
+        weq_balance_err_count(ic) = weq_balance_err_count(ic) + 1.0_jp  ! Count water budget issues per cell
       END IF
 #endif
     END DO
@@ -3661,53 +3661,53 @@ CONTAINS
     END IF
 
     IF (HYDRO__mem%trans_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(trans_gmean, transpiration, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(trans_gmean, transpiration, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%trans_gmean%ptr(:))
     END IF
     IF (HYDRO__mem%evapotrans_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(evapotrans_gmean, evapotrans, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(evapotrans_gmean, evapotrans, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%evapotrans_gmean%ptr(:))
     END IF
 
     ! Unit transformation from [m3] to [km3]: 1.e-9
     IF (HYDRO__mem%weq_land_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(weq_land_gsum, weq_land, scaling, 1.e-9_wp, acc_stream)
+      CALL scaled_global_sum_2D(weq_land_gsum, weq_land, scaling, 1.e-9_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_land_gsum%ptr(:))
     END IF
 
     ! Unit transformation from [m3] to [km3]: 1.e-9
     IF (HYDRO__mem%discharge_ocean_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(discharge_ocean_gsum, discharge_ocean, in_domain, 1.e-6_wp, acc_stream)
+      CALL scaled_global_sum_2D(discharge_ocean_gsum, discharge_ocean, in_domain, 1.e-6_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%discharge_ocean_gsum%ptr(:))
     END IF
 
     IF (HYDRO__mem%wtr_rootzone_rel_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(wtr_rootzone_rel_gmean, wtr_rootzone_rel, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(wtr_rootzone_rel_gmean, wtr_rootzone_rel, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:))
     END IF
 
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
     IF (HYDRO__mem%fract_snow_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(fract_snow_gsum, fract_snow, land_area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(fract_snow_gsum, fract_snow, land_area_scaling, 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%fract_snow_gsum%ptr(:))
     END IF
 
     ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
     IF (HYDRO__mem%weq_snow_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(weq_snow_gsum, weq_snow, land_area_scaling, 1.e-9_wp, acc_stream)
+      CALL scaled_global_sum_2D(weq_snow_gsum, weq_snow, land_area_scaling, 1.e-9_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_snow_gsum%ptr(:))
     END IF
 
     ! No unit transformation [m3]: 1
     IF (HYDRO__mem%weq_balance_err_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(weq_balance_err_gsum, weq_balance_err, scaling, 1.0_wp, acc_stream)
+      CALL scaled_global_sum_2D(weq_balance_err_gsum, weq_balance_err, scaling, 1.0_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(HYDRO__mem%weq_balance_err_gsum%ptr(:))
     END IF
 
     IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget == WB_IGNORE .AND. print_wb_warning) THEN
-      CALL scaled_global_sum_2D(gsum_weq_balance_err_count, weq_balance_err_count, in_domain, 1.0_wp, acc_stream)
+      CALL scaled_global_sum_2D(gsum_weq_balance_err_count, weq_balance_err_count, in_domain, 1.0_jp, acc_stream)
 
-      IF (gsum_weq_balance_err_count(1) > 0.5_wp) THEN
+      IF (gsum_weq_balance_err_count(1) > 0.5_jp) THEN
         CALL message (TRIM(routine), 'Water balance issues detected. '// &
             & 'Consider rerun the simulation with enforce_water_budget = "logging" for more details.')
         ! Don't repeat this warning during this simulation period

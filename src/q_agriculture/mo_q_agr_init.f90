@@ -103,7 +103,7 @@ CONTAINS
     IF (lctlib_ps_pathway == ic3phot) THEN ! C3 Crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_jp .AND. grid%lat(ic,iblk) > -30.0_jp ) THEN
             crop_type_index(ic,iblk) = ix_trsoy ! tropical C3 crop = soybean
           ELSE
             crop_type_index(ic,iblk) = ix_wheat ! temperate C3 crop = wheat
@@ -113,7 +113,7 @@ CONTAINS
     ELSE ! C4 crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_jp .AND. grid%lat(ic,iblk) > -30.0_jp ) THEN
             crop_type_index(ic,iblk) = ix_trcorn ! tropical C4 crop = corn
           ELSE
             crop_type_index(ic,iblk) = ix_tecorn ! temperate C4 crop = corn
@@ -224,8 +224,8 @@ CONTAINS
       CALL input_file%Close()
 
       ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-      n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._wp / molar_mass_N)
-      n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._wp / molar_mass_N)
+      n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._jp / molar_mass_N)
+      n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._jp / molar_mass_N)
     END IF
 
     !$ACC UPDATE DEVICE(n_fertiliser_c3, n_fertiliser_c4) ASYNC(1)

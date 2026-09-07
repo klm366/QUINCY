@@ -233,8 +233,8 @@ CONTAINS
       ! Initialization (on all tiles)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
-        burned_fract(ic) = 0._wp
-        damaged_fract(ic) = 0._wp
+        burned_fract(ic) = 0._jp
+        damaged_fract(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -302,9 +302,9 @@ CONTAINS
     IF (tile%Has_process_memory(CARBON_) .AND. newday) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
-        co2flux_fire_all_2_atm(ic) = 0._wp
-        cflux_dist_green_2_soil(ic) = 0._wp
-        cflux_dist_woods_2_soil(ic) = 0._wp
+        co2flux_fire_all_2_atm(ic) = 0._jp
+        cflux_dist_green_2_soil(ic) = 0._jp
+        cflux_dist_woods_2_soil(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -549,10 +549,10 @@ CONTAINS
                 & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
 
               ! Check conservation of carbon windthrow carbon relocations
-              ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._wp
+              ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._jp
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
               DO ic = 1, nc
-                cflux(ic) = 0._wp
+                cflux(ic) = 0._jp
               END DO
               !$ACC END PARALLEL LOOP
               dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)
@@ -569,7 +569,7 @@ CONTAINS
 
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1, nc
-            co2flux_fire_all_2_atm(ic) = 0._wp
+            co2flux_fire_all_2_atm(ic) = 0._jp
           END DO
           !$ACC END PARALLEL LOOP
 

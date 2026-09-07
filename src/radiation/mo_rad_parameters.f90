@@ -53,21 +53,21 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_rad_parameters'
 
     ! Parameters required for albedo and fapar calculation
-    kbl0_vis                  = 0.5_wp        !< Spitters 1986
-    kdf0_vis                  = 0.8_wp        !< Spitters 1986
-    kbl0_nir                  = 0.5_wp        !< Spitters 1986
-    kdf0_nir                  = 0.8_wp        !< Spitters 1986
-    rho2sbeta                 = 1.6_wp        !< Spitters 1986
-    k_csf                     = 2.2_wp        !< Campbell & Norman 1998, eq 15.35
-    min_cos_zenith_angle_rad  = 0.1736482_wp  !< corresponding to 10 deg solar elevation, below which the
+    kbl0_vis                  = 0.5_jp        !< Spitters 1986
+    kdf0_vis                  = 0.8_jp        !< Spitters 1986
+    kbl0_nir                  = 0.5_jp        !< Spitters 1986
+    kdf0_nir                  = 0.8_jp        !< Spitters 1986
+    rho2sbeta                 = 1.6_jp        !< Spitters 1986
+    k_csf                     = 2.2_jp        !< Campbell & Norman 1998, eq 15.35
+    min_cos_zenith_angle_rad  = 0.1736482_jp  !< corresponding to 10 deg solar elevation, below which the
                                               !! radiation equations are no longer valid
-    albedo_stem_vis           = 0.16_wp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
-    albedo_stem_nir           = 0.39_wp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
-    kbl_stem                  = 0.999_wp      !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
+    albedo_stem_vis           = 0.16_jp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
+    albedo_stem_nir           = 0.39_jp       !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
+    kbl_stem                  = 0.999_jp      !< Belda et al. 2022, https://doi.org/10.5194/gmd-15-6709-2022
     ! conversion factors
-    rad2ppfd                  = 4.6_wp        !< Monteith & Unsworth 1995
+    rad2ppfd                  = 4.6_jp        !< Monteith & Unsworth 1995
     ! parameters also used in jsbach
-    MinRadiation              = 1.0e-09_wp
+    MinRadiation              = 1.0e-09_jp
   END SUBROUTINE init_rad_parameters
 
 #endif

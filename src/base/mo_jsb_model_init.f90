@@ -128,7 +128,7 @@ CONTAINS
       grid%sinlat(:,:) = SIN(deg2rad * grid%lat(:,:))
       grid%coslon(:,:) = COS(deg2rad * grid%lon(:,:))
       grid%sinlon(:,:) = SIN(deg2rad * grid%lon(:,:))
-      grid%area(:,:) = 1._wp
+      grid%area(:,:) = 1._jp
     END IF
 
     CALL Register_grid(grid)
@@ -737,7 +737,7 @@ CONTAINS
       ! The rel. fraction of the primary LCT is 1: The tile is fully covered by this LCT.
       ! Todo: Are these arrays (i.e. fract_glac_glac, fract_veg_veg, ...) of any interest, or
       ! should we remove the definition here and also remove the corresponding Add_var calls?
-      tile%lcts(1)%fract(:,:) = 1._wp
+      tile%lcts(1)%fract(:,:) = 1._jp
 
       ! We start with second LCT, as the tile's primary LCT fraction has just been set.
       lct_start=2
@@ -750,7 +750,7 @@ CONTAINS
 
         ! Tile has children. The tile thus had been visited before (s.above) and we're on the way up.
         ! Loop over the children and add their contributions to the specific LCT fraction.
-        tile_lct_fract_tmp(:,:) = 0._wp
+        tile_lct_fract_tmp(:,:) = 0._jp
         no_children = tile%Get_no_of_children()
         child => tile%Get_first_child_tile()
         DO i=1,no_children
@@ -774,12 +774,12 @@ CONTAINS
             ! Get the (absolute) fraction of the current tile
             CALL tile%Get_fraction(fract=fract_tmp(:,:))
             ! Calculate the (relative) LCT fraction of the tile
-            WHERE (tile_lct_fract_tmp(:,:) == 0._wp)
-              tile%lcts(ilct)%fract(:,:) = 0._wp
-            ELSE WHERE (fract_tmp(:,:) > 0._wp)
+            WHERE (tile_lct_fract_tmp(:,:) == 0._jp)
+              tile%lcts(ilct)%fract(:,:) = 0._jp
+            ELSE WHERE (fract_tmp(:,:) > 0._jp)
               tile%lcts(ilct)%fract(:,:) = tile_lct_fract_tmp(:,:) / fract_tmp(:,:)
             ELSE WHERE
-              tile%lcts(ilct)%fract(:,:) = 1._wp
+              tile%lcts(ilct)%fract(:,:) = 1._jp
             END WHERE
           END IF
           child => child%Get_next_sibling_tile()

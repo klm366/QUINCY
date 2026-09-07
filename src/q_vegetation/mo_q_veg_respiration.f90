@@ -56,14 +56,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
-    hlp1 = t_maint_k3 + 1.0_wp / (1._wp / t_maint_k2 - log(eps8) / t_maint_k1)
+    hlp1 = t_maint_k3 + 1.0_jp / (1._jp / t_maint_k2 - log(eps8) / t_maint_k1)
 
     IF(temp >= hlp1) THEN
       ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
-      temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
-                       exp(t_maint_k1 * (1._wp / t_maint_k2 - 1._wp / (temp - t_maint_k3)))
+      temp_response = (10._jp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
+                       exp(t_maint_k1 * (1._jp / t_maint_k2 - 1._jp / (temp - t_maint_k3)))
     ELSE
-      temp_response = 0.0_wp
+      temp_response = 0.0_jp
     ENDIF
 
   END FUNCTION temperature_response_respiration

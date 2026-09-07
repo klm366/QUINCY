@@ -142,7 +142,7 @@ CONTAINS
     END SELECT
 
     ! extinction coefficient for canopy layer depth calculation
-    k_canopy_layer = 0.7_wp
+    k_canopy_layer = 0.7_jp
 
     !> canopy layer depth calculation
     !>
@@ -157,13 +157,13 @@ CONTAINS
     ALLOCATE(canopy_layer_thickness_profile(config%ncanopy))
     SELECT CASE(TRIM(config%canopy_layer_scheme))
     CASE ("standard")
-      canopy_layer_thickness_profile(:) = 0.5_wp
+      canopy_layer_thickness_profile(:) = 0.5_jp
     CASE ("fapar")
       ! alternative canopy layer depth calculation, approximately proportional to FAPAR
       ! to reduce impact of actual canopy layering on PS calculation
-      dAPAR = 1.0_wp / REAL(config%ncanopy, KIND = jp)
+      dAPAR = 1.0_jp / REAL(config%ncanopy, KIND = jp)
       DO icanopy = 1,config%ncanopy
-        canopy_layer_thickness_profile(icanopy) = -1.0_wp / k_canopy_layer * LOG(1._wp - (dAPAR * icanopy) + eps4)
+        canopy_layer_thickness_profile(icanopy) = -1.0_jp / k_canopy_layer * LOG(1._jp - (dAPAR * icanopy) + eps4)
       END DO
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme', config%canopy_layer_scheme
@@ -176,7 +176,7 @@ CONTAINS
     !! vgrid_canopy_q_assimi% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
     !!
     !! note: the axis of the q_canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
-    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_jp * (lbounds(:) + ubounds(:))
     vgrid_canopy_q_assimi  => new_vgrid('q_canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers (leaf mass per layer as LAI) from Q_ASSIMI_ QUINCY', &
       & units = 'm2 m-2 LAI', &

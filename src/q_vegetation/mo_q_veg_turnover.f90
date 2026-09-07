@@ -273,23 +273,23 @@ CONTAINS
           &                   / one_day * dtime
         !>  1.1 if N is addded to leaves or fine root (negative flux), make sure there is enough labile N to support this
         !>      If labile pool is smaller than eps8, do not add N to leaves and fine roots
-        hlp1 = -1.0_wp * (recycling_leaf + recycling_fine_root)
-        hlp2 = 1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixN, ic) * dtime
+        hlp1 = -1.0_jp * (recycling_leaf + recycling_fine_root)
+        hlp2 = 1.0_jp / tau_labile / one_day * veg_pool_mt(ix_labile, ixN, ic) * dtime
         IF (hlp1 > hlp2) THEN
           IF (hlp1 > eps8) THEN
             hlp3 = hlp2 / hlp1
             recycling_leaf       = recycling_leaf      * hlp3
             recycling_fine_root  = recycling_fine_root * hlp3
           ELSE
-            recycling_leaf       = 0.0_wp
-            recycling_fine_root  = 0.0_wp
+            recycling_leaf       = 0.0_jp
+            recycling_fine_root  = 0.0_jp
           END IF
         END IF
         recycling_leaf_n(ic)      = recycling_leaf_n(ic)      + recycling_leaf
         recycling_fine_root_n(ic) = recycling_fine_root_n(ic) + recycling_fine_root
         !>  1.2 calculate signature of N transfer from labile to leaf or inverse
         !>
-        IF (recycling_leaf >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
+        IF (recycling_leaf >= 0.0_jp) THEN  ! for all positive values of recycling_fine_root(ic)
           IF (veg_pool_mt(ix_leaf, ixN, ic) > eps8) THEN
             recycling_leaf_n15(ic) = recycling_leaf_n15(ic) &
               &                      + recycling_leaf / veg_pool_mt(ix_leaf, ixN, ic) * veg_pool_mt(ix_leaf, ixN15, ic)
@@ -301,7 +301,7 @@ CONTAINS
               &                      + recycling_leaf / veg_pool_mt(ix_labile, ixN, ic) * veg_pool_mt(ix_labile, ixN15, ic)
           END IF
         END IF
-        IF (recycling_fine_root >= 0.0_wp) THEN  ! for all positive values of recycling_fine_root(ic)
+        IF (recycling_fine_root >= 0.0_jp) THEN  ! for all positive values of recycling_fine_root(ic)
           IF (veg_pool_mt(ix_fine_root, ixN, ic) > eps8) THEN
             recycling_fine_root_n15(ic) = recycling_fine_root_n15(ic) &
               &                           + recycling_fine_root / veg_pool_mt(ix_fine_root, ixN, ic) &
@@ -325,16 +325,16 @@ CONTAINS
          &                    / tau_nutrient_recycling / one_day * dtime
         !>  2.1 if P is addded to leaves or fine root, make sure there is enough labile P to support this
         !>
-        hlp1 = -1.0_wp * (recycling_leaf + recycling_fine_root)
-        hlp2 = 1.0_wp / tau_labile / one_day * veg_pool_mt(ix_labile, ixP, ic) * dtime
+        hlp1 = -1.0_jp * (recycling_leaf + recycling_fine_root)
+        hlp2 = 1.0_jp / tau_labile / one_day * veg_pool_mt(ix_labile, ixP, ic) * dtime
         IF (hlp1 > hlp2) THEN
           IF (hlp1 > eps8) THEN
             hlp3 = hlp2 / hlp1
             recycling_leaf       = recycling_leaf      * hlp3
             recycling_fine_root  = recycling_fine_root * hlp3
           ELSE
-            recycling_leaf       = 0.0_wp
-            recycling_fine_root  = 0.0_wp
+            recycling_leaf       = 0.0_jp
+            recycling_fine_root  = 0.0_jp
           END IF
         END IF
         recycling_leaf_p(ic)        = recycling_leaf_p(ic)        + recycling_leaf
@@ -435,37 +435,37 @@ CONTAINS
 
     !>0.9 init output and local variables
     !>
-    net_growth(:) = 0.0_wp
-    fturn_leaf(:) = 0.0_wp
+    net_growth(:) = 0.0_jp
+    fturn_leaf(:) = 0.0_jp
 
     !>1.0 foliage turnover, including recycling of nutrients
     !>
     ! flat rate for evergreens, dual rates for deciduous (senescence after the growing season)
     SELECT CASE (lctlib_phenology_type)
     CASE (ievergreen)
-      fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
+      fturn_leaf(:) = 1.0_jp / lctlib_tau_leaf / one_day / one_year * dtime
     CASE (iraingreen, isummergreen)
       WHERE(growing_season(:) > test_false_true)
-        fturn_leaf(:) = 0.0_wp              ! herbivory
+        fturn_leaf(:) = 0.0_jp              ! herbivory
       ELSEWHERE
         WHERE(lai(:) > eps4)
           fturn_leaf(:) = MAX(eps4, max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
         ELSEWHERE
-          fturn_leaf(:) = 1.0_wp
+          fturn_leaf(:) = 1.0_jp
         END WHERE
       END WHERE
     CASE (iperennial, icrop_phenology)
       IF(config_active_q_agr .AND. lctlib_phenology_type == icrop_phenology) THEN
-        fturn_leaf(:) = 0.0_wp
+        fturn_leaf(:) = 0.0_jp
       ELSE
         WHERE(growing_season(:) > test_false_true)
-          fturn_leaf(:) = 1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime
+          fturn_leaf(:) = 1.0_jp / lctlib_tau_leaf / one_day / one_year * dtime
         ELSEWHERE
           WHERE(lai(:) > eps4)
-            fturn_leaf(:) = MAX(1.0_wp / lctlib_tau_leaf / one_day / one_year * dtime, &
+            fturn_leaf(:) = MAX(1.0_jp / lctlib_tau_leaf / one_day / one_year * dtime, &
               &             max_leaf_shedding_rate * dtime / one_day * target_lai(:) / lai(:))
           ELSEWHERE
-            fturn_leaf(:) = 1.0_wp
+            fturn_leaf(:) = 1.0_jp
           END WHERE
         END WHERE
       END IF
@@ -475,7 +475,7 @@ CONTAINS
     !>      by the available labile carbon
     !>
     DO ic = 1,nc
-      hlp1 = maint_respiration_leaf(ic) / 1.e6_wp * dtime
+      hlp1 = maint_respiration_leaf(ic) / 1.e6_jp * dtime
       IF (hlp1 > fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic)) THEN
         IF (hlp1 > eps8) THEN
           excess_leaf_turnover(ic) = MIN(max_leaf_shedding_rate * dtime / one_day, &
@@ -483,14 +483,14 @@ CONTAINS
         ELSE
           excess_leaf_turnover(ic) = max_leaf_shedding_rate * dtime / one_day
         END IF
-        maint_respiration_leaf(ic) = fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic) * 1.e6_wp / dtime
+        maint_respiration_leaf(ic) = fstore_leaf_max * veg_pool_mt(ix_labile, ixC, ic) * 1.e6_jp / dtime
       ELSE
-        excess_leaf_turnover(ic) = 0.0_wp
+        excess_leaf_turnover(ic) = 0.0_jp
       END IF
     END DO
 
     ! Safeguard that leaf turnover cannot exceed 1
-    fturn_leaf(:) = MAX(0.0_wp, MIN(1.0_wp, fturn_leaf(:) + excess_leaf_turnover(:)))
+    fturn_leaf(:) = MAX(0.0_jp, MIN(1.0_jp, fturn_leaf(:) + excess_leaf_turnover(:)))
 
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
@@ -523,17 +523,17 @@ CONTAINS
     !>
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
-      fturn(:) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
+      fturn(:) = 1.0_jp / lctlib_tau_fine_root / one_day / one_year * dtime
     CASE (igrass, icrop)
       DO ic = 1,nc
         ! during growing season, constant turnover
         IF (growing_season(ic) > test_false_true) THEN
-          fturn(ic) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
+          fturn(ic) = 1.0_jp / lctlib_tau_fine_root / one_day / one_year * dtime
         ! outside growing season
         ELSE
           ! In cold, perennial grasslands, continous fine root turnover with roots living outside the growing season
           IF (ABS(root_phenology_type(ic) - ipheno_type_cold_deciduous) < eps8) THEN
-            fturn(ic) = 1.0_wp / lctlib_tau_fine_root / one_day / one_year * dtime
+            fturn(ic) = 1.0_jp / lctlib_tau_fine_root / one_day / one_year * dtime
           ! In warm, annual grasslands, shed fine roots at the end of the growing season with the same rate as leaves
           ELSE
             fturn(ic) = fturn_leaf(ic)
@@ -553,7 +553,7 @@ CONTAINS
 
     !>3.0 coarse root turnover to litter
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_coarse_root / one_day / one_year * dtime
+    fturn(:) = 1.0_jp / lctlib_tau_coarse_root / one_day / one_year * dtime
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -571,7 +571,7 @@ CONTAINS
     !>
     SELECT CASE (lctlib_growthform)
     CASE (ITREE)
-      fturn(:) = 1.0_wp / lctlib_tau_branch / one_day / one_year * dtime
+      fturn(:) = 1.0_jp / lctlib_tau_branch / one_day / one_year * dtime
     CASE (igrass, icrop) ! for grasses and crops follow leaf phenology
       fturn(:) = fturn_leaf(:)
     ENDSELECT
@@ -589,7 +589,7 @@ CONTAINS
     !>  4.2 heart wood formation, including nutrient recycling
     !>
     IF (lctlib_growthform == ITREE) THEN
-      fturn(:) = (1.0_wp - lctlib_frac_sapwood_branch) / lctlib_tau_sap_wood / one_day / one_year * dtime
+      fturn(:) = (1.0_jp - lctlib_frac_sapwood_branch) / lctlib_tau_sap_wood / one_day / one_year * dtime
       ! loop over bgcm elements
       DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
         IF (is_element_used(ielem)) THEN
@@ -613,7 +613,7 @@ CONTAINS
 
     !>5.0 fruit turnover to seed_bed
     !>
-    fturn(:) = 1.0_wp / lctlib_tau_fruit / one_day / one_year * dtime
+    fturn(:) = 1.0_jp / lctlib_tau_fruit / one_day / one_year * dtime
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -632,14 +632,14 @@ CONTAINS
     !>
     SELECT CASE (lctlib_growthform)
     CASE (itree, igrass)
-      fturn(:) = 1.0_wp / lctlib_tau_seed_litter / one_day / one_year * dtime
+      fturn(:) = 1.0_jp / lctlib_tau_seed_litter / one_day / one_year * dtime
     CASE (icrop)
       DO ic = 1,nc
         IF (seed_bed_pool_mt(ixC, ic) > crop_planting_mass * fstore_seed_max) THEN
           fturn(ic) = (seed_bed_pool_mt(ixC, ic) - crop_planting_mass * fstore_seed_max) &
             &          / seed_bed_pool_mt(ixC, ic)
         ELSE
-          fturn(ic) = 0.0_wp
+          fturn(ic) = 0.0_jp
         END IF
       END DO
     END SELECT

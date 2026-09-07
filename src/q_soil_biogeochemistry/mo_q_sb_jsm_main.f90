@@ -529,14 +529,14 @@ CONTAINS
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
         ! using LOG() here to smooth the response curve in case of extreme P limited condition,
         ! avoiding drastic changes in plant phosphatase productions as it is updated at each time step
-        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_wp, LOG(growth_p_limit_based_on_n_mavg(:)))
+        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_jp, LOG(growth_p_limit_based_on_n_mavg(:)))
       ELSEWHERE
-        fine_root_carbon_sl(:,isoil)        = 0.0_wp
-        growth_p_limit_smoothed_sl(:,isoil) = 0.0_wp
+        fine_root_carbon_sl(:,isoil)        = 0.0_jp
+        growth_p_limit_smoothed_sl(:,isoil) = 0.0_jp
       ENDWHERE
     END DO
-    unit_uptake_n_pot(:) = 0.0_wp
-    unit_uptake_p_pot(:) = 0.0_wp
+    unit_uptake_n_pot(:) = 0.0_jp
+    unit_uptake_p_pot(:) = 0.0_jp
 
     !>2.0 Inorganic N assimilation
     !>
@@ -760,20 +760,20 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._jp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_po4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_po4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._jp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_jp
+          km2_uptake_act(ic,is) = 0.0_jp
         END IF
       END DO
     END DO
     arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
-    arr_hlp2(:,:)        = 1._wp
+    arr_hlp2(:,:)        = 1._jp
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
-    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
+    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._jp, qmax_po4(:,:) - po4_assoc_fast(:,:))
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -808,20 +808,20 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._jp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_nh4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_nh4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._jp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_jp
+          km2_uptake_act(ic,is) = 0.0_jp
         END IF
       END DO
     END DO
     arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
-    arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
+    arr_hlp2(:,:)        = 1._jp - anaerobic_volume_fraction_sl(:,:)
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
-    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
+    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._jp, qmax_nh4(:,:) - nh4_assoc(:,:))
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -859,19 +859,19 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._jp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_no3 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_no3 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._jp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_jp
+          km2_uptake_act(ic,is) = 0.0_jp
         END IF
       END DO
     END DO
-    arr_hlp1(:,:)        = 1._wp
-    km_array(:,:)        = 1._wp
-    avail_soil_surface_sorption_capacity_sl(:,:) = 1._wp
+    arr_hlp1(:,:)        = 1._jp
+    km_array(:,:)        = 1._jp
+    avail_soil_surface_sorption_capacity_sl(:,:) = 1._jp
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -970,7 +970,7 @@ CONTAINS
 
     !>8.0 co-metabolisation of polymeric litter & residues
     !>
-    arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._wp - enzyme_frac_AP(:,:))
+    arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._jp - enzyme_frac_AP(:,:))
     CALL calc_depolymerisation_SESAM( &
       & nc, &                                 ! in
       & nsoil_w, &

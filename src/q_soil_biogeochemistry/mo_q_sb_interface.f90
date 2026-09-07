@@ -666,9 +666,9 @@ CONTAINS
 #endif
 
     ! Sum soil layers
-    sb_pool_total_c_2d(:,:) = 0._wp
-    total_soil_inorg_n_2d(:,:) = 0._wp
-    het_respiration_2d(:,:) = 0._wp
+    sb_pool_total_c_2d(:,:) = 0._jp
+    total_soil_inorg_n_2d(:,:) = 0._jp
+    het_respiration_2d(:,:) = 0._jp
     DO is = 1, nsoil
       sb_pool_total_c_2d(:,:)    = sb_pool_total_c_2d(:,:) + sb_pool_total_c(:,is,:)*soil_depth_sl(:,is,:)
       total_soil_inorg_n_2d(:,:) = total_soil_inorg_n_2d(:,:) + total_soil_inorg_n(:,is,:)*soil_depth_sl(:,is,:)
@@ -678,13 +678,13 @@ CONTAINS
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(C)/m^2] to [PgC]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-15_wp
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-15_jp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
         & total_som_c_gsum = global_sum_array(sb_pool_total_c_2d(:,:) * scaling(:,:))
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(N)/m^2] to [TgN]
     !     1 mol N = molar_mass_N g N   => 1 Pg N = molar_mass_N * e-12
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-12_wp
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-12_jp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
         & total_inorg_n_gsum = global_sum_array(total_soil_inorg_n_2d(:,:) * scaling(:,:))
 
@@ -692,7 +692,7 @@ CONTAINS
     !  => Conversion from [mumol(C)/m^2/s] to [PgC/yr]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-21_wp * one_day * one_year
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-21_jp * one_day * one_year
     IF (SB__mem%rh_gsum%is_in_output) &
         & rh_gsum  = global_sum_array(het_respiration_2d(:,:) * scaling(:,:))
     IF (SB__mem%nbp_gsum%is_in_output) &
@@ -700,7 +700,7 @@ CONTAINS
     !  => Conversion from [mumol(N)/m^2/s] to [TgN/yr]
     !     1 mol N = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-18_wp * one_day * one_year
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-18_jp * one_day * one_year
     IF (SB__mem%fnloss_gsum%is_in_output) &
         & fnloss_gsum = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
     IF (SB__mem%fn2o_gsum%is_in_output) &

@@ -133,7 +133,7 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'reading lai_clim ...')
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='lai_clim')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._jp, ptr_mon(:,:,:) > 0._jp)
     pheno_init_vars%lai_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     pheno_init_vars%lai_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%lai_mon(:,:,13  ) = ptr_mon(:,:,1   )
@@ -143,7 +143,7 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'reading veg_fract ...')
     ptr_mon => input_file%Read_2d_time(    &
       & variable_name='veg_fract')
-    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._wp, ptr_mon(:,:,:) > 0._wp)
+    ptr_mon(:,:,:) = MERGE(ptr_mon(:,:,:), 0._jp, ptr_mon(:,:,:) > 0._jp)
     pheno_init_vars%fract_fpc_mon(:,:,1:12) = ptr_mon(:,:,1:12)
     pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon(:,:,12  )
     pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon(:,:,1   )
@@ -156,7 +156,7 @@ CONTAINS
       ptr_2D => input_file%Read_2d(      &
         & variable_name='forest_fract',  &
         & fill_array = pheno_init_vars%fract_forest)
-      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ptr_2D = MERGE(ptr_2D, 0._jp, ptr_2D >= 0._jp)
     END IF
 
     CALL input_file%Close()
@@ -168,7 +168,7 @@ CONTAINS
     ptr_2D => input_file%Read_2d(      &
       & variable_name='veg_ratio_max', &
       & fill_array = pheno_init_vars%fract_fpc_max)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    ptr_2D = MERGE(ptr_2D, 0._jp, ptr_2D >= 0._jp)
 
     CALL input_file%Close()
 
@@ -230,11 +230,11 @@ CONTAINS
       !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
       IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-          & 1.0_wp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
+          & 1.0_jp - exp(-dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) / dsl4jsb_Lctlib_param(clumpinessFactor))
       !@todo: do not rely on the lib_id but use a flag instead?
       ELSE
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-          & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+          & 1.0_jp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF

@@ -54,10 +54,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
 
 
-    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
-       delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._jp) THEN
+       delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_jp ) * 1000._jp
     ELSE
-       delta = 0.0_wp
+       delta = 0.0_jp
     ENDIF
 
   END FUNCTION calc_delta_C13
@@ -86,7 +86,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C13C12'
 
 
-    mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * PDB_STANDARD_C13
+    mixing_ratio = ( delta / 1000._jp + 1.0_jp ) * PDB_STANDARD_C13
 
   END FUNCTION calc_mixing_ratio_C13C12
 
@@ -118,11 +118,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
 
 
-    IF(element > eps8 .AND. (element * isotope) > 0._wp) THEN
+    IF(element > eps8 .AND. (element * isotope) > 0._jp) THEN
        Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * &
-               (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp
+               (1._jp - (2._jp* (25._jp + delta_C13)) /1000._jp) - 1._jp) * 1000._jp
     ELSE
-       Delta = 0.0_wp
+       Delta = 0.0_jp
     ENDIF
 
   END FUNCTION calc_delta_C14
@@ -154,9 +154,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C14C'
 
 
-    mixing_ratio = ( Delta_C14 / 1000._wp + 1._wp ) / &
+    mixing_ratio = ( Delta_C14 / 1000._jp + 1._jp ) / &
                    ( ( AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) ) * &
-                     (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) ) * &
+                     (1._jp - (2._jp* (25._jp + delta_C13)) /1000._jp) ) * &
                    scale_correction_C14
 
   END FUNCTION calc_mixing_ratio_C14C
@@ -186,10 +186,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
 
 
-    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
-       delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_wp ) * 1000._wp
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._jp) THEN
+       delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_jp ) * 1000._jp
     ELSE
-       delta = 0.0_wp
+       delta = 0.0_jp
     ENDIF
 
   END FUNCTION calc_delta_N15
@@ -218,7 +218,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_N15N14'
 
 
-    mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * ATM_STANDARD_N15
+    mixing_ratio = ( delta / 1000._jp + 1.0_jp ) * ATM_STANDARD_N15
 
   END FUNCTION calc_mixing_ratio_N15N14
 
@@ -256,21 +256,21 @@ CONTAINS
         IF((source_element - source_isotope) > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
         ELSE
-           Rsource = 0.0_wp
+           Rsource = 0.0_jp
         ENDIF
 
         ! molar mixing ratio of the isotope with the main element in the product of the reaction
         ! from Discrimination = ( Rsource/Rsink - 1 ) * 1000
-        Rsink = Rsource / (discrimination/1000._wp + 1._wp)
+        Rsink = Rsource / (discrimination/1000._jp + 1._jp)
 
         ! Since here the processes fluxes F are represented as the sum of all isotopes of an element
         ! (main: E and its isotope: I)
         ! F = E + I, with I/E = Rsink follows that
         !   = I/Rsink + I = ( 1/ Rsink + 1 ) * I => I = F * 1 / ( 1 + 1 / Rsink )
         IF( Rsink > eps8) THEN
-          fractionation = 1._wp / (1._wp + 1._wp/Rsink)
+          fractionation = 1._jp / (1._jp + 1._jp/Rsink)
         ELSE
-          fractionation = 0.0_wp
+          fractionation = 0.0_jp
         ENDIF
      !> 2.0  ..
      !!

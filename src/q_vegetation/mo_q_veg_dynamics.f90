@@ -198,7 +198,7 @@ CONTAINS
 
     !> 0.9 init local var
     !>
-    fract_herbivory(:)          = 0.0_wp
+    fract_herbivory(:)          = 0.0_jp
 
     !>1.0 Calculate foliage projective cover if vegetation dynamics are simulated, i.e., not needed for constant mortality
     !>
@@ -221,7 +221,7 @@ CONTAINS
     ! but calcs mortality_rate dynamically if veg_dynamics_scheme == population
     ! does not apply to croplands
     IF (lctlib%CropFlag .AND. dsl4jsb_Config(Q_AGR_)%active) THEN
-      mortality_rate(:) = 0.0_wp
+      mortality_rate(:) = 0.0_jp
     ELSE
       CALL calc_veg_mortality( &
         & nc                                              , & ! in
@@ -272,25 +272,25 @@ CONTAINS
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (model%config%is_element_used(ielem)) THEN
         ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
-        veg_growth_mt(ix_sap_wood,ix_elem,:)   = veg_growth_mt(ix_sap_wood,ix_elem,:)   * (1._wp - mortality_rate(:))
-        veg_growth_mt(ix_heart_wood,ix_elem,:) = veg_growth_mt(ix_heart_wood,ix_elem,:) * (1._wp - mortality_rate(:))
-        veg_growth_mt(ix_fruit,ix_elem,:)      = veg_growth_mt(ix_fruit,ix_elem,:)      * (1._wp - mortality_rate(:))
-        seed_bed_growth_mt(ix_elem,:)          = seed_bed_growth_mt(ix_elem,:)          * (1._wp - mortality_rate(:))
+        veg_growth_mt(ix_sap_wood,ix_elem,:)   = veg_growth_mt(ix_sap_wood,ix_elem,:)   * (1._jp - mortality_rate(:))
+        veg_growth_mt(ix_heart_wood,ix_elem,:) = veg_growth_mt(ix_heart_wood,ix_elem,:) * (1._jp - mortality_rate(:))
+        veg_growth_mt(ix_fruit,ix_elem,:)      = veg_growth_mt(ix_fruit,ix_elem,:)      * (1._jp - mortality_rate(:))
+        seed_bed_growth_mt(ix_elem,:)          = seed_bed_growth_mt(ix_elem,:)          * (1._jp - mortality_rate(:))
       END IF
     END DO
     !>
     !> Retranslocation of foliar nutrients is recorded separately, as it applies only to nutrients
     !> These have to be reduced by the fraction of individuals that have died (i.e. no heartwood, seedpool
     !> generation or retranslocation by dying individuals)
-    recycling_leaf_n(:)         = recycling_leaf_n(:)         * (1._wp - mortality_rate(:) - fract_herbivory(:))
-    recycling_fine_root_n(:)    = recycling_fine_root_n(:)    * (1._wp - mortality_rate(:))
-    recycling_heart_wood_n(:)   = recycling_heart_wood_n(:)   * (1._wp - mortality_rate(:))
-    recycling_leaf_p(:)         = recycling_leaf_p(:)         * (1._wp - mortality_rate(:) - fract_herbivory(:))
-    recycling_fine_root_p(:)    = recycling_fine_root_p(:)    * (1._wp - mortality_rate(:))
-    recycling_heart_wood_p(:)   = recycling_heart_wood_p(:)   * (1._wp - mortality_rate(:))
-    recycling_leaf_n15(:)       = recycling_leaf_n15(:)       * (1._wp - mortality_rate(:) - fract_herbivory(:))
-    recycling_fine_root_n15(:)  = recycling_fine_root_n15(:)  * (1._wp - mortality_rate(:))
-    recycling_heart_wood_n15(:) = recycling_heart_wood_n15(:) * (1._wp - mortality_rate(:))
+    recycling_leaf_n(:)         = recycling_leaf_n(:)         * (1._jp - mortality_rate(:) - fract_herbivory(:))
+    recycling_fine_root_n(:)    = recycling_fine_root_n(:)    * (1._jp - mortality_rate(:))
+    recycling_heart_wood_n(:)   = recycling_heart_wood_n(:)   * (1._jp - mortality_rate(:))
+    recycling_leaf_p(:)         = recycling_leaf_p(:)         * (1._jp - mortality_rate(:) - fract_herbivory(:))
+    recycling_fine_root_p(:)    = recycling_fine_root_p(:)    * (1._jp - mortality_rate(:))
+    recycling_heart_wood_p(:)   = recycling_heart_wood_p(:)   * (1._jp - mortality_rate(:))
+    recycling_leaf_n15(:)       = recycling_leaf_n15(:)       * (1._jp - mortality_rate(:) - fract_herbivory(:))
+    recycling_fine_root_n15(:)  = recycling_fine_root_n15(:)  * (1._jp - mortality_rate(:))
+    recycling_heart_wood_n15(:) = recycling_heart_wood_n15(:) * (1._jp - mortality_rate(:))
 
     !>
     !> catch numerical issues arising at leaf or fine-root shedding of the order of < E-12
@@ -340,14 +340,14 @@ CONTAINS
             & veg_establishment_mt(:,:)           )   ! inout
         ELSE
           ! Stand replacing harvest in QS is an exceptional case in which the establishment is initialised in a particular way
-          hlp1(:) = 0.0_wp
+          hlp1(:) = 0.0_jp
           ! set carbon in establishment such that the inital stand density is 1000 / ha (i.e. 0.1/m2)
           ! which seeds the forest floor for natural regeneration
           ! but limit to actual available seed pool to avoid generating mass
           ! NB: This might need to be revised for particular case studies
           DO ic = 1, nc
             IF (seed_bed_pool_mt(ixC, ic) > eps8) THEN
-              hlp1(ic) = MIN(0.1_wp * lctlib%seed_size, seed_bed_pool_mt(ixC, ic)) / seed_bed_pool_mt(ixC, ic)
+              hlp1(ic) = MIN(0.1_jp * lctlib%seed_size, seed_bed_pool_mt(ixC, ic)) / seed_bed_pool_mt(ixC, ic)
             END IF
           END DO
           DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
@@ -371,7 +371,7 @@ CONTAINS
           &                                     mortality_rate(:)           , &
           &                                     veg_establishment_mt(ixC,:) )
       ELSE
-        delta_dens_ind(:) = 0.0_wp
+        delta_dens_ind(:) = 0.0_jp
       END IF
     END SELECT
 
@@ -429,15 +429,15 @@ CONTAINS
           &             crown_area_tile(:)
       ELSEWHERE
         crown_area_tile(:) = k_crown_area * min_diameter ** k_rp
-        lai_ind(:)         = 0.0_wp
+        lai_ind(:)         = 0.0_jp
       ENDWHERE
     CASE DEFAULT ! all other growthforms
-      crown_area_tile(:) = 1.0_wp ! to satisfy the fpc equation
+      crown_area_tile(:) = 1.0_jp ! to satisfy the fpc equation
       lai_ind(:)         = lai(:) ! actually to be divided by dens_ind and crown_area,which are both 1
     END SELECT
 
     ! foliage projective cover is then the product of density and individual crown area
-    fpc(:) = crown_area_tile(:) * (1._wp - EXP(-k_fpc * lai_ind(:) * (1._wp + k_sai2lai)))
+    fpc(:) = crown_area_tile(:) * (1._jp - EXP(-k_fpc * lai_ind(:) * (1._jp + k_sai2lai)))
 
   END FUNCTION calc_foliage_projective_cover_tile
 
@@ -497,11 +497,11 @@ CONTAINS
 
     !> 0.9 init local var
     !>
-    boc_cbalance(:)                 = 0.0_wp
-    greff(:)                        = 0.0_wp
-    greff_mortality_rate(:)         = 0.0_wp
-    self_thinning_mortality_rate(:) = 0.0_wp
-    bg_mortality_rate(:)            = 0.0_wp
+    boc_cbalance(:)                 = 0.0_jp
+    greff(:)                        = 0.0_jp
+    greff_mortality_rate(:)         = 0.0_jp
+    self_thinning_mortality_rate(:) = 0.0_jp
+    bg_mortality_rate(:)            = 0.0_jp
 
     ! differ between veg_dynamics_schemes: population & none
     SELECT CASE (veg_dynamics_scheme)
@@ -512,7 +512,7 @@ CONTAINS
         IF (lai_tvegdyn_mavg(ic) > eps8) THEN
           ! growth efficiency per unit leaf area in mol C / m2 LAI / yr
           !   the application of 'MAX()' avoids negative values of greff_mortality_rate(ic) and mortality_rate(ic)
-          greff(ic) = MAX(net_growth_tvegdyn_mavg(ic) / lai_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_wp, 0.0_wp)
+          greff(ic) = MAX(net_growth_tvegdyn_mavg(ic) / lai_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_jp, 0.0_jp)
           !>  1.1 deduce mortality from asymptoptic mortality rate given growth efficiency,
           !>     below a minimum threshold mortality rises to 100%
           !>
@@ -522,23 +522,23 @@ CONTAINS
           !           this "static" value of k1_mort_greff per PFT may be replaced by future implementations
           !             of explicit disturbance regimes
           IF (greff(ic) > min_greff) THEN
-            greff_mortality_rate(ic) = lctlib_k1_mort_greff / (k2_mort_greff * greff(ic) + 1.0_wp)
+            greff_mortality_rate(ic) = lctlib_k1_mort_greff / (k2_mort_greff * greff(ic) + 1.0_jp)
           ELSE
-            greff_mortality_rate(ic) = 1.0_wp / (k3_mort_greff * greff(ic) + 1.0_wp)
+            greff_mortality_rate(ic) = 1.0_jp / (k3_mort_greff * greff(ic) + 1.0_jp)
           END IF
         END IF
       END DO
       !>  1.2 self-thinning related mortality
       !>
-      self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max, 0.0_wp)
+      self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max, 0.0_jp)
       ! ! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
       ! ! in mol / m2 LAI / year \n
       ! ! transformed to a mortality estimate using a Weibull function
-      ! boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &
-      !   &               - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib_tau_leaf/lctlib_sla
+      ! boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_jp &
+      !   &               - ( 1._jp + fresp_growth ) * 1.0_jp/lctlib_tau_leaf/lctlib_sla
       ! WHERE(boc_cbalance(:) < (-eps4))
       !   mortality_rate(:) = mortality_rate(:) &
-      !     &                 + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
+      !     &                 + ( 1._jp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
       ! END WHERE
 
       !>  1.3 quasi-stochastic background mortality
@@ -551,7 +551,7 @@ CONTAINS
       ENDSELECT
       !>  1.4 total mortality is the sum of all mortality terms, and limited to one
       !>
-      mortality_rate(:) = MIN(greff_mortality_rate(:) + self_thinning_mortality_rate(:) + bg_mortality_rate(:), 1.0_wp) &
+      mortality_rate(:) = MIN(greff_mortality_rate(:) + self_thinning_mortality_rate(:) + bg_mortality_rate(:), 1.0_jp) &
         &                 / one_year / one_day * dtime
     CASE ("none")
       SELECT CASE (lctlib_growthform)
@@ -574,7 +574,7 @@ CONTAINS
             ! If remaining biomass is smaller than litterfall + mortality put remaining biomass to litter,
             ! else reduce biomass by mortality rate
             hlp1 = veg_pool_mt(ix_comp, ix_elem, ic) * mortality_rate(ic)
-            IF (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic) - hlp1 <= 0.0_wp) THEN
+            IF (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic) - hlp1 <= 0.0_jp) THEN
               veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
                 &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
                 &                                         - veg_litterfall_mt(ix_comp, ix_elem, ic))
@@ -583,7 +583,7 @@ CONTAINS
                 &                                       + (veg_pool_mt(ix_comp, ix_elem, ic)    &
                 &                                         * mortality_rate(ic))
             END IF
-            veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
+            veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_jp, veg_litterfall_mt(ix_comp, ix_elem, ic))
           END IF
         END DO
       END DO
@@ -685,21 +685,21 @@ CONTAINS
           k_herbivory_act              = k_herbivory_pasture
         END IF
         ! long-term average productivity (mol/m2/year)
-        hlp1 = net_growth_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_wp
+        hlp1 = net_growth_tvegdyn_mavg(ic) * one_day * one_year / 1.e6_jp
 
         ! limit herbivory to only occur beyond minimal LAI and vegetation net growth
         IF (lai(ic) > min_lai_herbivory .AND. hlp1 > min_net_growth_herbivory_act ) THEN
           ! maximum herbivory fraction increases with long-term average productivity according to
           ! power law (Cyr & Pace, 1993). Following McNaughton et al. 1989, a lower limit of herbivory is applied
           ! note that this leads to a quadratic rise in the flux because that is fherbivory * pool
-          fact_lim_carbon = (hlp1 - min_net_growth_herbivory_act) ** (4._wp / 3._wp - 1._wp)
+          fact_lim_carbon = (hlp1 - min_net_growth_herbivory_act) ** (4._jp / 3._jp - 1._jp)
           ! herbivory fraction increases with N content, note this is
           ! rearranged from (leafN/leafC)/(maximum leaf N:C)
           fact_lim_nitrogen = veg_pool_mt(ix_leaf, ixN, ic) / veg_pool_mt(ix_leaf, ixC, ic) &
             &                 * lctlib_cn_leaf_min
           ! herbivory fraction is limited to the fraction that has not died yet
           fract_herbivory(ic) = fract_herbivory(ic) &
-            &                   + (1.0_wp - mortality_rate(ic)) &
+            &                   + (1.0_jp - mortality_rate(ic)) &
             &                   * fact_lim_carbon * fact_lim_nitrogen &
             &                   * k_herbivory_act / one_day * dtime
         END IF
@@ -725,14 +725,14 @@ CONTAINS
                   &   (veg_pool_mt(ix_comp, ix_elem, ic) - veg_litterfall_mt(ix_comp, ix_elem, ic)) &
                   &   / veg_pool_mt(ix_comp, ix_elem, ic))
               ELSE
-                eff_fract_herbivory = 0.0_wp
+                eff_fract_herbivory = 0.0_jp
               END IF
               ! for carbon and carbon isotopes
               IF (ix_elem == ixC .OR. ix_elem == ixC13 .OR. ix_elem == ixC14) THEN
                 veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) &
                   &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
-                  &                                       * (1._wp - ftroph_loss_herbivory) * eff_fract_herbivory)
-                hlp1 = ftroph_loss_herbivory * eff_fract_herbivory * veg_pool_mt(ix_comp, ix_elem, ic) * 1.e6_wp / dtime
+                  &                                       * (1._jp - ftroph_loss_herbivory) * eff_fract_herbivory)
+                hlp1 = ftroph_loss_herbivory * eff_fract_herbivory * veg_pool_mt(ix_comp, ix_elem, ic) * 1.e6_jp / dtime
                 ! leaf herbivory
                 IF (ix_comp == ix_leaf) THEN
                   IF (ix_elem == ixC) THEN
@@ -763,7 +763,7 @@ CONTAINS
                   &                                       + (veg_pool_mt(ix_comp, ix_elem, ic) &
                   &                                       * eff_fract_herbivory)
               END IF
-              veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_wp, veg_litterfall_mt(ix_comp, ix_elem, ic))
+              veg_litterfall_mt(ix_comp, ix_elem, ic) = MAX(0.0_jp, veg_litterfall_mt(ix_comp, ix_elem, ic))
             END IF
           END DO
         END IF
@@ -822,7 +822,7 @@ CONTAINS
 
     !>  1.1 light limitation
     !>
-    flim_light(:) = MAX(fpc_max - fpc(:), 0.0_wp)
+    flim_light(:) = MAX(fpc_max - fpc(:), 0.0_jp)
 
     ! depending on the red to far-red ratio of the light at the bottom of the canopy
     ! flim_light(:) = EXP(-(lctlib_lambda_est_light * &
@@ -831,19 +831,19 @@ CONTAINS
     !> 1.2 temperature and soil moisture limitation
     !!
     !! @NOTE  OBS: should be top soil moisture!
-    WHERE((t_air_week_mavg(:) - Tzero) < 0.0_wp .OR. growing_season(:) < test_false_true)
-      flim_temp(:) = 0.0_wp
+    WHERE((t_air_week_mavg(:) - Tzero) < 0.0_jp .OR. growing_season(:) < test_false_true)
+      flim_temp(:) = 0.0_jp
     ELSEWHERE
-      flim_temp(:) = 1.0_wp - EXP(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero)) ** k_est_temp)
+      flim_temp(:) = 1.0_jp - EXP(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero)) ** k_est_temp)
     END WHERE
-    flim_moist(:)  = 1.0_wp - EXP(-(lambda_est_moist * wtr_plant_avail_rel(:)) ** k_est_moist)
+    flim_moist(:)  = 1.0_jp - EXP(-(lambda_est_moist * wtr_plant_avail_rel(:)) ** k_est_moist)
 
     !>  1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !>
     establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) &
-      &                     * 1.0_wp / lctlib_tau_seed_est / one_day / one_year * dtime
+      &                     * 1.0_jp / lctlib_tau_seed_est / one_day / one_year * dtime
     WHERE(establishment_rate(:) < eps8)
-      establishment_rate(:) = 0.0_wp
+      establishment_rate(:) = 0.0_jp
     ENDWHERE
     ! calc vegetation establishment
     ! loop over bgcm elements

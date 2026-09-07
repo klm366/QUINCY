@@ -124,7 +124,7 @@ CONTAINS
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
     use_alb_canopy            = .FALSE.
-    albedo_age_weight         = 0.5_wp
+    albedo_age_weight         = 0.5_jp
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))

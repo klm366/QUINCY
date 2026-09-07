@@ -49,12 +49,12 @@ CONTAINS
     ! Note: allocation fractions to product pools need to add up to one (asserted in update_pools_on_harvest)
     ! Below some European longterm averages inspired by numbers from Nuetzel (2021, LMU master thesis)
     ! possibly to be read from spatially and temporally varrying maps later
-    fract_wood_to_pp_fuel       = 0.4_wp  !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
-    fract_wood_to_pp_paper      = 0.25_wp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
-    fract_wood_to_pp_fiberboard = 0.05_wp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
-    fract_wood_to_pp_oirw       = 0.05_wp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
-    fract_wood_to_pp_pv         = 0.05_wp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
-    fract_wood_to_pp_sawnwood   = 0.2_wp  !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_fuel       = 0.4_jp  !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_paper      = 0.25_jp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_fiberboard = 0.05_jp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_oirw       = 0.05_jp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_pv         = 0.05_jp !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
+    fract_wood_to_pp_sawnwood   = 0.2_jp  !< European longterm average inspired by numbers from Nuetzel (2021, LMU master thesis)
 
   END SUBROUTINE init_q_syl_constants
 

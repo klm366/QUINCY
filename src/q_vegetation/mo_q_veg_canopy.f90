@@ -150,17 +150,17 @@ CONTAINS
     !>
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1,nc
-      leaf_nitrogen_tc(ic)   = 0._wp
+      leaf_nitrogen_tc(ic)   = 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO icanopy = 1,ncanopy
       DO ic = 1,nc
-        lai_cl(ic,icanopy)           = 0._wp
-        cumm_lai_cl(ic,icanopy)      = 0._wp
-        leaf_nitrogen_cl(ic,icanopy) = 0._wp
-        mid_point_lai_cl(ic,icanopy) = 0._wp
+        lai_cl(ic,icanopy)           = 0._jp
+        cumm_lai_cl(ic,icanopy)      = 0._jp
+        leaf_nitrogen_cl(ic,icanopy) = 0._jp
+        mid_point_lai_cl(ic,icanopy) = 0._jp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -206,10 +206,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       IF (lai(ic) > dz(1)) THEN
-        leaf_nitrogen_tc(ic) = leaf_nitrogen(ic) * 1000._wp * kn / (1._wp - exp(-kn * lai(ic)))
+        leaf_nitrogen_tc(ic) = leaf_nitrogen(ic) * 1000._jp * kn / (1._jp - exp(-kn * lai(ic)))
       ELSEIF(lai(ic) > eps8) THEN
         ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-        leaf_nitrogen_tc(ic) = leaf_nitrogen(ic) * 1000._wp /lai(ic)
+        leaf_nitrogen_tc(ic) = leaf_nitrogen(ic) * 1000._jp /lai(ic)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -247,12 +247,12 @@ CONTAINS
     DO icanopy = 1,ncanopy
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        IF(lai_cl(ic,icanopy) > 0.0_wp) THEN
+        IF(lai_cl(ic,icanopy) > 0.0_jp) THEN
           !$ACC LOOP SEQ
           DO ii_canopy = 1,icanopy
             mid_point_lai_cl(ic,icanopy) = mid_point_lai_cl(ic,icanopy) + lai_cl(ic,ii_canopy)
           END DO
-          mid_point_lai_cl(ic,icanopy) =(mid_point_lai_cl(ic,icanopy) - lbounds(icanopy)) / 2.0_wp
+          mid_point_lai_cl(ic,icanopy) =(mid_point_lai_cl(ic,icanopy) - lbounds(icanopy)) / 2.0_jp
         END IF
       END DO
       !$ACC END LOOP
@@ -292,10 +292,10 @@ CONTAINS
             IF (cumm_lai_cl(ic,icanopy) > eps12) THEN   ! this layer has some leafs
               leaf_nitrogen_cl(ic,icanopy) = leaf_nitrogen_tc(ic) * exp(-kn * cumm_lai_cl(ic,icanopy))
             ELSE
-              leaf_nitrogen_cl(ic,icanopy) = 0.0_wp  ! set N to zero if layer has no leafs
+              leaf_nitrogen_cl(ic,icanopy) = 0.0_jp  ! set N to zero if layer has no leafs
             END IF
           ELSE
-            leaf_nitrogen_cl(ic,icanopy)   = 0.0_wp  ! set N to zero if layer has no leafs
+            leaf_nitrogen_cl(ic,icanopy)   = 0.0_jp  ! set N to zero if layer has no leafs
           END IF
         END IF
       END DO
@@ -320,10 +320,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO icanopy = 1,ncanopy
       DO ic = 1, nc
-        IF (leaf_nitrogen_cl(ic,icanopy) > 0.0_wp) THEN
+        IF (leaf_nitrogen_cl(ic,icanopy) > 0.0_jp) THEN
           fn_oth_cl(ic,icanopy) = lctlib_k0_fn_struc - k1_fn_struc * leaf_nitrogen_cl(ic,icanopy)
         ELSE
-          fn_oth_cl(ic,icanopy) = 1.0_wp
+          fn_oth_cl(ic,icanopy) = 1.0_jp
         END IF
         ! structural limitation to the indefinite increase in phot. N described by above equation
         IF (fn_oth_cl(ic,icanopy) < lctlib_fn_oth_min) fn_oth_cl(ic,icanopy) = lctlib_fn_oth_min
@@ -341,15 +341,15 @@ CONTAINS
         DO ic = 1, nc
           IF(lai_cl(ic,icanopy) > eps8) THEN ! canopy layers with leaves
             ! fraction in chlorophyll
-            fn_chl_cl(ic,icanopy) = MIN(0.99_wp - fn_oth_cl(ic,icanopy), &
+            fn_chl_cl(ic,icanopy) = MIN(0.99_jp - fn_oth_cl(ic,icanopy), &
               &              (k0_fn_chl - k1_fn_chl * exp(-kfn_chl * cumm_lai_cl(ic,icanopy))) / chl2n)
             ! fraction in PepC
             fn_pepc_cl(ic,icanopy) = f_pepc
             ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-            fn_et_cl(ic,icanopy) = (1._wp - (fn_oth_cl(ic,icanopy) + fn_chl_cl(ic,icanopy) + fn_pepc_cl(ic,icanopy) )) &
-              &                     / (1._wp + jmax2n / (jmax2vcmax * vcmax2n))
+            fn_et_cl(ic,icanopy) = (1._jp - (fn_oth_cl(ic,icanopy) + fn_chl_cl(ic,icanopy) + fn_pepc_cl(ic,icanopy) )) &
+              &                     / (1._jp + jmax2n / (jmax2vcmax * vcmax2n))
             ! fraction of Rubisco is determined as the remainder
-            fn_rub_cl(ic,icanopy) = 1._wp - fn_oth_cl(ic,icanopy) - fn_chl_cl(ic,icanopy) &
+            fn_rub_cl(ic,icanopy) = 1._jp - fn_oth_cl(ic,icanopy) - fn_chl_cl(ic,icanopy) &
               &                           - fn_et_cl(ic,icanopy) - fn_pepc_cl(ic,icanopy)
 
             ! Note: did not replace (:,:) by (ic,icanopy) in the outcommented code below
@@ -360,25 +360,25 @@ CONTAINS
             !               ((molar_mass_C / lctlib_sla)/carbon_per_dryweight_leaf)
             ! !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
             ! ! implied Vmax and Jmax in nmol / g DW / s
-            ! !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
-            ! !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
+            ! !hlp1(:,:) = exp(4.44904_jp + 0.3472_jp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
+            ! !hlp2(:,:) = exp(5.49435_jp + 0.37345_jp*log10(hlp4(:,:)) + 0.41435_jp*log10(hlp3(:,:)))
             ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | micro-mol / m2 / s
             ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
             ! !                      exp(X) = vmax2n * frub * leaf_n
             ! !                      frub = exp(X) / leaf_n / vmax2n
-            ! !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / &
-            ! !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
-            ! !fn_et_cl(:,:) = exp(5.49435_wp + 0.37345_wp*log(hlp4(:,:)) + 0.41435_wp*log(hlp3(:,:))) / 4.0_wp / &
-            ! !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
-            ! !fn_oth_cl(:,:) = 1.0_wp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
+            ! !fn_rub_cl(:,:) = exp(4.44904_jp + 0.3472_jp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / &
+            ! !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._jp / (molar_mass_C / lctlib_sla / 0.48_jp))
+            ! !fn_et_cl(:,:) = exp(5.49435_jp + 0.37345_jp*log(hlp4(:,:)) + 0.41435_jp*log(hlp3(:,:))) / 4.0_jp / &
+            ! !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._jp / (molar_mass_C / lctlib_sla / 0.48_jp))
+            ! !fn_oth_cl(:,:) = 1.0_jp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
 
           ELSE ! canopy layers without leaves
-            leaf_nitrogen_cl(ic,icanopy)  = 0.0_wp
-            fn_oth_cl(ic,icanopy)         = 1.0_wp
-            fn_chl_cl(ic,icanopy)         = 0.0_wp
-            fn_et_cl(ic,icanopy)          = 0.0_wp
-            fn_rub_cl(ic,icanopy)         = 0.0_wp
-            fn_pepc_cl(ic,icanopy)        = 0.0_wp
+            leaf_nitrogen_cl(ic,icanopy)  = 0.0_jp
+            fn_oth_cl(ic,icanopy)         = 1.0_jp
+            fn_chl_cl(ic,icanopy)         = 0.0_jp
+            fn_et_cl(ic,icanopy)          = 0.0_jp
+            fn_rub_cl(ic,icanopy)         = 0.0_jp
+            fn_pepc_cl(ic,icanopy)        = 0.0_jp
           END IF
         END DO
       END DO
@@ -418,19 +418,19 @@ CONTAINS
             ! fraction in PepC
             fn_pepc_cl(:,icanopy) = f_pepc
             ! fraction of electron-transport is dependent on N in electron transport versus N in light harvesting
-            fn_et_cl(:,icanopy)   = (1._wp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
-                                    (1._wp + jmax2n/(jmax2vcmax * vcmax2n))
+            fn_et_cl(:,icanopy)   = (1._jp - (fn_oth_cl(:,icanopy) + fn_chl_cl(:,icanopy) + fn_pepc_cl(:,icanopy) )) / &
+                                    (1._jp + jmax2n/(jmax2vcmax * vcmax2n))
             ! fraction of Rubisco is determined as the remainder
-            fn_rub_cl(:,icanopy)  = 1._wp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - &
+            fn_rub_cl(:,icanopy)  = 1._jp - fn_oth_cl(:,icanopy) - fn_chl_cl(:,icanopy) - fn_et_cl(:,icanopy) - &
                                       fn_pepc_cl(:,icanopy)
           ENDWHERE
         ELSEWHERE
-              leaf_nitrogen_cl(:,icanopy) = 0.0_wp
-              fn_oth_cl(:,icanopy)        = 1.0_wp
-              fn_chl_cl(:,icanopy)        = 0.0_wp
-              fn_et_cl(:,icanopy)         = 0.0_wp
-              fn_rub_cl(:,icanopy)        = 0.0_wp
-              fn_pepc_cl(:,icanopy)       = 0.0_wp
+              leaf_nitrogen_cl(:,icanopy) = 0.0_jp
+              fn_oth_cl(:,icanopy)        = 1.0_jp
+              fn_chl_cl(:,icanopy)        = 0.0_jp
+              fn_et_cl(:,icanopy)         = 0.0_jp
+              fn_rub_cl(:,icanopy)        = 0.0_jp
+              fn_pepc_cl(:,icanopy)       = 0.0_jp
         ENDWHERE
 
         ! for canopy layer > 1
@@ -446,12 +446,12 @@ CONTAINS
                  fleaf_sunlit_cl(:,icanopy)  = fleaf_sunlit_cl(:,icanopy-1)
               ENDWHERE
            ELSEWHERE
-              leaf_nitrogen_cl(:,icanopy) = 0.0_wp
-              fn_oth_cl(:,icanopy)        = 1.0_wp
-              fn_chl_cl(:,icanopy)        = 0.0_wp
-              fn_et_cl(:,icanopy)         = 0.0_wp
-              fn_rub_cl(:,icanopy)        = 0.0_wp
-              fn_pepc_cl(:,icanopy)       = 0.0_wp
+              leaf_nitrogen_cl(:,icanopy) = 0.0_jp
+              fn_oth_cl(:,icanopy)        = 1.0_jp
+              fn_chl_cl(:,icanopy)        = 0.0_jp
+              fn_et_cl(:,icanopy)         = 0.0_jp
+              fn_rub_cl(:,icanopy)        = 0.0_jp
+              fn_pepc_cl(:,icanopy)       = 0.0_jp
            ENDWHERE
         ENDDO ! icanopy
 
@@ -589,10 +589,10 @@ CONTAINS
       !> 1.0 Set N fractions to previous values and calculate photosynthesis for avererage conditions
       ! set fractions to previous values. In current code chl + et+ rub=1
       ! all other routines chl +et +rub +oth = 1
-      fn_chl0_cl   = fn_chl_cl /(1._wp-fn_oth_cl)
-      fn_rub0_cl   = fn_rub_cl /(1._wp-fn_oth_cl)
-      fn_et0_cl    = fn_et_cl  /(1._wp-fn_oth_cl)
-      fn_pepc0_cl  = fn_pepc_cl/(1._wp-fn_oth_cl)
+      fn_chl0_cl   = fn_chl_cl /(1._jp-fn_oth_cl)
+      fn_rub0_cl   = fn_rub_cl /(1._jp-fn_oth_cl)
+      fn_et0_cl    = fn_et_cl  /(1._jp-fn_oth_cl)
+      fn_pepc0_cl  = fn_pepc_cl/(1._jp-fn_oth_cl)
 
       fn_chl_cl    = fn_chl0_cl
       fn_et_cl     = fn_et0_cl
@@ -619,10 +619,10 @@ CONTAINS
                                  beta_soil_ps                  , &
                                  beta_sinklim_ps               , &
                                  beta_soil_gs                  , &
-                                 fn_chl0_cl*(1._wp-fn_oth_cl)  , &
-                                 fn_et0_cl*(1._wp-fn_oth_cl)   , &
-                                 fn_rub0_cl*(1._wp-fn_oth_cl)  , &
-                                 fn_pepc0_cl*(1._wp-fn_oth_cl) , &
+                                 fn_chl0_cl*(1._jp-fn_oth_cl)  , &
+                                 fn_et0_cl*(1._jp-fn_oth_cl)   , &
+                                 fn_rub0_cl*(1._jp-fn_oth_cl)  , &
+                                 fn_pepc0_cl*(1._jp-fn_oth_cl) , &
                                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                                  leaf_nitrogen_cl              , &
                                  t_jmax_opt                    , &
@@ -637,7 +637,7 @@ CONTAINS
 
       !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll
       !!
-      fn_chl_cl = MIN(fn_chl0_cl * (1.0_wp + delta_n_fraction*dtime/one_day), 1.0_wp)
+      fn_chl_cl = MIN(fn_chl0_cl * (1.0_jp + delta_n_fraction*dtime/one_day), 1.0_jp)
 
       ! optimal N fraction assuming Aj=Av=Apepc
       CALL calc_coordination_n_fractions(ps_pathway, &
@@ -657,8 +657,8 @@ CONTAINS
                t_air, press_srf, co2_mixing_ratio, aerodyn_cond, t_acclim, &
                ppfd_sunlit_cl, ppfd_shaded_cl, fleaf_sunlit_cl, &
                beta_air, beta_soa,beta_soil_ps, beta_sinklim_ps, beta_soil_gs, &
-               fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
-               fn_pepc_cl*(1._wp-fn_oth_cl),&
+               fn_chl_cl*(1._jp-fn_oth_cl), fn_et_cl*(1._jp-fn_oth_cl), fn_rub_cl*(1._jp-fn_oth_cl), &
+               fn_pepc_cl*(1._jp-fn_oth_cl),&
                lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                leaf_nitrogen_cl, &
                t_jmax_opt, &
@@ -670,7 +670,7 @@ CONTAINS
       IF (an_cl < an0_cl) THEN
 
         ! decrease N fraction in chlorophyll
-        fn_chl_cl  = MAX(fn_chl0_cl * (1._wp - delta_n_fraction*dtime/one_day), eps8)
+        fn_chl_cl  = MAX(fn_chl0_cl * (1._jp - delta_n_fraction*dtime/one_day), eps8)
         fn_et_cl   = fn_et0_cl
         fn_rub_cl  = fn_rub0_cl
         fn_pepc_cl = fn_pepc0_cl
@@ -692,8 +692,8 @@ CONTAINS
                  t_air, press_srf, co2_mixing_ratio, aerodyn_cond, t_acclim, &
                  ppfd_sunlit_cl, ppfd_shaded_cl, fleaf_sunlit_cl,&
                  beta_air, beta_soa,beta_soil_ps, beta_sinklim_ps,beta_soil_gs, &
-                 fn_chl_cl*(1._wp-fn_oth_cl), fn_et_cl*(1._wp-fn_oth_cl), fn_rub_cl*(1._wp-fn_oth_cl), &
-                 fn_pepc_cl*(1._wp-fn_oth_cl),&
+                 fn_chl_cl*(1._jp-fn_oth_cl), fn_et_cl*(1._jp-fn_oth_cl), fn_rub_cl*(1._jp-fn_oth_cl), &
+                 fn_pepc_cl*(1._jp-fn_oth_cl),&
                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                  leaf_nitrogen_cl, &
                  t_jmax_opt, &
@@ -722,10 +722,10 @@ CONTAINS
 
       !> 4.0 Transform optimal fractions to fractions of total canopy N
       !!
-      fn_chl_cl   = fn_chl_cl *(1._wp-fn_oth_cl)
-      fn_rub_cl   = fn_rub_cl *(1._wp-fn_oth_cl)
-      fn_et_cl    = fn_et_cl  *(1._wp-fn_oth_cl)
-      fn_pepc_cl  = fn_pepc_cl*(1._wp-fn_oth_cl)
+      fn_chl_cl   = fn_chl_cl *(1._jp-fn_oth_cl)
+      fn_rub_cl   = fn_rub_cl *(1._jp-fn_oth_cl)
+      fn_et_cl    = fn_et_cl  *(1._jp-fn_oth_cl)
+      fn_pepc_cl  = fn_pepc_cl*(1._jp-fn_oth_cl)
 
     ENDIF ! IF(lai_cl > eps8)
 
@@ -787,7 +787,7 @@ CONTAINS
     ! C4 / C3 plant
     IF (ps_pathway == ic4phot) THEN
        ! fraction in Rubisco
-       fn_rub_opt_cl  = (1._wp - fn_chl_cl)/(1._wp + m_rub/hlp2 + m_rub/hlp1)
+       fn_rub_opt_cl  = (1._jp - fn_chl_cl)/(1._jp + m_rub/hlp2 + m_rub/hlp1)
        ! fraction in electron transport
        fn_et_opt_cl   = fn_rub_opt_cl * m_rub/hlp2
        ! fraction in PEPc
@@ -795,11 +795,11 @@ CONTAINS
        IF (fn_pepc_opt_cl < eps8) fn_pepc_opt_cl = eps8
     ELSE
        ! fraction in Rubisco
-       fn_rub_opt_cl  = (1._wp - fn_chl_cl)/(1._wp + (m_rub)/(hlp2))
+       fn_rub_opt_cl  = (1._jp - fn_chl_cl)/(1._jp + (m_rub)/(hlp2))
        ! fraction in electron transport
        fn_et_opt_cl   = fn_rub_opt_cl * (m_rub)/(hlp2)
        ! fraction in PEPc
-       fn_pepc_opt_cl = 0._wp
+       fn_pepc_opt_cl = 0._jp
     ENDIF
     ! ensure fn_rub_opt_cl & fn_et_opt_cl are > zero
     IF (fn_rub_opt_cl < eps8) fn_rub_opt_cl = eps8
@@ -856,7 +856,7 @@ CONTAINS
     IF(ps_pathway == ic4phot) THEN
        hlp3 = ABS(fn_pepc_opt_cl-fn_pepc_cl)/ fn_pepc_cl
     ELSE
-       hlp3 = 0.0_wp
+       hlp3 = 0.0_jp
     ENDIF
 
 
@@ -869,23 +869,23 @@ CONTAINS
        fn_pepc_cl = fn_pepc_opt_cl
     ! if not, change by maximum amount into right direction
     ELSEIF (fn_rub_cl < fn_rub_opt_cl) THEN
-       fn_rub_cl = MIN(fn_rub_cl * (1.0_wp+delta_n_fraction), fn_rub_opt_cl)
+       fn_rub_cl = MIN(fn_rub_cl * (1.0_jp+delta_n_fraction), fn_rub_opt_cl)
        IF (fn_pepc_cl < fn_pepc_opt_cl) THEN
-          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_jp+delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_jp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ELSE
-          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_jp-delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_jp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ENDIF
     ! else ...
     ELSE
-       fn_rub_cl = MIN(fn_rub_cl * (1.0_wp-delta_n_fraction), fn_rub_opt_cl)
+       fn_rub_cl = MIN(fn_rub_cl * (1.0_jp-delta_n_fraction), fn_rub_opt_cl)
        IF (fn_pepc_cl < fn_pepc_opt_cl) THEN
-          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_wp+delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MAX(fn_pepc_cl * (1.0_jp+delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_jp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ELSE
-          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_wp-delta_n_fraction), fn_pepc_opt_cl)
-          fn_et_cl    = MAX(1.0_wp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
+          fn_pepc_cl  = MIN(fn_pepc_cl * (1.0_jp-delta_n_fraction), fn_pepc_opt_cl)
+          fn_et_cl    = MAX(1.0_jp -fn_rub_cl - fn_pepc_cl - fn_chl_cl, eps8)
        ENDIF
     ENDIF
 
@@ -1047,7 +1047,7 @@ CONTAINS
     fn_et_new_cl(:,:)         = fn_et_cl(:,:)
     fn_rub_new_cl(:,:)        = fn_rub_cl(:,:)
     fn_pepc_new_cl(:,:)       = fn_pepc_cl(:,:)
-    beta_sinklim_local        = 1._wp
+    beta_sinklim_local        = 1._jp
 
     !> 1.0 copy current plant state into dummy variables
     !!
@@ -1070,7 +1070,7 @@ CONTAINS
     WHERE(veg_pool_leaf_carbon(:) > eps8)
        leaf_nitrogen_new(:) = veg_pool_leaf_nitrogen(:) + veg_pool_leaf_nitrogen(:) / veg_pool_leaf_carbon(:)
     ELSEWHERE
-       leaf_nitrogen_new(:) = 1._wp / lctlib_cn_leaf
+       leaf_nitrogen_new(:) = 1._jp / lctlib_cn_leaf
     END WHERE
 
     ! recompute canopy layer LAI and foliar N with new numbers
@@ -1109,14 +1109,14 @@ CONTAINS
 
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:) < eps8)
-       loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
-       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) * fract_par_diffuse(:) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_sunlit_cl(:,1)  = (1._jp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._jp - lctlib_sigma_vis) * fract_par_diffuse(:) * swpar_srf_down(:) * rad2ppfd
        loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 
     ! calculate photosynthesis by integration over canopy layers containing leaves
-    net_assimilation_new(:)  = 0.0_wp
-    canopy_cond_new(:)       = 0.0_wp
+    net_assimilation_new(:)  = 0.0_jp
+    canopy_cond_new(:)       = 0.0_jp
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(     lctlib_gmin                     , & ! lctlib
                                     lctlib_g0                       , &
@@ -1168,14 +1168,14 @@ CONTAINS
     END DO
     WHERE(canopy_cond(:) > eps8 .AND. canopy_cond_new(:) > eps8)
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) ) - &
+                                (q_sat(:) - q_air(:)) / (1._jp / canopy_cond_new(:) + 1._jp / aerodyn_cond(:) ) - &
                                 press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond(:) + 1._wp / aerodyn_cond(:) )
+                                (q_sat(:) - q_air(:)) / (1._jp / canopy_cond(:) + 1._jp / aerodyn_cond(:) )
     ELSEWHERE (canopy_cond_new(:) > eps8) ! this might cover only the points in the vector that are not true in the above where statement
        unit_transpiration(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                (q_sat(:) - q_air(:)) / (1._wp / canopy_cond_new(:) + 1._wp / aerodyn_cond(:) )
+                                (q_sat(:) - q_air(:)) / (1._jp / canopy_cond_new(:) + 1._jp / aerodyn_cond(:) )
     ELSEWHERE
-      unit_transpiration(:) = 0.0_wp
+      unit_transpiration(:) = 0.0_jp
     END WHERE
 
   END SUBROUTINE calc_marginal_canopy_flux_increment
@@ -1332,7 +1332,7 @@ CONTAINS
     loc_ppfd_sunlit_cl(:,:)   = ppfd_sunlit_tcnl_mavg_cl(:,:)
     loc_ppfd_shaded_cl(:,:)   = ppfd_shaded_tcnl_mavg_cl(:,:)
     loc_fleaf_sunlit_cl(:,:)  = fleaf_sunlit_tcnl_mavg_cl(:,:)
-    beta_sinklim_ps_local(:)  = 1._wp
+    beta_sinklim_ps_local(:)  = 1._jp
 
     fn_chl_new_cl(:,:)   = fn_chl_cl(:,:)
     fn_et_new_cl(:,:)    = fn_et_cl(:,:)
@@ -1347,22 +1347,22 @@ CONTAINS
           ! Only change leaf N if leaves present
           IF(veg_pool_leaf_nitrogen(ic) > eps4)THEN
              !> Check the N status of the plant. If there is not enough N for growth, decrease leaf N
-             IF ((uptake_n(ic) *  mavg_period_tgrowth * one_day * 1e-6_wp + &
-                   resorp_fract_leaf * veg_pool_leaf_nitrogen(ic) * 1._wp / (lctlib_tau_leaf * one_year * one_day) * &
-                   mavg_period_tgrowth * one_day * 1e-6_wp + labile_nitrogen(ic)) * growth_cn(ic) < &
-                 (npp(ic)*  mavg_period_tgrowth * 1e-6_wp * one_day + labile_carbon(ic))) THEN
-                leaf_cn_direction(ic) = -1._wp
+             IF ((uptake_n(ic) *  mavg_period_tgrowth * one_day * 1e-6_jp + &
+                   resorp_fract_leaf * veg_pool_leaf_nitrogen(ic) * 1._jp / (lctlib_tau_leaf * one_year * one_day) * &
+                   mavg_period_tgrowth * one_day * 1e-6_jp + labile_nitrogen(ic)) * growth_cn(ic) < &
+                 (npp(ic)*  mavg_period_tgrowth * 1e-6_jp * one_day + labile_carbon(ic))) THEN
+                leaf_cn_direction(ic) = -1._jp
 
              ELSE
                 !> Check for C optimality i.e. if increasing leaf N increases NPP
                 !!
-                npp_direction(:) = 0.0_wp
+                npp_direction(:) = 0.0_jp
                 DO dd = 1,3
-                   direction                 = REAL(dd,KIND=jp) - 2.0_wp
+                   direction                 = REAL(dd,KIND=jp) - 2.0_jp
                    leaf_nitrogen_new(ic) = veg_pool_leaf_carbon(ic) / target_cn_leaf(ic) * &
-                        (1.0_wp + direction * delta_n_leaf * dtime/one_day)
+                        (1.0_jp + direction * delta_n_leaf * dtime/one_day)
                    root_nitrogen_new(ic) = veg_pool_root_carbon(ic) / target_cn_fine_root(ic) * &
-                        (1.0_wp + direction * delta_n_leaf * dtime/one_day)
+                        (1.0_jp + direction * delta_n_leaf * dtime/one_day)
 
                 ! update N distribution in the canopy
                 CALL finish(routine, 'Call to calc_canopy_layers has been commented out due to compiling issues. Stop.')
@@ -1403,15 +1403,15 @@ CONTAINS
                 ! for optimal fractions this is only a aproximation
                 IF (lai(ic) > eps8) THEN
                    ! avoid division by zero for plants that have no leaf nitrogen
-                   WHERE (leaf_nitrogen_new_cl(ic,:) > eps8 .AND. fn_oth_cl(ic,:) < 1._wp)
+                   WHERE (leaf_nitrogen_new_cl(ic,:) > eps8 .AND. fn_oth_cl(ic,:) < 1._jp)
                       fn_rub_new_cl(ic,:)  = fn_rub_cl(ic,:)  * &
-                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                                                   (1._jp - fn_oth_new_cl(ic,:)) / (1._jp - fn_oth_cl(ic,:))
                       fn_et_new_cl(ic,:)   = fn_et_cl(ic,:)   * &
-                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                                                   (1._jp - fn_oth_new_cl(ic,:)) / (1._jp - fn_oth_cl(ic,:))
                       fn_pepc_new_cl(ic,:) = fn_pepc_cl(ic,:) * &
-                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                                                   (1._jp - fn_oth_new_cl(ic,:)) / (1._jp - fn_oth_cl(ic,:))
                       fn_chl_new_cl(ic,:)  = fn_chl_cl(ic,:)  * &
-                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                                                   (1._jp - fn_oth_new_cl(ic,:)) / (1._jp - fn_oth_cl(ic,:))
                    END WHERE
                 END IF
 
@@ -1458,11 +1458,11 @@ CONTAINS
 
                 ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
                 !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-                leaf_cn_direction(ic) = (REAL(MAXLOC(npp_direction, 1),KIND=jp) - 2.0_wp)
+                leaf_cn_direction(ic) = (REAL(MAXLOC(npp_direction, 1),KIND=jp) - 2.0_jp)
              ENDIF  ! if enough N available
 
           ELSE    ! IF(veg_pool_leaf_nitrogen(ic) > eps4)
-             leaf_cn_direction(ic) = 0.0_wp
+             leaf_cn_direction(ic) = 0.0_jp
           END IF  ! IF(veg_pool_leaf_nitrogen(ic) > eps4)
        END IF  ! IF(growing_season(ic) > test_false_true)
     END DO  ! ic=1,nc

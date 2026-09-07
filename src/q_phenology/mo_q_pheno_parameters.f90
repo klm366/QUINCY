@@ -44,8 +44,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_pheno_parameters'
 
-    gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
-    k_leafon_canopy           = 0.2_wp
+    gdd_t_air_threshold       = 5.0_jp + Tzero              !< citation or source ....  [ ? ]
+    k_leafon_canopy           = 0.2_jp
 
     !$ACC UPDATE DEVICE(gdd_t_air_threshold, k_leafon_canopy) ASYNC(1)
 

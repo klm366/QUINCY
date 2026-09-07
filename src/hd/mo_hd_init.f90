@@ -86,7 +86,7 @@ CONTAINS
       ! Initialize boundary conditions
       !
       ! Number of base flow reservoirs
-      dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._wp
+      dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._jp
 
       ! Maximum number of reservoirs
       ! If this is changed one has to change the definition of the three grids in mo_hd_config_class!!!
@@ -146,7 +146,7 @@ CONTAINS
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
       ELSE
-        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._jp
       END IF
 
       nproma = grid%nproma
@@ -216,9 +216,9 @@ CONTAINS
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
-        & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(1._jp, 0._jp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
-        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(0._jp, 1._jp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL input_file%Close()
@@ -237,7 +237,7 @@ CONTAINS
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
-        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(0._jp, 1._jp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL input_file%Close()
@@ -366,9 +366,9 @@ CONTAINS
 
       ALLOCATE(tile_fract(grid%nproma, grid%nblks))
       CALL tile%Get_fraction(fract=tile_fract(:,:))
-      dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_o_max)
-      dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_b_max)
-      dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_r_max)
+      dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._jp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_o_max)
+      dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._jp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_b_max)
+      dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._jp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_r_max)
 
     END IF
 

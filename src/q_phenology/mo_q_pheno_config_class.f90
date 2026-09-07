@@ -71,7 +71,7 @@ CONTAINS
     lrestart_cont = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
     bc_filename = 'bc_land_phenology.nc'
     ic_filename = 'ic_land_phenology.nc'
-    lai_max     = -1.0_wp
+    lai_max     = -1.0_jp
     !first_call_phenology_this_day = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist

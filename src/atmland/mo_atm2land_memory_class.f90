@@ -37,7 +37,7 @@ MODULE mo_a2l_memory_class
       & DEBUG_VAR           , &
       & CO2_air             , &
       & CO2_air_mol         , &
-      & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
+      & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._jp
       & CO2_mixing_ratio_C13, & !< surface air 13CO2 mixing ratio [ppmv]
       & CO2_mixing_ratio_C14    !< surface air 14CO2 mixing ratio [scaled]
 
@@ -159,14 +159,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=777.7_wp )
+      & initval_r=777.7_jp )
 
     CALL mem%Add_var( 'co2_air', mem%CO2_air,                                                      &
       & hgrid, surface,                                                                            &
       & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
-      & lrestart=.FALSE., initval_r=6.077E-4_wp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
+      & lrestart=.FALSE., initval_r=6.077E-4_jp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
                                                   !    CO2:44.011 g/mol; dry air: 28,97 g/mol
                                                   !    400 ppm => 6.077*10^-4
 
@@ -176,7 +176,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
-      & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
+      & lrestart=.FALSE., initval_r=4.0E-4_jp ) ! R: I just choosed this value for 400 ppm
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
@@ -188,7 +188,7 @@ CONTAINS
         & output_level=FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
         & hgrid, surface, &
@@ -199,7 +199,7 @@ CONTAINS
         & output_level=FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
         & hgrid, surface, &
@@ -210,7 +210,7 @@ CONTAINS
         & output_level=FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
     END IF
 
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
@@ -220,7 +220,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=283.15_wp )  ! R: I just invented a value to start with...
+      & initval_r=283.15_jp )  ! R: I just invented a value to start with...
 
     CALL mem%Add_var( 'q_air', mem%q_air,                                                 &
       & hgrid, surface,                                                                   &
@@ -229,7 +229,7 @@ CONTAINS
       & prefix, suffix,                                                                   &
       & lrestart=.FALSE.,                                                                 &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'rain', mem%rain,                                      &
       & hgrid, surface,                                                      &
@@ -238,7 +238,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'snow', mem%snow,                                      &
       & hgrid, surface,                                                      &
@@ -247,7 +247,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'wind_air', mem%wind_air,                              &
       & hgrid, surface,                                                      &
@@ -256,7 +256,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'wind_10m', mem%wind_10m,                              &
       & hgrid, surface,                                                      &
@@ -265,7 +265,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'lw_srf_down', mem%lw_srf_down,                        &
       & hgrid, surface,                                                      &
@@ -274,7 +274,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=300.0_wp )
+      & initval_r=300.0_jp )
 
     CALL mem%Add_var( 'swvis_srf_down', mem%swvis_srf_down,                  &
       & hgrid, surface,                                                      &
@@ -283,7 +283,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=100.0_wp )
+      & initval_r=100.0_jp )
 
     CALL mem%Add_var( 'swnir_srf_down', mem%swnir_srf_down,                  &
       & hgrid, surface,                                                      &
@@ -292,7 +292,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
-      & initval_r=90.0_wp )
+      & initval_r=90.0_jp )
 
     CALL mem%Add_var( 'swpar_srf_down', mem%swpar_srf_down,                  &
       & hgrid, surface,                                                      &
@@ -301,7 +301,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
       & hgrid, surface,                                                      &
@@ -310,7 +310,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'press_srf', mem%press_srf,                            &
       & hgrid, surface,                                                      &
@@ -319,7 +319,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
-      & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
+      & initval_r=101325.0_jp )  ! R: I just took average atmospheric pressure
                                  !    at sea level as value to start with...
 
     IF (model%config%use_tmx) THEN
@@ -330,7 +330,7 @@ CONTAINS
         & prefix, suffix,                                                                   &
         & lrestart=.FALSE.,                                                                 &
         & output_level=BASIC, &
-        & initval_r=98300.0_wp )
+        & initval_r=98300.0_jp )
 
       CALL mem%Add_var( 'dz_srf', mem%dz_srf,                                  &
         & hgrid, surface,                                                      &
@@ -339,7 +339,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=FULL,                                                   &
-        & initval_r=10.0_wp )
+        & initval_r=10.0_jp )
 
       CALL mem%Add_var( 'rho_srf', mem%rho_srf,                                &
         & hgrid, surface,                                                      &
@@ -348,7 +348,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=BASIC,                                                  &
-        & initval_r=1.0_wp )
+        & initval_r=1.0_jp )
     ELSE
       CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
         & hgrid, surface,                                                      &
@@ -357,14 +357,14 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=jsbach_runs_standalone(),                                   &
         & output_level=FULL,                                                   &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
       CALL mem%Add_var( 'pch', mem%pch,                                        &
         & hgrid, surface,                                                      &
         & t_cf('pch', '', ''),                                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
     END IF
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
@@ -373,7 +373,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 't_bcoef', mem%t_bcoef,                                &
       & hgrid, surface,                                                      &
@@ -381,7 +381,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'q_acoef', mem%q_acoef,                                &
       & hgrid, surface,                                                      &
@@ -389,7 +389,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'q_bcoef', mem%q_bcoef,                                &
       & hgrid, surface,                                                      &
@@ -397,7 +397,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var( 'cos_zenith_angle', mem%cos_zenith_angle,              &
       & hgrid, surface,                                                      &
@@ -405,7 +405,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     ! lakes
     IF (.NOT. model%config%use_tmx .AND. One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
@@ -417,7 +417,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=FULL,                                                   &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL  mem%Add_var( 'drag_ice', mem%drag_ice,                             &
         & hgrid, surface,                                                      &
@@ -426,7 +426,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=FULL,                                                   &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 't_acoef_wtr', mem%t_acoef_wtr,                        &
         & hgrid, surface,                                                      &
@@ -434,7 +434,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 't_bcoef_wtr', mem%t_bcoef_wtr,                        &
         & hgrid, surface,                                                      &
@@ -442,7 +442,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 'q_acoef_wtr', mem%q_acoef_wtr,                        &
         & hgrid, surface,                                                      &
@@ -450,7 +450,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 'q_bcoef_wtr', mem%q_bcoef_wtr,                        &
         & hgrid, surface,                                                      &
@@ -458,7 +458,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 't_acoef_ice', mem%t_acoef_ice,                        &
         & hgrid, surface,                                                      &
@@ -466,7 +466,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 't_bcoef_ice', mem%t_bcoef_ice,                        &
         & hgrid, surface,                                                      &
@@ -474,7 +474,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 'q_acoef_ice', mem%q_acoef_ice,                        &
         & hgrid, surface,                                                      &
@@ -482,7 +482,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 'q_bcoef_ice', mem%q_bcoef_ice,                        &
         & hgrid, surface,                                                      &
@@ -490,7 +490,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
     END IF ! lakes
 
@@ -505,7 +505,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & output_level=BASIC, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('noy_deposition', mem%noy_deposition, &
         & hgrid, surface, &
@@ -516,7 +516,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & output_level=BASIC, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('nhx_n15_deposition', mem%nhx_n15_deposition, &
         & hgrid, surface, &
@@ -526,7 +526,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('noy_n15_deposition', mem%noy_n15_deposition, &
         & hgrid, surface, &
@@ -536,7 +536,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
@@ -546,7 +546,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
         & hgrid, surface, &
@@ -557,7 +557,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('daylength_prev_day', mem%daylength_prev_day, &
         & hgrid, surface, &
@@ -568,7 +568,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('local_time_day_seconds', mem%local_time_day_seconds, &
         & hgrid, surface, &
@@ -579,7 +579,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
     END IF ! MODEL_QUINCY
 
@@ -592,7 +592,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('noy_deposition_acc', mem%noy_deposition_acc, &
       & hgrid, surface, &
@@ -602,7 +602,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('p_deposition_acc', mem%p_deposition_acc, &
       & hgrid, surface, &
@@ -612,7 +612,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_mixing_ratio_acc', mem%co2_mixing_ratio_acc, &
       & hgrid, surface, &
@@ -622,7 +622,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_dC13_acc', mem%co2_dC13_acc, &
       & hgrid, surface, &
@@ -632,7 +632,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_DC14_acc', mem%co2_DC14_acc, &
       & hgrid, surface, &
@@ -642,7 +642,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('const_input_timestep_counter', mem%const_input_timestep_counter, &
       & hgrid, surface, &
@@ -652,7 +652,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('nhx_deposition_const', mem%nhx_deposition_const, &
       & hgrid, surface, &
@@ -662,7 +662,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('noy_deposition_const', mem%noy_deposition_const, &
       & hgrid, surface, &
@@ -672,7 +672,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('p_deposition_const', mem%p_deposition_const, &
       & hgrid, surface, &
@@ -682,7 +682,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_mixing_ratio_const', mem%co2_mixing_ratio_const, &
       & hgrid, surface, &
@@ -692,7 +692,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_dC13_const', mem%co2_dC13_const, &
       & hgrid, surface, &
@@ -702,7 +702,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 
     CALL mem%Add_var('co2_DC14_const', mem%co2_DC14_const, &
       & hgrid, surface, &
@@ -712,7 +712,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .FALSE., &
       & lrestart = .TRUE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_jp)
 #endif
   END SUBROUTINE Init_a2l_memory
 

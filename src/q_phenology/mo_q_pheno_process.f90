@@ -320,8 +320,8 @@ CONTAINS
         ! if soil moisture is above specified threshold
         IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
           growing_season            = true
-          growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-          growth_req_p_tlabile_mavg = 1._wp / np_leaf
+          growth_req_n_tlabile_mavg = 1._jp / cn_leaf
+          growth_req_p_tlabile_mavg = 1._jp / np_leaf
         ENDIF
       CASE (isummergreen)
         ! if GDD requirement is exceeded. The latter depends on the length of the
@@ -329,16 +329,16 @@ CONTAINS
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1) THEN
            growing_season            = true
-           growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-           growth_req_p_tlabile_mavg = 1._wp / np_leaf
+           growth_req_n_tlabile_mavg = 1._jp / cn_leaf
+           growth_req_p_tlabile_mavg = 1._jp / np_leaf
         ENDIF
       CASE (iperennial,icrop_phenology)
         ! if temperature and soil moisture are not limiting growth
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
           growing_season            = true
-          growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-          growth_req_p_tlabile_mavg = 1._wp / np_leaf
+          growth_req_n_tlabile_mavg = 1._jp / cn_leaf
+          growth_req_p_tlabile_mavg = 1._jp / np_leaf
         ENDIF
       END SELECT
     ! If in the growing season, check whether growing season has ended
@@ -391,14 +391,14 @@ CONTAINS
     ENDIF
     ! vegetation growth doesn't start when there is snow coverage and soil is frozen
     IF(t_air_tphen_mavg < Tzero .AND. t_soil_srf_tphen_mavg <= Tzero) THEN
-      gdd = 0.0_wp
+      gdd = 0.0_jp
     ENDIF
 
     !>  2.2 nd_dormance counter
     !>
     IF (growing_season > test_false_true) THEN
-      gdd         = 0.0_wp
-      nd_dormance = 0.0_wp
+      gdd         = 0.0_jp
+      nd_dormance = 0.0_jp
     ELSE
       nd_dormance = nd_dormance + dtime / one_day
     ENDIF
@@ -467,7 +467,7 @@ CONTAINS
       ! diagnose required change in leaf C given phenology to attain prescribed LAI max
        IF (growing_season(ic) > test_false_true) THEN
          veg_growth_leaf_carbon(ic) = lai_max(ic) / lctlib_sla &
-           &                          * (1._wp - exp(-k_leafon_canopy &
+           &                          * (1._jp - exp(-k_leafon_canopy &
            &                          * (lai_max(ic) - lai(ic)) / lai_max(ic))) &
            &                          * dtime / one_day
        ELSE

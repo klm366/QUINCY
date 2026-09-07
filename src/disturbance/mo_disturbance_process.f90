@@ -54,7 +54,7 @@ CONTAINS
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(jp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(jp), PARAMETER :: delta_time_yr = 1._jp / 365._jp
 
     nc = SIZE(fuel)
 
@@ -99,15 +99,15 @@ CONTAINS
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(jp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(jp), PARAMETER :: delta_time_yr = 1._jp / 365._jp
 
     nc = SIZE(max_wind_clim)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
-        damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
-        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._wp / max_wind_clim(ic) )
+      IF (cover_fract_pot(ic) > EPSILON(1._jp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
+        damaged_fract(ic) = MIN( 1._jp - EPSILON(1._jp) / cover_fract_pot(ic),                                          &
+        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._jp / max_wind_clim(ic) )
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP

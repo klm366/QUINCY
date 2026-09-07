@@ -680,7 +680,7 @@ CONTAINS
       WHERE(soil_depth_sl(:,isoil) > eps8)
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
       ELSEWHERE
-        fine_root_carbon_sl(:,isoil) = 0.0_wp
+        fine_root_carbon_sl(:,isoil) = 0.0_jp
       ENDWHERE
     ENDDO
     ! calculate the potential PO4 flux rate
@@ -714,7 +714,7 @@ CONTAINS
 
     !>  3.1 Calculation of asymbiotic N fixation rate
     !>
-    asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
+    asymb_n_fixation(:,:) = 0.0_jp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
       DO is = 1,NINT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
@@ -941,96 +941,96 @@ CONTAINS
     !>    convert rates to [micro-mol/ m3 / s]
     !>    covert surface fluxes to [micro-mol / m2 / s]
     !>
-    het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._wp
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._wp
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) / dtime * 1000000._wp
-    myc_respiration(:,:)     = myc_respiration(:,:) / dtime * 1000000._wp
-    myc_respiration_c13(:,:) = myc_respiration_c13(:,:) / dtime * 1000000._wp
-    myc_respiration_c14(:,:) = myc_respiration_c14(:,:) / dtime * 1000000._wp
+    het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._jp
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._jp
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) / dtime * 1000000._jp
+    myc_respiration(:,:)     = myc_respiration(:,:) / dtime * 1000000._jp
+    myc_respiration_c13(:,:) = myc_respiration_c13(:,:) / dtime * 1000000._jp
+    myc_respiration_c14(:,:) = myc_respiration_c14(:,:) / dtime * 1000000._jp
 
-    net_mineralisation_nh4(:,:)    = net_mineralisation_nh4(:,:) / dtime * 1000000._wp
-    net_mineralisation_no3(:,:)    = net_mineralisation_no3(:,:) / dtime * 1000000._wp
-    net_mineralisation_po4(:,:)    = net_mineralisation_po4(:,:) / dtime * 1000000._wp
-    plant_uptake_nh4_sl(:,:)       = plant_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_no3_sl(:,:)       = plant_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_po4_sl(:,:)       = plant_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_nh4_sl(:,:)  = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_no3_sl(:,:)  = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_po4_sl(:,:)  = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_nh4_sl(:,:)   = microbial_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_no3_sl(:,:)   = microbial_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_po4_sl(:,:)   = microbial_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    asymb_n_fixation(:,:)          = asymb_n_fixation(:,:) / dtime * 1000000._wp
+    net_mineralisation_nh4(:,:)    = net_mineralisation_nh4(:,:) / dtime * 1000000._jp
+    net_mineralisation_no3(:,:)    = net_mineralisation_no3(:,:) / dtime * 1000000._jp
+    net_mineralisation_po4(:,:)    = net_mineralisation_po4(:,:) / dtime * 1000000._jp
+    plant_uptake_nh4_sl(:,:)       = plant_uptake_nh4_sl(:,:) / dtime * 1000000._jp
+    plant_uptake_no3_sl(:,:)       = plant_uptake_no3_sl(:,:) / dtime * 1000000._jp
+    plant_uptake_po4_sl(:,:)       = plant_uptake_po4_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_nh4_sl(:,:)  = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_no3_sl(:,:)  = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_po4_sl(:,:)  = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._jp
+    microbial_uptake_nh4_sl(:,:)   = microbial_uptake_nh4_sl(:,:) / dtime * 1000000._jp
+    microbial_uptake_no3_sl(:,:)   = microbial_uptake_no3_sl(:,:) / dtime * 1000000._jp
+    microbial_uptake_po4_sl(:,:)   = microbial_uptake_po4_sl(:,:) / dtime * 1000000._jp
+    asymb_n_fixation(:,:)          = asymb_n_fixation(:,:) / dtime * 1000000._jp
 
-    volatilisation_nh4(:,:)  = volatilisation_nh4(:,:) / dtime * 1000000._wp
-    nitrification_no3(:,:)   = nitrification_no3(:,:) / dtime * 1000000._wp
-    nitrification_noy(:,:)   = nitrification_noy(:,:) / dtime * 1000000._wp
-    nitrification_n2o(:,:)   = nitrification_n2o(:,:) / dtime * 1000000._wp
-    denitrification_noy(:,:) = denitrification_noy(:,:) / dtime * 1000000._wp
-    denitrification_n2o(:,:) = denitrification_n2o(:,:) / dtime * 1000000._wp
-    denitrification_n2(:,:)  = denitrification_n2(:,:) / dtime * 1000000._wp
+    volatilisation_nh4(:,:)  = volatilisation_nh4(:,:) / dtime * 1000000._jp
+    nitrification_no3(:,:)   = nitrification_no3(:,:) / dtime * 1000000._jp
+    nitrification_noy(:,:)   = nitrification_noy(:,:) / dtime * 1000000._jp
+    nitrification_n2o(:,:)   = nitrification_n2o(:,:) / dtime * 1000000._jp
+    denitrification_noy(:,:) = denitrification_noy(:,:) / dtime * 1000000._jp
+    denitrification_n2o(:,:) = denitrification_n2o(:,:) / dtime * 1000000._jp
+    denitrification_n2(:,:)  = denitrification_n2(:,:) / dtime * 1000000._jp
 
-    transport_nh4_solute(:,:)     = transport_nh4_solute(:,:) / dtime * 1000000._wp
-    transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:) / dtime * 1000000._wp
-    transport_no3_solute(:,:)     = transport_no3_solute(:,:) / dtime * 1000000._wp
-    transport_po4_solute(:,:)     = transport_po4_solute(:,:) / dtime * 1000000._wp
-    transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) / dtime * 1000000._wp
-    transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) / dtime * 1000000._wp
-    transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) / dtime * 1000000._wp
-    transport_noy(:,:)            = transport_noy(:,:) / dtime * 1000000._wp
-    transport_n2o(:,:)            = transport_n2o(:,:) / dtime * 1000000._wp
-    transport_n2(:,:)             = transport_n2(:,:) / dtime * 1000000._wp
+    transport_nh4_solute(:,:)     = transport_nh4_solute(:,:) / dtime * 1000000._jp
+    transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:) / dtime * 1000000._jp
+    transport_no3_solute(:,:)     = transport_no3_solute(:,:) / dtime * 1000000._jp
+    transport_po4_solute(:,:)     = transport_po4_solute(:,:) / dtime * 1000000._jp
+    transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) / dtime * 1000000._jp
+    transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) / dtime * 1000000._jp
+    transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) / dtime * 1000000._jp
+    transport_noy(:,:)            = transport_noy(:,:) / dtime * 1000000._jp
+    transport_n2o(:,:)            = transport_n2o(:,:) / dtime * 1000000._jp
+    transport_n2(:,:)             = transport_n2(:,:) / dtime * 1000000._jp
 
-    lateral_loss_nh4_solute_sl(:,:) = lateral_loss_nh4_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_no3_solute_sl(:,:) = lateral_loss_no3_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_po4_solute_sl(:,:) = lateral_loss_po4_solute_sl(:,:) / dtime * 1000000._wp
+    lateral_loss_nh4_solute_sl(:,:) = lateral_loss_nh4_solute_sl(:,:) / dtime * 1000000._jp
+    lateral_loss_no3_solute_sl(:,:) = lateral_loss_no3_solute_sl(:,:) / dtime * 1000000._jp
+    lateral_loss_po4_solute_sl(:,:) = lateral_loss_po4_solute_sl(:,:) / dtime * 1000000._jp
 
-    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._wp
-    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._wp
-    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._wp
-    emission_noy(:)        = emission_noy(:) / dtime * 1000000._wp
-    emission_n2o(:)        = emission_n2o(:) / dtime * 1000000._wp
-    emission_n2(:)         = emission_n2(:) / dtime * 1000000._wp
+    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._jp
+    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._jp
+    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._jp
+    emission_noy(:)        = emission_noy(:) / dtime * 1000000._jp
+    emission_n2o(:)        = emission_n2o(:) / dtime * 1000000._jp
+    emission_n2(:)         = emission_n2(:) / dtime * 1000000._jp
 
-    net_mineralisation_nh4_n15(:,:)   = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._wp
-    net_mineralisation_no3_n15(:,:)   = net_mineralisation_no3_n15(:,:) / dtime * 1000000._wp
-    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:) / dtime * 1000000._wp
+    net_mineralisation_nh4_n15(:,:)   = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._jp
+    net_mineralisation_no3_n15(:,:)   = net_mineralisation_no3_n15(:,:) / dtime * 1000000._jp
+    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:) / dtime * 1000000._jp
+    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._jp
+    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._jp
+    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:) / dtime * 1000000._jp
+    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:) / dtime * 1000000._jp
+    asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:) / dtime * 1000000._jp
 
-    volatilisation_nh4_n15(:,:)  = volatilisation_nh4_n15(:,:) / dtime * 1000000._wp
-    nitrification_no3_n15(:,:)   = nitrification_no3_n15(:,:) / dtime * 1000000._wp
-    nitrification_noy_n15(:,:)   = nitrification_noy_n15(:,:) / dtime * 1000000._wp
-    nitrification_n2o_n15(:,:)   = nitrification_n2o_n15(:,:) / dtime * 1000000._wp
-    denitrification_noy_n15(:,:) = denitrification_noy_n15(:,:) / dtime * 1000000._wp
-    denitrification_n2o_n15(:,:) = denitrification_n2o_n15(:,:) / dtime * 1000000._wp
-    denitrification_n2_n15(:,:)  = denitrification_n2_n15(:,:) / dtime * 1000000._wp
+    volatilisation_nh4_n15(:,:)  = volatilisation_nh4_n15(:,:) / dtime * 1000000._jp
+    nitrification_no3_n15(:,:)   = nitrification_no3_n15(:,:) / dtime * 1000000._jp
+    nitrification_noy_n15(:,:)   = nitrification_noy_n15(:,:) / dtime * 1000000._jp
+    nitrification_n2o_n15(:,:)   = nitrification_n2o_n15(:,:) / dtime * 1000000._jp
+    denitrification_noy_n15(:,:) = denitrification_noy_n15(:,:) / dtime * 1000000._jp
+    denitrification_n2o_n15(:,:) = denitrification_n2o_n15(:,:) / dtime * 1000000._jp
+    denitrification_n2_n15(:,:)  = denitrification_n2_n15(:,:) / dtime * 1000000._jp
 
-    transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1000000._wp
-    transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) / dtime * 1000000._wp
-    transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) / dtime * 1000000._wp
-    transport_noy_n15(:,:)        = transport_noy_n15(:,:) / dtime * 1000000._wp
-    transport_n2o_n15(:,:)        = transport_n2o_n15(:,:) / dtime * 1000000._wp
-    transport_n2_n15(:,:)         = transport_n2_n15(:,:) / dtime * 1000000._wp
+    transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1000000._jp
+    transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) / dtime * 1000000._jp
+    transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) / dtime * 1000000._jp
+    transport_noy_n15(:,:)        = transport_noy_n15(:,:) / dtime * 1000000._jp
+    transport_n2o_n15(:,:)        = transport_n2o_n15(:,:) / dtime * 1000000._jp
+    transport_n2_n15(:,:)         = transport_n2_n15(:,:) / dtime * 1000000._jp
 
-    leaching_nh4_n15_solute(:)          = leaching_nh4_n15_solute(:) / dtime * 1000000._wp
-    leaching_no3_n15_solute(:)          = leaching_no3_n15_solute(:) / dtime * 1000000._wp
-    lateral_loss_nh4_n15_solute_sl(:,:) = lateral_loss_nh4_n15_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_no3_n15_solute_sl(:,:) = lateral_loss_no3_n15_solute_sl(:,:) / dtime * 1000000._wp
+    leaching_nh4_n15_solute(:)          = leaching_nh4_n15_solute(:) / dtime * 1000000._jp
+    leaching_no3_n15_solute(:)          = leaching_no3_n15_solute(:) / dtime * 1000000._jp
+    lateral_loss_nh4_n15_solute_sl(:,:) = lateral_loss_nh4_n15_solute_sl(:,:) / dtime * 1000000._jp
+    lateral_loss_no3_n15_solute_sl(:,:) = lateral_loss_no3_n15_solute_sl(:,:) / dtime * 1000000._jp
 
-    emission_noy_n15(:)        = emission_noy_n15(:) / dtime * 1000000._wp
-    emission_n2o_n15(:)        = emission_n2o_n15(:) / dtime * 1000000._wp
-    emission_n2_n15(:)         = emission_n2_n15(:) / dtime * 1000000._wp
+    emission_noy_n15(:)        = emission_noy_n15(:) / dtime * 1000000._jp
+    emission_n2o_n15(:)        = emission_n2o_n15(:) / dtime * 1000000._jp
+    emission_n2_n15(:)         = emission_n2_n15(:) / dtime * 1000000._jp
 
-    weathering_po4(:,:)             = weathering_po4(:,:) / dtime * 1000000._wp
-    occlusion_po4(:,:)              = occlusion_po4(:,:) / dtime * 1000000._wp
-    slow_exchange_po4(:,:)          = slow_exchange_po4(:,:) / dtime * 1000000._wp
-    biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
+    weathering_po4(:,:)             = weathering_po4(:,:) / dtime * 1000000._jp
+    occlusion_po4(:,:)              = occlusion_po4(:,:) / dtime * 1000000._jp
+    slow_exchange_po4(:,:)          = slow_exchange_po4(:,:) / dtime * 1000000._jp
+    biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._jp
 
     !------------------------------------------------------------------------------------------------------ !
     ! de-allocate local allocatable variables
@@ -1151,24 +1151,24 @@ CONTAINS
 
     !> init out var
     !>
-    km1_uptake_nh4_act(:,:)         = 0.0_wp
-    km2_uptake_nh4_act(:,:)         = 0.0_wp
-    km1_uptake_no3_act(:,:)         = 0.0_wp
-    km2_uptake_no3_act(:,:)         = 0.0_wp
-    km1_uptake_po4_act(:,:)         = 0.0_wp
-    km2_uptake_po4_act(:,:)         = 0.0_wp
-    km_uptake_org_act(:,:)          = 0.0_wp
-    km_mic_uptake_nh4_act(:,:)      = 0.0_wp
-    km_mic_uptake_no3_act(:,:)      = 0.0_wp
-    km_denitrification_c_act(:,:)   = 0.0_wp
-    km_denitrification_no3_act(:,:) = 0.0_wp
-    apparent_fast_som_cn(:,:)       = 0.0_wp
-    apparent_fast_som_np(:,:)       = 0.0_wp
-    p_deposition_act(:,:)           = 0.0_wp
-    vmax_weath_mineral_act_sl(:,:)  = 0.0_wp
-    k_adsorpt_po4_act(:,:)          = 0.0_wp
-    k_desorpt_po4_act(:,:)          = 0.0_wp
-    km_dip_biochem_po4_act(:,:)     = 0.0_wp
+    km1_uptake_nh4_act(:,:)         = 0.0_jp
+    km2_uptake_nh4_act(:,:)         = 0.0_jp
+    km1_uptake_no3_act(:,:)         = 0.0_jp
+    km2_uptake_no3_act(:,:)         = 0.0_jp
+    km1_uptake_po4_act(:,:)         = 0.0_jp
+    km2_uptake_po4_act(:,:)         = 0.0_jp
+    km_uptake_org_act(:,:)          = 0.0_jp
+    km_mic_uptake_nh4_act(:,:)      = 0.0_jp
+    km_mic_uptake_no3_act(:,:)      = 0.0_jp
+    km_denitrification_c_act(:,:)   = 0.0_jp
+    km_denitrification_no3_act(:,:) = 0.0_jp
+    apparent_fast_som_cn(:,:)       = 0.0_jp
+    apparent_fast_som_np(:,:)       = 0.0_jp
+    p_deposition_act(:,:)           = 0.0_jp
+    vmax_weath_mineral_act_sl(:,:)  = 0.0_jp
+    k_adsorpt_po4_act(:,:)          = 0.0_jp
+    k_desorpt_po4_act(:,:)          = 0.0_jp
+    km_dip_biochem_po4_act(:,:)     = 0.0_jp
 
 
     !> run calc
@@ -1193,7 +1193,7 @@ CONTAINS
             &                            k_fast_som_cn_min)
         ELSE
           ! set to mean of min-max range
-          apparent_fast_som_cn(ic,is)  = 0.5_wp * (k_fast_som_cn_min + k_fast_som_cn_max)
+          apparent_fast_som_cn(ic,is)  = 0.5_jp * (k_fast_som_cn_min + k_fast_som_cn_max)
         END IF
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
@@ -1201,9 +1201,9 @@ CONTAINS
         vmax_weath_mineral_act_sl(ic, is) = rtm_hsc(ic, is) / rmm_hsc(ic, is) * vmax_weath_mineral_sl(ic, is)
         k_adsorpt_po4_act(ic, is)         = rtm_sorption(ic, is)   * k_adsorpt_po4
         k_desorpt_po4_act(ic, is)         = rtm_desorption(ic, is) * k_desorpt_po4
-        p_deposition_act(ic, is)          = 0.0_wp
+        p_deposition_act(ic, is)          = 0.0_jp
         ! only for the 1st soil layer
-        p_deposition_act(ic,1)            = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
+        p_deposition_act(ic,1)            = p_deposition(ic) / 1.e6_jp / soil_depth_sl(ic,1) * dtime
       END DO
     END DO
   END SUBROUTINE calc_local_soil_profile_values
@@ -1288,11 +1288,11 @@ CONTAINS
 
     !> 0.9 zero output variables
     !!
-    plant_uptake_nh4_sl(:,:) = 0.0_wp
-    plant_uptake_no3_sl(:,:) = 0.0_wp
-    plant_uptake_po4_sl(:,:) = 0.0_wp
-    unit_uptake_n_pot(:)     = 0.0_wp
-    unit_uptake_p_pot(:)     = 0.0_wp
+    plant_uptake_nh4_sl(:,:) = 0.0_jp
+    plant_uptake_no3_sl(:,:) = 0.0_jp
+    plant_uptake_po4_sl(:,:) = 0.0_jp
+    unit_uptake_n_pot(:)     = 0.0_jp
+    unit_uptake_p_pot(:)     = 0.0_jp
 
 
     !> 1.0 inorganic plant N uptake
@@ -1306,15 +1306,15 @@ CONTAINS
           myc_root_coverage_act(ic) = MIN(myc_root_coverage_max, &
             &                         SUM(sb_pool_mycorrhiza_carbon(ic,:) * soil_depth_sl(ic,:)) &
             &                         / veg_pool_fine_root_carbon(ic))
-          f_vmax_uptake_act(ic)     = 1.0_wp / (1.0_wp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
+          f_vmax_uptake_act(ic)     = 1.0_jp / (1.0_jp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
         ELSE
-          myc_root_coverage_act(ic) = 0.0_wp
-          f_vmax_uptake_act(ic)     = 1.0_wp
+          myc_root_coverage_act(ic) = 0.0_jp
+          f_vmax_uptake_act(ic)     = 1.0_jp
         ENDIF
       ENDDO
     ELSE
-       f_vmax_uptake_act(:)     = 1.0_wp
-       myc_root_coverage_act(:) = 0.0_wp
+       f_vmax_uptake_act(:)     = 1.0_jp
+       myc_root_coverage_act(:) = 0.0_jp
     ENDIF
 
     DO ic = 1,nc
@@ -1323,33 +1323,33 @@ CONTAINS
         !!
         !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
+                        (1.0_jp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
                         nh4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_nh4_act(ic, is) + nh4_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_nh4_act(ic, is) + nh4_solute(ic, is) ))
+                        1._jp / ( km2_uptake_nh4_act(ic, is) + nh4_solute(ic, is) ))
         hlp2(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
+                        (1.0_jp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
                         no3_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_no3_act(ic, is) + no3_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
+                        1._jp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
         unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + hlp1(ic, is) + hlp2(ic, is)
 
         ! potential uptake rate in mol N / m3 / timestep
         plant_uptake_nh4_sl(ic, is) = hlp1(ic, is) * &
                                        veg_pool_fine_root_carbon(ic) / &
-                                       soil_depth_sl(ic, is) * dtime / 1.e6_wp
+                                       soil_depth_sl(ic, is) * dtime / 1.e6_jp
         plant_uptake_no3_sl(ic, is) = hlp2(ic, is) * &
                                        veg_pool_fine_root_carbon(ic) / &
-                                       soil_depth_sl(ic, is) * dtime / 1.e6_wp
+                                       soil_depth_sl(ic, is) * dtime / 1.e6_jp
 
         !> 2.2 inorganic plant P uptake
         !!
         !! potential P uptake rate (micro-mol P / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is)  * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
+                        (1.0_jp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
                         po4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_po4_act(ic, is) + po4_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
+                        1._jp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
         unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + hlp1(ic, is)
         ! potential uptake rate in mol P / m3 / timestep
-        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_wp
+        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_jp
       ENDDO
     ENDDO
   END SUBROUTINE calc_potential_plant_uptake_rate
@@ -1424,20 +1424,20 @@ CONTAINS
 
     !> 0.9.1 init out arguments
     !>
-    mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
+    mycorrhiza_uptake_nh4_sl(:,:) = 0.0_jp
+    mycorrhiza_uptake_no3_sl(:,:) = 0.0_jp
+    mycorrhiza_uptake_po4_sl(:,:) = 0.0_jp
 
     !> 0.9.2 init local var
     !>
-    f_vmax_uptake_act(:) = 0.0_wp
+    f_vmax_uptake_act(:) = 0.0_jp
 
     !> 1.0 pot. N uptake by mycorrhizal fungi (mol / m3 / timestep)
     !>
     WHERE(veg_pool_fine_root_carbon(:) > eps8)
-       f_vmax_uptake_act(:) =  1.0_wp / (1.0_wp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
+       f_vmax_uptake_act(:) =  1.0_jp / (1.0_jp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
     ELSEWHERE
-       f_vmax_uptake_act(:) = 1.0_wp
+       f_vmax_uptake_act(:) = 1.0_jp
     ENDWHERE
     DO isoil = 1,nsoil_w
       mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
@@ -1445,15 +1445,15 @@ CONTAINS
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                           nh4_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._jp / ( km2_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil) )) * &
+                                          dtime / 1.e6_jp
       mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * &
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                           no3_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_no3_act(:, isoil) + no3_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_no3_act(:, isoil) + no3_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._jp / ( km2_uptake_no3_act(:, isoil) + no3_solute(:, isoil) )) * &
+                                          dtime / 1.e6_jp
       !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
       !!
       hlp1(:,isoil) = mycorrhiza_uptake_nh4_sl(:,isoil) * transform_cost_nh4 + &
@@ -1465,8 +1465,8 @@ CONTAINS
           mycorrhiza_uptake_nh4_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_nh4_sl(:,isoil)
           mycorrhiza_uptake_no3_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_no3_sl(:,isoil)
         ELSEWHERE
-          mycorrhiza_uptake_nh4_sl(:,isoil) = 0.0_wp
-          mycorrhiza_uptake_no3_sl(:,isoil) = 0.0_wp
+          mycorrhiza_uptake_nh4_sl(:,isoil) = 0.0_jp
+          mycorrhiza_uptake_no3_sl(:,isoil) = 0.0_jp
         ENDWHERE
       ENDWHERE
       !> 2.0 pot. P uptake by mycorrhizal fungi (mol / m3 / timestep)
@@ -1476,8 +1476,8 @@ CONTAINS
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * &
                                           po4_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_po4_act(:, isoil) + po4_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_po4_act(:, isoil) + po4_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._jp / ( km2_uptake_po4_act(:, isoil) + po4_solute(:, isoil) )) * &
+                                          dtime / 1.e6_jp
     END DO
   END SUBROUTINE calc_potential_mycorrhiza_uptake_rate
 
@@ -1532,8 +1532,8 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_no3(:,:)  = 0.0_wp
-    denitrification_n2(:,:) = 0.0_wp
+    nitrification_no3(:,:)  = 0.0_jp
+    denitrification_n2(:,:) = 0.0_jp
 
     !> run calc
     !>
@@ -1543,14 +1543,14 @@ CONTAINS
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
                                    MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
                                    (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
-                                   (1._wp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_wp
+                                   (1._jp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_jp
 
         ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]
         denitrification_n2(ic,is)  = vmax_denitrification * rtm_denitrification(ic,is) * &
                                    MAX(c_limit_on_denitrification_min, sb_pool_microbial_carbon(ic,is) / &
                                    (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    anaerobic_volume_fraction(ic,is) * no3_solute(ic,is) / &
-                                   (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_wp
+                                   (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_jp
       ENDDO
     ENDDO
   END SUBROUTINE calc_potential_nitrification_denitrification_rate
@@ -1670,28 +1670,28 @@ CONTAINS
 
     !> init out var
     !>
-    transport_noy(:,:)                  = 0.0_wp
-    transport_noy_n15(:,:)              = 0.0_wp
-    transport_n2o(:,:)                  = 0.0_wp
-    transport_n2o_n15(:,:)              = 0.0_wp
-    transport_n2(:,:)                   = 0.0_wp
-    transport_n2_n15(:,:)               = 0.0_wp
-    lateral_loss_nh4_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_wp
-    lateral_loss_no3_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_wp
-    lateral_loss_po4_solute_sl(:,:)     = 0.0_wp
-    leaching_nh4_solute(:)              = 0.0_wp
-    leaching_nh4_n15_solute(:)          = 0.0_wp
-    leaching_no3_solute(:)              = 0.0_wp
-    leaching_no3_n15_solute(:)          = 0.0_wp
-    leaching_po4_solute(:)              = 0.0_wp
-    emission_noy(:)                     = 0.0_wp
-    emission_noy_n15(:)                 = 0.0_wp
-    emission_n2o(:)                     = 0.0_wp
-    emission_n2o_n15(:)                 = 0.0_wp
-    emission_n2(:)                      = 0.0_wp
-    emission_n2_n15(:)                  = 0.0_wp
+    transport_noy(:,:)                  = 0.0_jp
+    transport_noy_n15(:,:)              = 0.0_jp
+    transport_n2o(:,:)                  = 0.0_jp
+    transport_n2o_n15(:,:)              = 0.0_jp
+    transport_n2(:,:)                   = 0.0_jp
+    transport_n2_n15(:,:)               = 0.0_jp
+    lateral_loss_nh4_solute_sl(:,:)     = 0.0_jp
+    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_jp
+    lateral_loss_no3_solute_sl(:,:)     = 0.0_jp
+    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_jp
+    lateral_loss_po4_solute_sl(:,:)     = 0.0_jp
+    leaching_nh4_solute(:)              = 0.0_jp
+    leaching_nh4_n15_solute(:)          = 0.0_jp
+    leaching_no3_solute(:)              = 0.0_jp
+    leaching_no3_n15_solute(:)          = 0.0_jp
+    leaching_po4_solute(:)              = 0.0_jp
+    emission_noy(:)                     = 0.0_jp
+    emission_noy_n15(:)                 = 0.0_jp
+    emission_n2o(:)                     = 0.0_jp
+    emission_n2o_n15(:)                 = 0.0_jp
+    emission_n2(:)                      = 0.0_jp
+    emission_n2_n15(:)                  = 0.0_jp
 
 
     !>1.0. Leaching rate
@@ -1952,10 +1952,10 @@ CONTAINS
 
     !> init out var
     !>
-    weathering_po4(:,:)             = 0.0_wp
-    occlusion_po4(:,:)              = 0.0_wp
-    slow_exchange_po4(:,:)          = 0.0_wp
-    biochem_mineralisation_po4(:,:) = 0.0_wp
+    weathering_po4(:,:)             = 0.0_jp
+    occlusion_po4(:,:)              = 0.0_jp
+    slow_exchange_po4(:,:)          = 0.0_jp
+    biochem_mineralisation_po4(:,:) = 0.0_jp
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !! weathering rate is composed of a background rate (frac_background_weath_mineral) and pH/root biomass regulated rate
@@ -1985,14 +1985,14 @@ CONTAINS
           IF (fine_root_carbon_sl(ic, is) > eps8) THEN
             hlp2(ic, is) = fine_root_carbon_sl(ic, is) / (km_rootc_biochem_po4 + fine_root_carbon_sl(ic, is))
           ELSE
-            hlp2(ic, is) = 0.0_wp
+            hlp2(ic, is) = 0.0_jp
           ENDIF
           biochem_mineralisation_po4(ic, is) = rtm_decomposition(ic, is) * rmm_decomposition(ic, is) / tau_biomineralisation * &
             &                                  sb_pool_residue_phosphorus(ic, is) * hlp1(ic, is) * hlp2(ic, is) * dtime
         ENDDO
       ENDDO
     ELSE
-      biochem_mineralisation_po4(:,:) = 0.0_wp
+      biochem_mineralisation_po4(:,:) = 0.0_jp
     ENDIF
 
   END SUBROUTINE calc_potential_p_flux_rate
@@ -2035,7 +2035,7 @@ CONTAINS
 
     !> init out var
     !>
-    asymb_n_fixation = 0.0_wp
+    asymb_n_fixation = 0.0_jp
 
     SELECT CASE(TRIM(bnf_scheme))
     ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed"
@@ -2053,16 +2053,16 @@ CONTAINS
       !>1.2 rate modifier for mineral soil nitrogen
       !>
       IF(nh4_solute + no3_solute > eps8) THEN
-        f_nav = MIN(1._wp, 1.0_wp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
+        f_nav = MIN(1._jp, 1.0_jp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
       ELSE
-        f_nav = 1._wp
+        f_nav = 1._jp
       ENDIF
 
       asymb_n_fixation = vmax_asymb_bnf * rtm_asymb_bnf * rmm_asymb_bnf * f_nav * n_demand
     CASE("none", "unlimited")
       !>1.3 asymb_n_fixation is calculated during the decomposition process for these cases
       !>
-      asymb_n_fixation = 0.0_wp
+      asymb_n_fixation = 0.0_jp
     END SELECT
 
   END FUNCTION calc_asymb_n_fixation
@@ -2165,9 +2165,9 @@ CONTAINS
 
     !> init out var
     !>
-    microbial_uptake_nh4_sl(:,:) = 0.0_wp
-    microbial_uptake_no3_sl(:,:) = 0.0_wp
-    microbial_uptake_po4_sl(:,:) = 0.0_wp
+    microbial_uptake_nh4_sl(:,:) = 0.0_jp
+    microbial_uptake_no3_sl(:,:) = 0.0_jp
+    microbial_uptake_po4_sl(:,:) = 0.0_jp
 
     !>1.0 formation of fast SOM from litter
     !>
@@ -2193,7 +2193,7 @@ CONTAINS
         !>
         SELECT CASE(TRIM(bnf_scheme))
         CASE("unlimited")
-          f_uptake_nh4_sl = 1.0_wp
+          f_uptake_nh4_sl = 1.0_jp
 
         CASE("none", "dynamic", "fixed")
           affinity_nh4 = vmax_mic_uptake_nh4 * nh4_solute(ic, is) &
@@ -2203,12 +2203,12 @@ CONTAINS
           IF (nh4_solute(ic, is) + no3_solute(ic, is) > eps8) THEN
             f_uptake_nh4_sl = affinity_nh4 / (affinity_nh4 + affinity_no3)
           ELSE
-            f_uptake_nh4_sl = 1.0_wp
+            f_uptake_nh4_sl = 1.0_jp
           END IF
         END SELECT
 
         microbial_uptake_nh4_sl(ic, is) = f_uptake_nh4_sl * litter_deficit_n
-        microbial_uptake_no3_sl(ic, is) = (1.0_wp - f_uptake_nh4_sl) * litter_deficit_n
+        microbial_uptake_no3_sl(ic, is) = (1.0_jp - f_uptake_nh4_sl) * litter_deficit_n
 
         !! limit uptake rate at low nitrogen assuming a Michaelis-Menten Kinetic
         !! only for cases without unlimited BNF. In unlimited BNF, the missing N will be supplied via BNF
@@ -2216,16 +2216,16 @@ CONTAINS
           CASE("unlimited")
             !! asymbiotic N fixation is the difference between the required uptake and the available N
             asymb_n_fixation(ic, is) = MAX(microbial_uptake_nh4_sl(ic, is) &
-              &                            - (nh4_solute(ic, is) + transport_nh4_solute(ic, is)), 0.0_wp)
+              &                            - (nh4_solute(ic, is) + transport_nh4_solute(ic, is)), 0.0_jp)
             !! microbial uptake is corrected to be the actual update, i.e. reduced by the amount added as asymbiotic n fixation
             microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) - asymb_n_fixation(ic, is)
 
           CASE("none", "dynamic", "fixed")
             hlp1(ic, is) = nh4_solute(ic, is) / ( nh4_solute(ic, is) + km_mic_uptake_nh4_act(ic, is) )
-            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_jp)
 
             hlp1(ic, is) = no3_solute(ic, is) / ( no3_solute(ic, is) + km_mic_uptake_no3_act(ic, is) )
-            microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+            microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_jp)
         END SELECT
       END DO
     END DO
@@ -2244,9 +2244,9 @@ CONTAINS
               nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-              nitrification_no3(ic, is)        = 0.0_wp
-              mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+              plant_uptake_nh4_sl(ic, is)      = 0.0_jp
+              nitrification_no3(ic, is)        = 0.0_jp
+              mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_jp
             END IF
           END IF
         END DO
@@ -2257,7 +2257,7 @@ CONTAINS
     CASE("none", "dynamic", "fixed")
       DO ic = 1, nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
-          IF (microbial_uptake_nh4_sl(ic, is) > 0.0_wp) THEN
+          IF (microbial_uptake_nh4_sl(ic, is) > 0.0_jp) THEN
             hlp1(ic, is) = microbial_uptake_nh4_sl(ic, is) + plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) &
               &            + mycorrhiza_uptake_nh4_sl(ic, is)
             hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is)
@@ -2268,10 +2268,10 @@ CONTAINS
                 nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
                 mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
               ELSE
-                microbial_uptake_nh4_sl(ic, is)  = 0.0_wp
-                plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-                nitrification_no3(ic, is)        = 0.0_wp
-                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+                microbial_uptake_nh4_sl(ic, is)  = 0.0_jp
+                plant_uptake_nh4_sl(ic, is)      = 0.0_jp
+                nitrification_no3(ic, is)        = 0.0_jp
+                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_jp
               END IF
             END IF
           ELSE
@@ -2283,9 +2283,9 @@ CONTAINS
                 nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
                 mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
               ELSE
-                plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-                nitrification_no3(ic, is)        = 0.0_wp
-                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+                plant_uptake_nh4_sl(ic, is)      = 0.0_jp
+                nitrification_no3(ic, is)        = 0.0_jp
+                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_jp
               END IF
             END IF
           END IF
@@ -2299,7 +2299,7 @@ CONTAINS
     !!
     DO ic = 1, nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
-        IF (microbial_uptake_no3_sl(ic,is) > 0.0_wp) THEN
+        IF (microbial_uptake_no3_sl(ic,is) > 0.0_jp) THEN
           hlp1(ic,is) = microbial_uptake_no3_sl(ic,is) + plant_uptake_no3_sl(ic,is) &
             &           + denitrification_n2(ic,is) + mycorrhiza_uptake_no3_sl(ic,is)
           hlp2(ic,is) = no3_solute(ic,is) + transport_no3_solute(ic,is)
@@ -2310,10 +2310,10 @@ CONTAINS
               denitrification_n2(ic,is)       = hlp2(ic,is) * denitrification_n2(ic,is) / hlp1(ic,is)
               mycorrhiza_uptake_no3_sl(ic,is) = hlp2(ic,is) * mycorrhiza_uptake_no3_sl(ic,is) / hlp1(ic,is)
             ELSE
-              microbial_uptake_no3_sl(ic,is)  = 0.0_wp
-              plant_uptake_no3_sl(ic,is)      = 0.0_wp
-              denitrification_n2(ic,is)       = 0.0_wp
-              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
+              microbial_uptake_no3_sl(ic,is)  = 0.0_jp
+              plant_uptake_no3_sl(ic,is)      = 0.0_jp
+              denitrification_n2(ic,is)       = 0.0_jp
+              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_jp
             END IF
           END IF
         ELSE
@@ -2325,12 +2325,12 @@ CONTAINS
               denitrification_n2(ic,is)       = hlp2(ic,is) * denitrification_n2(ic,is) / hlp1(ic,is)
               mycorrhiza_uptake_no3_sl(ic,is) = hlp2(ic,is) * mycorrhiza_uptake_no3_sl(ic,is) / hlp1(ic,is)
             ELSE
-              plant_uptake_no3_sl(ic,is)      = 0.0_wp
-              denitrification_n2(ic,is)       = 0.0_wp
-              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
+              plant_uptake_no3_sl(ic,is)      = 0.0_jp
+              denitrification_n2(ic,is)       = 0.0_jp
+              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_jp
             END IF
           END IF
-        END IF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_wp
+        END IF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_jp
       END DO
     END DO
 
@@ -2349,7 +2349,7 @@ CONTAINS
           IF (hlp1(ic, is) > eps8) THEN
             hlp2(ic, is) = (microbial_uptake_nh4_sl(ic, is) + microbial_uptake_no3_sl(ic, is)) / hlp1(ic, is)
           ELSE
-            hlp2(ic, is) = 0.0_wp
+            hlp2(ic, is) = 0.0_jp
           ENDIF
           sb_loss_mt(ix_soluable_litter, ixC, ic, is)    = hlp2(ic, is) * sb_loss_mt(ix_soluable_litter, ixC, ic, is)
           sb_loss_mt(ix_soluable_litter, ixN, ic, is)    = hlp2(ic, is) * sb_loss_mt(ix_soluable_litter, ixN, ic, is)
@@ -2382,7 +2382,7 @@ CONTAINS
         !>  3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable,
         !>      biomineralisation and transport (mol /m3 / timestep)
         !>
-        IF (microbial_uptake_po4_sl(ic, is) > 0.0_wp) THEN ! if microbes take up P, constrain both microbial and plant uptake to available P
+        IF (microbial_uptake_po4_sl(ic, is) > 0.0_jp) THEN ! if microbes take up P, constrain both microbial and plant uptake to available P
           hlp1(ic, is) = microbial_uptake_po4_sl(ic, is) + plant_uptake_po4_sl(ic, is) + mycorrhiza_uptake_po4_sl(ic, is)
           hlp2(ic, is) = po4_solute(ic, is) + transport_po4_solute(ic, is)
           IF (hlp2(ic, is) < hlp1(ic, is)) THEN
@@ -2391,9 +2391,9 @@ CONTAINS
               plant_uptake_po4_sl(ic, is)      = hlp2(ic, is) * plant_uptake_po4_sl(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_po4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_po4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              microbial_uptake_po4_sl(ic, is)  = 0.0_wp
-              plant_uptake_po4_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_wp
+              microbial_uptake_po4_sl(ic, is)  = 0.0_jp
+              plant_uptake_po4_sl(ic, is)      = 0.0_jp
+              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_jp
             ENDIF
           ENDIF
         ELSE ! if microbes release P, constrain plant uptake to available P, note the negative sign of microbial_uptake_po4_sl(ic, is)
@@ -2404,8 +2404,8 @@ CONTAINS
               plant_uptake_po4_sl(ic, is)      = hlp2(ic, is) * plant_uptake_po4_sl(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_po4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_po4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              plant_uptake_po4_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_wp
+              plant_uptake_po4_sl(ic, is)      = 0.0_jp
+              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_jp
             ENDIF
           ENDIF
         ENDIF
@@ -2451,10 +2451,10 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_noy(:,:)    = 0.0_wp
-    nitrification_n2o(:,:)    = 0.0_wp
-    denitrification_noy(:,:)  = 0.0_wp
-    denitrification_n2o(:,:)  = 0.0_wp
+    nitrification_noy(:,:)    = 0.0_jp
+    nitrification_n2o(:,:)    = 0.0_jp
+    denitrification_noy(:,:)  = 0.0_jp
+    denitrification_n2o(:,:)  = 0.0_jp
 
     !>1.0 case of dynamic N loss calculations, following Zaehle et al. 2011
     !>
@@ -2588,38 +2588,38 @@ CONTAINS
 
     !> init out var
     !>
-    plant_uptake_nh4_n15_sl(:,:)      = 0.0_wp
-    plant_uptake_no3_n15_sl(:,:)      = 0.0_wp
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp
-    microbial_uptake_nh4_n15_sl(:,:)  = 0.0_wp
-    microbial_uptake_no3_n15_sl(:,:)  = 0.0_wp
-    asymb_n_fixation_n15(:,:)         = 0.0_wp
-    nitrification_no3_n15(:,:)        = 0.0_wp
-    nitrification_noy_n15(:,:)        = 0.0_wp
-    nitrification_n2o_n15(:,:)        = 0.0_wp
-    denitrification_noy_n15(:,:)      = 0.0_wp
-    denitrification_n2o_n15(:,:)      = 0.0_wp
-    denitrification_n2_n15(:,:)       = 0.0_wp
+    plant_uptake_nh4_n15_sl(:,:)      = 0.0_jp
+    plant_uptake_no3_n15_sl(:,:)      = 0.0_jp
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_jp
+    mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_jp
+    microbial_uptake_nh4_n15_sl(:,:)  = 0.0_jp
+    microbial_uptake_no3_n15_sl(:,:)  = 0.0_jp
+    asymb_n_fixation_n15(:,:)         = 0.0_jp
+    nitrification_no3_n15(:,:)        = 0.0_jp
+    nitrification_noy_n15(:,:)        = 0.0_jp
+    nitrification_n2o_n15(:,:)        = 0.0_jp
+    denitrification_noy_n15(:,:)      = 0.0_jp
+    denitrification_n2o_n15(:,:)      = 0.0_jp
+    denitrification_n2_n15(:,:)       = 0.0_jp
 
     !>0.9 'INTENT(in) valiables': flux rates unit conversion when this routines is called from JSM
     !>  unit conversion: [micro-mol/m3/s] -> [mol/m3/timestep]
     !>
     !> @NOTE @TODO ? not all INTENT(in) variables are considered ?
     IF(sb_model_scheme == 'jsm') THEN
-      plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)      * dtime / 1.e6_wp
-      plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)      * dtime / 1.e6_wp
-      mycorrhiza_uptake_nh4_local_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_wp
-      mycorrhiza_uptake_no3_local_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_wp
-      microbial_uptake_nh4_local_sl(:,:)  = microbial_uptake_nh4_sl(:,:)  * dtime / 1.e6_wp
-      microbial_uptake_no3_local_sl(:,:)  = microbial_uptake_no3_sl(:,:)  * dtime / 1.e6_wp
-      asymb_n_fixation_local(:,:)         = asymb_n_fixation(:,:)         * dtime / 1.e6_wp
-      nitrification_no3_local(:,:)        = nitrification_no3(:,:)        * dtime / 1.e6_wp
-      nitrification_noy_local(:,:)        = nitrification_noy(:,:)        * dtime / 1.e6_wp
-      nitrification_n2o_local(:,:)        = nitrification_n2o(:,:)        * dtime / 1.e6_wp
-      denitrification_noy_local(:,:)      = denitrification_noy(:,:)      * dtime / 1.e6_wp
-      denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)      * dtime / 1.e6_wp
-      denitrification_n2_local(:,:)       = denitrification_n2(:,:)       * dtime / 1.e6_wp
+      plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)      * dtime / 1.e6_jp
+      plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)      * dtime / 1.e6_jp
+      mycorrhiza_uptake_nh4_local_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_jp
+      mycorrhiza_uptake_no3_local_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_jp
+      microbial_uptake_nh4_local_sl(:,:)  = microbial_uptake_nh4_sl(:,:)  * dtime / 1.e6_jp
+      microbial_uptake_no3_local_sl(:,:)  = microbial_uptake_no3_sl(:,:)  * dtime / 1.e6_jp
+      asymb_n_fixation_local(:,:)         = asymb_n_fixation(:,:)         * dtime / 1.e6_jp
+      nitrification_no3_local(:,:)        = nitrification_no3(:,:)        * dtime / 1.e6_jp
+      nitrification_noy_local(:,:)        = nitrification_noy(:,:)        * dtime / 1.e6_jp
+      nitrification_n2o_local(:,:)        = nitrification_n2o(:,:)        * dtime / 1.e6_jp
+      denitrification_noy_local(:,:)      = denitrification_noy(:,:)      * dtime / 1.e6_jp
+      denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)      * dtime / 1.e6_jp
+      denitrification_n2_local(:,:)       = denitrification_n2(:,:)       * dtime / 1.e6_jp
     ELSE
       plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)
       plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)
@@ -2647,13 +2647,13 @@ CONTAINS
             &              microbial_uptake_nh4_local_sl(ic, is) + nitrification_no3_local(ic, is) + &
             &              nitrification_noy_local(ic, is) + nitrification_n2o_local(ic, is)) / nh4_solute(ic, is), eps8)
         ELSE
-          hlp1(ic, is) = 1.0_wp
+          hlp1(ic, is) = 1.0_jp
         ENDIF
         ! calculate reduction factor for discrimination
-        IF (hlp1(ic, is) < (1.0_wp - eps8)) THEN
-          hlp2(ic, is) = (hlp1(ic, is) - 1.0_wp) * LOG(1.0_wp - hlp1(ic, is)) / hlp1(ic, is)
+        IF (hlp1(ic, is) < (1.0_jp - eps8)) THEN
+          hlp2(ic, is) = (hlp1(ic, is) - 1.0_jp) * LOG(1.0_jp - hlp1(ic, is)) / hlp1(ic, is)
         ELSE
-          hlp2(ic, is) = 0.0_wp
+          hlp2(ic, is) = 0.0_jp
         ENDIF
       ENDDO
     ENDDO
@@ -2700,12 +2700,12 @@ CONTAINS
               nitrification_noy_n15(ic, is)        = hlp2(ic, is) * nitrification_noy_n15(ic, is) / hlp1(ic, is)
               nitrification_n2o_n15(ic, is)        = hlp2(ic, is) * nitrification_n2o_n15(ic, is) / hlp1(ic, is)
            ELSE
-              plant_uptake_nh4_n15_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_nh4_n15_sl(ic, is) = 0.0_wp
-              microbial_uptake_nh4_n15_sl(ic, is)  = 0.0_wp
-              nitrification_no3_n15(ic, is)        = 0.0_wp
-              nitrification_noy_n15(ic, is)        = 0.0_wp
-              nitrification_n2o_n15(ic, is)        = 0.0_wp
+              plant_uptake_nh4_n15_sl(ic, is)      = 0.0_jp
+              mycorrhiza_uptake_nh4_n15_sl(ic, is) = 0.0_jp
+              microbial_uptake_nh4_n15_sl(ic, is)  = 0.0_jp
+              nitrification_no3_n15(ic, is)        = 0.0_jp
+              nitrification_noy_n15(ic, is)        = 0.0_jp
+              nitrification_n2o_n15(ic, is)        = 0.0_jp
            ENDIF
         ENDIF
       ENDDO
@@ -2722,12 +2722,12 @@ CONTAINS
                             microbial_uptake_no3_local_sl(ic, is) + denitrification_noy_local(ic, is) + &
                             denitrification_n2o_local(ic, is) + denitrification_n2_local(ic, is)) / no3_solute(ic, is), eps8)
         ELSE
-           hlp1(ic, is) = 1.0_wp
+           hlp1(ic, is) = 1.0_jp
         ENDIF
-        IF (hlp1(ic, is) < (1.0_wp - eps8)) THEN
-           hlp2(ic, is) = (hlp1(ic, is) - 1.0_wp) * LOG(1.0_wp - hlp1(ic, is)) / hlp1(ic, is)
+        IF (hlp1(ic, is) < (1.0_jp - eps8)) THEN
+           hlp2(ic, is) = (hlp1(ic, is) - 1.0_jp) * LOG(1.0_jp - hlp1(ic, is)) / hlp1(ic, is)
         ELSE
-           hlp2(ic, is) = 0.0_wp
+           hlp2(ic, is) = 0.0_jp
         ENDIF
       ENDDO
     ENDDO
@@ -2774,12 +2774,12 @@ CONTAINS
               denitrification_n2o_n15(ic, is)      = hlp2(ic, is) * denitrification_n2o_n15(ic, is) / hlp1(ic, is)
               denitrification_n2_n15(ic, is)       = hlp2(ic, is) * denitrification_n2_n15(ic, is) / hlp1(ic, is)
            ELSE
-              plant_uptake_no3_n15_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_no3_n15_sl(ic, is) = 0.0_wp
-              microbial_uptake_no3_n15_sl(ic, is)  = 0.0_wp
-              denitrification_noy_n15(ic, is)      = 0.0_wp
-              denitrification_n2o_n15(ic, is)      = 0.0_wp
-              denitrification_n2_n15(ic, is)       = 0.0_wp
+              plant_uptake_no3_n15_sl(ic, is)      = 0.0_jp
+              mycorrhiza_uptake_no3_n15_sl(ic, is) = 0.0_jp
+              microbial_uptake_no3_n15_sl(ic, is)  = 0.0_jp
+              denitrification_noy_n15(ic, is)      = 0.0_jp
+              denitrification_n2o_n15(ic, is)      = 0.0_jp
+              denitrification_n2_n15(ic, is)       = 0.0_jp
            ENDIF
         ENDIF
       ENDDO
@@ -2789,7 +2789,7 @@ CONTAINS
     !!
     DO ic = 1,nc
       DO is = 1,NINT(num_sl_above_bedrock(ic))
-        asymb_n_fixation_n15(ic, is) = asymb_n_fixation_local(ic, is) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
+        asymb_n_fixation_n15(ic, is) = asymb_n_fixation_local(ic, is) / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(-eta_nfixation))
       ENDDO
     ENDDO
 
@@ -2798,19 +2798,19 @@ CONTAINS
     !! 'INTENT(out)' variables unit conversion when this routines is called from JSM
     !!
     IF(sb_model_scheme == 'jsm') THEN
-      plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_wp
-      plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_wp
-      mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_wp
-      mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_wp
-      microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_wp
-      microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_wp
-      asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:)         / dtime * 1.e6_wp
-      nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_wp
-      nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_wp
-      nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_wp
-      denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_wp
-      denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_wp
-      denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_wp
+      plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_jp
+      plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_jp
+      mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_jp
+      mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_jp
+      microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_jp
+      microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_jp
+      asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:)         / dtime * 1.e6_jp
+      nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_jp
+      nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_jp
+      nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_jp
+      denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_jp
+      denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_jp
+      denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_jp
     ENDIF
 
   END SUBROUTINE calc_sb_inorganic_n15_fluxes
@@ -2888,11 +2888,11 @@ CONTAINS
         !>1.0 formation of fast SOM from litter
         !>
         ! calculate 15N mineralised during litter decay, remainder enters fast pool
-        hlp1(ic, is) = (1.0_wp - microbial_nue) * sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
+        hlp1(ic, is) = (1.0_jp - microbial_nue) * sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_soluable_litter, ixN, ic, is), &
           &                              sb_loss_mt(ix_soluable_litter, ixN15, ic, is), &
           &                              eta_ammonification)
-        hlp2(ic, is) = (1.0_wp - microbial_nue) * sb_loss_mt(ix_polymeric_litter, ixN, ic, is) &
+        hlp2(ic, is) = (1.0_jp - microbial_nue) * sb_loss_mt(ix_polymeric_litter, ixN, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_polymeric_litter, ixN, ic, is), &
           &                              sb_loss_mt(ix_polymeric_litter, ixN15, ic, is), &
           &                              eta_ammonification)
@@ -2921,22 +2921,22 @@ CONTAINS
           &                                          + microbial_uptake_nh4_n15_sl(ic, is) + microbial_uptake_no3_n15_sl(ic, is) &
           &                                          + asymb_n_fixation_n15(ic, is)
 
-        het_respiration(ic, is)            = het_respiration(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration(ic, is)            = het_respiration(ic, is) + (1._jp - frac_litter2fast_som) * &
           &                                                      (sb_loss_mt(ix_soluable_litter, ixC, ic, is) + &
           &                                                       sb_loss_mt(ix_polymeric_litter, ixC, ic, is))
-        het_respiration_c13(ic, is)        = het_respiration_c13(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration_c13(ic, is)        = het_respiration_c13(ic, is) + (1._jp - frac_litter2fast_som) * &
           &                                                          (sb_loss_mt(ix_soluable_litter, ixC13, ic, is) + &
           &                                                           sb_loss_mt(ix_polymeric_litter, ixC13, ic, is))
-        het_respiration_c14(ic, is)        = het_respiration_c14(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration_c14(ic, is)        = het_respiration_c14(ic, is) + (1._jp - frac_litter2fast_som) * &
           &                                                          (sb_loss_mt(ix_soluable_litter, ixC14, ic, is) + &
           &                                                           sb_loss_mt(ix_polymeric_litter, ixC14, ic, is))
         net_mineralisation_nh4(ic, is)     = net_mineralisation_nh4(ic, is) - microbial_uptake_nh4_sl(ic, is) + &
-          &                                                             (1.0_wp - microbial_nue) * &
+          &                                                             (1.0_jp - microbial_nue) * &
           &                                                             (sb_loss_mt(ix_soluable_litter, ixN, ic, is) + &
           &                                                              sb_loss_mt(ix_polymeric_litter, ixN, ic, is))
         net_mineralisation_no3(ic, is)     = net_mineralisation_no3(ic, is) - microbial_uptake_no3_sl(ic, is)
         net_mineralisation_po4(ic, is)     = net_mineralisation_po4(ic, is) - microbial_uptake_po4_sl(ic, is) + &
-          &                                                             (1.0_wp - microbial_pue) * &
+          &                                                             (1.0_jp - microbial_pue) * &
           &                                                             (sb_loss_mt(ix_soluable_litter, ixP, ic, is) + &
           &                                                              sb_loss_mt(ix_polymeric_litter, ixP, ic, is))
         net_mineralisation_nh4_n15(ic, is) = net_mineralisation_nh4_n15(ic, is) - microbial_uptake_nh4_n15_sl(ic, is) &
@@ -2964,14 +2964,14 @@ CONTAINS
         hlp1(ic, is) = frac_fast2slow_som / k_slow_som_cn * sb_loss_mt(ix_microbial, ixC, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_microbial, ixN, ic, is), &
           &                              sb_loss_mt(ix_microbial, ixN15, ic, is), &
-          &                              0.0_wp)
+          &                              0.0_jp)
         sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + hlp1(ic, is)
 
-        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._wp - frac_fast2slow_som) &
+        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._jp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC, ic, is)
-        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._wp - frac_fast2slow_som) &
+        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._jp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC13, ic, is)
-        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._wp - frac_fast2slow_som) &
+        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._jp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC14, ic, is)
         net_mineralisation_nh4(ic, is) = net_mineralisation_nh4(ic, is) + sb_loss_mt(ix_microbial, ixN, ic, is) &
           &                           - frac_fast2slow_som / k_slow_som_cn * sb_loss_mt(ix_microbial, ixC, ic, is)
@@ -3013,14 +3013,14 @@ CONTAINS
         hlp1(ic, is) = frac_slow2fast_som / apparent_fast_som_cn(ic, is) * sb_loss_mt(ix_residue, ixC, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_residue, ixN, ic, is), &
           &                              sb_loss_mt(ix_residue, ixN15, ic, is), &
-          &                              0.0_wp)
+          &                              0.0_jp)
         sb_formation_mt(ix_microbial, ixN15, ic, is) = sb_formation_mt(ix_microbial, ixN15, ic, is) + hlp1(ic, is)
 
-        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._wp - frac_slow2fast_som) &
+        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._jp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC, ic, is)
-        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._wp - frac_slow2fast_som) &
+        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._jp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC13, ic, is)
-        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._wp - frac_slow2fast_som) &
+        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._jp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC14, ic, is)
         net_mineralisation_nh4(ic, is) = net_mineralisation_nh4(ic, is) + sb_loss_mt(ix_residue, ixN, ic, is) &
           &                           - frac_slow2fast_som / apparent_fast_som_cn(ic, is) * sb_loss_mt(ix_residue, ixC, ic, is)
@@ -3088,16 +3088,16 @@ CONTAINS
 
     !>1.0 Calculate partitioning of decaying woody litter into metabolic and structural litter
     !>
-    fc_soluable_woody_litter(:,:) = 0.0_wp
-    fn_soluable_woody_litter(:,:) = 0.0_wp
-    fp_soluable_woody_litter(:,:) = 0.0_wp
+    fc_soluable_woody_litter(:,:) = 0.0_jp
+    fn_soluable_woody_litter(:,:) = 0.0_jp
+    fp_soluable_woody_litter(:,:) = 0.0_jp
     WHERE(sb_loss_mt(ix_woody_litter, ixN, :, :) > eps8)
-      fc_soluable_woody_litter(:,:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_woody_litter &
+      fc_soluable_woody_litter(:,:) = MAX(0.0_jp,fc_soluable_max - k_fc_soluable * lc_woody_litter &
         &                             * sb_loss_mt(ix_woody_litter, ixC, :, :) / sb_loss_mt(ix_woody_litter, ixN, :, :))
       WHERE(fc_soluable_woody_litter(:,:) > eps8)
-        fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) &
+        fn_soluable_woody_litter(:,:) = 1._jp / (1._jp + (1._jp - fc_soluable_woody_litter(:,:)) &
           &                             / (k_fn_soluable * fc_soluable_woody_litter(:,:)))
-        fp_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) &
+        fp_soluable_woody_litter(:,:) = 1._jp / (1._jp + (1._jp - fc_soluable_woody_litter(:,:)) &
           &                             / (k_fp_soluable * fc_soluable_woody_litter(:,:)))
       ENDWHERE
     ENDWHERE
@@ -3125,43 +3125,43 @@ CONTAINS
       &                                                * sb_loss_mt(ix_woody_litter, ixN15, :, :)
 
     sb_formation_mt(ix_polymeric_litter, ixC, :, :)   = sb_formation_mt(ix_polymeric_litter, ixC, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_jp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC, :, :)
     sb_formation_mt(ix_polymeric_litter, ixN, :, :)   = sb_formation_mt(ix_polymeric_litter, ixN, :, :) &
-      &                                                 + (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue &
+      &                                                 + (1.0_jp - fn_soluable_woody_litter(:,:)) * microbial_nue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixN, :, :)
     sb_formation_mt(ix_polymeric_litter, ixP, :, :)   = sb_formation_mt(ix_polymeric_litter, ixP, :, :) &
-      &                                                 + (1.0_wp - fp_soluable_woody_litter(:,:)) * microbial_pue &
+      &                                                 + (1.0_jp - fp_soluable_woody_litter(:,:)) * microbial_pue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixP, :, :)
     sb_formation_mt(ix_polymeric_litter, ixC13, :, :) = sb_formation_mt(ix_polymeric_litter, ixC13, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_jp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC13, :, :)
     sb_formation_mt(ix_polymeric_litter, ixC14, :, :) = sb_formation_mt(ix_polymeric_litter, ixC14, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_jp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC14, :, :)
     sb_formation_mt(ix_polymeric_litter, ixN15, :, :) = sb_formation_mt(ix_polymeric_litter, ixN15, :, :) &
-      &                                                 + (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue &
+      &                                                 + (1.0_jp - fn_soluable_woody_litter(:,:)) * microbial_nue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixN15, :, :)
 
     !>3.0 record losses to heterotrophic respiration and mineralisation
     !>
     het_respiration(:,:)            = het_respiration(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_jp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC, :, :)
     net_mineralisation_nh4(:,:)     = net_mineralisation_nh4(:,:) &
-      &                               + (1.0_wp - microbial_nue) &
+      &                               + (1.0_jp - microbial_nue) &
       &                               * sb_loss_mt(ix_woody_litter, ixN, :, :)
     net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) &
-      &                               + (1.0_wp - microbial_pue) &
+      &                               + (1.0_jp - microbial_pue) &
       &                               * sb_loss_mt(ix_woody_litter, ixP, :, :)
     het_respiration_c13(:,:)        = het_respiration_c13(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_jp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC13, :, :)
     het_respiration_c14(:,:)        = het_respiration_c14(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_jp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC14, :, :)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) &
-      &                               + (1.0_wp - microbial_nue) &
+      &                               + (1.0_jp - microbial_nue) &
       &                               * sb_loss_mt(ix_woody_litter, ixN15, :, :)
   END SUBROUTINE calc_litter_formation_from_woody_decay
 
@@ -3315,22 +3315,22 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_no3(:,:)      = 0.0_wp
-    nitrification_no3_n15(:,:)  = 0.0_wp
-    volatilisation_nh4(:,:)     = 0.0_wp
-    volatilisation_nh4_n15(:,:) = 0.0_wp
-    emission_n2(:)              = 0.0_wp
-    emission_n2_n15(:)          = 0.0_wp
+    nitrification_no3(:,:)      = 0.0_jp
+    nitrification_no3_n15(:,:)  = 0.0_jp
+    volatilisation_nh4(:,:)     = 0.0_jp
+    volatilisation_nh4_n15(:,:) = 0.0_jp
+    emission_n2(:)              = 0.0_jp
+    emission_n2_n15(:)          = 0.0_jp
 
     !>1.0 case of fixed N losses: N loss proportional to net mineralisation
     !>
-    WHERE(net_mineralisation_nh4(:,:) > 0.0_wp)
+    WHERE(net_mineralisation_nh4(:,:) > 0.0_jp)
       ! N lost to atmosphere during processing of net mineralisation [mol m-3 timestep-1]
       volatilisation_nh4(:,:)      = net_mineralisation_nh4(:,:)     * floss_nmin
       volatilisation_nh4_n15(:,:)  = net_mineralisation_nh4_n15(:,:) * floss_nmin
       ! NH4 transformed to NO3 [mol m-3 timestep-1]
-      nitrification_no3(:,:)       = net_mineralisation_nh4(:,:)     * (1._wp - floss_nmin) * fnit_nmin
-      nitrification_no3_n15(:,:)   = net_mineralisation_nh4_n15(:,:) * (1._wp - floss_nmin) * fnit_nmin
+      nitrification_no3(:,:)       = net_mineralisation_nh4(:,:)     * (1._jp - floss_nmin) * fnit_nmin
+      nitrification_no3_n15(:,:)   = net_mineralisation_nh4_n15(:,:) * (1._jp - floss_nmin) * fnit_nmin
     ENDWHERE
     ! report volatilisation losses as N2 emission [mol m-2 timestep-1]
     emission_n2(:)     = SUM(volatilisation_nh4(:,:)     * soil_depth_sl(:,:), DIM=2)
@@ -3435,10 +3435,10 @@ CONTAINS
     !>  1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !>
     WHERE(sb_pool_mt(ix_mycorrhiza, ixN, :, :) > eps8)
-      hlp1(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
+      hlp1(:,:) = MIN(1.0_jp, MAX(0.0_jp, &
         & (((sb_pool_mt(ix_mycorrhiza, ixC, :, :) / sb_pool_mt(ix_mycorrhiza, ixN, :, :)) &
         & - mycorrhiza_cn * f_norg_limit) &
-        & / (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+        & / (mycorrhiza_cn * (1._jp - f_norg_limit)))))
       mycorrhiza_uptake_nh4_sl(:,:)     = mycorrhiza_uptake_nh4_sl(:,:)     * hlp1(:,:)
       mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) * hlp1(:,:)
       mycorrhiza_uptake_no3_sl(:,:)     = mycorrhiza_uptake_no3_sl(:,:)     * hlp1(:,:)
@@ -3446,10 +3446,10 @@ CONTAINS
     ENDWHERE
 
     WHERE(sb_pool_mt(ix_mycorrhiza, ixP, :, :) > eps8)
-      hlp1(:,:) = MIN(1.0_wp,MAX(0.0_wp, &
+      hlp1(:,:) = MIN(1.0_jp,MAX(0.0_jp, &
         & (((sb_pool_mt(ix_mycorrhiza, ixN, :, :) / sb_pool_mt(ix_mycorrhiza, ixP, :, :)) &
         & - mycorrhiza_np * f_norg_limit) &
-        & / (mycorrhiza_np * (1._wp - f_norg_limit)))))
+        & / (mycorrhiza_np * (1._jp - f_norg_limit)))))
       mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) * hlp1(:,:)
     ENDWHERE
 
@@ -3457,7 +3457,7 @@ CONTAINS
     transform_respiration(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * transform_cost_nh4 &
       &                          + mycorrhiza_uptake_no3_sl(:,:) * transform_cost_no3
 
-    fresp(:,:) = 0.0_wp
+    fresp(:,:) = 0.0_jp
     WHERE(sb_pool_mt(ix_mycorrhiza, ixC, :, :) > eps8)
       fresp(:,:) = transform_respiration(:,:) / sb_pool_mt(ix_mycorrhiza, ixC, :, :)
     ENDWHERE
@@ -3481,15 +3481,15 @@ CONTAINS
     !>
     IF (flag_mycorrhiza_org) THEN
       ! limit organic uptake when inorganic nitrogen is abundant
-      fvmax(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
-        & 0.5_wp * (2.0_wp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) &
+      fvmax(:,:) = MIN(1.0_jp, MAX(0.0_jp, &
+        & 0.5_jp * (2.0_jp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) &
         & - no3_solute(:,:) / (f_nin2norg * km2_uptake_no3_act(:,:) + no3_solute(:,:)))))
       hlp1(:,:) = fvmax(:,:)
 
       ! limit organic uptake according to accessibility to substrate
       fvmax(:,:) = fvmax(:,:) * sb_pool_mt(ix_residue, ixN, :, :) / ( km_uptake_org_act(:,:) + sb_pool_mt(ix_residue, ixN, :, :))
       mycorrhiza_uptake_norg_sl(:,:) = fvmax(:,:) * vmax_uptake_norg * sb_pool_mt(ix_mycorrhiza, ixC, :, :) &
-        &                              * dtime / 1000000._wp
+        &                              * dtime / 1000000._jp
 
       WHERE(sb_pool_mt(ix_residue, ixN, :, :) > eps8)
         mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) &
@@ -3498,16 +3498,16 @@ CONTAINS
 
       ! reduce organic uptake at low mycorrhiza CN (should be obsolete with above function)
       WHERE(sb_pool_mt(ix_mycorrhiza, ixN, :, :) > eps8)
-        hlp1(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
+        hlp1(:,:) = MIN(1.0_jp, MAX(0.0_jp, &
           & (((sb_pool_mt(ix_mycorrhiza, ixC, :, :) / sb_pool_mt(ix_mycorrhiza, ixN, :, :)) &
           & - mycorrhiza_cn * f_norg_limit) &
-          & / (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+          & / (mycorrhiza_cn * (1._jp - f_norg_limit)))))
         mycorrhiza_uptake_norg_sl(:,:)     = mycorrhiza_uptake_norg_sl(:,:)     * hlp1(:,:)
         mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_n15_sl(:,:) * hlp1(:,:)
       ENDWHERE
 
       ! calculate N uptake fraction
-      fnorg(:,:) = 0.0_wp
+      fnorg(:,:) = 0.0_jp
       WHERE(sb_pool_mt(ix_residue, ixN, :, :) > eps8)
         fnorg(:,:) = mycorrhiza_uptake_norg_sl(:,:) / sb_pool_mt(ix_residue, ixN, :, :)
       ENDWHERE
@@ -3533,11 +3533,11 @@ CONTAINS
       sb_formation_mt(ix_mycorrhiza, ixN15, :, :) = sb_formation_mt(ix_mycorrhiza, ixN15, :, :) &
         &                                           + fnorg(:,:) * sb_pool_mt(ix_residue, ixN15, :, :)
 
-      het_respiration(:,:)     = het_respiration(:,:)     + (1.0_wp - mycorrhiza_cue) &
+      het_respiration(:,:)     = het_respiration(:,:)     + (1.0_jp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC, :, :)
-      het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1.0_wp - mycorrhiza_cue) &
+      het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1.0_jp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC13, :, :)
-      het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1.0_wp - mycorrhiza_cue) &
+      het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1.0_jp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC14, :, :)
     ENDIF
 
@@ -3548,7 +3548,7 @@ CONTAINS
     ! N demand can be negative => N supply can be greater then current N uptake by plants!
 
     ! N demand of mycorrhiza in mol N / m3 / timestep
-    hlp1(:,:) = MAX(0.0_wp, &
+    hlp1(:,:) = MAX(0.0_jp, &
       &         sb_pool_mt(ix_mycorrhiza, ixC, :, :) / mycorrhiza_cn - sb_pool_mt(ix_mycorrhiza, ixN, :, :))
     ! N uptake incorporated into mycorrhiza (minimum of potential uptake and demand)
     hlp2(:,:) = MIN(hlp1(:,:), &
@@ -3579,7 +3579,7 @@ CONTAINS
 
     ! P demand of mycorrhiza in mol P / m3 / timestep
     hlp1(:,:) = MAX(sb_pool_mt(ix_mycorrhiza, ixN, :, :) / mycorrhiza_np &
-      &         - sb_pool_mt(ix_mycorrhiza, ixP, :, :), 0.0_wp)
+      &         - sb_pool_mt(ix_mycorrhiza, ixP, :, :), 0.0_jp)
     ! incorporation of P into mycorrhiza (mol P / m3 / timestep), constrain flux to minimum of potential uptake and demand
     hlp2(:,:) = MIN(hlp1(:,:), mycorrhiza_uptake_po4_sl(:,:))
     ! remainder is exported to plants (mol P / m3 / timestep)
@@ -3589,7 +3589,7 @@ CONTAINS
     !>  1.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !>
     ! calc turnover
-    fturn_mycorrhiza(:,:) = 1.0_wp / lctlib_tau_mycorrhiza / one_day / one_year * dtime
+    fturn_mycorrhiza(:,:) = 1.0_jp / lctlib_tau_mycorrhiza / one_day / one_year * dtime
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN

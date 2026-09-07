@@ -325,7 +325,7 @@ CONTAINS
     is_single_site             = .FALSE.
     single_site_name           = ''
     single_site_shortname      = ''
-    single_site_lonlat         = [0._wp, 0._wp]
+    single_site_lonlat         = [0._jp, 0._jp]
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))

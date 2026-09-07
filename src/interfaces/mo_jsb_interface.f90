@@ -255,7 +255,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=REAL(dtime,KIND=jp), alpha=MERGE(1._wp, REAL(cvdifts,KIND=jp), jsbach_runs_standalone()) )
+      & dtime=REAL(dtime,KIND=jp), alpha=MERGE(1._jp, REAL(cvdifts,KIND=jp), jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -504,7 +504,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=REAL(dtime,KIND=jp), alpha=1._wp)
+      & dtime=REAL(dtime,KIND=jp), alpha=1._jp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -862,7 +862,7 @@ CONTAINS
     REAL(jp), POINTER      :: area(:,:)
     REAL(jp), POINTER      :: notsea(:,:)
     LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(jp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
+    REAL(jp), ALLOCATABLE  :: in_domain(:,:)    ! 1._jp: cell in domain, 0._jp: halo cell
                                                 ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
     REAL(jp), ALLOCATABLE  :: area_scaling(:,:)
     REAL(jp), ALLOCATABLE  :: land_area_scaling(:,:)
@@ -886,9 +886,9 @@ CONTAINS
     DO blk = 1, grid%nblks
       DO jc = 1, grid%nproma
         IF (is_in_domain(jc,blk)) THEN
-          in_domain(jc,blk) = 1._wp
+          in_domain(jc,blk) = 1._jp
         ELSE
-          in_domain(jc,blk) = 0._wp
+          in_domain(jc,blk) = 0._jp
         END IF
 
         area_scaling(jc,blk) = area(jc,blk) * in_domain(jc,blk)

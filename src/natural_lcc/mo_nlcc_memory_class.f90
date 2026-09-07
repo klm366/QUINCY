@@ -103,7 +103,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('bare_fpc', mem%bare_fpc,                                &
       & hgrid, surface,                                                       &
@@ -111,7 +111,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('pot_fpc', mem%pot_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
@@ -119,7 +119,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,                  &
       & hgrid, pft_vgrid,                                                     &
@@ -127,7 +127,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('bio_exist', mem%bio_exist,                              &
       & hgrid, pft_vgrid,                                                     &
@@ -135,7 +135,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('sum_green_bio_memory', mem%sum_green_bio_memory,        &
       & hgrid, surface,                                                       &
@@ -143,7 +143,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     CALL mem%Add_var('desert_fpc', mem%desert_fpc,                            &
       & hgrid, surface,                                                       &
@@ -151,7 +151,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
     ! diagnostic output variables
     CALL mem%Add_var('cover_fract', mem%cover_fract,                          &
@@ -160,7 +160,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_jp )
 
   END SUBROUTINE Init_nlcc_memory
 

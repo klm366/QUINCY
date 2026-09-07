@@ -81,8 +81,8 @@ CONTAINS
     DO ic=1,nc
 
       ! Compute net SW radiation from downward SW and albedo
-      zswvis_net = swvis_down(ic) * (1._wp - alb_vis(ic))
-      zswnir_net = swnir_down(ic) * (1._wp - alb_nir(ic))
+      zswvis_net = swvis_down(ic) * (1._jp - alb_vis(ic))
+      zswnir_net = swnir_down(ic) * (1._jp - alb_nir(ic))
       zsw_net    = zswvis_net + zswnir_net
 
       ! Compute LW net radiation from incoming and the thermal radiation from the surface
@@ -152,7 +152,7 @@ CONTAINS
                 EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
                 ZP0, EKL0, EHL0, X0, X1, X2, F    ! These variables do not vary per grid cell
 
-    REAL(jp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
+    REAL(jp), PARAMETER :: OMEGA = 0.12_jp   ! single leaf scattering albedo
 
     ! ---------------------------
     ! Go
@@ -167,14 +167,14 @@ CONTAINS
 !        soil_reflectivity_par = alb_background ! USE ONLY FOR COMPARISON WITH JSBACH3
     ELSE
       ! soil reflectivity is derived from background albedo of the whole solar spectrum (compare eq. (122) in Knorr)
-      soil_reflectivity_par = MAX(0.92_wp * alb_vis_soil - 0.015_wp, SoilReflectivityParMin)
-!       soil_reflectivity_par = MAX(0.92_wp * alb_background - 0.015_wp, SoilReflectivityParMin) ! USE ONLY FOR COMPARISON WITH JS3
+      soil_reflectivity_par = MAX(0.92_jp * alb_vis_soil - 0.015_jp, SoilReflectivityParMin)
+!       soil_reflectivity_par = MAX(0.92_jp * alb_background - 0.015_jp, SoilReflectivityParMin) ! USE ONLY FOR COMPARISON WITH JS3
     END IF
 
     ! Initialize ABSORBED PAR PER LEAF AREA,  IF cos_zenith_angle<1e-3
     ! Spread LAI equally around the three layers
-    faPAR_cl = 0._wp
-    apar_per_lai_cl = 0._wp
+    faPAR_cl = 0._jp
+    apar_per_lai_cl = 0._jp
     lai_cl   = lai * canopy_bound_lai_delta
     lai_cl   = MAX(lai_cl, LaiMin) ! ensure minimum LAI
 
@@ -285,37 +285,37 @@ CONTAINS
         !----------------------------------
         !  h = sqrt( 1 - omega )
         !----------------------------------
-        ZH = SQRT (1._wp - OMEGA)
+        ZH = SQRT (1._jp - OMEGA)
         !----------------------------------
         !  p1 = ( 1-omega/2 + h )/omega/2
         !----------------------------------
-        ZP1 = (1._wp - OMEGA / 2._wp + ZH) &
-              / OMEGA * 2._wp
+        ZP1 = (1._jp - OMEGA / 2._jp + ZH) &
+              / OMEGA * 2._jp
         !----------------------------------------
         ! p2 = ( 1-omega/2 - h )/omega/2 = 1 / p1
         !----------------------------------------
-        ZP0 = 1._wp / ZP1
+        ZP0 = 1._jp / ZP1
         !----------------------------------
         ! k = 0.5/mu
         !----------------------------------
-        K0 = 0.5_wp / cos_zenith_angle
-        IF (K0 == ZH)  K0 = K0 + 1.E-12_wp
-        IF (K0 == -ZH) K0 = K0 + 1.E-12_wp
+        K0 = 0.5_jp / cos_zenith_angle
+        IF (K0 == ZH)  K0 = K0 + 1.E-12_jp
+        IF (K0 == -ZH) K0 = K0 + 1.E-12_jp
         !--------------------------------------------------------------
         ! denominator of q1 and q2
         !--------------------------------------------------------------
-        X0 = (1._wp - 4._wp * cos_zenith_angle**2 * ZH**2)
+        X0 = (1._jp - 4._jp * cos_zenith_angle**2 * ZH**2)
         !--------------------------------------------------------------
         ! q1 = ( (1 + 2*mu)*omega/2 )/(1-4*mu^2*(1-omega))
         !    = ( k*(k + 1)*omega/2 )/(k^2-1-omega)
         !--------------------------------------------------------------
-        Q1 = ((1._wp + 2._wp * cos_zenith_angle) &
-                   * OMEGA / 2._wp) / X0
+        Q1 = ((1._jp + 2._jp * cos_zenith_angle) &
+                   * OMEGA / 2._jp) / X0
         !--------------------------------------------------------------
         ! q2 = ( (1 - 2*mu)*omega/2 )/(1-4*mu^2*(1-omega))
         !    = ( k*(k - 1)*omega/2 )/(k^2-1-omega)
         !--------------------------------------------------------------
-        Q0 = ((1._wp - 2._wp * cos_zenith_angle) * OMEGA / 2._wp) / X0
+        Q0 = ((1._jp - 2._jp * cos_zenith_angle) * OMEGA / 2._jp) / X0
 
         FSHD = MAX (FC, FcMin)
         !-----------------------------------------------------------
@@ -337,13 +337,13 @@ CONTAINS
         !-----------------------------------------------------------
         ! eta = (soil_reflectivity_parPAR * (1-q1)-q2) * EXP(-k*LAI)
         !-----------------------------------------------------------
-        X2 = (soil_reflectivity_par * (1._wp - Q1) - Q0) * EKL
+        X2 = (soil_reflectivity_par * (1._jp - Q1) - Q0) * EKL
         !------------------------------------------------------------
         ! F = 1 - dPAR + dPAR * q1
         ! => F*RPAR = Rd + q1*R0
         ! i.e. calculation takes RPAR=1
         !-----------------------------------------------------------
-        F = 1._wp - fract_par_direct + Q1 * fract_par_direct
+        F = 1._jp - fract_par_direct + Q1 * fract_par_direct
         !-------------------------------------------------------------
         ! B1*RPAR = B1, B2*RPAR = B2, B4*RPAR = R(0) + Rdown(0) - Rup(0)
         !  B1 = + ( eta*R0 - (Rd+q1*R0) * gamma2 )/(gamma1 - gamma2)
@@ -355,14 +355,14 @@ CONTAINS
         !  Note: the second form is used to avoid compiler-dependent ambiguity in the
         !        result of gamma1/(gamma1-gamma2) if gamma1 = infinity
         !-----------------------------------------------------------
-        B0 = X2 * fract_par_direct / (X0 - X1) + F / (1.0_wp - X0/X1)
+        B0 = X2 * fract_par_direct / (X0 - X1) + F / (1.0_jp - X0/X1)
         !-----------------------------------------------------------
         !  R(l)+Rdown-Rup = (1-q1-q2)* R0*EXP(-kl) + (1-p1)* B1*EXP(hl) + (1-p2)* B2*EXP(-hl)
         !----------------------------------------------------------------------------
-        B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
-          &  + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
+        B4 =   (1._jp - Q0 - Q1) * fract_par_direct &
+          &  + (1._jp - ZP1) * B1 + (1._jp - ZP0) * B0
 
-        IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+        IF (B4_layer_above < 7777776._jp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
           B4 = B4_layer_above                  !    with the second level use level above...
         ENDIF
 
@@ -370,7 +370,7 @@ CONTAINS
            !----------------------------------------------------------------------------
            ! p2=1/p1
            !----------------------------------------------------------------------------
-           ZP0 = 1._wp / ZP1
+           ZP0 = 1._jp / ZP1
           !----------------------------------------------------------------------------
            ! EXP(-k*l/fc)
            ! with l=LAI*canopy_bound_lai, i.e. l is element of [0,LAI], i.e. 0,LAI/3,2LAI/3,LAI
@@ -385,9 +385,9 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kl)+(1-p1)*B1*EXP(hl)+(1-p2)*B2*EXP(-hl)
            !  i.e. X0*RPAR = above
            !----------------------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL0 * fract_par_direct &
-                + (1._wp - ZP1) * B1 / EHL0 &
-                + (1._wp - ZP0) * B0 * EHL0
+           X0 = (1._jp - Q0 - Q1) * EKL0 * fract_par_direct &
+                + (1._jp - ZP1) * B1 / EHL0 &
+                + (1._jp - ZP0) * B0 * EHL0
            !----------------------------------------------------------------
            ! faPAR_cl = (R(D(iGP-1))+Rdown(D(iGP-1))-Rup(D(iGP-1)) - R(D)+
            ! Rdown(D)-Rup(D) / ((D-D(iGP-1))
@@ -410,9 +410,9 @@ CONTAINS
            !      (1-q1-q2)*R0*EXP(-kLAI)+(1-p1)*B1*EXP(hLAI)+(1-p2)*B2*EXP(-hLAI)
            !  i.e. X0*RPAR = above for the lower boundary
            !------------------------------------------------------------
-           X0 = (1._wp - Q0 - Q1) * EKL * fract_par_direct &
-                + (1._wp - ZP1) * B1 / EHL &
-                + (1._wp - ZP0) * B0 * EHL          ! these variables do not change with canopy level
+           X0 = (1._jp - Q0 - Q1) * EKL * fract_par_direct &
+                + (1._jp - ZP1) * B1 / EHL &
+                + (1._jp - ZP0) * B0 * EHL          ! these variables do not change with canopy level
            !------------------------------------------------------------------
            ! faPAR_cl(NL) = (R(D(NL-1))+Rdown(D(NL-1))-Rup(D(NL-1)) - R(D(NL))+
            ! Rdown(D(NL))-Rup(D(NL)) / ((D(NL)-D(NL-1))
@@ -430,7 +430,7 @@ CONTAINS
 
     ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
     ! par and fraction of absorbed PAR
-    apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl, 1.e-10_wp))
+    apar_per_lai_cl = par_down_mol * faPAR_cl / (MAX(lai_cl, 1.e-10_jp))
 
   END SUBROUTINE calc_par
 
@@ -451,7 +451,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_jp
 
     REAL(jp), INTENT(in)    :: dtime,               & !< model time step [s]
       &                        temperature_surface, & !< surface temperature [K]
@@ -467,13 +467,13 @@ CONTAINS
     ! Snow age increases with time and temperatures closer to the melting point
     ! It decreases with new snowfall or resets to zero in case all snow is melted
 
-    IF (fract_snow_soil > EPSILON(1.0_wp)) THEN
-      hlp1     = MIN(1._wp, EXP(5000._wp * ((1._wp / tmelt) - (1._wp / temperature_surface))))
-      snow_age = MAX(0.0_wp, (snow_age +                          &
-        & ((hlp1**10._wp + hlp1 + 0.3_wp) * dtime * 1.e-06_wp)) * &
-        & (1._wp - (snow * dtime * 0.5_wp)))
+    IF (fract_snow_soil > EPSILON(1.0_jp)) THEN
+      hlp1     = MIN(1._jp, EXP(5000._jp * ((1._jp / tmelt) - (1._jp / temperature_surface))))
+      snow_age = MAX(0.0_jp, (snow_age +                          &
+        & ((hlp1**10._jp + hlp1 + 0.3_jp) * dtime * 1.e-06_jp)) * &
+        & (1._jp - (snow * dtime * 0.5_jp)))
     ELSE
-      snow_age = 0._wp
+      snow_age = 0._jp
     END IF
 
   END SUBROUTINE calc_snow_age
@@ -545,9 +545,9 @@ CONTAINS
 
     IF (.NOT. l_day) RETURN
 
-    t_upper_limit = tmelt - 1._wp
+    t_upper_limit = tmelt - 1._jp
 
-    IF (weq_snow_lice > 0.01_wp) THEN
+    IF (weq_snow_lice > 0.01_jp) THEN
       alb_min = AlbedoLakeSnowMin
       alb_max = AlbedoLakeSnowMax
     ELSE
@@ -735,8 +735,8 @@ CONTAINS
       alb_vis_soil_nolitter = alb_vis_mineralsoil - Scalfact_SOC_to_alb_vis * MIN(soil_carbon,Soil_C_min)
       alb_nir_soil_nolitter = alb_nir_mineralsoil - Scalfact_SOC_to_alb_nir * MIN(soil_carbon,Soil_C_min)
     ELSE IF(use_alb_soil_organic_int .eq. 2) THEN ! log
-      alb_vis_soil_nolitter = MAX(6._wp * alb_vis_mineralsoil / (6._wp + log(1._wp + soil_carbon)),0.1_wp)
-      alb_nir_soil_nolitter = MAX(6._wp * alb_nir_mineralsoil / (6._wp + log(1._wp + soil_carbon)),0.2_wp)
+      alb_vis_soil_nolitter = MAX(6._jp * alb_vis_mineralsoil / (6._jp + log(1._jp + soil_carbon)),0.1_jp)
+      alb_nir_soil_nolitter = MAX(6._jp * alb_nir_mineralsoil / (6._jp + log(1._jp + soil_carbon)),0.2_jp)
     ELSE
       alb_vis_soil_nolitter = alb_vis_mineralsoil ! R: This is Rainers approximation, because in JSBACH3
                                                   !    the result was set to albedo_desert_dry_vis,
@@ -755,14 +755,14 @@ CONTAINS
       alb_vis_litter = litter_area * AlbedoLitterVIS
       alb_nir_litter = litter_area * AlbedoLitterNIR
 
-      IF (litter_area <= EPSILON(1._wp)) THEN
-        alb_vis_litter = 0.1_wp
-        alb_nir_litter = 0.2_wp
+      IF (litter_area <= EPSILON(1._jp)) THEN
+        alb_vis_litter = 0.1_jp
+        alb_nir_litter = 0.2_jp
       END IF
 
       ! calculate the litter_view_fraction, i.e. what fraction of the box is covered by litter
       ! this determines how much soil is seen through litter
-      litter_view_fract = 1.0_wp - EXP(-0.5_wp * litter_area) ! R: because this graph is not linear (logarithmical) and in JSBACH4
+      litter_view_fract = 1.0_jp - EXP(-0.5_jp * litter_area) ! R: because this graph is not linear (logarithmical) and in JSBACH4
                                                               !    the litter_areas are not summed up the result in JS4 will be
                                                               !    smaller here as it is calcul. for each single tile but the sum
                                                               !    of tiles will give a much higher "litter_view_fract" or - to
@@ -770,8 +770,8 @@ CONTAINS
                                                               !    alb_soil_vis However, therefore it meight be necessary to
                                                               !    rescale this funktion ...
 
-      alb_vis_soil = (1.0_wp - litter_view_fract) * alb_vis_soil_nolitter + litter_view_fract * alb_vis_litter
-      alb_nir_soil = (1.0_wp - litter_view_fract) * alb_nir_soil_nolitter + litter_view_fract * alb_nir_litter
+      alb_vis_soil = (1.0_jp - litter_view_fract) * alb_vis_soil_nolitter + litter_view_fract * alb_vis_litter
+      alb_nir_soil = (1.0_jp - litter_view_fract) * alb_nir_soil_nolitter + litter_view_fract * alb_nir_litter
     ELSE
        alb_vis_soil = alb_vis_soil_nolitter
        alb_nir_soil = alb_nir_soil_nolitter
@@ -812,7 +812,7 @@ CONTAINS
       & AlbedoSnowVisMax_temp,  &
       & AlbedoSnowNirMax_temp
 
-    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_jp
 
     ! Arguments
     LOGICAL,  INTENT(in)  :: l_day
@@ -839,12 +839,12 @@ CONTAINS
                              snow_albedo_angle_factor
 
     ! Initialize local variables
-    alb_vis_snow_age  = 0.0_wp
-    alb_nir_snow_age  = 0.0_wp
-    alb_vis_snow_temp = 0.0_wp
-    alb_nir_snow_temp = 0.0_wp
-    alb_vis_snow      = 0.0_wp
-    alb_nir_snow      = 0.0_wp
+    alb_vis_snow_age  = 0.0_jp
+    alb_nir_snow_age  = 0.0_jp
+    alb_vis_snow_temp = 0.0_jp
+    alb_nir_snow_temp = 0.0_jp
+    alb_vis_snow      = 0.0_jp
+    alb_nir_snow      = 0.0_jp
 
     ! ---------------------------
     ! Go
@@ -852,24 +852,24 @@ CONTAINS
     IF (.NOT. l_day) RETURN
 
     ! calculate albedo of snow dependent on age (snow age scheme, from BATS model of NCAR)
-    IF (fract_snow_soil > EPSILON(1._wp)) THEN
-       snow_age_factor = snow_age / (1._wp + snow_age)
-       IF (cos_zenith_angle < 0.5_wp) THEN
-         snow_albedo_angle_factor = ((1.0_wp + ZenithAngleFactor)/ &
-                                    (1.0_wp + 2.0_wp * ZenithAngleFactor * cos_zenith_angle) - 1.0_wp) / &
+    IF (fract_snow_soil > EPSILON(1._jp)) THEN
+       snow_age_factor = snow_age / (1._jp + snow_age)
+       IF (cos_zenith_angle < 0.5_jp) THEN
+         snow_albedo_angle_factor = ((1.0_jp + ZenithAngleFactor)/ &
+                                    (1.0_jp + 2.0_jp * ZenithAngleFactor * cos_zenith_angle) - 1.0_jp) / &
                                   ZenithAngleFactor
        ELSE
-          snow_albedo_angle_factor = 0._wp
+          snow_albedo_angle_factor = 0._jp
        END IF
-       alb_vis_snow_age = AlbedoSnowVisMax_age * (1._wp - AlbedoSnowVisAge * snow_age_factor)
+       alb_vis_snow_age = AlbedoSnowVisMax_age * (1._jp - AlbedoSnowVisAge * snow_age_factor)
        alb_vis_snow_age = alb_vis_snow_age + AlbedoSnowAngle * snow_albedo_angle_factor * &
-                                                   (1._wp - alb_vis_snow_age)
-       alb_nir_snow_age = AlbedoSnowNirMax_age * (1._wp - AlbedoSnowNirAge * snow_age_factor)
+                                                   (1._jp - alb_vis_snow_age)
+       alb_nir_snow_age = AlbedoSnowNirMax_age * (1._jp - AlbedoSnowNirAge * snow_age_factor)
        alb_nir_snow_age = alb_nir_snow_age + AlbedoSnowAngle * snow_albedo_angle_factor * &
-                                                   (1._wp - alb_nir_snow_age)
+                                                   (1._jp - alb_nir_snow_age)
     ELSE
-       alb_vis_snow_age = 0._wp
-       alb_nir_snow_age = 0._wp
+       alb_vis_snow_age = 0._jp
+       alb_nir_snow_age = 0._jp
     END IF
 
 
@@ -891,9 +891,9 @@ CONTAINS
 
     ! weight age vs. temperature of snow albedo to receive alb_vis_snow and alb_nir_snow
     alb_vis_snow = albedo_age_weight * alb_vis_snow_age + &
-                              (1._wp - albedo_age_weight) * alb_vis_snow_temp
+                              (1._jp - albedo_age_weight) * alb_vis_snow_temp
     alb_nir_snow = albedo_age_weight * alb_nir_snow_age + &
-                              (1._wp - albedo_age_weight) * alb_nir_snow_temp
+                              (1._jp - albedo_age_weight) * alb_nir_snow_temp
 
   END SUBROUTINE calc_snow_albedo
   !
@@ -917,7 +917,7 @@ CONTAINS
     ! Declarations
     USE mo_rad_constants,           ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
 
-    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_jp
 
     ! Arguments
     LOGICAL,  INTENT(in)  :: l_day
@@ -947,12 +947,12 @@ CONTAINS
     IF (.NOT. l_day) RETURN
 
     !!!! Albedo formulation for unfrozen ponds is taken from CLM
-    alb_wtr_pond_vis = 0.05_wp /(MAX(0.001_wp,cos_zenith_angle) + 0.15_wp)
+    alb_wtr_pond_vis = 0.05_jp /(MAX(0.001_jp,cos_zenith_angle) + 0.15_jp)
     alb_wtr_pond_nir = alb_pond_vis
 
 
     ! Temperature-dependent ice albedo (taken from lake ice fomulation)
-    t_upper_limit     = tmelt - 1._wp
+    t_upper_limit     = tmelt - 1._jp
     IF (t >= tmelt) THEN
       alb_ice_pond_vis = AlbedoLakeIceMin
     ELSE IF (t < t_upper_limit) THEN
@@ -963,14 +963,14 @@ CONTAINS
         &        * (tmelt - t))
     END IF
     ! Albedo nir from CLM
-    alb_ice_pond_nir = 0.4_wp
+    alb_ice_pond_nir = 0.4_jp
 
     ! Agregation of albedo of ice and wtr under the assumption that ice is predominantly
     ! near the surfce hence has a stronger influence on albedo
-    IF (ice_pond > 0._wp) THEN
-      fact_ice     = MAX(0._wp, MIN(1._wp, 1._wp - (wtr_pond/(wtr_pond+ice_pond))**2._wp))
-      alb_pond_vis = fact_ice * alb_ice_pond_vis + (1.0_wp - fact_ice) * alb_wtr_pond_vis
-      alb_pond_nir = fact_ice * alb_ice_pond_nir + (1.0_wp - fact_ice) * alb_wtr_pond_nir
+    IF (ice_pond > 0._jp) THEN
+      fact_ice     = MAX(0._jp, MIN(1._jp, 1._jp - (wtr_pond/(wtr_pond+ice_pond))**2._jp))
+      alb_pond_vis = fact_ice * alb_ice_pond_vis + (1.0_jp - fact_ice) * alb_wtr_pond_vis
+      alb_pond_nir = fact_ice * alb_ice_pond_nir + (1.0_jp - fact_ice) * alb_wtr_pond_nir
     ELSE
       alb_pond_vis = alb_wtr_pond_vis
       alb_pond_nir = alb_wtr_pond_nir
@@ -1012,13 +1012,13 @@ CONTAINS
     IF (.NOT. l_day) RETURN
 
     ! Fraction of "visible" bare ground below vegetation regarding only the LAI coverage
-    sky_view_fract = 1._wp - fract_fpc_max * (1._wp - EXP(- SkyViewFactor * lai))
+    sky_view_fract = 1._jp - fract_fpc_max * (1._jp - EXP(- SkyViewFactor * lai))
 
     ! Fraction of soil below vegetation covered only by stems
     ! R: later: skip "sky_view_fract -" => changes meaning of sky_view_fract_stem but later shortens calculations
     sky_view_fract_stem = &
-      & sky_view_fract - (1._wp - fract_fpc_max * (1._wp - EXP(- SkyViewFactor * &
-                                                     (lai + StemArea) * (2.0_wp - cos_zenith_angle))))
+      & sky_view_fract - (1._jp - fract_fpc_max * (1._jp - EXP(- SkyViewFactor * &
+                                                     (lai + StemArea) * (2.0_jp - cos_zenith_angle))))
 
   END SUBROUTINE calc_sky_view_fractions
   !
@@ -1091,29 +1091,29 @@ CONTAINS
     IF (.NOT. l_day) RETURN
 
     alb_vis_grnd    = fract_pond           * alb_pond_vis &
-                    + (1._wp - fract_pond) * alb_vis_soil
+                    + (1._jp - fract_pond) * alb_vis_soil
     alb_nir_grnd    = fract_pond           * alb_pond_nir &
-                    + (1._wp - fract_pond) * alb_nir_soil
+                    + (1._jp - fract_pond) * alb_nir_soil
 
-    alb_vis_nostems = (1.0_wp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_grnd
-    alb_nir_nostems = (1.0_wp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_grnd
+    alb_vis_nostems = (1.0_jp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_grnd
+    alb_nir_nostems = (1.0_jp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_grnd
 
     ! albedo of forests = weighted mean of albedo of ground below canopy and albedo of canopy
     IF (l_forest) THEN
       alb_vis = MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
         & (sky_view_fract - sky_view_fract_stem)                                                  &
-        &   * (fract_snow_soil * alb_vis_snow        + (1.0_wp - fract_snow_soil) * alb_vis_grnd) &
+        &   * (fract_snow_soil * alb_vis_snow        + (1.0_jp - fract_snow_soil) * alb_vis_grnd) &
         & +                                                                                       &
           ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
           ! alb_vis_grnd represents here the stem albedo (consistent with the input datasets
           ! where the albedo soil represents the ground albedo for LAI=0 which includes stems)
         & sky_view_fract_stem                                                                     &
-        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_grnd)  &
+        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_jp - fract_snow_can) * alb_vis_grnd)  &
         & +                                                                                       &
           ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
-        & (1.0_wp - sky_view_fract)                                                               &
-        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_can)   &
+        & (1.0_jp - sky_view_fract)                                                               &
+        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_jp - fract_snow_can) * alb_vis_can)   &
           !
           ! OR use the albedo without regarding stems if then the albedo is higher:
         & , alb_vis_nostems)
@@ -1121,26 +1121,26 @@ CONTAINS
       alb_nir =  MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
         & (sky_view_fract - sky_view_fract_stem)                                                   &
-        &   * (fract_snow_soil * alb_nir_snow        +  (1.0_wp - fract_snow_soil) * alb_nir_grnd) &
+        &   * (fract_snow_soil * alb_nir_snow        +  (1.0_jp - fract_snow_soil) * alb_nir_grnd) &
         & +                                                                                        &
           ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
         & sky_view_fract_stem                                                                      &
-        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_grnd)  &
+        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_jp - fract_snow_can) * alb_nir_grnd)  &
         & +                                                                                        &
           ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
-        & (1.0_wp - sky_view_fract)                                                                &
-        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_can)   &
+        & (1.0_jp - sky_view_fract)                                                                &
+        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_jp - fract_snow_can) * alb_nir_can)   &
           !
           ! OR use the albedo without regarding stems if then the albedo is higher:
         & , alb_nir_nostems)
     ELSE
       alb_vis = MAX( &
         ! Albedo of the (snow covered and uncoverd) visible soil:
-        & fract_snow_soil * alb_vis_snow         + (1.0_wp - fract_snow_soil) * alb_vis_nostems &
+        & fract_snow_soil * alb_vis_snow         + (1.0_jp - fract_snow_soil) * alb_vis_nostems &
         &      , alb_vis_nostems)
        alb_nir = MAX( &
         ! Albedo of the (snow covered and uncoverd) visible soil:
-        & fract_snow_soil * alb_nir_snow         + (1.0_wp - fract_snow_soil) * alb_nir_nostems &
+        & fract_snow_soil * alb_nir_snow         + (1.0_jp - fract_snow_soil) * alb_nir_nostems &
         &      , alb_nir_nostems)
     END IF ! l_forest
 
@@ -1195,7 +1195,7 @@ CONTAINS
     ! Go
 
     ! Calculate albedo_grnd incl. snowcover
-    min_temp_snow_albedo = tmelt - 5._wp
+    min_temp_snow_albedo = tmelt - 5._jp
 
     IF (t_srf >= tmelt) THEN
       albedo_snow_grnd = AlbedoSnowMin_simple
@@ -1212,20 +1212,20 @@ CONTAINS
 
     ! Calclulate albedo of ground incl. snowcover
     albedo_grnd = grnd_snow_fract                                   * albedo_snow_grnd &
-                + (1._wp - grnd_snow_fract) * fract_pond            * albedo_pond      &
-                + (1._wp - grnd_snow_fract) * (1.0_wp - fract_pond) * alb_background
+                + (1._jp - grnd_snow_fract) * fract_pond            * albedo_pond      &
+                + (1._jp - grnd_snow_fract) * (1.0_jp - fract_pond) * alb_background
 
     ! Calculate albedo_can incl. snowcover
-    albedo_can = fract_snow_can * AlbedoCanopySnow_simple + (1._wp - fract_snow_can) * alb_background
+    albedo_can = fract_snow_can * AlbedoCanopySnow_simple + (1._jp - fract_snow_can) * alb_background
 
     ! Calculate albedo of surface
-    sky_view_fract = EXP(-1.0_wp * MAX(lai, 2._wp)) ! The value 1.0 is the SkyViewFactor.
+    sky_view_fract = EXP(-1.0_jp * MAX(lai, 2._jp)) ! The value 1.0 is the SkyViewFactor.
                                                     ! The value 2.0 represents the stem_area.
                                                     ! Keep these values constant:
                                                     ! The function get_surface_albedo_simple_echam5 is not thought as an actual
                                                     ! alternative albedo scheme but to provide comparability to old ECHAM versions
 
-    forest_view_fract = fract_forest * (1._wp - sky_view_fract)
+    forest_view_fract = fract_forest * (1._jp - sky_view_fract)
 
 
 !   R: falls man Glaciermaske verwenden will, siehe auch radiation interface...
@@ -1233,7 +1233,7 @@ CONTAINS
 !        get_surface_albedo_simple = albedo_snow_grnd
 !     ELSE
     get_surface_albedo_simple = MAX(alb_background, &
-                                    (1._wp - forest_view_fract) * albedo_grnd &
+                                    (1._jp - forest_view_fract) * albedo_grnd &
                                     + forest_view_fract * albedo_can)
 
   END FUNCTION get_surface_albedo_simple
@@ -1353,7 +1353,7 @@ CONTAINS
   !!  accordingly to Wang2003, "radf4" was replaced by "-kbl" when calculating "idrdra"
   !!
   !! @par canopy clumping factor
-  !!  to disable clumping set lctlib(:)%omega_clumping = 1.0_wp
+  !!  to disable clumping set lctlib(:)%omega_clumping = 1.0_jp
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_canopy_radiation_budget( nc     , &   ! in
@@ -1474,41 +1474,41 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO icanopy = 1,ncanopy
       DO ic = 1,nc
-        IF (PRESENT(fleaf_sunlit_cl)) fleaf_sunlit_cl(ic,icanopy) = 0.0_wp
-        IF (PRESENT(appfd_sunlit_cl)) appfd_sunlit_cl(ic,icanopy) = 0.0_wp
-        IF (PRESENT(appfd_shaded_cl)) appfd_shaded_cl(ic,icanopy) = 0.0_wp
+        IF (PRESENT(fleaf_sunlit_cl)) fleaf_sunlit_cl(ic,icanopy) = 0.0_jp
+        IF (PRESENT(appfd_sunlit_cl)) appfd_sunlit_cl(ic,icanopy) = 0.0_jp
+        IF (PRESENT(appfd_shaded_cl)) appfd_shaded_cl(ic,icanopy) = 0.0_jp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
-      IF (PRESENT(fapar)) fapar(ic) = 0.0_wp
-      IF (PRESENT(alb_can)) alb_can(ic) = 0.0_wp
-      IF (PRESENT(alb_lnd)) alb_lnd(ic) = 0.0_wp
+      IF (PRESENT(fapar)) fapar(ic) = 0.0_jp
+      IF (PRESENT(alb_can)) alb_can(ic) = 0.0_jp
+      IF (PRESENT(alb_lnd)) alb_lnd(ic) = 0.0_jp
     END DO
     !$ACC END PARALLEL LOOP
 
     ! init local vars
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
-      arad_can(ic) = 0.0_wp
-      arad_can_up(ic) = 0.0_wp
-      arad_soil(ic) = 0.0_wp
+      arad_can(ic) = 0.0_jp
+      arad_can_up(ic) = 0.0_jp
+      arad_soil(ic) = 0.0_jp
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO icanopy = 1,ncanopy
       DO ic = 1,nc
-        arad_sunlit_cl(ic,icanopy) = 0.0_wp
-        arad_shaded_cl(ic,icanopy) = 0.0_wp
-        arad_can_sunlit_cl(ic,icanopy) = 0.0_wp
-        arad_can_shaded_cl(ic,icanopy) = 0.0_wp
-        arad_can_shaded_up_cl(ic,icanopy) = 0.0_wp
-        sai_cl(ic,icanopy) = 0.0_wp
-        cumm_sai_cl(ic,icanopy) = 0.0_wp
-        fsunlit_cl(ic,icanopy) = 0.0_wp
+        arad_sunlit_cl(ic,icanopy) = 0.0_jp
+        arad_shaded_cl(ic,icanopy) = 0.0_jp
+        arad_can_sunlit_cl(ic,icanopy) = 0.0_jp
+        arad_can_shaded_cl(ic,icanopy) = 0.0_jp
+        arad_can_shaded_up_cl(ic,icanopy) = 0.0_jp
+        sai_cl(ic,icanopy) = 0.0_jp
+        cumm_sai_cl(ic,icanopy) = 0.0_jp
+        fsunlit_cl(ic,icanopy) = 0.0_jp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -1520,7 +1520,7 @@ CONTAINS
     DO ic = 1,nc
       IF (lai(ic) < eps8) THEN ! case of vegetation with no leaves, condense SAI to first layer
         sai_cl(ic,1)      = sai(ic)
-        cumm_sai_cl(ic,1) = sai(ic) / 2.0_wp ! sai mid-point evaluation
+        cumm_sai_cl(ic,1) = sai(ic) / 2.0_jp ! sai mid-point evaluation
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -1554,9 +1554,9 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     !> Eq.1 constants for albedo calculations
-    radf3b = (1.0_wp - lctlib_sigma)
+    radf3b = (1.0_jp - lctlib_sigma)
     temp1  = SQRT(radf3b)
-    temp2  = 2.0_wp * (1.0_wp - temp1) / (1.0_wp + temp1)
+    temp2  = 2.0_jp * (1.0_jp - temp1) / (1.0_jp + temp1)
 
     !> @par IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
@@ -1565,7 +1565,7 @@ CONTAINS
       IF (sw_srf_down(ic) > eps8) THEN
 
         !> Downwelling direct radiation (Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation)
-        irad_dir_down(ic) = (1.0_wp - fract_par_diffuse(ic)) * sw_srf_down(ic)
+        irad_dir_down(ic) = (1.0_jp - fract_par_diffuse(ic)) * sw_srf_down(ic)
         !> Downwelling diffuse radiation
         irad_dif_down(ic) = fract_par_diffuse(ic) * sw_srf_down(ic)
 
@@ -1573,46 +1573,46 @@ CONTAINS
         IF (plai(ic) > eps8) THEN
 
           !> Eq.1  Fraction of radiation reflected by green closed canopy (fraction)
-          rho_leaf = temp2 / (1.0_wp + rho2sbeta * tmp_cos_zenith_angle(ic))
+          rho_leaf = temp2 / (1.0_jp + rho2sbeta * tmp_cos_zenith_angle(ic))
           rho = (rho_leaf * lai(ic) + alb_stem * sai(ic)) / plai(ic)
 
           !> clumping factor (eq 15.35) Campbell & Norman (1998) as a function of sun-angle
-          omega = lctlib_omega_clumping / (lctlib_omega_clumping + (1.0_wp - lctlib_omega_clumping) &
+          omega = lctlib_omega_clumping / (lctlib_omega_clumping + (1.0_jp - lctlib_omega_clumping) &
             &        * EXP(-k_csf * ACOS(tmp_cos_zenith_angle(ic)) ** lctlib_crown_shape_factor))
 
           !> Extinction coefficient for radiation over black leaves in canopy
-          kdf_leaf = kdf0 * temp1 * omega ! temp1 == SQRT(1.0_wp - lctlib_sigma)
-          kbl_leaf = kbl0 * kdf_leaf / (0.8_wp * temp1 * tmp_cos_zenith_angle(ic))
+          kdf_leaf = kdf0 * temp1 * omega ! temp1 == SQRT(1.0_jp - lctlib_sigma)
+          kbl_leaf = kbl0 * kdf_leaf / (0.8_jp * temp1 * tmp_cos_zenith_angle(ic))
           kdf(ic)      = ( kdf_leaf * lai(ic) + kbl_stem * sai(ic) ) / plai(ic)
           kbl(ic)      = ( kbl_leaf * lai(ic) + kbl_stem * sai(ic) ) / plai(ic)
 
           !> Eq.10 & 11 Some factors for radiation calculations that change with time (for canopy and canopy+stem)
-          radf1_leaf(ic) = (1.0_wp - rho_leaf) * irad_dif_down(ic) * kdf_leaf            ! eq 10
-          radf2_leaf(ic) = (1.0_wp - rho_leaf) * temp1 * irad_dir_down(ic) * kbl_leaf    ! eq 11
-          radf1(ic)      = (1.0_wp - rho) * irad_dif_down(ic) * kdf(ic)                      ! eq 10
-          radf2(ic)      = (1.0_wp - rho) * temp1 * irad_dir_down(ic) * kbl(ic)              ! eq 11
+          radf1_leaf(ic) = (1.0_jp - rho_leaf) * irad_dif_down(ic) * kdf_leaf            ! eq 10
+          radf2_leaf(ic) = (1.0_jp - rho_leaf) * temp1 * irad_dir_down(ic) * kbl_leaf    ! eq 11
+          radf1(ic)      = (1.0_jp - rho) * irad_dif_down(ic) * kdf(ic)                      ! eq 10
+          radf2(ic)      = (1.0_jp - rho) * temp1 * irad_dir_down(ic) * kbl(ic)              ! eq 11
           !> Eq.12 absorbed direct radiation
           radf3_leaf(ic) = radf3b * irad_dir_down(ic) * kbl_leaf                    ! eq 12
           radf3(ic)      = radf3b * irad_dir_down(ic) * kbl(ic)                         ! eq 12
           radf4(ic)      = -temp1 * kbl(ic)
 
           !> light intensity at bottom of canopy
-          irad_dif_down_bc(ic) = (1.0_wp - rho) * irad_dif_down(ic) * EXP(-kdf(ic)  * plai(ic))
-          irad_dir_down_bc(ic) = (1.0_wp - rho) * irad_dir_down(ic) * EXP(radf4(ic) * plai(ic))
+          irad_dif_down_bc(ic) = (1.0_jp - rho) * irad_dif_down(ic) * EXP(-kdf(ic)  * plai(ic))
+          irad_dir_down_bc(ic) = (1.0_jp - rho) * irad_dir_down(ic) * EXP(radf4(ic) * plai(ic))
 
           !> diffuse upward shortwave flux from soil reflection and absorbed radiation of the soil or snow
           irad_dif_up(ic) = alb_surface(ic) * (irad_dif_down_bc(ic) + irad_dir_down_bc(ic))
-          arad_soil(ic)   = (1.0_wp - alb_surface(ic)) * (irad_dif_down_bc(ic) + irad_dir_down_bc(ic))
+          arad_soil(ic)   = (1.0_jp - alb_surface(ic)) * (irad_dif_down_bc(ic) + irad_dir_down_bc(ic))
 
           !> factor for the absorption calculation of the upward stream
-          radf4_leaf(ic) = (1.0_wp - rho_leaf) * irad_dif_up(ic) * kdf_leaf            ! eq 10
-          radf5(ic)      = (1.0_wp - rho) * irad_dif_up(ic) * kdf(ic)                      ! eq 10
+          radf4_leaf(ic) = (1.0_jp - rho_leaf) * irad_dif_up(ic) * kdf_leaf            ! eq 10
+          radf5(ic)      = (1.0_jp - rho) * irad_dif_up(ic) * kdf(ic)                      ! eq 10
 
           !> upward shortwave diffuse flux reaching the top of the canopy
-          irad_dif_up(ic) = (1.0_wp - rho) * irad_dif_up(ic) * EXP(-kdf(ic)*plai(ic))
+          irad_dif_up(ic) = (1.0_jp - rho) * irad_dif_up(ic) * EXP(-kdf(ic)*plai(ic))
         ELSE
            !> case of no PLAI: absorped radiation and upward flux from soil only
-           arad_soil(ic)   = (1.0_wp - alb_surface(ic) ) * (irad_dif_down(ic) + irad_dir_down(ic))
+           arad_soil(ic)   = (1.0_jp - alb_surface(ic) ) * (irad_dif_down(ic) + irad_dir_down(ic))
            irad_dif_up(ic) = alb_surface(ic)             * (irad_dif_down(ic) + irad_dir_down(ic))
         END IF
       END IF
@@ -1631,9 +1631,9 @@ CONTAINS
           IF (radf2(ic) <= eps8) THEN
             !> Eq.10 Mean radiation penetrating foliage at cumm_plai_cl
             arad_shaded_cl(ic,icanopy)     = radf1_leaf(ic) * EXP(-kdf(ic) * cumm_plai_cl(ic,icanopy)) + &    ! eq 10
-                                            radf4_leaf(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy),0.0_wp)))
+                                            radf4_leaf(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy),0.0_jp)))
             arad_can_shaded_cl(ic,icanopy) = radf1(ic) * EXP(-kdf(ic) * cumm_plai_cl(ic,icanopy)) + &         ! eq 10
-                                            radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy),0.0_wp)))
+                                            radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy),0.0_jp)))
           !> @par ELSE Case of direct and diffuse radiation
           ELSE
             !> Sunlit foliage at cumm_plai_cl(icanopy) (fraction)
@@ -1643,7 +1643,7 @@ CONTAINS
             !> first calculate absorption of radiation for ecosystem level (leaves+stem)
             !> Eq.10 Diffuse radiation penetrating foliage at cumm_plai_cl(icanopy)
             idfa = radf1(ic) * EXP(-kdf(ic) * cumm_plai_cl(ic,icanopy)) &
-              &   + radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy), 0.0_wp)))
+              &   + radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic)-cumm_plai_cl(ic,icanopy), 0.0_jp)))
             !> Direct radiation penetrating sunlit foliage at cumm_plai_cl(icanopy)
             idra = radf2(ic) * EXP(radf4(ic) * cumm_plai_cl(ic,icanopy))
             !> Eq.12 Mean direct radiation remaining direct at cumm_plai_cl(icanopy)
@@ -1651,7 +1651,7 @@ CONTAINS
             idrdra = radf3(ic) * EXP(-kbl(ic) * cumm_plai_cl(ic,icanopy))
             !> Radiation penetrating shaded foliage at cumm_plai_cl(icanopy) (umol/m2/s)
             !! Eq.13 Sum of diffuse radiation and diffuse component of direct flux
-            arad_can_shaded_cl(ic,icanopy) = idfa + MAX((idra - idrdra), 0.0_wp)
+            arad_can_shaded_cl(ic,icanopy) = idfa + MAX((idra - idrdra), 0.0_jp)
             !> Radiation penetrating sunlit foliage at lc (umol/m2/s)
             !! sum of diffuse and direct radiation
             arad_can_sunlit_cl(ic,icanopy) = arad_can_shaded_cl(ic,icanopy) + radf3(ic)
@@ -1659,7 +1659,7 @@ CONTAINS
             !> now calculate radiation absorption of green foliage only
             !> Eq.10 Diffuse radiation penetrating foliage at cumm_plai_cl(icanopy)
             idfa = radf1_leaf(ic) * EXP(-kdf(ic) * cumm_plai_cl(ic,icanopy)) &
-              &    + radf4_leaf(ic) * EXP(-kdf(ic) * (MAX(plai(ic) - cumm_plai_cl(ic,icanopy), 0.0_wp)))
+              &    + radf4_leaf(ic) * EXP(-kdf(ic) * (MAX(plai(ic) - cumm_plai_cl(ic,icanopy), 0.0_jp)))
             !> Direct radiation penetrating sunlit foliage at cumm_plai_cl(icanopy)
             idra = radf2_leaf(ic) * EXP(radf4(ic) * cumm_plai_cl(ic,icanopy))
             !> Eq.12 Mean direct radiation remaining direct at cumm_plai_cl(icanopy)
@@ -1667,14 +1667,14 @@ CONTAINS
             idrdra = radf3_leaf(ic) * EXP(-kbl(ic) * cumm_plai_cl(ic,icanopy))
             !> Radiation penetrating shaded foliage at cumm_plai_cl(icanopy) (umol/m2/s)
             !! Eq.13 Sum of diffuse radiation and diffuse component of direct flux
-            arad_shaded_cl(ic,icanopy) = idfa + MAX((idra - idrdra), 0.0_wp)
+            arad_shaded_cl(ic,icanopy) = idfa + MAX((idra - idrdra), 0.0_jp)
             !> Radiation penetrating sunlit foliage at lc (umol/m2/s)
             !! sum of diffuse and direct radiation
             arad_sunlit_cl(ic,icanopy) = arad_shaded_cl(ic,icanopy) + radf3_leaf(ic)
           END IF
 
           !> for albedo calculation: radiation absorbed from the upward stream
-          arad_can_shaded_up_cl(ic,icanopy) = radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic) - cumm_plai_cl(ic,icanopy), 0.0_wp)))
+          arad_can_shaded_up_cl(ic,icanopy) = radf5(ic) * EXP(-kdf(ic) * (MAX(plai(ic) - cumm_plai_cl(ic,icanopy), 0.0_jp)))
         END IF
       END DO
     END DO
@@ -1687,7 +1687,7 @@ CONTAINS
       DO ic = 1, nc
         IF (sw_srf_down(ic) > eps8 .AND. plai_cl(ic,icanopy) > eps8) THEN
           !> total absorbed radiation (canopy+stem)
-          arad_can(ic) = arad_can(ic) + ( arad_can_shaded_cl(ic,icanopy) * (1.0_wp - fsunlit_cl(ic,icanopy)) &
+          arad_can(ic) = arad_can(ic) + ( arad_can_shaded_cl(ic,icanopy) * (1.0_jp - fsunlit_cl(ic,icanopy)) &
             &                         + arad_can_sunlit_cl(ic,icanopy) * fsunlit_cl(ic,icanopy) )            &
             &                         * plai_cl(ic,icanopy)
           !> radiation penetrating foliage from below for albedo calculation (only needed for canopy+stem)
@@ -1721,7 +1721,7 @@ CONTAINS
         IF (sw_srf_down(ic) > eps8) THEN
           fapar(ic) = arad_can(ic) / sw_srf_down(ic)
         ELSE
-          fapar(ic) = 0.0_wp
+          fapar(ic) = 0.0_jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -1739,7 +1739,7 @@ CONTAINS
             !> albedo of the canopy, as seen from the top of the canopy
             !! inferred from the difference between top and bottom of the
             !! canopy light intensities minus the amount of absorbed downward radiation
-            alb_can(ic) = 1.0_wp - (irad_dif_down_bc(ic) + irad_dir_down_bc(ic) + (arad_can(ic) - arad_can_up(ic))) &
+            alb_can(ic) = 1.0_jp - (irad_dif_down_bc(ic) + irad_dir_down_bc(ic) + (arad_can(ic) - arad_can_up(ic))) &
               &                   / (irad_dir_down(ic) + irad_dif_down(ic))
             !> total upward shortwave radiation flux at the top of the canopy:
             !! soil-based flux + reflectance of the canopy

@@ -147,8 +147,8 @@ CONTAINS
     !> specifies vertical grid with tracked age dimension
     fage_grid_levels(1:max_age) = (/ (REAL(i,kind=jp),i=1,max_age) /)
     forest_age  => new_vgrid('forest_age', ZAXIS_GENERIC, max_age, &
-      & levels  = fage_grid_levels (1:max_age) - 0.5_wp, &
-      & lbounds = fage_grid_levels (1:max_age) - 1._wp,  &
+      & levels  = fage_grid_levels (1:max_age) - 0.5_jp, &
+      & lbounds = fage_grid_levels (1:max_age) - 1._jp,  &
       & ubounds = fage_grid_levels (1:max_age),          &
       & units='y')
     CALL register_vgrid(forest_age)
@@ -189,8 +189,8 @@ CONTAINS
     END IF
 
     ! First class always contains the first year only
-    age_class_max_age(1) = 0._wp
-    age_class_max_age(2) = 1._wp
+    age_class_max_age(1) = 0._jp
+    age_class_max_age(2) = 1._jp
 
     IF (age_class_scheme == 'equal' ) THEN
       ! Equal intervals distributed equally over all but the first age class
@@ -217,7 +217,7 @@ CONTAINS
     age_class_max_age(nacs+1) = max_age
 
     ! Assertion (currently this is of course the case - just in case that others want to define distributions themselves)
-    IF (age_class_max_age(2) .NE. 1._wp) THEN
+    IF (age_class_max_age(2) .NE. 1._jp) THEN
       CALL finish(TRIM(routine), 'Assertion: upper boundary of lowest age class always needs to have max_age of 1!')
     END IF
     IF (ANY(age_class_max_age(:) .GT. max_age)) THEN
@@ -225,7 +225,7 @@ CONTAINS
     END IF
 
     DO i = 1,nacs
-      age_class_mean_age(i) = (age_class_max_age(i) + age_class_max_age(i+1)) * 0.5_wp
+      age_class_mean_age(i) = (age_class_max_age(i) + age_class_max_age(i+1)) * 0.5_jp
     END DO
 
   END SUBROUTINE derive_age_class_boundaries

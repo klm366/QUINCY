@@ -103,121 +103,121 @@ MODULE mo_hydro_constants
 
   REAL(jp), PARAMETER :: &
     ! Parameters used to calculate snow fraction from snow amount
-    & wsn2fract_eps    = 1.E-12_wp,        & !< Used for numerical reasons (Roesch et al. 2001, Eq. 6)
-    & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate subgrid scale slopes (Roesch et al. 2001, Eq. 7)
-    & wsn2fract_const  = 0.95_wp,          & !< Factor for snow fraction (Roesch et al. 2001, Eq. 6 and 7)
+    & wsn2fract_eps    = 1.E-12_jp,        & !< Used for numerical reasons (Roesch et al. 2001, Eq. 6)
+    & wsn2fract_sigfac = 0.15_jp,          & !< Factor to approximate subgrid scale slopes (Roesch et al. 2001, Eq. 7)
+    & wsn2fract_const  = 0.95_jp,          & !< Factor for snow fraction (Roesch et al. 2001, Eq. 6 and 7)
 
     ! Parameters used to calculate snow density (following Heise et al. 2006, also used in TERRA; compare Doms et al. 2021)
     ! Note: dens_snow_min is currently also used in SSE and thus defined in shared/mo_jsb_physical_constants
-    ! dens_snow_min      = 50._wp,         & !< Minimum density of snow - for fresh snow [kg/m3] (Heise et al. 2006)
-    & dens_snow_max      = 400._wp,        & !< Maximum density of snow [kg/m3] (Heise et al. 2006)
-    & csnow_tmin         = 258.15_wp,      & !< Lower threshold temperature of snow for ageing and fresh snow density [K]
+    ! dens_snow_min      = 50._jp,         & !< Minimum density of snow - for fresh snow [kg/m3] (Heise et al. 2006)
+    & dens_snow_max      = 400._jp,        & !< Maximum density of snow [kg/m3] (Heise et al. 2006)
+    & csnow_tmin         = 258.15_jp,      & !< Lower threshold temperature of snow for ageing and fresh snow density [K]
                                              !< (= 273.15-15.0 K; Heise et al. 2006)
-    & crhosmaxt          = 0.40_wp,        & !< Maximum value of time constant for ageing of snow
-    & crhosmint          = 0.125_wp,       & !< Time constant for ageing of snow at csnow_tmin (8 days)
-    & crhosmax_tmin      = 200.00_wp,      & !< Maximum density of snow at csnow_tmin [kg/m3] (Doms et al., 2021)
+    & crhosmaxt          = 0.40_jp,        & !< Maximum value of time constant for ageing of snow
+    & crhosmint          = 0.125_jp,       & !< Time constant for ageing of snow at csnow_tmin (8 days)
+    & crhosmax_tmin      = 200.00_jp,      & !< Maximum density of snow at csnow_tmin [kg/m3] (Doms et al., 2021)
 
     ! Canopy interception
-    & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of precipitation interception (rain and snow)
+    & InterceptionEfficiency = 0.25_jp,    & !< Efficiency of precipitation interception (rain and snow)
 
-    & Epar                   = 2.2E5_wp,   & !TODO: remove, not used in HYDRO
-    & SoilReflectivityParMin = 0.0_wp,     & !TODO: remove, not used in HYDRO
+    & Epar                   = 2.2E5_jp,   & !TODO: remove, not used in HYDRO
+    & SoilReflectivityParMin = 0.0_jp,     & !TODO: remove, not used in HYDRO
 
-    & FcMax = 1.0_wp,                      & !TODO: remove, not used in HYDRO
-    & FcMin = 1.E-3_wp,                    & !TODO: remove, not used in HYDRO
-    & ZenithMinPar = 1.E-3_wp,             & !TODO: remove, not used in HYDRO
+    & FcMax = 1.0_jp,                      & !TODO: remove, not used in HYDRO
+    & FcMin = 1.E-3_jp,                    & !TODO: remove, not used in HYDRO
+    & ZenithMinPar = 1.E-3_jp,             & !TODO: remove, not used in HYDRO
 
     ! Parameters required with ARNO Scheme - compare Todini (1996)
-    & oro_var_min = 100._wp,               & !< ARNO Scheme minimum orographic standard deviation threshold
-    & oro_var_max = 1000._wp,              & !< ARNO Scheme maximum orographic standard deviation threshold
-    & drain_min   = 0.001_wp / (3600._wp*1000._wp), & !< maximum flux for slow subsurface drainage, i.e. below
+    & oro_var_min = 100._jp,               & !< ARNO Scheme minimum orographic standard deviation threshold
+    & oro_var_max = 1000._jp,              & !< ARNO Scheme maximum orographic standard deviation threshold
+    & drain_min   = 0.001_jp / (3600._jp*1000._jp), & !< maximum flux for slow subsurface drainage, i.e. below
                                                       !< field capacity (Todini, 1996; Duemenil, 1992)
-    & drain_max   = 0.1_wp   / (3600._wp*1000._wp), & !< maximum flux for fast subsurface drainage, i.e. above
+    & drain_max   = 0.1_jp   / (3600._jp*1000._jp), & !< maximum flux for fast subsurface drainage, i.e. above
                                                       !< field capacity (Todini, 1996; Duemenil, 1992)
-    & drain_exp   = 1.5_wp,                & !< drainage scaling exponent for ARNO scheme
+    & drain_exp   = 1.5_jp,                & !< drainage scaling exponent for ARNO scheme
 
     ! Parameters used for pond computations
-    & oro_crit = 100._wp,                  & !< Reference topographic standard deviation for pond scaling factor [m]
+    & oro_crit = 100._jp,                  & !< Reference topographic standard deviation for pond scaling factor [m]
 
     ! Parameters for the computation of canopy conductance/resistance using Eq. 3.3.2.12 in ECHAM3 manual
-    & conductance_k = 0.9_wp,              & !< Parameter for canopy conductance/resistance []
-    & conductance_a = 5000._wp,            & !< Parameter for conductance/resistance [Jm-3]
-    & conductance_b = 10._wp,              & !< Parameter for canopy conductance/resistance [Wm-2]
-    & conductance_c = 100._wp,             & !< Parameter for conductance/resistance [ms-1]
+    & conductance_k = 0.9_jp,              & !< Parameter for canopy conductance/resistance []
+    & conductance_a = 5000._jp,            & !< Parameter for conductance/resistance [Jm-3]
+    & conductance_b = 10._jp,              & !< Parameter for canopy conductance/resistance [Wm-2]
+    & conductance_c = 100._jp,             & !< Parameter for conductance/resistance [ms-1]
 
     ! Parameters for organic soil component - top layer
-    & vol_porosity_org_top    = 0.95_wp,       & !< Volumetric porosity of top organic layer [m/m]
-    & vol_field_cap_org_top   = 0.95_wp,       & !< Volumetric field capacity of top organic layer [m/m]
-    & vol_p_wilt_org_top      = 0.255_wp,      & !< Volumetric wilting point of top organic layer [m/m]
-    & vol_wres_org_top        = 0.050_wp,      & !< Volumetric residual water content of top organic
+    & vol_porosity_org_top    = 0.95_jp,       & !< Volumetric porosity of top organic layer [m/m]
+    & vol_field_cap_org_top   = 0.95_jp,       & !< Volumetric field capacity of top organic layer [m/m]
+    & vol_p_wilt_org_top      = 0.255_jp,      & !< Volumetric wilting point of top organic layer [m/m]
+    & vol_wres_org_top        = 0.050_jp,      & !< Volumetric residual water content of top organic
                                                  !< layer [m/m] (Letts et al., 2000)
-    & hyd_cond_sat_org_top    = 0.0001_wp,     & !< Saturated hydraulic conductivity of organic part of
+    & hyd_cond_sat_org_top    = 0.0001_jp,     & !< Saturated hydraulic conductivity of organic part of
                                                  !< top soil layer [m/s]
-    & bclapp_org_top          = 4._wp,         & !< Exponent b in Clapp and Hornberger of organic part
+    & bclapp_org_top          = 4._jp,         & !< Exponent b in Clapp and Hornberger of organic part
                                                  !< of top soil layer []
-    & matric_pot_org_top      = -0.1_wp,       & !< Soil matric potential of top organic layer [m]
+    & matric_pot_org_top      = -0.1_jp,       & !< Soil matric potential of top organic layer [m]
                                                  !< (values (roughy) from Chadburn 2022)
-    & pore_size_index_org_top = 0.7_wp,        & !< Pore size distribution index of top organic layer []
+    & pore_size_index_org_top = 0.7_jp,        & !< Pore size distribution index of top organic layer []
 
     ! Parameters for organic soil component - deeper layers
-    & vol_porosity_org_below  = 0.82_wp,       & !< Volumetric porosity of deep organic layers [m/m]
-    & vol_field_cap_org_below = 0.82_wp,       & !< Volumetric field capacity of deep organic layers [m/m]
-    & vol_p_wilt_org_below    = 0.255_wp,      & !< Volumetric wilting point of deep organic layers [m/m]
-    & vol_wres_org_below      = 0.150_wp,      & !< Volumetric residual water content of deep organic
+    & vol_porosity_org_below  = 0.82_jp,       & !< Volumetric porosity of deep organic layers [m/m]
+    & vol_field_cap_org_below = 0.82_jp,       & !< Volumetric field capacity of deep organic layers [m/m]
+    & vol_p_wilt_org_below    = 0.255_jp,      & !< Volumetric wilting point of deep organic layers [m/m]
+    & vol_wres_org_below      = 0.150_jp,      & !< Volumetric residual water content of deep organic
                                                  !< layers [m/m] (Letts et al., 2000)
-    & hyd_cond_sat_org_below  = 0.00000001_wp, & !< Saturated hydraulic conductivity of deep organic layers [m/s]
-    & bclapp_org_below        = 8._wp,         & !< Exponent b in Clapp and Hornberger of deep organic layers []
-    & matric_pot_org_below    = -1.0_wp,       & !< Soil matric potential of deep organic layers [m]
+    & hyd_cond_sat_org_below  = 0.00000001_jp, & !< Saturated hydraulic conductivity of deep organic layers [m/s]
+    & bclapp_org_below        = 8._jp,         & !< Exponent b in Clapp and Hornberger of deep organic layers []
+    & matric_pot_org_below    = -1.0_jp,       & !< Soil matric potential of deep organic layers [m]
                                                  !< (values (roughy) from Chadburn 2022)
-    & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of deep organic layers []
+    & pore_size_index_org_below = 0.7_jp,      & !< Pore size distribution index of deep organic layers []
 
     ! Parameters for percolation theory (Oleson et al., 2013)
-    & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected
+    & thresh_org              = 0.5_jp,        & !< Threshold of organic material above which connected
                                                  !< flow pathways form (Oleson et al., 2013, p. 162)
-    & beta_perc               = 0.139_wp,      & !< Parameter from percolation theory (Oleson et al., 2013, p. 162)
+    & beta_perc               = 0.139_jp,      & !< Parameter from percolation theory (Oleson et al., 2013, p. 162)
 
     ! Parameter for bedrock
-    & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
+    & k_brock                 = 1.E-6_jp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
 
   REAL(jp), PARAMETER :: &
-    & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
+    & matric_pot_min          = -1000.0_jp       !< min value of matric potential ('mpot_act'), tuned [m]
 
   REAL(jp), PARAMETER :: &
-    & wtr_density             = 998.0_wp, &      !< Density of water at 20 degrees C (e.g. Tanaka et al., 2001) [kg / m3]
-    & ice_density             = 916.7_wp         !< Density of ice, textbook value [kg / m3]
+    & wtr_density             = 998.0_jp, &      !< Density of water at 20 degrees C (e.g. Tanaka et al., 2001) [kg / m3]
+    & ice_density             = 916.7_jp         !< Density of ice, textbook value [kg / m3]
 
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone
   REAL(jp), PARAMETER :: &
-    & k_pwp_a         = 0.031_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_c         = 0.487_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_s         = -0.024_wp, &             !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_sc        = 0.068_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_at        = -0.02_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_pwp_bt        = 0.14_wp, &               !< Empirical constant in pedo-transfer function to get water content at PWP
-    & k_fc_a          = 0.299_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_c          = 0.195_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_s          = -0.251_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_sc         = 0.452_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_at         = -0.015_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_bt         = -0.373_wp, &             !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_fc_ct         = 1.293_wp, &              !< Empirical constant in pedo-transfer function to get water content at FC
-    & k_sat_a         = 0.078_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_c         = 0.034_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_s         = 0.278_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_sc        = -0.584_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_at        = -0.107_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_bt        = 0.6360_wp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_ct        = 0.097_wp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
-    & k_sat_dt        = 0.043_wp                 !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_pwp_a         = 0.031_jp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_c         = 0.487_jp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_s         = -0.024_jp, &             !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_sc        = 0.068_jp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_at        = -0.02_jp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_pwp_bt        = 0.14_jp, &               !< Empirical constant in pedo-transfer function to get water content at PWP
+    & k_fc_a          = 0.299_jp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_c          = 0.195_jp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_s          = -0.251_jp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_sc         = 0.452_jp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_at         = -0.015_jp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_bt         = -0.373_jp, &             !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_fc_ct         = 1.293_jp, &              !< Empirical constant in pedo-transfer function to get water content at FC
+    & k_sat_a         = 0.078_jp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_c         = 0.034_jp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_s         = 0.278_jp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_sc        = -0.584_jp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_at        = -0.107_jp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_bt        = 0.6360_jp, &             !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_ct        = 0.097_jp, &              !< Empirical constant in pedo-transfer function to get water content at SAT
+    & k_sat_dt        = 0.043_jp                 !< Empirical constant in pedo-transfer function to get water content at SAT
 #endif
 
   REAL(jp), PARAMETER :: &
-    & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< Maximum upward material transport across soil layers,
+    & frac_wtr_vertical_transport_up_max    = -0.75_jp, &   !< Maximum upward material transport across soil layers,
                                                             !< i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
-    & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< Maximum downward material transport across soil layers,
+    & frac_wtr_vertical_transport_down_max  = 0.75_jp, &    !< Maximum downward material transport across soil layers,
                                                             !< i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
-    & frac_w_lat_loss_max                   = 0.75_wp       !< Maximum fraction of lateral (horizontal) water loss; parameter
+    & frac_w_lat_loss_max                   = 0.75_jp       !< Maximum fraction of lateral (horizontal) water loss; parameter
                                                             !< value: identical with frac_wtr_vertical_transport_down_max
 
 #endif

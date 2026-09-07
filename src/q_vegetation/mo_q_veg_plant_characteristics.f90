@@ -258,9 +258,9 @@ CONTAINS
       lai(ic)      = veg_pool_mt(ix_leaf, ixC, ic) * lctlib_sla
 
       IF (lctlib_growthform == itree) THEN
-        dens_ind(ic) = MAX(0.0_wp, dens_ind(ic) + delta_dens_ind(ic))
+        dens_ind(ic) = MAX(0.0_jp, dens_ind(ic) + delta_dens_ind(ic))
         ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
-        delta_dens_ind(ic) = 0.0_wp
+        delta_dens_ind(ic) = 0.0_jp
 
         ! In CANOPY mode dens_ind is zero and height is a pft specific lctlib constant
         IF (dens_ind(ic) > eps8) THEN
@@ -274,7 +274,7 @@ CONTAINS
         END IF
       END IF
 
-      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
+      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -286,7 +286,7 @@ CONTAINS
             sai(ic) = k_sai2lai * veg_pool_mt(ix_sap_wood, ixC, ic) &
               &       * lctlib_k_latosa / lctlib_wood_density / height(ic)
           ELSE
-            sai(ic) = 0.0_wp
+            sai(ic) = 0.0_jp
           END IF
         END DO
       CASE(QCANOPY)
@@ -302,12 +302,12 @@ CONTAINS
     !>
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
-      fract_fpc(ic) = 1.0_wp - EXP(-k_fpc * (lai(ic) + sai(ic)))
+      fract_fpc(ic) = 1.0_jp - EXP(-k_fpc * (lai(ic) + sai(ic)))
       ! NOTE use as minimum value for all PFT veg_min_roughness, because
       !      vegetation density and height can change and
       !      therefore a tile occupied by a woody PFT can have a height lower than 10m, implying a rough_m less than 1;
       !      jsbach is using the lctlib parameter MinVegRoughness instead
-      rough_veg_star(ic) = 1._wp / LOG(config_blending_height / MAX((height(ic) / veg_height_to_rough_momentum), &
+      rough_veg_star(ic) = 1._jp / LOG(config_blending_height / MAX((height(ic) / veg_height_to_rough_momentum), &
         &                  veg_min_roughness)) ** 2
     END DO
     !$ACC END PARALLEL LOOP

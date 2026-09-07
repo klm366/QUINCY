@@ -260,13 +260,13 @@ CONTAINS
     bc_filename            = 'bc_land_hydro.nc'
     ic_filename            = 'ic_land_hydro.nc'
     bc_sso_filename        = 'bc_land_sso.nc'
-    w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
-    w_soil_limit           = -1.0_wp
-    w_soil_crit_fract      = 0.75_wp
-    w_soil_wilt_fract      = 0.35_wp
-    snow_depth_max         = -1.0_wp             ! -1: no limitation
-    ret_macro_blg          = 432000._wp          ! [s]
-    ret_macro_srf          = 36000._wp           ! [s]
+    w_skin_max             = 2.E-4_jp            ! 0.2 mm corresponds to Roesch et al. 2001
+    w_soil_limit           = -1.0_jp
+    w_soil_crit_fract      = 0.75_jp
+    w_soil_wilt_fract      = 0.35_jp
+    snow_depth_max         = -1.0_jp             ! -1: no limitation
+    ret_macro_blg          = 432000._jp          ! [s]
+    ret_macro_srf          = 36000._jp           ! [s]
     scheme_stom_cond       = 'echam5'
     l_read_initial_moist   = .FALSE.
     sanitize_restart       = .FALSE.
@@ -285,8 +285,8 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_w           = 5         ! but use 5 soil layers as default for quincy standalone
     qs_soil_depth            = 9.5
-    qs_soil_awc_prescribe    = 300.0_wp
-    qs_soil_theta_prescribe  = 1.0_wp
+    qs_soil_awc_prescribe    = 300.0_jp
+    qs_soil_theta_prescribe  = 1.0_jp
 #endif
 
     ! Open the file containing the hydrology namelist
@@ -326,7 +326,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Fraction of field capacity at permanent wilting point: '//TRIM(real2string(w_soil_wilt_fract)))
 
     config%snow_depth_max      = snow_depth_max
-    IF (snow_depth_max >= 0._wp) THEN
+    IF (snow_depth_max >= 0._jp) THEN
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
 
@@ -480,9 +480,9 @@ CONTAINS
       ! calculate mid-points of each soil layer
       ALLOCATE(depths(nsoil+1))                                     ! Upper/lower bounds of soil layers
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp                                             ! lower bounds == top of the soil layer
+      depths(1) = 0._jp                                             ! lower bounds == top of the soil layer
       depths(2:nsoil+1) = ptr_1D(1:nsoil)                           ! upper bounds == bottom of the soil layer
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp ! center depth of a layer
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._jp ! center depth of a layer
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()
@@ -507,8 +507,8 @@ CONTAINS
       END IF
 
       ! parameter for soil layer calculations
-      k_soil_profile  = 0.25_wp
-      min_layer_depth = 0.065_wp
+      k_soil_profile  = 0.25_jp
+      min_layer_depth = 0.065_jp
 
       nsoil = config%quincy_nsoil_w
       ALLOCATE(ubounds_soil_lay_water(nsoil))
@@ -529,7 +529,7 @@ CONTAINS
             &   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
         END DO
       ELSE
-        dz_water(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+        dz_water(1:nsoil) = (/0.065_jp,0.254_jp,0.913_jp,2.902_jp,5.700_jp/)
       END IF
 
       ! calc upper bound of soil layers (water and energy) from layer thickness
@@ -545,7 +545,7 @@ CONTAINS
       !!
       !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
-      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_jp * (lbounds(:) + ubounds(:))
       vgrid_soil_w => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
         &   longname='Soil (water) layers from HYDRO_ config', &
         &   units='m', &

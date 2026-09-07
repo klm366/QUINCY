@@ -121,37 +121,37 @@ CONTAINS
     DO ib = 1,nblks
       DO ic = 1,nproma
 
-        beta_air(ic,ib)                     = 1.0_wp
-        beta_soa(ic,ib)                     = 1.0_wp
-        soa_tsoa_mavg(ic,ib)                = -10.0_wp
-        beta_soa_tphen_mavg(ic,ib)          = 1.0_wp
-        beta_soil_ps(ic,ib)                 = 1.0_wp
-        beta_soil_gs(ic,ib)                 = 1.0_wp
+        beta_air(ic,ib)                     = 1.0_jp
+        beta_soa(ic,ib)                     = 1.0_jp
+        soa_tsoa_mavg(ic,ib)                = -10.0_jp
+        beta_soa_tphen_mavg(ic,ib)          = 1.0_jp
+        beta_soil_ps(ic,ib)                 = 1.0_jp
+        beta_soil_gs(ic,ib)                 = 1.0_jp
 
-        beta_air_daytime(ic,ib)             = 1.0_wp
-        beta_air_daytime_dacc(ic,ib)        = 1.0_wp
-        beta_soil_ps_daytime(ic,ib)         = 1.0_wp
-        beta_soil_ps_daytime_dacc(ic,ib)    = 1.0_wp
-        beta_soil_gs_daytime(ic,ib)         = 1.0_wp
-        beta_soil_gs_daytime_dacc(ic,ib)    = 1.0_wp
+        beta_air_daytime(ic,ib)             = 1.0_jp
+        beta_air_daytime_dacc(ic,ib)        = 1.0_jp
+        beta_soil_ps_daytime(ic,ib)         = 1.0_jp
+        beta_soil_ps_daytime_dacc(ic,ib)    = 1.0_jp
+        beta_soil_gs_daytime(ic,ib)         = 1.0_jp
+        beta_soil_gs_daytime_dacc(ic,ib)    = 1.0_jp
 
-        beta_air_tfrac_mavg(ic,ib)          = 1.0_wp
-        beta_air_tcnl_mavg(ic,ib)           = 1.0_wp
-        beta_soil_ps_tfrac_mavg(ic,ib)      = 1.0_wp
-        beta_soil_ps_tcnl_mavg(ic,ib)       = 1.0_wp
-        beta_soil_gs_tphen_mavg(ic,ib)      = 1.0_wp
-        beta_soil_gs_tfrac_mavg(ic,ib)      = 1.0_wp
-        beta_soil_gs_tcnl_mavg(ic,ib)       = 1.0_wp
+        beta_air_tfrac_mavg(ic,ib)          = 1.0_jp
+        beta_air_tcnl_mavg(ic,ib)           = 1.0_jp
+        beta_soil_ps_tfrac_mavg(ic,ib)      = 1.0_jp
+        beta_soil_ps_tcnl_mavg(ic,ib)       = 1.0_jp
+        beta_soil_gs_tphen_mavg(ic,ib)      = 1.0_jp
+        beta_soil_gs_tfrac_mavg(ic,ib)      = 1.0_jp
+        beta_soil_gs_tcnl_mavg(ic,ib)       = 1.0_jp
 
         t_jmax_opt(ic,ib)                   = t_jmax_opt_min
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
-    ftranspiration_sl(:, :, :)      = 0.0_wp    !< set to zero
+    ftranspiration_sl(:, :, :)      = 0.0_jp    !< set to zero
     ! init 1st soil layer with 1.0 for all but bare-soil tile
     IF (.NOT. lctlib%BareSoilFlag) THEN
-      ftranspiration_sl(:, 1, :)    = 1.0_wp
+      ftranspiration_sl(:, 1, :)    = 1.0_jp
     END IF
     !$ACC UPDATE DEVICE(ftranspiration_sl) ASYNC(1)
 

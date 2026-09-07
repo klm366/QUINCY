@@ -67,12 +67,12 @@ CONTAINS
     !$ACC   ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod)
     DO ic = 1, nc
-      IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
+      IF (nres(ic) > 0._jp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]
         amod  = retention(ic) * day_length
         akdiv(ic) = dtime / (amod + dtime)
       ELSE                       ! ocean and lakes
-        akdiv(ic) = 0._wp
+        akdiv(ic) = 0._jp
       END IF
       ! conversions: [m3/s] -> [m3]
       inflow_cascade(ic) = inflow(ic) * dtime

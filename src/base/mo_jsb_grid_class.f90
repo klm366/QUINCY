@@ -161,16 +161,16 @@ CONTAINS
     ALLOCATE(new%coslat(new%nproma,new%nblks), new%sinlat(new%nproma,new%nblks), &
       &      new%coslon(new%nproma,new%nblks), new%sinlon(new%nproma,new%nblks))  !TODO: remove coslon and sinlon
     ! Compute cosine and sin of the latitudes and convert from radiant to degree
-    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._wp)
-    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._wp)
-    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._wp) !TODO: remove
-    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._wp) !TODO: remove
+    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._jp)
+    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._jp)
+    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._jp) !TODO: remove
+    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._jp) !TODO: remove
     new%area    => get_area_domain         (patch)
 
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     ! Initialization of the land sea masks - will be changed later according to 'notsea'
     new%lsm(:,:) = .TRUE.
-    new%lsf(:,:) = 1.0_wp
+    new%lsf(:,:) = 1.0_jp
 
     new%configured = .TRUE.   ! keep track that the new grid has been configured
 
@@ -445,17 +445,17 @@ CONTAINS
     END IF
 
     ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
-    new%levels (:) = 0._wp
-    new%lbounds(:) = 0._wp
-    new%ubounds(:) = 0._wp
-    new%dz     (:) = 0._wp
+    new%levels (:) = 0._jp
+    new%lbounds(:) = 0._jp
+    new%ubounds(:) = 0._jp
+    new%dz     (:) = 0._jp
     !$ACC ENTER DATA PCREATE(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
     IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
+      IF (ANY(dz(:) <= 0._jp)) CALL finish(routine, 'Dz must be larger than zero')
       new%dz     (:) = dz(:)
     END IF
 
@@ -463,18 +463,18 @@ CONTAINS
     IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
       IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
       IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._jp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
       ELSE
         new%dz(:) = ubounds(:) - lbounds(:)
       END IF
       IF (.NOT. PRESENT(levels)) THEN
-        new%levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+        new%levels(:) = 0.5_jp * (lbounds(:) + ubounds(:))
       END IF
     ELSE IF (PRESENT(lbounds)) THEN
       IF (PRESENT(dz)) THEN
         new%ubounds(:) = lbounds(:) + dz(:)
         IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (lbounds(:) + new%ubounds(:))
+          new%levels(:) = 0.5_jp * (lbounds(:) + new%ubounds(:))
         END IF
       ELSE IF (PRESENT(levels)) THEN
         new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
@@ -486,7 +486,7 @@ CONTAINS
       IF (PRESENT(dz)) THEN
         new%lbounds(:) = ubounds(:) - dz(:)
         IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (new%lbounds(:) + ubounds(:))
+          new%levels(:) = 0.5_jp * (new%lbounds(:) + ubounds(:))
         END IF
       ELSE IF (PRESENT(levels)) THEN
         new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
@@ -498,15 +498,15 @@ CONTAINS
       IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
         CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
       ELSE IF (PRESENT(dz)) THEN
-        new%lbounds(1) = 0._wp
+        new%lbounds(1) = 0._jp
         DO i=2,length
           new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
         END DO
         new%ubounds(:) = new%lbounds(:) + dz(:)
-        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
+        new%levels(:) = 0.5_jp * (new%lbounds(:) + new%ubounds(:))
       ELSE IF (PRESENT(levels)) THEN
         IF (length > 1) THEN ! Multi-level axis
-          new%lbounds(1) = 0._wp
+          new%lbounds(1) = 0._jp
           DO i=2,length
             new%lbounds(i) = levels(i-1) + (levels(i-1) - new%lbounds(i-1))
           END DO
@@ -515,7 +515,7 @@ CONTAINS
         ELSE ! Single level axis (level specified)
           new%lbounds(1) = levels(1)
           new%ubounds(1) = levels(1)
-          new%dz(1)      = 0._wp
+          new%dz(1)      = 0._jp
         END IF
       ELSE
         IF (length > 1) THEN ! Multi-level axis
@@ -525,13 +525,13 @@ CONTAINS
             new%levels(i) = REAL(i,jp)
             new%lbounds(i) = REAL(i,jp)
             new%ubounds(i) = REAL(i+1,jp)
-            new%dz(i) = 1._wp
+            new%dz(i) = 1._jp
           END DO
         ELSE ! Single level axis (level not specified)
-          new%levels(1) = 0._wp
-          new%lbounds(1) = 0._wp
-          new%ubounds(1) = 0._wp
-          new%dz(1)      = 0._wp
+          new%levels(1) = 0._jp
+          new%lbounds(1) = 0._jp
+          new%ubounds(1) = 0._jp
+          new%dz(1)      = 0._jp
         END IF
       END IF
     END IF

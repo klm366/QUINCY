@@ -416,8 +416,8 @@ CONTAINS
     IF (l_newday) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._wp
-        day_NPP_sum(ic) = 0._wp
+        previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._jp
+        day_NPP_sum(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -459,7 +459,7 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          dummy_flux(ic) = 0._wp
+          dummy_flux(ic) = 0._jp
         END DO
         !$ACC END PARALLEL LOOP
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
@@ -538,7 +538,7 @@ CONTAINS
     DO i = 1, nc
       IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
         LaiMax_corrected(i) = LAI_negligible_tmp
-        lai(i) = LAI_negligible_tmp - EPSILON(1.0_wp)
+        lai(i) = LAI_negligible_tmp - EPSILON(1.0_jp)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -1017,12 +1017,12 @@ CONTAINS
 
     ! Calculate global land means phenology variables, if requested for output
     IF (PHENO__mem%lai_ta_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(lai_ta_gmean, lai_ta, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(lai_ta_gmean, lai_ta, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%lai_ta_gmean%ptr(:))
     END IF
 
     IF (PHENO__mem%fract_fpc_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%fract_fpc_gmean%ptr(:))
     END IF
 

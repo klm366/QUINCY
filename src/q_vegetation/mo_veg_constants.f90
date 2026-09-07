@@ -255,156 +255,156 @@ CONTAINS
 
 
   ! Respiration parameters
-      fresp_growth                = 0.25_wp
-      fmaint_rate_base            = 1._wp
-      fmaint_rate_wood            = 0.25_wp * fmaint_rate_base
-      t_maint_k1                  = 308.56_wp
-      t_maint_k2                  = 56.02_wp
-      t_maint_k3                  = 227.13_wp
-      f_resp_acclim               = -0.008_wp
-      t_acclim_zero               = 283.15_wp
-      k_maint_resp_suppress       = 1.0_wp        ! set to 1.0 on purpose, not reducing maint_respiration; ticket https://projects.bgc-jena.mpg.de/QUINCY/ticket/594
+      fresp_growth                = 0.25_jp
+      fmaint_rate_base            = 1._jp
+      fmaint_rate_wood            = 0.25_jp * fmaint_rate_base
+      t_maint_k1                  = 308.56_jp
+      t_maint_k2                  = 56.02_jp
+      t_maint_k3                  = 227.13_jp
+      f_resp_acclim               = -0.008_jp
+      t_acclim_zero               = 283.15_jp
+      k_maint_resp_suppress       = 1.0_jp        ! set to 1.0 on purpose, not reducing maint_respiration; ticket https://projects.bgc-jena.mpg.de/QUINCY/ticket/594
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
-      k0_fn_pepc_C3               = 0.0_wp
-      k0_fn_pepc_C4               = 0.045_wp
-      jmax2vcmax_C3               = 1.92_wp / 4._wp
-      jmax2vcmax_C4               = 1.4_wp
+      k0_fn_pepc_C3               = 0.0_jp
+      k0_fn_pepc_C4               = 0.045_jp
+      jmax2vcmax_C3               = 1.92_jp / 4._jp
+      jmax2vcmax_C4               = 1.4_jp
 
   ! Labile pool parameters
-      tau_labile                  = 5.0_wp
-      k_labphen_grass             = 0.5_wp
-      k_labphen_tree              = 0.25_wp
-      lambda_labile_temp          = 0.5_wp
-      k_labile_temp               = 2.0_wp
-      lambda_labile_theta         = 10.0_wp
-      k_labile_theta              = 2.0_wp
-      lambda_phiphen              = 1.3_wp
-      k_phiphen                   = 8.0_wp
-      lambda_phimaint             = 4.0_wp
-      k_phimaint                  = 1.2_wp
-      lambda_phimaint_nut         = 1.6_wp
-      k_phimaint_nut              = 3._wp
-      lambda_phistore             = 2._wp
-      k_phistore                  = 3._wp
-      knut_labile                 = 1.2_wp
-      lambda_sinklim_ps           = 0.1_wp
-      k_sinklim_ps                = 2.0_wp
-      k_cnp_sinklim_ps            = 4.0_wp
-      beta_sinklim_ps_min         = 0.25_wp
-      fstore_leaf_max             = 0.02_wp
-      fstore_fine_root_max        = 0.2_wp
-      fstore_sap_wood_max         = 0.15_wp
-      k_phi_interact              = 0.75_wp
+      tau_labile                  = 5.0_jp
+      k_labphen_grass             = 0.5_jp
+      k_labphen_tree              = 0.25_jp
+      lambda_labile_temp          = 0.5_jp
+      k_labile_temp               = 2.0_jp
+      lambda_labile_theta         = 10.0_jp
+      k_labile_theta              = 2.0_jp
+      lambda_phiphen              = 1.3_jp
+      k_phiphen                   = 8.0_jp
+      lambda_phimaint             = 4.0_jp
+      k_phimaint                  = 1.2_jp
+      lambda_phimaint_nut         = 1.6_jp
+      k_phimaint_nut              = 3._jp
+      lambda_phistore             = 2._jp
+      k_phistore                  = 3._jp
+      knut_labile                 = 1.2_jp
+      lambda_sinklim_ps           = 0.1_jp
+      k_sinklim_ps                = 2.0_jp
+      k_cnp_sinklim_ps            = 4.0_jp
+      beta_sinklim_ps_min         = 0.25_jp
+      fstore_leaf_max             = 0.02_jp
+      fstore_fine_root_max        = 0.2_jp
+      fstore_sap_wood_max         = 0.15_jp
+      k_phi_interact              = 0.75_jp
 
 
   ! Resorption parameters
-      resorp_fract_leaf           = 0.5_wp
-      resorp_fract_wood           = 0.2_wp
-      root2leaf_cn                = 0.85_wp
-      wood2leaf_cn                = 0.145_wp
-      root2leaf_np                = 1.0_wp
-      wood2leaf_np                = 1.0_wp
-      tau_nutrient_recycling      = 10._wp
+      resorp_fract_leaf           = 0.5_jp
+      resorp_fract_wood           = 0.2_jp
+      root2leaf_cn                = 0.85_jp
+      wood2leaf_cn                = 0.145_jp
+      root2leaf_np                = 1.0_jp
+      wood2leaf_np                = 1.0_jp
+      tau_nutrient_recycling      = 10._jp
 
   ! N uptake parameters
-      kappa_f_demand_nc           = 0.75_wp
-      kappa_f_demand_pn           = 0.9_wp
-      k_f_demand                  = 2.0_wp
-      omega_nutrient_demand       = 0.15_wp ! tuned to leave a flexiable space between the targeted and actual labile CN or NP ratios
-      k1_temp_bnf                 = 1.25_wp
-      k2_temp_bnf                 = -3.62_wp
-      k3_temp_bnf                 = 0.27_wp
-      k4_temp_bnf                 = 50.3_wp
-      transform_cost_nh4          = 1.7_wp    / (molar_mass_C/molar_mass_N)
-      transform_cost_no3          = 2.3_wp    / (molar_mass_C/molar_mass_N)
-      transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
+      kappa_f_demand_nc           = 0.75_jp
+      kappa_f_demand_pn           = 0.9_jp
+      k_f_demand                  = 2.0_jp
+      omega_nutrient_demand       = 0.15_jp ! tuned to leave a flexiable space between the targeted and actual labile CN or NP ratios
+      k1_temp_bnf                 = 1.25_jp
+      k2_temp_bnf                 = -3.62_jp
+      k3_temp_bnf                 = 0.27_jp
+      k4_temp_bnf                 = 50.3_jp
+      transform_cost_nh4          = 1.7_jp    / (molar_mass_C/molar_mass_N)
+      transform_cost_no3          = 2.3_jp    / (molar_mass_C/molar_mass_N)
+      transform_cost_org          = 1.0_jp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      k_cost_symb_bnf             = 12.75_wp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021
-      t_opt_symb_bnf              = 28.15_wp + Tzero ! calibrated from Bytnerowicz et al. 2022, adjusted for acclimation of growth temperature
-      k_topt_symb_bnf             = 0.15_wp          ! calibrated based on Bytnerowicz et al. 2022, mean between measured biomes
-      k_ea_symb_bnf               = 0.04_wp          ! calibrated from Bytnerowicz et al. 2022
-      ea_symb_bnf                 = 72000._wp        ! calibrated from Bytnerowicz et al. 2022
-      ed_symb_bnf                 = 250000._wp       ! calibrated from Bytnerowicz et al. 2022
-      tacclim_nacq_min            = 15.0_wp
-      tacclim_nacq_max            = 30.0_wp
-      eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
-      f_myc_exudation_max         = 0.3_wp
-      f_mycorrhization_min        = 0.1_wp
-      f_mycorrhization_max        = 0.5_wp
+      k_cost_symb_bnf             = 12.75_jp  / (molar_mass_C/molar_mass_N)     ! Average value from Kern 2021
+      t_opt_symb_bnf              = 28.15_jp + Tzero ! calibrated from Bytnerowicz et al. 2022, adjusted for acclimation of growth temperature
+      k_topt_symb_bnf             = 0.15_jp          ! calibrated based on Bytnerowicz et al. 2022, mean between measured biomes
+      k_ea_symb_bnf               = 0.04_jp          ! calibrated from Bytnerowicz et al. 2022
+      ea_symb_bnf                 = 72000._jp        ! calibrated from Bytnerowicz et al. 2022
+      ed_symb_bnf                 = 250000._jp       ! calibrated from Bytnerowicz et al. 2022
+      tacclim_nacq_min            = 15.0_jp
+      tacclim_nacq_max            = 30.0_jp
+      eta_nfixation               = 3.0_jp                   ! Robinson, Tree 2001
+      f_myc_exudation_max         = 0.3_jp
+      f_mycorrhization_min        = 0.1_jp
+      f_mycorrhization_max        = 0.5_jp
 
   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-      k0_fn_chl_C3                = 6.0_wp
-      k0_fn_chl_C4                = 15.0_wp
-      k1_fn_chl_C3                = 3.6_wp
-      k1_fn_chl_C4                = 4.4_wp
-      kfn_chl                     = 0.7_wp
+      k0_fn_chl_C3                = 6.0_jp
+      k0_fn_chl_C4                = 15.0_jp
+      k1_fn_chl_C3                = 3.6_jp
+      k1_fn_chl_C4                = 4.4_jp
+      kfn_chl                     = 0.7_jp
 
   ! parameters used for phenology calculations
-      min_lai                     = 0.1_wp
-      target_lai_max              = 5.0_wp
-      max_leaf_shedding_rate      = 0.05_wp
+      min_lai                     = 0.1_jp
+      target_lai_max              = 5.0_jp
+      max_leaf_shedding_rate      = 0.05_jp
 
   ! vegetation dynamics
-      background_mort_rate_tree   = 0.01_wp
-      background_mort_rate_grass  = 0.05_wp
-      lambda_mort_light           = 0.15_wp
-      k_mort_light                = 4.0_wp
-      lambda_est_temp             = 0.075_wp
-      k_est_temp                  = 4.0_wp
-      lambda_est_moist            = 10._wp
-      k_est_moist                 = 2.0_wp
-      k2_mort_greff               = 0.3_wp
-      k3_mort_greff               = 25.0_wp
-      min_greff                   = 1.0_wp
-      max_crown_area              = 100._wp ! adjusted to conform with observations by Pretsch et al. 2015; but cutting off extremes
-      min_diameter                = 0.01_wp
-      k_crown_area                = 175._wp ! adjusted to medium size trees analysed by Pretch et al. 2015; https://doi.org/10.1016/j.ufug.2015.04.006
-      k_rp                        = 1.6_wp
-      k_fpc                       = 0.5_wp
-      fpc_max                     = 0.95_wp
+      background_mort_rate_tree   = 0.01_jp
+      background_mort_rate_grass  = 0.05_jp
+      lambda_mort_light           = 0.15_jp
+      k_mort_light                = 4.0_jp
+      lambda_est_temp             = 0.075_jp
+      k_est_temp                  = 4.0_jp
+      lambda_est_moist            = 10._jp
+      k_est_moist                 = 2.0_jp
+      k2_mort_greff               = 0.3_jp
+      k3_mort_greff               = 25.0_jp
+      min_greff                   = 1.0_jp
+      max_crown_area              = 100._jp ! adjusted to conform with observations by Pretsch et al. 2015; but cutting off extremes
+      min_diameter                = 0.01_jp
+      k_crown_area                = 175._jp ! adjusted to medium size trees analysed by Pretch et al. 2015; https://doi.org/10.1016/j.ufug.2015.04.006
+      k_rp                        = 1.6_jp
+      k_fpc                       = 0.5_jp
+      fpc_max                     = 0.95_jp
 
   ! other
-      carbon_per_dryweight_leaf   = 0.48_wp
-      min_height                  = 0.1_wp
-      k_sai2lai                   = 0.05_wp ! calibrated to get fapar < 0.2 when no leaves at canopy closure
-      sm2lm_grass                 = 0.05_wp
-      lambda_fruit_alloc          = 10.0_wp
-      k1_fruit_alloc              = 0.01_wp
-      k3_fruit_alloc              = 0.1_wp
-      k4_fruit_alloc              = 2.0_wp
-      k1_root_alloc               = 0.8_wp
-      leaf2root_min_ratio         = 0.2_wp
-      leaf2root_max_ratio         = 15.0_wp
+      carbon_per_dryweight_leaf   = 0.48_jp
+      min_height                  = 0.1_jp
+      k_sai2lai                   = 0.05_jp ! calibrated to get fapar < 0.2 when no leaves at canopy closure
+      sm2lm_grass                 = 0.05_jp
+      lambda_fruit_alloc          = 10.0_jp
+      k1_fruit_alloc              = 0.01_jp
+      k3_fruit_alloc              = 0.1_jp
+      k4_fruit_alloc              = 2.0_jp
+      k1_root_alloc               = 0.8_jp
+      leaf2root_min_ratio         = 0.2_jp
+      leaf2root_max_ratio         = 15.0_jp
 
   ! parameters for changes in canopy N fractions
 !@todo:should this be 1/20days?
-      delta_n_fraction            = 0.048_wp        ! 0.001_wp (changed to account for multiplication with dtime/one_day in the code)
-      delta_n_leaf                = 0.0048_wp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
+      delta_n_fraction            = 0.048_jp        ! 0.001_jp (changed to account for multiplication with dtime/one_day in the code)
+      delta_n_leaf                = 0.0048_jp       ! 0.0001 (changed to account for multiplication with dtime/one_day in the code)
 
-    ! parameters used for product pool decay [years] - these need to be > 0.0_wp
-      tau_pp_crop = 1.0_wp ! made up by SZ
+    ! parameters used for product pool decay [years] - these need to be > 0.0_jp
+      tau_pp_crop = 1.0_jp ! made up by SZ
       ! following values are all taken from Nuetzel (2021, LMU master thesis)
-      tau_pp_fuelwood = 0.53_wp
-      tau_pp_paper = 1.50_wp
-      tau_pp_fiberboard = 13.2_wp
-      tau_pp_oirw = 16.5_wp
-      tau_pp_pv = 24.9_wp
-      tau_pp_sawnwood = 49.9_wp
+      tau_pp_fuelwood = 0.53_jp
+      tau_pp_paper = 1.50_jp
+      tau_pp_fiberboard = 13.2_jp
+      tau_pp_oirw = 16.5_jp
+      tau_pp_pv = 24.9_jp
+      tau_pp_sawnwood = 49.9_jp
 
     ! parameters used for herbivory
     ! calibrated from data in McNaugton et al. 1989, Nature 341, 142-144, and Cyr and Pace, 1993, Nature 361, 148-150
-      ftroph_loss_herbivory             = 0.9_wp   !< assumuming a typical 90% loss of energy per trophic level
-      k_herbivory_grass                 = 0.01_wp  !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
-      k_herbivory_pasture               = 0.015_wp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
-      min_net_growth_herbivory_grass    = 20.8_wp  !< 250 gC/m2/yr converted to mol
-      min_net_growth_herbivory_pasture  = 4.16_wp  !< 50 gC/m2/yr converted to mol
-      min_lai_herbivory                 = 0.1_wp   !< set to min_lai value, needs evaluation
+      ftroph_loss_herbivory             = 0.9_jp   !< assumuming a typical 90% loss of energy per trophic level
+      k_herbivory_grass                 = 0.01_jp  !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      k_herbivory_pasture               = 0.015_jp !< calibrated from Cyr and Pace, Nature 1993, adjusted to daily rate and fraction of accessible NPP
+      min_net_growth_herbivory_grass    = 20.8_jp  !< 250 gC/m2/yr converted to mol
+      min_net_growth_herbivory_pasture  = 4.16_jp  !< 50 gC/m2/yr converted to mol
+      min_lai_herbivory                 = 0.1_jp   !< set to min_lai value, needs evaluation
 
     ! red to far red ratio calculations
-      rfr_ratio_toc           = 1.2_wp                !< Kull & Kruijt 1998
-      k_r2fr_chl              = 0.0012_wp - 0.012_wp  !< Kull & Kruijt 1998
+      rfr_ratio_toc           = 1.2_jp                !< Kull & Kruijt 1998
+      k_r2fr_chl              = 0.0012_jp - 0.012_jp  !< Kull & Kruijt 1998
 
     !$ACC UPDATE DEVICE(t_maint_k1, t_maint_k2, t_maint_k3, min_height) ASYNC(1)
     !$ACC UPDATE DEVICE(f_resp_acclim, t_acclim_zero, fmaint_rate_base, k_fpc, k_sai2lai) ASYNC(1)

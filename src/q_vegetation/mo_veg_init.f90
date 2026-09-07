@@ -311,7 +311,7 @@ CONTAINS
       ! fmaint_rate_base
       IF (dsl4jsb_Config(VEG_)%nml_fmaint_rate_base > def_parameters) THEN
         fmaint_rate_base = dsl4jsb_Config(VEG_)%nml_fmaint_rate_base
-        fmaint_rate_wood = 0.25_wp * fmaint_rate_base
+        fmaint_rate_wood = 0.25_jp * fmaint_rate_base
         !$ACC UPDATE DEVICE(fmaint_rate_base, fmaint_rate_wood) ASYNC(1)
         CALL message(TRIM(routine), ' Modified value of vegetation parameter: fmaint_rate_base & fmaint_rate_wood')
       END IF
@@ -367,8 +367,8 @@ CONTAINS
 
     !>0.9 init veg_pool_mt_domain with zero
     !>
-    veg_pool_mt_domain(:,:,:,:) = 0.0_wp
-    seed_bed_pool_mt_domain(:,:,:) = 0.0_wp
+    veg_pool_mt_domain(:,:,:,:) = 0.0_jp
+    seed_bed_pool_mt_domain(:,:,:) = 0.0_jp
 
     !>1.0 vegetation init specific to the SLM model
     !>
@@ -385,10 +385,10 @@ CONTAINS
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
-        seed_bed_pool_mt_domain(ixC, :, :) = lctlib%seed_size * 10.0_wp
-        dens_ind(:,:)                       = 0.0_wp
+        seed_bed_pool_mt_domain(ixC, :, :) = lctlib%seed_size * 10.0_jp
+        dens_ind(:,:)                       = 0.0_jp
         seed_bed_pool_mt_domain(ixN, :, :) &
-          & = seed_bed_pool_mt_domain(ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+          & = seed_bed_pool_mt_domain(ixC, :, :) / (1._jp + fresp_growth) / lctlib%cn_leaf
         seed_bed_pool_mt_domain(ixP, :, :) = seed_bed_pool_mt_domain(ixN, :, :) / lctlib%np_leaf
         ! pool%seed_bed%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
@@ -415,15 +415,15 @@ CONTAINS
               &                                                             def_co2_deltaC14 - hlp1 )    &
               &                                         * seed_bed_pool_mt_domain(ixC, ic, iblk)
             seed_bed_pool_mt_domain(ixN15, ic, iblk)  = seed_bed_pool_mt_domain(ixN, ic, iblk) &
-              &                                         / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+              &                                         / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(0.0_jp))
           ENDDO
         ENDDO
       ! no vegetation dynamics and not starting with bare ground
       CASE ("none")
-        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 5.0_wp
-        dens_ind(:,:)                      = 0.4_wp
+        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 5.0_jp
+        dens_ind(:,:)                      = 0.4_jp
         veg_pool_mt_domain(ix_reserve, ixN, :, :) &
-          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._jp + fresp_growth) / lctlib%cn_leaf
         veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
         ! pool%reserve%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
@@ -450,7 +450,7 @@ CONTAINS
               &                                                           def_co2_deltaC14 - hlp1)     &
               &                                               * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
             veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
-              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+              &                                    / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(0.0_jp))
           ENDDO
         ENDDO
       CASE DEFAULT
@@ -464,8 +464,8 @@ CONTAINS
     !>  1.3 Test_Canopy & Test_Radiation
     !>
     CASE(Q_TEST_CANOPY, Q_TEST_RADIATION)
-      ref_lai   = 6.0_wp  !! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_wp for dry sites like ZA-Kru
-      ref_nleaf = 2.0_wp
+      ref_lai   = 6.0_jp  !! the ref_lai of 6.0 works great for all sites that are not too dry; but use 0.5_jp for dry sites like ZA-Kru
+      ref_nleaf = 2.0_jp
       lai(:,:)  = ref_lai
       !leaf_nitrogen
       IF (dsl4jsb_Config(VEG_)%pft_id == 0) THEN
@@ -474,7 +474,7 @@ CONTAINS
             veg_pool_mt_domain(ix_leaf, ixN, ic, iblk) = ref_nleaf / molar_mass_N * lai(ic, iblk)
           ENDDO
         ENDDO
-        height                          = 10.0_wp
+        height                          = 10.0_jp
       ELSE
         DO ic = 1,nproma
           DO iblk = 1,nblks
@@ -483,13 +483,13 @@ CONTAINS
         ENDDO
         veg_pool_mt_domain(ix_leaf, ixP, :, :) = veg_pool_mt_domain(ix_leaf, ixN, :, :) / lctlib%np_leaf
         IF (lctlib%growthform == ITREE) THEN
-          height(:,:) = 10.0_wp
+          height(:,:) = 10.0_jp
         ELSE
-          height(:,:) = 1.0_wp
+          height(:,:) = 1.0_jp
         ENDIF
       ENDIF
-      leaf_nitrogen_cl(:,:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
-      lai_cl(:,:,:)           = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
+      leaf_nitrogen_cl(:,:,:) = 0.0_jp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
+      lai_cl(:,:,:)           = 0.0_jp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
     !>  1.4 Default (error catching)
     !>
     CASE DEFAULT
@@ -515,8 +515,8 @@ CONTAINS
       !>     - dynamic root fractions (see mo_q_veg_growth)
       !>
       ! all roots are in the first soil layer
-      root_fraction_sl(:, 1, :)          = 1.0_wp
-      root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_wp
+      root_fraction_sl(:, 1, :)          = 1.0_jp
+      root_fraction_sl(:, 2:nsoil_w, :)  = 0.0_jp
     ELSE
       !>     - fixed root fractions (no changes after init) depending on root_depth
       !>
@@ -531,8 +531,8 @@ CONTAINS
         DO ic = 1,nproma
           ! root depth larger than thickness of first soil layer
           IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, 1, iblk)) THEN
-            root_fraction_sl(ic, 1, iblk) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
-              &                             / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+            root_fraction_sl(ic, 1, iblk) = (1._jp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, 1, iblk))) &
+              &                             / (1._jp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
             ! soil layers 2 to x
             !
             DO is = 2,NINT(num_sl_above_bedrock(ic, iblk))
@@ -540,21 +540,21 @@ CONTAINS
                 IF (root_depth(ic, iblk) > soil_lay_depth_ubound_sl(ic, is, iblk)) THEN
                   root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
                     &                                - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is, iblk))) &
-                    &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                    &                                / (1._jp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
                 ELSE
                   root_fraction_sl(ic, is, iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(ic, is-1, iblk)) &
                     &                                - EXP(-lctlib%k_root_dist * root_depth(ic, iblk))) &
-                    &                                / (1._wp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
+                    &                                / (1._jp - EXP(-lctlib%k_root_dist * root_depth(ic, iblk)))
                 END IF
               ELSE
-                root_fraction_sl(ic, is, iblk) = 0.0_wp
+                root_fraction_sl(ic, is, iblk) = 0.0_jp
               END IF
             END DO
           ! root depth lower than / equal thickness of first soil layer
           ! all roots are in the first soil layer
           ELSE
-            root_fraction_sl(ic, :, iblk) = 0.0_wp
-            root_fraction_sl(ic, 1, iblk) = 1.0_wp
+            root_fraction_sl(ic, :, iblk) = 0.0_jp
+            root_fraction_sl(ic, 1, iblk) = 1.0_jp
           END IF
         END DO
       END DO
@@ -563,95 +563,95 @@ CONTAINS
     !>   2.1 set root fraction to zero for tiles such as bare soil and urban area
     !>
     IF (lctlib%BareSoilFlag) THEN
-      root_fraction_sl(:, :, :) = 0.0_wp
+      root_fraction_sl(:, :, :) = 0.0_jp
     END IF
 
     !> 3.0 set veg_pool bgcm to zero for tiles such as bare soil and urban area
     !>
     IF (lctlib%BareSoilFlag) THEN
-      veg_pool_mt_domain(:,:,:,:) = 0.0_wp
+      veg_pool_mt_domain(:,:,:,:) = 0.0_jp
     END IF
 
     !> 4.0 vegetation init for all QUINCY models
     !>
     ! plant variables
-    dphi(:,:)                             = -1.0_wp * lctlib%phi_leaf_min
-    beta_sinklim_ps(:,:)                  = 1.0_wp
-    leaf_cn_direction(:,:)                = 0.0_wp
-    fn_oth_cl(:,:,:)                      = 1.0_wp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
-                                                    ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_wp by default with the add_var()
+    dphi(:,:)                             = -1.0_jp * lctlib%phi_leaf_min
+    beta_sinklim_ps(:,:)                  = 1.0_jp
+    leaf_cn_direction(:,:)                = 0.0_jp
+    fn_oth_cl(:,:,:)                      = 1.0_jp  ! it is necessary to start with fn_oth = 1.0 leaving the rest of the fraction 0.0
+                                                    ! fn_chl_cl, fn_rub_cl, fn_et_cl, fn_pepc_cl are set to 0.0_jp by default with the add_var()
     ! initialising moving averages
     ! allocation
-    npp_talloc_mavg(:,:)                  = 0.0_wp
-    n_fixation_talloc_mavg(:,:)           = 0.0_wp
+    npp_talloc_mavg(:,:)                  = 0.0_jp
+    n_fixation_talloc_mavg(:,:)           = 0.0_jp
     transpiration_talloc_mavg(:,:)        = eps8
-    unit_transpiration_talloc_mavg(:,:)   = 1.e-6_wp
+    unit_transpiration_talloc_mavg(:,:)   = 1.e-6_jp
     unit_uptake_n_talloc_mavg(:,:)        = eps8
-    unit_uptake_p_talloc_mavg(:,:)        = 4._wp * 1.e-10_wp
-    dphi_talloc_mavg(:,:)                 = -1.0_wp * lctlib%phi_leaf_min
-    growth_cn_talloc_mavg(:,:)            = 60.0_wp
+    unit_uptake_p_talloc_mavg(:,:)        = 4._jp * 1.e-10_jp
+    dphi_talloc_mavg(:,:)                 = -1.0_jp * lctlib%phi_leaf_min
+    growth_cn_talloc_mavg(:,:)            = 60.0_jp
     unit_npp_talloc_mavg(:,:)             = unit_uptake_n_talloc_mavg(:,:) * growth_cn_talloc_mavg(:,:)
-    growth_cp_talloc_mavg(:,:)            = 2000.0_wp
+    growth_cp_talloc_mavg(:,:)            = 2000.0_jp
     growth_np_talloc_mavg(:,:)            = growth_cp_talloc_mavg(:,:) / growth_cn_talloc_mavg(:,:)
-    labile_carbon_talloc_mavg(:,:)        = 0.0_wp
-    labile_nitrogen_talloc_mavg(:,:)      = 0.0_wp
-    labile_phosphorus_talloc_mavg(:,:)    = 0.0_wp
-    growth_p_limit_based_on_n_mavg(:,:)   = 1.0_wp
-    reserve_carbon_talloc_mavg(:,:)       = 0.0_wp
-    reserve_nitrogen_talloc_mavg(:,:)     = 0.0_wp
-    reserve_phosphorus_talloc_mavg(:,:)   = 0.0_wp
+    labile_carbon_talloc_mavg(:,:)        = 0.0_jp
+    labile_nitrogen_talloc_mavg(:,:)      = 0.0_jp
+    labile_phosphorus_talloc_mavg(:,:)    = 0.0_jp
+    growth_p_limit_based_on_n_mavg(:,:)   = 1.0_jp
+    reserve_carbon_talloc_mavg(:,:)       = 0.0_jp
+    reserve_nitrogen_talloc_mavg(:,:)     = 0.0_jp
+    reserve_phosphorus_talloc_mavg(:,:)   = 0.0_jp
     wtr_rootzone_rel_talloc_mavg(:,:)     = k1_root_alloc
-    exudation_c_tmyc_mavg(:,:)            = 0.0_wp
+    exudation_c_tmyc_mavg(:,:)            = 0.0_jp
     ! N fraction optimisation
-    fleaf_sunlit_tfrac_mavg_cl(:,:,:)     = 0.5_wp
-    t_air_tfrac_mavg(:,:)                 = 283.15_wp
+    fleaf_sunlit_tfrac_mavg_cl(:,:,:)     = 0.5_jp
+    t_air_tfrac_mavg(:,:)                 = 283.15_jp
     press_srf_tfrac_mavg(:,:)             = standard_press_srf
     co2_mixing_ratio_tfrac_mavg(:,:)      = def_co2_mixing_ratio
-    ga_tfrac_mavg(:,:)                    = 0.2_wp
-    beta_sinklim_ps_tfrac_mavg(:,:)       = 1.0_wp
+    ga_tfrac_mavg(:,:)                    = 0.2_jp
+    beta_sinklim_ps_tfrac_mavg(:,:)       = 1.0_jp
     ! leaf N optimisation
-    fleaf_sunlit_tcnl_mavg_cl(:,:,:)      = 0.5_wp
-    t_air_tcnl_mavg(:,:)                  = 283.15_wp
+    fleaf_sunlit_tcnl_mavg_cl(:,:,:)      = 0.5_jp
+    t_air_tcnl_mavg(:,:)                  = 283.15_jp
     press_srf_tcnl_mavg(:,:)              = standard_press_srf
     co2_mixing_ratio_tcnl_mavg(:,:)       = def_co2_mixing_ratio
-    growth_cn_tcnl_mavg(:,:)              = 60.0_wp
-    growth_np_tcnl_mavg(:,:)              = 30.0_wp
+    growth_cn_tcnl_mavg(:,:)              = 60.0_jp
+    growth_np_tcnl_mavg(:,:)              = 30.0_jp
     uptake_n_tcnl_mavg(:,:)               = eps8
     npp_tcnl_mavg(:,:)                    = uptake_n_tcnl_mavg(:,:) * growth_cn_tcnl_mavg(:,:)
     ! daytime averages plus accumulation var
-    t_air_daytime(:,:)                    = 283.15_wp
+    t_air_daytime(:,:)                    = 283.15_jp
     press_srf_daytime(:,:)                = standard_press_srf
     co2_mixing_ratio_daytime(:,:)         = def_co2_mixing_ratio
-    ga_daytime(:,:)                       = 0.2_wp
-    beta_sinklim_ps_daytime(:,:)          = 1.0_wp
-    t_jmax_opt_daytime(:,:)               = 17.0_wp
-    t_jmax_opt_daytime_dacc(:,:)          = 17.0_wp
-    t_air_daytime_dacc(:,:)               = 283.15_wp
+    ga_daytime(:,:)                       = 0.2_jp
+    beta_sinklim_ps_daytime(:,:)          = 1.0_jp
+    t_jmax_opt_daytime(:,:)               = 17.0_jp
+    t_jmax_opt_daytime_dacc(:,:)          = 17.0_jp
+    t_air_daytime_dacc(:,:)               = 283.15_jp
     press_srf_daytime_dacc(:,:)           = standard_press_srf
     co2_mixing_ratio_daytime_dacc(:,:)    = def_co2_mixing_ratio
-    ga_daytime_dacc(:,:)                  = 0.2_wp
-    beta_sinklim_ps_daytime_dacc(:,:)     = 1.0_wp
+    ga_daytime_dacc(:,:)                  = 0.2_jp
+    beta_sinklim_ps_daytime_dacc(:,:)     = 1.0_jp
     ! moving averages
-    growth_req_n_tlabile_mavg(:,:)        = 1._wp / 25._wp
-    growth_req_p_tlabile_mavg(:,:)        = 1._wp / 14._wp
-    t_air_tphen_mavg(:,:)                 = 283.15_wp
-    t_soil_srf_tphen_mavg(:,:)            = 283.15_wp
-    npp_tuptake_mavg(:,:)                 = 1.0_wp
-    demand_uptake_n_tuptake_mavg(:,:)     = 0.1_wp
-    demand_uptake_p_tuptake_mavg(:,:)     = 0.1_wp
-    growth_req_n_tuptake_mavg(:,:)        = 1._wp / 25._wp
-    growth_req_p_tuptake_mavg(:,:)        = 1._wp / 14._wp
-    ga_tcnl_mavg(:,:)                     = 0.2_wp
-    leaf2root_troot_mavg(:,:)             = 1.0_wp
-    an_boc_tvegdyn_mavg(:,:)              = 5.0_wp
-    net_growth_tvegdyn_mavg(:,:)          = 5.0_wp
-    lai_tvegdyn_mavg(:,:)                 = 0.1_wp
-    beta_sinklim_ps_tacclim_mavg(:,:)     = 1.0_wp
-    t_air_tacclim_mavg(:,:)               = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
-    t_soil_root_tacclim_mavg(:,:)         = 283.15_wp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
-    t_air_week_mavg(:,:)                  = 283.15_wp
-    t_air_month_mavg(:,:)                 = 283.15_wp
-    t_jmax_opt_mavg(:,:)                  = 17.0_wp
+    growth_req_n_tlabile_mavg(:,:)        = 1._jp / 25._jp
+    growth_req_p_tlabile_mavg(:,:)        = 1._jp / 14._jp
+    t_air_tphen_mavg(:,:)                 = 283.15_jp
+    t_soil_srf_tphen_mavg(:,:)            = 283.15_jp
+    npp_tuptake_mavg(:,:)                 = 1.0_jp
+    demand_uptake_n_tuptake_mavg(:,:)     = 0.1_jp
+    demand_uptake_p_tuptake_mavg(:,:)     = 0.1_jp
+    growth_req_n_tuptake_mavg(:,:)        = 1._jp / 25._jp
+    growth_req_p_tuptake_mavg(:,:)        = 1._jp / 14._jp
+    ga_tcnl_mavg(:,:)                     = 0.2_jp
+    leaf2root_troot_mavg(:,:)             = 1.0_jp
+    an_boc_tvegdyn_mavg(:,:)              = 5.0_jp
+    net_growth_tvegdyn_mavg(:,:)          = 5.0_jp
+    lai_tvegdyn_mavg(:,:)                 = 0.1_jp
+    beta_sinklim_ps_tacclim_mavg(:,:)     = 1.0_jp
+    t_air_tacclim_mavg(:,:)               = 283.15_jp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
+    t_soil_root_tacclim_mavg(:,:)         = 283.15_jp     ! this init value may equal t_acclim_zero (283.15) to make work: mo_q_veg_respiration:temperature_response_respiration
+    t_air_week_mavg(:,:)                  = 283.15_jp
+    t_air_month_mavg(:,:)                 = 283.15_jp
+    t_jmax_opt_mavg(:,:)                  = 17.0_jp
     ! bottom of the canopy radiation
     rfr_ratio_boc(:,:)                    = rfr_ratio_toc
     rfr_ratio_boc_tvegdyn_mavg(:,:)       = rfr_ratio_boc(:,:)

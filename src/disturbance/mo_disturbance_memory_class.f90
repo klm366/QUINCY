@@ -84,7 +84,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=MINIMUM,                                                           &
-      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_jp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
       & hgrid, surface,                                                                  &
@@ -92,7 +92,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & output_level=MINIMUM,                                                            &
-      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_jp ) ! initval taken from JSBACH3
 
     IF (.NOT. model%processes(WLCC_)%p%config%active) THEN
       CALL mem%Add_var( 'cconservation_wind', mem%cconservation_wind,         &
@@ -101,7 +101,7 @@ CONTAINS
         &   'Test for c conservation on relocation for wind damaged area.'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
-        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_jp )
     END IF
 
     IF (.NOT. model%processes(FLCC_)%p%config%active) THEN
@@ -111,7 +111,7 @@ CONTAINS
         &  'Test for c conservation on relocation for burned area.'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
-        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_jp )
     END IF
 
   END SUBROUTINE Init_disturb_memory

@@ -270,7 +270,7 @@ CONTAINS
       !
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        discharge(ic) = 0._wp
+        discharge(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -362,7 +362,7 @@ CONTAINS
 
     REAL(jp), ALLOCATABLE  :: &
       & ztemp(:,:),           &
-      & in_domain(:,:)          ! 1._wp: cell in domain, 0._wp: halo cell (in_domain)
+      & in_domain(:,:)          ! 1._jp: cell in domain, 0._jp: halo cell (in_domain)
                                 ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
     REAL(jp) :: &
       & factor, &
@@ -425,9 +425,9 @@ CONTAINS
     DO blk = 1, nblks
       DO jc = 1, nproma
         IF (is_in_domain(jc,blk)) THEN
-          in_domain(jc,blk) = 1._wp
+          in_domain(jc,blk) = 1._jp
         ELSE
-          in_domain(jc,blk) = 0._wp
+          in_domain(jc,blk) = 0._jp
         END IF
       ENDDO
     ENDDO
@@ -446,9 +446,9 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
-          discharge(jc,blk) = 0._wp
-          discharge_ocean(jc,blk) = 0._wp
-          internal_drain(jc,blk) = 0._wp
+          discharge(jc,blk) = 0._jp
+          discharge_ocean(jc,blk) = 0._jp
+          internal_drain(jc,blk) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -480,7 +480,7 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
         global_resid = global_sum_array(outflow_resid, lacc=.TRUE.)
-        IF (global_resid /= 0._wp) THEN
+        IF (global_resid /= 0._jp) THEN
           WRITE (message_text,*) 'WARNING: Outflow to non-inflow ocean cells: ', global_resid, ' m3/s'
           CALL message (routine, message_text)
         END IF
@@ -505,7 +505,7 @@ CONTAINS
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
               ! Workaround for NVIDIA compiler < 22.9 internal compiler error
-              ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
+              ! Note that nsplit is set to 1._jp for use_bifurcated_rivers=false
 #if defined(__NVCOMPILER) && (__NVCOMPILER_MAJOR__ < 22  || (__NVCOMPILER_MAJOR__ == 22 && __NVCOMPILER_MINOR__ < 9))
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                   + ( ( outflow_runoff(jc_us,blk_us)       &
@@ -528,11 +528,11 @@ CONTAINS
 #endif
               ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos, and only on CPU
               !dbg>>
-              ! outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
+              ! outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._jp
               ! IF (outflow_count(jc_us,blk_us) == 0) THEN
-              !   outflow_runoff  (jc_us,blk_us) = 0._wp
-              !   outflow_drainage(jc_us,blk_us) = 0._wp
-              !   outflow_rivers  (jc_us,blk_us) = 0._wp
+              !   outflow_runoff  (jc_us,blk_us) = 0._jp
+              !   outflow_drainage(jc_us,blk_us) = 0._jp
+              !   outflow_rivers  (jc_us,blk_us) = 0._jp
               ! END IF
               !dbg<<
             END IF
@@ -548,17 +548,17 @@ CONTAINS
       !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
       ! END WHERE
       ! print*, '  o  internal drainage cells    : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
-      ! outflow_resid(:,:) = 0._wp
+      ! outflow_resid(:,:) = 0._jp
       ! WHERE (NINT(hd_mask(:,:)) == 1)
       !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
       ! END WHERE
       ! print*, '  o  hd cells (mask=1)          : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
-      ! outflow_resid(:,:) = 0._wp
+      ! outflow_resid(:,:) = 0._jp
       ! WHERE (NINT(hd_mask(:,:)) == 0)
       !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
       ! END WHERE
       ! print*, '  o  ocean inflow cells (mask=0): ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
-      ! outflow_resid(:,:) = 0._wp
+      ! outflow_resid(:,:) = 0._jp
       ! WHERE (NINT(hd_mask(:,:)) == -1)
       !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
       ! END WHERE
@@ -571,7 +571,7 @@ CONTAINS
       !   jcs = grid%get_col_start(blk)
       !   jce = grid%get_col_end(blk)
       !   DO jc = jcs, jce
-      !     IF (outflow_resid(jc,blk) /= 0._wp) print*, 'AAA outflow_resid: ', jc,blk, &
+      !     IF (outflow_resid(jc,blk) /= 0._jp) print*, 'AAA outflow_resid: ', jc,blk, &
       !       &      ' lon: ', grid%lon(jc,blk), 'lat: ', grid%lat(jc,blk), outflow_resid(jc,blk)
       !   END DO
       ! END DO
@@ -583,15 +583,15 @@ CONTAINS
           IF (NINT(hd_mask(jc,blk)) <= 0) THEN
             ! ocean inflow cells
             discharge_ocean(jc,blk) = outflow_runoff(jc,blk) + outflow_drainage(jc,blk) + discharge(jc,blk)
-            outflow_runoff(jc,blk) = 0._wp
-            outflow_drainage(jc,blk) = 0._wp
-            discharge(jc,blk) = 0._wp
+            outflow_runoff(jc,blk) = 0._jp
+            outflow_drainage(jc,blk) = 0._jp
+            discharge(jc,blk) = 0._jp
           ELSE IF (NINT(hd_mask(jc,blk)) == 2) THEN
             ! internal drainage cells
             internal_drain(jc,blk) = outflow_runoff(jc,blk) + outflow_drainage(jc,blk) + discharge(jc,blk)
-            outflow_runoff(jc,blk) = 0._wp
-            outflow_drainage(jc,blk) = 0._wp
-            discharge(jc,blk) = 0._wp
+            outflow_runoff(jc,blk) = 0._jp
+            outflow_drainage(jc,blk) = 0._jp
+            discharge(jc,blk) = 0._jp
           END IF
         END DO
       END DO
@@ -627,10 +627,10 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
-          IF (NINT(hd_mask(jc,blk)) <= 0._wp .AND. is_in_domain(jc,blk)) THEN
-            ztemp(jc,blk) = 1._wp
+          IF (NINT(hd_mask(jc,blk)) <= 0._jp .AND. is_in_domain(jc,blk)) THEN
+            ztemp(jc,blk) = 1._jp
           ELSE
-            ztemp(jc,blk) = 0._wp
+            ztemp(jc,blk) = 0._jp
           END IF
         END DO
       END DO
@@ -654,9 +654,9 @@ CONTAINS
         CALL message (routine, message_text)
       END IF
 
-      IF (global_discharge_ocean > 0._wp) THEN
+      IF (global_discharge_ocean > 0._jp) THEN
         ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
-        factor = 1._wp + global_internal_drain / global_discharge_ocean
+        factor = 1._jp + global_internal_drain / global_discharge_ocean
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
         DO blk = 1, nblks
           DO jc = 1, nproma
@@ -664,7 +664,7 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
-      ELSE IF (global_internal_drain > 0._wp) THEN
+      ELSE IF (global_internal_drain > 0._jp) THEN
         ! Without (positive) river discharge towards the ocean, the internal drainage needs
         ! to be distributed equally over all coastal and ocean cells
         internal_drain_share = global_internal_drain / global_ocean_cells
@@ -710,7 +710,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2) PRIVATE(cos_lat)
       DO blk = 1, nblks
         DO jc = 1, nproma
-          cos_lat = MERGE(COS(deg2rad * grid%lat(jc,blk)), 0._wp, coast_ocean(jc,blk) > 0.5_wp)  ! coast_ocean is either 0. or 1.
+          cos_lat = MERGE(COS(deg2rad * grid%lat(jc,blk)), 0._jp, coast_ocean(jc,blk) > 0.5_jp)  ! coast_ocean is either 0. or 1.
           ztemp(jc,blk) = coast_ocean(jc,blk) * cos_lat * in_domain(jc,blk)
         END DO
       END DO
@@ -720,13 +720,13 @@ CONTAINS
       !$ACC   PRIVATE(cos_lat)
       DO blk = 1, nblks
         DO jc = 1, nproma
-          IF (coast_ocean(jc,blk) > 0.5_wp) THEN
-            cos_lat = MERGE(COS(deg2rad * grid%lat(jc,blk)), 0._wp, coast_ocean(jc,blk) > 0.5_wp)  ! coast_ocean is either 0. or 1.
+          IF (coast_ocean(jc,blk) > 0.5_jp) THEN
+            cos_lat = MERGE(COS(deg2rad * grid%lat(jc,blk)), 0._jp, coast_ocean(jc,blk) > 0.5_jp)  ! coast_ocean is either 0. or 1.
             discharge_ocean(jc,blk) = global_discharge * cos_lat / sum_weights
           ELSE
-            discharge_ocean(jc,blk) = 0._wp
+            discharge_ocean(jc,blk) = 0._jp
           END IF
-          ! discharge(jc,blk) = 0._wp
+          ! discharge(jc,blk) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -736,7 +736,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
       DO blk = 1, nblks
         DO jc = 1, nproma
-          discharge_ocean(jc,blk) = 0._wp
+          discharge_ocean(jc,blk) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -875,9 +875,9 @@ CONTAINS
     DO blk = 1, nblks
       DO jc = 1, nproma
         IF (is_in_domain(jc,blk)) THEN
-          in_domain(jc,blk) = 1._wp
+          in_domain(jc,blk) = 1._jp
         ELSE
-          in_domain(jc,blk) = 0._wp
+          in_domain(jc,blk) = 0._jp
         END IF
       ENDDO
     ENDDO
@@ -1060,8 +1060,8 @@ CONTAINS
       global_water_budget =     global_sum_array(water_budget,     lacc=.TRUE.)
       global_water_budget_old = global_sum_array(water_budget_old, lacc=.TRUE.)
 
-      IF (global_water_budget_old /= 0._wp .AND. global_water_budget /= 0._wp) THEN     ! zero at the very first time step
-        IF (ABS(global_water_error/global_water_budget) > 50._wp*EPSILON(1._wp)) THEN
+      IF (global_water_budget_old /= 0._jp .AND. global_water_budget /= 0._jp) THEN     ! zero at the very first time step
+        IF (ABS(global_water_error/global_water_budget) > 50._jp*EPSILON(1._jp)) THEN
           WRITE (message_text,*) 'Water conservation problem: budget imbalance: ', &
                global_water_error,' m3'
           IF (dsl4jsb_Config(HD_)%enforce_water_budget == WB_ERROR) THEN

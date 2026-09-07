@@ -52,8 +52,8 @@ CONTAINS
     fract_sum = SUM(fract_per_age)
     n = SIZE(fract_per_age)
 
-    IF (fract_sum >= 0._wp) THEN
-      mean_age = 0._wp
+    IF (fract_sum >= 0._jp) THEN
+      mean_age = 0._jp
       DO i = 1,n
           mean_age  = mean_age + i * (fract_per_age (i) /  fract_sum)
       END DO
@@ -77,14 +77,14 @@ CONTAINS
 
     n  = SIZE(fract_per_age,2)       ! max tracked age
 
-    fract_sum(:) = 0._wp
+    fract_sum(:) = 0._jp
     DO i=1,n
       fract_sum(:) = fract_sum(:) + fract_per_age (:,i)
     END DO
 
-    mean_age(:)  = 0._wp
+    mean_age(:)  = 0._jp
     DO i=1,n
-      WHERE(fract_sum(:) > 0._wp)
+      WHERE(fract_sum(:) > 0._jp)
         mean_age(:)  = mean_age (:) + i * (fract_per_age (:,i) /  fract_sum(:))
       END WHERE
     END DO
@@ -108,14 +108,14 @@ CONTAINS
 
     n  = SIZE(fract_per_age,2)       ! max tracked age
 
-    fract_sum(:,:) = 0._wp
+    fract_sum(:,:) = 0._jp
     DO i=1,n
       fract_sum(:,:) = fract_sum(:,:) + fract_per_age (:,i,:)
     END DO
 
-    mean_age (:,:) = 0._wp
+    mean_age (:,:) = 0._jp
     DO i=1,n
-      WHERE(fract_sum(:,:) > 0._wp)
+      WHERE(fract_sum(:,:) > 0._jp)
         mean_age (:,:) = mean_age (:,:) + i * (fract_per_age (:,i,:) / fract_sum(:,:))
       END WHERE
     END DO

@@ -77,32 +77,32 @@ CONTAINS
 
     !> initialise solar constant
     !!
-    frac_vis_swtot_srf        = 0.54_wp    ! UV-A+PAR / UV-A+PAR+NIR; Monteith & Unsworth 1995
-    frac_par_swvis_srf        = 0.9_wp     ! PAR/PAR+UV-A
+    frac_vis_swtot_srf        = 0.54_jp    ! UV-A+PAR / UV-A+PAR+NIR; Monteith & Unsworth 1995
+    frac_par_swvis_srf        = 0.9_jp     ! PAR/PAR+UV-A
 
     !> wind speed
     !!
-    min_wind                  = 0.3_wp
-    max_wind                  = 5.0_wp
-    def_wind                  = 1.0_wp
+    min_wind                  = 0.3_jp
+    max_wind                  = 5.0_jp
+    def_wind                  = 1.0_jp
 
     !> conversion factors
     !!
-    standard_press_srf        = 101300.0_wp
-    eps_vpd                   = 0.622_wp
+    standard_press_srf        = 101300.0_jp
+    eps_vpd                   = 0.622_jp
 
     !> default values
     !!
-    def_t_air                 = 298.15_wp
-    def_vpd                   = 1000._wp
-    def_swdown                = 652.173913_wp
-    def_fdiffuse              = 0.2_wp
-    def_cos_angle             = 1.0_wp
-    def_co2_mixing_ratio      = 380.0_wp
-    def_co2_deltaC13          = -6.6_wp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025)
+    def_t_air                 = 298.15_jp
+    def_vpd                   = 1000._jp
+    def_swdown                = 652.173913_jp
+    def_fdiffuse              = 0.2_jp
+    def_cos_angle             = 1.0_jp
+    def_co2_mixing_ratio      = 380.0_jp
+    def_co2_deltaC13          = -6.6_jp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025)
                                             ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
-    def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
-    def_co2_deltaC14          = -3.2_wp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
+    def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._jp + 1._jp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
+    def_co2_deltaC14          = -3.2_jp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
                                             ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
 

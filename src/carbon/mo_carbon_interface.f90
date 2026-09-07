@@ -449,10 +449,10 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      co2flux_npp_2_atm_yday_ta(ic)  = 0._wp
-      co2flux_npp_2_atm_ta(ic)       = 0._wp
-      co2flux_soilresp_2_atm_ta(ic)  = 0._wp
-      co2flux_herb_2_atm_ta(ic)      = 0._wp
+      co2flux_npp_2_atm_yday_ta(ic)  = 0._jp
+      co2flux_npp_2_atm_ta(ic)       = 0._jp
+      co2flux_soilresp_2_atm_ta(ic)  = 0._jp
+      co2flux_herb_2_atm_ta(ic)      = 0._jp
     END DO
     !$ACC END LOOP
 
@@ -460,10 +460,10 @@ CONTAINS
       ! Reset annual sums if newyear or if the simulation just started
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        c_decomp_humus_1_sum(ic) =  0._wp
-        c_decomp_humus_2_sum(ic) =  0._wp
-        c_into_humus_1_sum(ic)   =  0._wp
-        c_into_humus_2_sum(ic)   =  0._wp
+        c_decomp_humus_1_sum(ic) =  0._jp
+        c_decomp_humus_2_sum(ic) =  0._jp
+        c_into_humus_1_sum(ic)   =  0._jp
+        c_into_humus_2_sum(ic)   =  0._jp
       END DO
       !$ACC END LOOP
     END IF
@@ -1689,8 +1689,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Collect matter from potential active variables -- here unfortunately explicit
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      non_woody_litter(ic) = 0._wp
-      woody_litter(ic) = 0._wp
+      non_woody_litter(ic) = 0._jp
+      woody_litter(ic) = 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1704,11 +1704,11 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     this_fract_wood_aboveGround = fract_wood_aboveGround
     IF (lcc_relocations%name .EQ. 'flcc_lcc') THEN
       ! In case of fire there is no C transferred from green and reserve pools to ag litter pools, since it burned.
-      this_fract_green_aboveGround = 0.0_wp
+      this_fract_green_aboveGround = 0.0_jp
       ! Besides, part of the ag wood C is burned and has already been added to the atmosphere flux (vg: where????)
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
-      not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
-      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
+      not_burned_AG_fract = (1.0_jp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
+      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_jp - fract_wood_aboveGround))
     END IF
 
     ! Distribution of the litter to the different yasso carbon pools
@@ -1748,10 +1748,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
         fraction = this_fract
       ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'bg') > 0) THEN
         ! Pool name contains 'bg' => below ground C pool => 1 - fraction to above ground pool
-        fraction = 1.0_wp - this_fract
+        fraction = 1.0_jp - this_fract
       ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'humus') > 0) THEN
         ! Pool name contains 'humus' => humus C pool
-        fraction = 1.0_wp
+        fraction = 1.0_jp
       ELSE
         CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
           & // ' did not contain "ag", "bg" or "humus" which are key to identifiy above vs below'     &
@@ -2029,7 +2029,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
 
       ! Do not test as long as carbon_conservation_test still carries the initialisation value
-      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
+      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_jp)) THEN
 
         ! CO2 flux due to npp, soil respiration and herbivory
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -2062,7 +2062,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          carbon_conservation_test(ic) = 0._wp
+          carbon_conservation_test(ic) = 0._jp
         END DO
         !$ACC END PARALLEL LOOP
       ENDIF
@@ -2140,40 +2140,40 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !  => Conversion from [mol(C)/m^2] to [GtC]
     !     1 mol C = molarMassC_kg kg C   => 1 mol C = molarMassC_kg * e-12 Gt C
     IF (CARBON__mem%C_sum_veg_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_veg_gsum, C_sum_veg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_veg_gsum, C_sum_veg_ta, land_area_scaling, molarMassC_kg * 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_veg_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_litter_ag_gsum, C_sum_litter_ag_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_litter_ag_gsum, C_sum_litter_ag_ta, land_area_scaling, molarMassC_kg * 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_ag_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_litter_bg_gsum, C_sum_litter_bg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_litter_bg_gsum, C_sum_litter_bg_ta, land_area_scaling, molarMassC_kg * 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_bg_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_humus_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_humus_gsum, C_sum_humus_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_humus_gsum, C_sum_humus_ta, land_area_scaling, molarMassC_kg * 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_humus_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_natural_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_natural_gsum, C_sum_natural_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_natural_gsum, C_sum_natural_ta, land_area_scaling, molarMassC_kg * 1.e-12_jp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_natural_gsum%ptr(:))
     END IF
 
     ! ... fluxes * sec_per_year
     IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(NPP_act_yDayMean_gsum, NPP_act_yDayMean_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_jp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%NPP_act_yDayMean_gsum%ptr(:))
     END IF
     IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(GPP_yDayMean_gsum, GPP_yDayMean_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_jp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%GPP_yDayMean_gsum%ptr(:))
     END IF
     IF (CARBON__mem%soil_respiration_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(soil_respiration_gsum, soil_respiration_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_jp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%soil_respiration_gsum%ptr(:))
     END IF
 

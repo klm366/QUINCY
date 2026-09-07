@@ -162,9 +162,9 @@ CONTAINS
     dsl4jsb_Get_lcc_area_matrix(initial_area)
     dsl4jsb_Get_lcc_area_matrix(lost_area)
     dsl4jsb_Get_lcc_area_matrix(gained_area)
-    initial_area(:,:) = 0.0_wp
-    lost_area(:,:) = 0.0_wp
-    gained_area(:,:) = 0.0_wp
+    initial_area(:,:) = 0.0_jp
+    lost_area(:,:) = 0.0_jp
+    gained_area(:,:) = 0.0_jp
 
     !>
     !> 2. Two possibilities:
@@ -211,8 +211,8 @@ CONTAINS
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! init gained and lost area
-      lost_area(:,:) = 0.0_wp
-      gained_area(:,:) = 0.0_wp
+      lost_area(:,:) = 0.0_jp
+      gained_area(:,:) = 0.0_jp
 
       ! Collect lost and gained area of involved tiles
       DO j =1,nr_of_combined_tiles ! < inner loop collecting lcc movements within this lcc-cycle
@@ -241,10 +241,10 @@ CONTAINS
 
         lost_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
         WHERE(lost_area(:,i_tile) < min_daily_cf_change)
-          lost_area(:,i_tile) = 0.0_wp
+          lost_area(:,i_tile) = 0.0_jp
         END WHERE
 
-        IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
+        IF (ANY(lost_area(:,i_tile) > 0._jp)) THEN
           ! - care for the gained area  -> @todo change when bare land tile available
           ! ... if forest age classes are used the area of any disturbed age class is added to the first class
           IF (d_tile_is_ac) THEN
@@ -274,7 +274,7 @@ CONTAINS
       END DO ! inner loop collecting lcc movements within this lcc-cycle
 
       ! Only needs to be executed if there is area to be moved
-      IF (ANY(lost_area(:, :) > 0._wp)) THEN
+      IF (ANY(lost_area(:, :) > 0._jp)) THEN
 
         !>
         !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
@@ -300,12 +300,12 @@ CONTAINS
         DO WHILE (i_tile < nr_of_tiles)
 
           i_tile = i_tile + 1
-          IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+          IF (ANY(lost_area(:, i_tile) > 0.0_jp)) THEN
             ! 4a -- 'special transfer'
             IF (current_tile%Has_process_memory(CARBON_)) THEN
               ! treat vegetation pools: copy matter for diagnostics
               ! -> matter itself will be actively transferred to soils by the generic routine in the carbon interface
-              conversion_fact = 1.0_wp / sec_per_day
+              conversion_fact = 1.0_jp / sec_per_day
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
                 & 'c_woods', 'cflux_dist_woods_2_soil', conversion_fact = conversion_fact )
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &

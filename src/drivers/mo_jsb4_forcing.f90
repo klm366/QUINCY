@@ -76,23 +76,23 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbalone_forcing'
 
 !>>>>> TODO: module for general constants / subroutine initialising general constants?
-  REAL(jp), PARAMETER :: gamma = 6.0E-3_wp  ! copied from jsbach3 - mo_jsbalone_forcing
+  REAL(jp), PARAMETER :: gamma = 6.0E-3_jp  ! copied from jsbach3 - mo_jsbalone_forcing
                                             ! fixed temperature gradient of atmosphere [K/m] (see Knorr, p. 31). Note that
                                             ! for the standard ICAO-atmosphere this value is different, namely 6.5E-3 !!!
-  REAL(jp), PARAMETER :: solar_const =  1361.371_wp      ! default solar constant (AMIP) [W/m2]
-  REAL(jp), PARAMETER :: conv_prec_day = 1._wp/86400._wp ! copied from jsbach3 - mo_jsbalone_forcing
+  REAL(jp), PARAMETER :: solar_const =  1361.371_jp      ! default solar constant (AMIP) [W/m2]
+  REAL(jp), PARAMETER :: conv_prec_day = 1._jp/86400._jp ! copied from jsbach3 - mo_jsbalone_forcing
                                                          ! Conversion factor for precipitation in [mm/day] to [kg/m^2/s]:
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
-  REAL(jp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
-  REAL(jp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
+  REAL(jp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_jp  !  28.970e-3_jp   -  Mass of 1 mol of dry air in kg
+  REAL(jp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_jp   ! 44.0095e-3_jp   -  Mass of 1 mol CO2 in kg
 
-  REAL(jp), PARAMETER :: defHeightWind = -1._wp        ! -1: for ECHAM lowest layer values
-  REAL(jp), PARAMETER :: defHeightHumidity = -1._wp    ! -1: for ECHAM lowest layer values
+  REAL(jp), PARAMETER :: defHeightWind = -1._jp        ! -1: for ECHAM lowest layer values
+  REAL(jp), PARAMETER :: defHeightHumidity = -1._jp    ! -1: for ECHAM lowest layer values
 
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
-  REAL(jp), PARAMETER :: cb = 5._wp
-  REAL(jp), PARAMETER :: cc = 5._wp
-  REAL(jp), PARAMETER :: ckap = 0.4_wp
+  REAL(jp), PARAMETER :: cb = 5._jp
+  REAL(jp), PARAMETER :: cc = 5._jp
+  REAL(jp), PARAMETER :: ckap = 0.4_jp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
 
@@ -167,9 +167,9 @@ MODULE mo_jsb4_forcing
     CHARACTER(NF90_MAX_NAME) :: file_name_prefix = ""  !! Prefix of files in which the variable is located
     CHARACTER(NF90_MAX_NAME) :: expectedUnit = ""      !! Unit for the variable expected in the file
     INTEGER                  :: frequency = 0          !! Input data frequency (see 'options controlling types of forcing data')
-    REAL(jp)                 :: ocean_value = 0._wp    !! Value used for ocean cells
-    REAL(jp)                 :: constantValue = 0._wp  !! Value in case of frequency 'constant'
-    REAL(jp)                 :: missval = 1.0e+20_wp   !! Missing value
+    REAL(jp)                 :: ocean_value = 0._jp    !! Value used for ocean cells
+    REAL(jp)                 :: constantValue = 0._jp  !! Value in case of frequency 'constant'
+    REAL(jp)                 :: missval = 1.0e+20_jp   !! Missing value
     INTEGER                  :: currentDayStart = 0    !! First time step in file corresponding to the current day
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
@@ -299,19 +299,19 @@ CONTAINS
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     DO iblk = 1, nblks
       DO ic = 1, nproma
-        CO2_air(ic, iblk)           = 0._wp
-        t_air(ic, iblk)             = 0._wp
-        q_air(ic, iblk)             = 0._wp
-        rain(ic, iblk)              = 0._wp
-        snow(ic, iblk)              = 0._wp
-        wind_air(ic, iblk)          = 0._wp
-        wind_10m(ic, iblk)          = 0._wp
-        lw_srf_down(ic, iblk)       = 0._wp
-        swvis_srf_down(ic, iblk)    = 0._wp
-        swnir_srf_down(ic, iblk)    = 0._wp
-        swpar_srf_down(ic, iblk)    = 0._wp
-        fract_par_diffuse(ic, iblk) = 0._wp
-        press_srf(ic, iblk)         = 0._wp
+        CO2_air(ic, iblk)           = 0._jp
+        t_air(ic, iblk)             = 0._jp
+        q_air(ic, iblk)             = 0._jp
+        rain(ic, iblk)              = 0._jp
+        snow(ic, iblk)              = 0._jp
+        wind_air(ic, iblk)          = 0._jp
+        wind_10m(ic, iblk)          = 0._jp
+        lw_srf_down(ic, iblk)       = 0._jp
+        swvis_srf_down(ic, iblk)    = 0._jp
+        swnir_srf_down(ic, iblk)    = 0._jp
+        swpar_srf_down(ic, iblk)    = 0._jp
+        fract_par_diffuse(ic, iblk) = 0._jp
+        press_srf(ic, iblk)         = 0._jp
       END DO
     END DO
     !$ACC END PARALLEL
@@ -326,8 +326,8 @@ CONTAINS
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO iblk = 1, nblks
         DO ic = 1, nproma
-          co2_air_dc13(ic, iblk)       = 0._wp
-          co2_air_Dc14(ic, iblk)       = 0._wp
+          co2_air_dc13(ic, iblk)       = 0._jp
+          co2_air_Dc14(ic, iblk)       = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL
@@ -426,7 +426,7 @@ CONTAINS
                 ENDDO
 
                 CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
-                  &                             0.5_wp*(argMin + argMax))
+                  &                             0.5_jp*(argMin + argMax))
             ENDDO
           ENDDO
           !$ACC END PARALLEL
@@ -453,7 +453,7 @@ CONTAINS
         DO iblk = 1, nblks
           DO ic = 1, nproma
             CALL snow_and_rain_from_precip(rain(ic, iblk), snow(ic, iblk), temporary_data1(ic, iblk), &
-              &                            0.5_wp*(tmax_data(ic, iblk) + tmin_data(ic, iblk)))
+              &                            0.5_jp*(tmax_data(ic, iblk) + tmin_data(ic, iblk)))
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -495,7 +495,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO iblk = 1, nblks
       DO ic = 1, nproma
-        sat_spec_humidity(ic, iblk) = 0._wp
+        sat_spec_humidity(ic, iblk) = 0._jp
       ENDDO
     ENDDO
     !$ACC END PARALLEL LOOP
@@ -530,7 +530,7 @@ CONTAINS
       !$ACC UPDATE DEVICE(rel_humidity) ASYNC(1)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
-      IF(hlp_r < 1._wp) THEN
+      IF(hlp_r < 1._jp) THEN
         WRITE (message_text,*) 'Maximum value of relative humidity is ', hlp_r
         CALL message(TRIM(routine), TRIM(message_text))
         CALL message(TRIM(routine),'relative humidity data probably represent fractions instead of percentages.')
@@ -540,7 +540,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk=1,nblks
         DO ic=1,nproma
-          rel_humidity(ic,iblk) = rel_humidity(ic,iblk)/100._wp
+          rel_humidity(ic,iblk) = rel_humidity(ic,iblk)/100._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -926,7 +926,7 @@ CONTAINS
     delta_time    = dtime
     time_steps_per_day = 86400/INT(delta_time)
     ! Assertion: delta_time needs to be smaller or equal 86400
-    IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
+    IF ((delta_time > 86400._jp)) CALL finish(TRIM(routine), &
       & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
 
     IF (my_process_is_stdio()) THEN
@@ -944,59 +944,59 @@ CONTAINS
 
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
-      forcing_temp_const_tmin = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_temp_const_tmax = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_temp_ocean = 0._wp
+      forcing_temp_const_tmin = 0.0_jp !jsb3: HUGE(0.0_jp)
+      forcing_temp_const_tmax = 0.0_jp !jsb3: HUGE(0.0_jp)
+      forcing_temp_ocean = 0._jp
       forcing_temp_unit = exp_unit_temperature
 
       forcing_precip_file_prefix = 'climate_'
       forcing_precip_frequ = 'DAILY'
-      forcing_precip_const_precip = 0.0_wp !jsb3: HUGE(0.0_wp)
+      forcing_precip_const_precip = 0.0_jp !jsb3: HUGE(0.0_jp)
       forcing_precip_in_mm_per_day = .TRUE.
-      forcing_precip_ocean = 0._wp
+      forcing_precip_ocean = 0._jp
       forcing_precip_unit = unit_precip_mm_day
 
       forcing_sw_file_prefix = 'climate_'
       forcing_sw_frequ = 'DAILY'
-      forcing_sw_ocean = 0._wp
+      forcing_sw_ocean = 0._jp
       forcing_sw_unit = exp_unit_radiation
 
       forcing_lw_file_prefix = 'climate_'
       forcing_lw_frequ = 'DAILY'
-      forcing_lw_ocean = 100._wp
+      forcing_lw_ocean = 100._jp
       forcing_lw_unit = exp_unit_radiation
 
       forcing_co2_file_prefix = 'climate_'
       forcing_co2_frequ = 'DAILY'
-      forcing_co2_const_co2 = 3.67e-4_wp
+      forcing_co2_const_co2 = 3.67e-4_jp
       forcing_co2_unit = unspecified_exp_unit
-      forcing_co2_ocean = 3.67e-4_wp
+      forcing_co2_ocean = 3.67e-4_jp
 
       forcing_wind_file_prefix = 'climate_'
       forcing_wind_frequ = 'DAILY'
-      forcing_wind_const_wspeed = 0.0_wp !jsb3: HUGE(0.0_wp)
-      forcing_wind_ocean = 0._wp
+      forcing_wind_const_wspeed = 0.0_jp !jsb3: HUGE(0.0_jp)
+      forcing_wind_ocean = 0._jp
       forcing_wind_unit = exp_unit_wspeed
 
       forcing_qair_file_prefix = 'climate_'
       forcing_qair_frequ = 'DAILY'
       forcing_qair_type = 'QAIR'
-      forcing_qair_const_rh = 100._wp
+      forcing_qair_const_rh = 100._jp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
 
       ! c13 and c14 isotopes required for QUINCY
       forcing_c13_file_prefix = 'climate_'
       forcing_c13_frequ = 'DAILY'
-      forcing_c13_const_c13 = -7.5e+0_wp
+      forcing_c13_const_c13 = -7.5e+0_jp
       forcing_c13_unit = unspecified_exp_unit
-      forcing_c13_ocean = -7.5e+0_wp
+      forcing_c13_ocean = -7.5e+0_jp
 
       forcing_c14_file_prefix = 'climate_'
       forcing_c14_frequ = 'DAILY'
-      forcing_c14_const_c14 = -1.49e+1_wp
+      forcing_c14_const_c14 = -1.49e+1_jp
       forcing_c14_unit = unspecified_exp_unit
-      forcing_c14_ocean = -1.49e+1_wp
+      forcing_c14_ocean = -1.49e+1_jp
 
       ! ----- read the namelist
 
@@ -1066,13 +1066,13 @@ CONTAINS
       SELECT CASE(TRIM(tolower(forcing_co2_unit)))
       CASE("ppmv","1.e-6")
         CALL message(TRIM(routine),'CO2 forcing in ppmv')
-        forcing_options(model_id)%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg * 0.000001_wp
+        forcing_options(model_id)%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg * 0.000001_jp
       CASE("mol_per_mol", "mol/mol")
         CALL message(TRIM(routine),'CO2 forcing in mol(CO2)/mol(Dry Air)')
         forcing_options(model_id)%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       CASE("kg_per_kg", "kg/kg")
         CALL message(TRIM(routine),'CO2 forcing in kg(CO2)/kg(Dry Air)')
-        forcing_options(model_id)%conv_CO2_2_MassRatio = 1.0_wp
+        forcing_options(model_id)%conv_CO2_2_MassRatio = 1.0_jp
       CASE default
         CALL message(TRIM(routine),'WARNING: "FORCING_CO2_UNIT" missing in namelist jsb_forcing_nml.')
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
@@ -1261,7 +1261,7 @@ CONTAINS
     nproma = SIZE(current_forcing_array,1)
     nblks  = SIZE(current_forcing_array,2)
 
-    current_forcing_array(:,:) = 0._wp
+    current_forcing_array(:,:) = 0._jp
 
     model => Get_model(model_id)
 
@@ -1306,7 +1306,7 @@ CONTAINS
       ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time) + 1 !+1 because 00:00/X => 0; and 1 based vector
     ELSE IF (forcing_input_variable%frequency == SUBDAILY_) THEN
       ith_timestep = IMerge_HMS2Sec(hour, minute, second)/ &
-        & int(86400._wp/forcing_options(model_id)%forcing_steps_per_day) + 1 !+1 because 00:00/X => 0; and 1 based vector
+        & int(86400._jp/forcing_options(model_id)%forcing_steps_per_day) + 1 !+1 because 00:00/X => 0; and 1 based vector
     END IF
 
     ! ----- ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one value per year
@@ -1325,7 +1325,7 @@ CONTAINS
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
         ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
-        forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
+        forcing_input_variable%data_read = 0._jp ! Initialization needed for grid cells beyond npromz
       ENDIF
 
       IF (new_year_forcing .OR. lstart .OR. lresume) THEN
@@ -1434,7 +1434,7 @@ CONTAINS
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
       ALLOCATE(forcing_input_variable%data_read(nproma, nblks, forcing_options(model_id)%forcing_steps_per_day))
-      forcing_input_variable%data_read = 0._wp ! Initialization needed for grid cells beyond npromz
+      forcing_input_variable%data_read = 0._jp ! Initialization needed for grid cells beyond npromz
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &
@@ -1737,11 +1737,11 @@ CONTAINS
     REAL(jp),INTENT(OUT) :: qair(1:ice)          !! the specific humidity of the day
 
     ! constants
-    REAL(jp), PARAMETER :: pio180 = pi/180._wp     ! conversion factor from degrees to radians ("pi over 180")
-    REAL(jp), PARAMETER :: rat1=14._wp/24._wp      ! day fraction at which maximum temperature shall occur
-    REAL(jp), PARAMETER :: rat2=4._wp/24._wp       ! minimum length of normal day (as fraction of day)
-    REAL(jp), PARAMETER :: rat3=20._wp/24._wp      ! maximum length of normal day (as fraction of day)
-    REAL(jp), PARAMETER :: rat4=2._wp/24._wp       ! day fraction of dawn times (before sunrise + after sunset), used to set ...
+    REAL(jp), PARAMETER :: pio180 = pi/180._jp     ! conversion factor from degrees to radians ("pi over 180")
+    REAL(jp), PARAMETER :: rat1=14._jp/24._jp      ! day fraction at which maximum temperature shall occur
+    REAL(jp), PARAMETER :: rat2=4._jp/24._jp       ! minimum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat3=20._jp/24._jp      ! maximum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat4=2._jp/24._jp       ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                    ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
     ! Temperature calculations
     REAL(jp) :: declination       ! solar declination
@@ -1775,7 +1775,7 @@ CONTAINS
 
     CALL inquire_declination(declination)
 
-    nstep = (86400.0_wp/delta_time)
+    nstep = (86400.0_jp/delta_time)
 
     IF(.NOT.(ALLOCATED(tmp))) ALLOCATE(tmp(time_steps_per_day))
     IF(.NOT.(ALLOCATED(pressure))) ALLOCATE(pressure(time_steps_per_day))
@@ -1789,45 +1789,45 @@ CONTAINS
       cpds = coslat(i)*COS(declination)  ! cosine contribution to solar zenith angle
 
       arg = -spds/cpds                        ! faulty?: for cpds=0 arg gets infinite
-      IF (arg > 1._wp) THEN               ! polar night:
-        fract_daylight = 0._wp            ! ... day length is zero
-      ELSE IF (arg < -1._wp) THEN         ! polar day:
-        fract_daylight = 1._wp            ! ... day length is the whole day
+      IF (arg > 1._jp) THEN               ! polar night:
+        fract_daylight = 0._jp            ! ... day length is zero
+      ELSE IF (arg < -1._jp) THEN         ! polar day:
+        fract_daylight = 1._jp            ! ... day length is the whole day
       ELSE                                ! normal day / night:
         fract_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
       END IF
-      dtmp = 0.5_wp*(Tmax(i)+Tmin(i)) ! The mean day temperature
+      dtmp = 0.5_jp*(Tmax(i)+Tmin(i)) ! The mean day temperature
       dtran = Tmax(i)- Tmin(i)        ! temperature range
       DO j = 1,time_steps_per_day
         tstep=j/nstep
         ! -------- normal day ---------------------------------------------
         IF (fract_daylight>=rat2 .AND. fract_daylight<=rat3) THEN
-          fract_sunrise = 0.5_wp - fract_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
+          fract_sunrise = 0.5_jp - fract_daylight/2._jp             ! time of sunrise expressed as fraction of day since midnight
           fract_sunset = fract_sunrise+fract_daylight                ! time of sunset expressed as fraction of day since midnight
 
           ! For time steps at daylight ...
           IF (tstep>fract_sunrise .AND. tstep<fract_sunset) THEN
-            sd = COS(pi*(tstep-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that
+            sd = COS(pi*(tstep-rat1)/(fract_daylight/2._jp+rat4)) ! modulation factor for day-temperature such that
                                                                  !   temperature is at maximum at rat1 (2 pm) and at average at
                                                                  !   sunrise-rat4/2 and sunset+rat4/2
-            tmp(j) = dtmp + sd*dtran/2._wp                       ! temperature modulated by temperature range
+            tmp(j) = dtmp + sd*dtran/2._jp                       ! temperature modulated by temperature range
 
           ! For time steps at night ...
           ELSE
-            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
-            temp_sunset = dtmp + dtran/2._wp*sd                        ! temperature at sunset
-            fract_since_sunset = MOD(tstep-fract_sunset+1._wp,1._wp)     ! day fraction since sunset
-            tmp(j) = Tmin(i)+(temp_sunset-Tmin(i))*(1._wp-fract_since_sunset/(1._wp-fract_daylight))! linear interpolation
+            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._jp+rat4)) ! modulation factor for temperature at sunset
+            temp_sunset = dtmp + dtran/2._jp*sd                        ! temperature at sunset
+            fract_since_sunset = MOD(tstep-fract_sunset+1._jp,1._jp)     ! day fraction since sunset
+            tmp(j) = Tmin(i)+(temp_sunset-Tmin(i))*(1._jp-fract_since_sunset/(1._jp-fract_daylight))! linear interpolation
                                                                      ! ... of temperature such that temperature is equal to the
                                                                      ! ... temperature at sunset and drops until the minimum ...
                                                                      ! ... temperature is met at sunrise.
           END IF
         ! --- long day (close to polar day) ------------------------------------------------------
         ELSEIF (fract_daylight>rat3) THEN
-          sd = COS(pi*(tstep-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
+          sd = COS(pi*(tstep-rat1)/(fract_daylight/2._jp+rat4)) ! modulation factor for day-temperature such that ...
                                                                ! ... temperature is at maximum at rat1 (2 pm) and at average
                                                                ! ... at sunrise-rat4/2 and sunset+rat4/2
-          tmp(j) = dtmp + dtran/2._wp*sd                       ! temperature modulated by temperature range
+          tmp(j) = dtmp + dtran/2._jp*sd                       ! temperature modulated by temperature range
         ! ------------------------------- short day (close to polar night) ---------------------------------------------------
         ELSE
           tmp(j) = dtmp                                        ! temperature is set to mean temperture at all time steps
@@ -1836,7 +1836,7 @@ CONTAINS
 
         ! from function bottom pressure; in jsb3: p0sl_bg = p_sealevel; grav = Gravity; rd = GasConstantDryAir
         pressure(j) = &
-          & p0sl_bg * ( 1._wp - elevation(i)*gamma /(tmp(j) + elevation(i)*gamma))**(grav/rd/gamma)
+          & p0sl_bg * ( 1._jp - elevation(i)*gamma /(tmp(j) + elevation(i)*gamma))**(grav/rd/gamma)
 
         CALL sat_specific_humidity_scalar(tmp(j), pressure(j), qsat(j)) ! present saturated qair
 
@@ -1849,7 +1849,7 @@ CONTAINS
         ! saturation during the day. In this case, qair can be inferred by inverting
         ! RH = 1/n * sum ( QAIR / QSAT ) = QAIR / n * sum ( 1 / QSAT )
         ! -> QAIR = n * RH / sum ( 1 / QSAT )
-        inv_qsat(:) = 1._wp / qsat(:)
+        inv_qsat(:) = 1._jp / qsat(:)
         qair(i) = nstep * rel_humidity(i) / SUM( inv_qsat(:) )
       ELSE
         ! The case where RH implies saturation at night. Under these conditions
@@ -1857,12 +1857,12 @@ CONTAINS
         ! taking account of the implied period during the day where saturation occurs.
         ! Surely there's a better way to do this, but I cannot be bothered now.
         offset(:)=MAXLOC(qsat(:))
-        IF( rel_humidity(i) >= 1._wp ) THEN
+        IF( rel_humidity(i) >= 1._jp ) THEN
            qair(i)=qsat(offset(1))
         ELSE
           j=0
           jj=offset(1)
-          rh_test=1._wp
+          rh_test=1._jp
           DO WHILE ( rh_test > rel_humidity(i) .AND. j < time_steps_per_day )
             ! save value from last time
             qsat_last=qsat(jj)
@@ -1927,7 +1927,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
 #ifndef _OPENACC
-      IF (temp(ic) < 50._wp .OR. temp(ic) > 400._wp) THEN
+      IF (temp(ic) < 50._jp .OR. temp(ic) > 400._jp) THEN
         WRITE (message_text,*) &
           & 'Temperature out of bound: ', temp(ic), 'K. One thing to check: consistency of land-sea mask and forcing.'
         CALL finish(TRIM(routine), TRIM(message_text))
@@ -1958,7 +1958,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity_scalar'
 
-    IF (temp < 50._wp .OR. temp > 400._wp) THEN
+    IF (temp < 50._jp .OR. temp > 400._jp) THEN
 !       WRITE (message_text,*) &
 !          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
 !        CALL finish(TRIM(routine), TRIM(message_text))
@@ -1999,7 +1999,7 @@ CONTAINS
     REAL(jp),INTENT(in) :: air_pressure           !< air pressure at bottom [N/m^2]
     REAL(jp)            :: fun_specific_humidity  !< (from [0,1])
 
-    fun_specific_humidity = rdv * vapour_pressure / (air_pressure - (1._wp - rdv) * vapour_pressure)
+    fun_specific_humidity = rdv * vapour_pressure / (air_pressure - (1._jp - rdv) * vapour_pressure)
   END FUNCTION fun_specific_humidity
 
   SUBROUTINE fun_specific_humidity_2d(vapour_pressure, air_pressure, fun_specific_humidity)
@@ -2019,7 +2019,7 @@ CONTAINS
     DO iblk = 1, nblks
       DO ic = 1, nproma
         fun_specific_humidity(ic,iblk) = rdv * vapour_pressure(ic,iblk) / &
-        & (air_pressure(ic,iblk) - (1._wp - rdv) * vapour_pressure(ic,iblk))
+        & (air_pressure(ic,iblk) - (1._jp - rdv) * vapour_pressure(ic,iblk))
       ENDDO
     ENDDO
     !$ACC END PARALLEL LOOP
@@ -2070,8 +2070,8 @@ CONTAINS
     REAL(jp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
     REAL(jp), INTENT(OUT) :: vpress(:,:)
 
-    REAL(jp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
-    REAL(jp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
+    REAL(jp), PARAMETER :: h0 = 0.6_jp  !! (0.96_jp) tuning constant for computing vapor pressure
+    REAL(jp), PARAMETER :: h1 = 0.0_jp  !! (0.49_jp) tuning constant for computing vapor pressure
 
     REAL(jp) :: evapo_sat        ! saturation pressure at actual temperature
     REAL(jp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
@@ -2090,12 +2090,12 @@ CONTAINS
 
         !Assertion: the expected temperature range is indirectly defined by the tlucua bounds in convect tables -> consistency check
 #ifndef _OPENACC
-        IF (Tmin(ic,ib) + tmelt < 50._wp .OR. Tmin(ic,ib) + tmelt > 400._wp) THEN
+        IF (Tmin(ic,ib) + tmelt < 50._jp .OR. Tmin(ic,ib) + tmelt > 400._jp) THEN
           WRITE (message_text,*) &
             & 'min temperature out of range: ', Tmin(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
           CALL finish(TRIM(routine), TRIM(message_text))
         ENDIF
-        IF (Tair(ic,ib) + tmelt < 50._wp .OR. Tair(ic,ib) + tmelt > 400._wp) THEN
+        IF (Tair(ic,ib) + tmelt < 50._jp .OR. Tair(ic,ib) + tmelt > 400._jp) THEN
           WRITE (message_text,*) &
             & 'air temperature out of bounds: ', Tair(ic,ib), ' degC. One thing to check: consistency of land-sea mask and forcing.'
           CALL finish(TRIM(routine), TRIM(message_text))
@@ -2104,7 +2104,7 @@ CONTAINS
 
         evapo_sat_min = sat_pres_mixed(Tmin(ic,ib) + tmelt) ! saturation pressure at minimum temperature
         evapo_sat     = sat_pres_mixed(Tair(ic,ib) + tmelt) ! saturation pressure at actual temperature
-        e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
+        e0_vap = evapo_sat_min * (h0 + (1._jp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
         vpress(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 
       ENDDO
@@ -2150,7 +2150,7 @@ CONTAINS
       ics = startidx(ib)
       ice = endidx  (ib)
       DO ic = ics, ice
-        IF (tile%fract(ic,ib) <= 0._wp) array(ic,ib) = constant
+        IF (tile%fract(ic,ib) <= 0._jp) array(ic,ib) = constant
       END DO
     END DO
 !$OMP END PARALLEL DO
@@ -2187,7 +2187,7 @@ CONTAINS
       ics = startidx(ib)
       ice = endidx  (ib)
       DO ic = ics, ice
-        IF (ABS(array(ic,ib) - missval) <= EPSILON(1.0_wp)) array(ic,ib) = constant
+        IF (ABS(array(ic,ib) - missval) <= EPSILON(1.0_jp)) array(ic,ib) = constant
       END DO
     END DO
 !$OMP END PARALLEL DO
@@ -2226,11 +2226,11 @@ CONTAINS
   !
   SUBROUTINE instantly_from_daily_temp_2(startblk, endblk, startidx, endidx, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
 
-    REAL(jp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
-    REAL(jp), PARAMETER :: rat1=14._wp/24._wp  ! day fraction at which maximum temperature shall occur
-    REAL(jp), PARAMETER :: rat2=4._wp/24._wp   ! minimum length of normal day (as fraction of day)
-    REAL(jp), PARAMETER :: rat3=20._wp/24._wp  ! maximum length of normal day (as fraction of day)
-    REAL(jp), PARAMETER :: rat4=2._wp/24._wp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
+    REAL(jp), PARAMETER :: pio180 = pi/180._jp ! conversion factor from degrees to radians ("pi over 180")
+    REAL(jp), PARAMETER :: rat1=14._jp/24._jp  ! day fraction at which maximum temperature shall occur
+    REAL(jp), PARAMETER :: rat2=4._jp/24._jp   ! minimum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat3=20._jp/24._jp  ! maximum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat4=2._jp/24._jp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
@@ -2266,7 +2266,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
     DO ib = 1,SIZE(tmp,2)
       DO ic = 1, SIZE(tmp, 1)
-        tmp(ic,ib) = 0._wp
+        tmp(ic,ib) = 0._jp
       ENDDO
     ENDDO
     !$ACC END PARALLEL LOOP
@@ -2283,15 +2283,15 @@ CONTAINS
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
-        fract_UTC_offset = lon(ic,ib)/360._wp   ! difference between local time and UTC as fraction of a day
-        fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
+        fract_UTC_offset = lon(ic,ib)/360._jp   ! difference between local time and UTC as fraction of a day
+        fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._jp,1._jp) ! local time as fraction of the local day (modulo 1)
         spds = sinlat(ic,ib)*SIN(declination)  ! sine contribution to solar zenith angle
         cpds = coslat(ic,ib)*COS(declination)  ! cosine contribution to solar zenith angle
         arg = -spds/cpds                        ! faulty?: for cpds=0 arg gets infinite
-        IF (arg > 1._wp) THEN               ! polar night:
-          fract_daylight = 0._wp            ! ... day length is zero
-        ELSEIF (arg < -1._wp) THEN         ! polar day:
-          fract_daylight = 1._wp            ! ... day length is the whole day
+        IF (arg > 1._jp) THEN               ! polar night:
+          fract_daylight = 0._jp            ! ... day length is zero
+        ELSEIF (arg < -1._jp) THEN         ! polar day:
+          fract_daylight = 1._jp            ! ... day length is the whole day
         ELSE                                ! normal day / night:
           fract_daylight = ACOS(arg)/pi    ! ... day length expressed as fraction of the whole day
         ENDIF
@@ -2300,23 +2300,23 @@ CONTAINS
         !! consered dtmp=0.5*(max+min). The night-day turn temperature is adjusted such that the mean
         !! temperature is within 0.05 K of the 0.5*(tmax+tmin) temperature
         IF (fract_daylight>=rat2 ) THEN ! -------- normal day ---------------------------------------------
-          IF(fract_daylight < 0.36_wp)THEN
-            arg=-8._wp * (fract_daylight-0.36_wp)**2 + 0.685_wp
+          IF(fract_daylight < 0.36_jp)THEN
+            arg=-8._jp * (fract_daylight-0.36_jp)**2 + 0.685_jp
           ELSE
-            arg=-0.8_wp * (fract_daylight-0.36_wp)**2 + 0.685_wp
+            arg=-0.8_jp * (fract_daylight-0.36_jp)**2 + 0.685_jp
           ENDIF
         ELSE
-          arg = 0.5_wp
+          arg = 0.5_jp
         ENDIF
 
-        dtmp = arg * dtmp_max(ic,ib) + (1._wp-arg) * dtmp_min(ic,ib) ! The dusk day temperature
-        !dtmp = 0.5_wp*(dtmp_max(ic,ib)+dtmp_min(ic,ib)) ! The mean day temperature
+        dtmp = arg * dtmp_max(ic,ib) + (1._jp-arg) * dtmp_min(ic,ib) ! The dusk day temperature
+        !dtmp = 0.5_jp*(dtmp_max(ic,ib)+dtmp_min(ic,ib)) ! The mean day temperature
         dtran = dtmp_max(ic,ib)- dtmp_min(ic,ib)        ! temperature range
         IF (fract_daylight>=rat2 .AND. fract_daylight<=rat3) THEN ! -------- normal day ---------------------------------------------
-          fract_sunrise = 0.5_wp - fract_daylight/2._wp             ! time of sunrise expressed as fraction of day since midnight
+          fract_sunrise = 0.5_jp - fract_daylight/2._jp             ! time of sunrise expressed as fraction of day since midnight
           fract_sunset = fract_sunrise+fract_daylight                ! time of sunset expressed as fraction of day since midnight
           IF (fract_localtime > fract_sunrise .AND. fract_localtime <= fract_sunset) THEN  ! For time steps at daylight ...
-            sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._wp+rat4)) ! ... modulation factor for day-temperature such that
+            sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._jp+rat4)) ! ... modulation factor for day-temperature such that
                                                                     ! .. temperature is at maximum at rat1 (2 pm) and at average at
                                                                     ! .. sunrise-rat4/2 and sunset+rat4/2
             IF (sd >= 0) THEN
@@ -2324,28 +2324,28 @@ CONTAINS
             ELSE
               tmp(ic,ib) = dtmp + sd*(dtmp-dtmp_min(ic,ib))                       ! temperature modulated by temperature range
             ENDIF
-            !tmp(ic,ib) = dtmp + sd*dtran/2._wp                       ! temperature modulated by temperature range
+            !tmp(ic,ib) = dtmp + sd*dtran/2._jp                       ! temperature modulated by temperature range
           ELSE                                                 ! For time steps at night ...
-            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for temperature at sunset
+            sd = COS(pi*(fract_sunset-rat1)/(fract_daylight/2._jp+rat4)) ! modulation factor for temperature at sunset
             IF (sd >= 0) THEN
               temp_sunset = dtmp + sd*(dtmp_max(ic,ib)-dtmp)                       ! temperature modulated by temperature range
             ELSE
               temp_sunset = dtmp + sd*(dtmp-dtmp_min(ic,ib))                       ! temperature modulated by temperature range
             ENDIF
-            !temp_sunset = dtmp + dtran/2._wp*sd                     ! temperature at sunset
-            fract_since_sunset = MOD(fract_localtime-fract_sunset+1._wp,1._wp) ! day fraction since sunset
+            !temp_sunset = dtmp + dtran/2._jp*sd                     ! temperature at sunset
+            fract_since_sunset = MOD(fract_localtime-fract_sunset+1._jp,1._jp) ! day fraction since sunset
             tmp(ic,ib) = dtmp_min(ic,ib)+(temp_sunset-dtmp_min(ic,ib)) &
-              & *(1._wp-fract_since_sunset/(1._wp-fract_daylight))! linear interpolation
+              & *(1._jp-fract_since_sunset/(1._jp-fract_daylight))! linear interpolation
                                                                 ! ... of temperature such that temperature is equal to the
                                                                 ! ... temperature at sunset and drops until the minimum ...
                                                                 ! ... temperature is met at sunrise.
           ENDIF
         ELSEIF (fract_daylight>rat3) THEN ! --- long day (close to polar day) ------------------------------------------------------
           ! case is now obsolete
-          sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._wp+rat4)) ! modulation factor for day-temperature such that ...
+          sd = COS(pi*(fract_localtime-rat1)/(fract_daylight/2._jp+rat4)) ! modulation factor for day-temperature such that ...
                                                                        ! ... temperature is at maximum at rat1 (2 pm) and at average
                                                                        ! ... at sunrise-rat4/2 and sunset+rat4/2
-          tmp(ic,ib) = dtmp + dtran/2._wp*sd                             ! temperature modulated by temperature range
+          tmp(ic,ib) = dtmp + dtran/2._jp*sd                             ! temperature modulated by temperature range
         ELSE ! ------------------------------- short day (close to polar night) ---------------------------------------------------
           tmp(ic,ib) = dtmp                                        ! temperature is set to mean temperture at all time steps
         ENDIF
@@ -2400,7 +2400,7 @@ CONTAINS
     REAL(jp)              :: bottom_pressure
 
     bottom_pressure = &
-      & p0sl_bg * (1._wp - elevation * gamma / (tmelt + air_temperature + elevation * gamma)) ** (grav / rd / gamma)
+      & p0sl_bg * (1._jp - elevation * gamma / (tmelt + air_temperature + elevation * gamma)) ** (grav / rd / gamma)
 
   END FUNCTION bottom_pressure
 
@@ -2429,12 +2429,12 @@ CONTAINS
     REAL(jp),INTENT(OUT) :: rain            !< rain [kg/m^2/s]
     REAL(jp),INTENT(OUT) :: snow            !< snow [kg/m^2/s]
 
-    IF(air_temp_daily < -1.1_wp) THEN
+    IF(air_temp_daily < -1.1_jp) THEN
        snow = precipitation
-    ELSEIF(air_temp_daily > 3.3_wp) THEN
-       snow = 0.0_wp
+    ELSEIF(air_temp_daily > 3.3_jp) THEN
+       snow = 0.0_jp
     ELSE
-       snow = precipitation*(3.3_wp-air_temp_daily)/4.4_wp
+       snow = precipitation*(3.3_jp-air_temp_daily)/4.4_jp
     ENDIF
     ! set the rain part according to Eq. (2):
     rain = precipitation - snow
@@ -2567,7 +2567,7 @@ CONTAINS
     REAL(jp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
     REAL(jp) :: delta,K
 
-    REAL(jp), PARAMETER  ::  fract_UV = 0.1_wp ! UV fraction of (UV + PAR)
+    REAL(jp), PARAMETER  ::  fract_UV = 0.1_jp ! UV fraction of (UV + PAR)
 
     INTEGER :: i, j, nc, nblks
 
@@ -2581,17 +2581,17 @@ CONTAINS
     ALLOCATE(rad_sw_in_corr(nc, nblks))
     !$ACC ENTER DATA CREATE(u, v, hh, sinehh, rad_sw_in_corr)
 
-    day_angle = 2._wp*pi*(day_of_year+10._wp)/365._wp !! ATTENTION: this may be incorrect for paleo situations
+    day_angle = 2._jp*pi*(day_of_year+10._jp)/365._jp !! ATTENTION: this may be incorrect for paleo situations
 
-    hlp_r=2._wp*day_angle
+    hlp_r=2._jp*day_angle
     r_sun_earth_2 = &         ! Eq. (3) from above
-      & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
-    K=13750.98708_wp
+      & 1.000110_jp+3.4221E-2_jp*COS(day_angle)+1.280E-3_jp*SIN(day_angle)+7.19E-4_jp*COS(hlp_r)+7.7E-5_jp*SIN(hlp_r)
+    K=13750.98708_jp
 
     IF (      forcing_input(model_id)%shortwave%frequency /= TIMESTEP_ &
       & .AND. forcing_input(model_id)%shortwave%frequency /= SUBDAILY_) THEN
       ! today's sum of top of the atmosphere radiation
-      delta=-23.4_wp*pi/180._wp*COS(day_angle)
+      delta=-23.4_jp*pi/180._jp*COS(day_angle)
       !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG VECTOR COLLAPSE(2)
       DO j=1,nblks
@@ -2601,27 +2601,27 @@ CONTAINS
           ! derive half day-length hh: time from solar noon to sunset (angular units)
           IF (u(i,j).GE.v(i,j)) THEN
             hh(i,j) = pi
-          ELSE IF (u(i,j).LE.(0._wp-v(i,j))) THEN
-            hh(i,j) = 0.0_wp
+          ELSE IF (u(i,j).LE.(0._jp-v(i,j))) THEN
+            hh(i,j) = 0.0_jp
           ELSE
             hh(i,j) = ACOS(-u(i,j) / v(i,j))
           END IF
           sinehh(i,j) = SIN(hh(i,j))
 
           !estimate of noon radiation giving rise to the recorded radiation sum
-          rad_sw_in_corr(i,j) = 0._wp
+          rad_sw_in_corr(i,j) = 0._jp
 
           ! If the day is very short (half day length less then ~25 min.) we distribute the small
           ! daily SW flux proportional to cos_zenith. With longer days, the daily-mean SW value
           ! is normalized by the analytical integral of cos(zenith) over the daytime window.
-          IF (hh(i,j) .GE. 0.0_wp .AND. hh(i,j) .LT. 0.1_wp) THEN
+          IF (hh(i,j) .GE. 0.0_jp .AND. hh(i,j) .LT. 0.1_jp) THEN
             ! Polar twilight: day-length integral is near-zero
-            IF (cos_zenith(i,j) .GT. 0._wp) THEN
+            IF (cos_zenith(i,j) .GT. 0._jp) THEN
               rad_sw_in_corr(i,j) = rad_sw_in(i,j)
             END IF
-          ELSE IF ((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp) THEN
+          ELSE IF ((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_jp) THEN
             ! Longer days: normalization with the integral of cos(zenith)
-            rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._wp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._wp
+            rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._jp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._jp
             ! Cap to physically realistic maximum (top-of-atmosphere noon flux)
             rad_sw_in_corr(i,j) = MIN(rad_sw_in_corr(i,j), solar_const * r_sun_earth_2)
           END IF
@@ -2645,32 +2645,32 @@ CONTAINS
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     DO j=1,nblks
       DO i=1,nc
-        IF(cos_zenith(i,j) > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
+        IF(cos_zenith(i,j) > 0.017452406_jp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
           Rpar_top   = solar_const*cos_zenith(i,j)*r_sun_earth_2       ! Eq. (2) from above
-          hlp3_r = EXP(-0.185_wp * (air_pressure(i,j) / p0sl_bg) / cos_zenith(i,j)) ! in jsb3: p0sl_bg = p_sealevel
-          hlp4_r = 0.4_wp + 0.6_wp * hlp3_r
+          hlp3_r = EXP(-0.185_jp * (air_pressure(i,j) / p0sl_bg) / cos_zenith(i,j)) ! in jsb3: p0sl_bg = p_sealevel
+          hlp4_r = 0.4_jp + 0.6_jp * hlp3_r
           rad_sw_pot(i,j) = Rpar_top * hlp4_r
-          fsw = MAX(MIN(rad_sw(i,j) / rad_sw_pot(i,j), 1._wp), 0._wp)
-          hlp_r = 1._wp - fsw
+          fsw = MAX(MIN(rad_sw(i,j) / rad_sw_pot(i,j), 1._jp), 0._jp)
+          hlp_r = 1._jp - fsw
           hlp2_r = hlp_r * hlp_r
-          F_invers=1._wp + (1.185_wp - 0.437_wp * hlp_r - 0.494_wp * hlp2_r) * &
-                 & EXP(MIN(2.534_wp, (0.0305_wp - 0.208_wp * hlp_r + 0.495_wp * hlp2_r) / cos_zenith(i,j))) ! Eq. (9) from above
+          F_invers=1._jp + (1.185_jp - 0.437_jp * hlp_r - 0.494_jp * hlp2_r) * &
+                 & EXP(MIN(2.534_jp, (0.0305_jp - 0.208_jp * hlp_r + 0.495_jp * hlp2_r) / cos_zenith(i,j))) ! Eq. (9) from above
           rad_UV(i,j) = rad_sw(i,j) * fract_UV / F_invers
-          rad_PAR(i,j) = rad_sw(i,j) * (1._wp - fract_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
+          rad_PAR(i,j) = rad_sw(i,j) * (1._jp - fract_UV) / F_invers   ! This is "Rtot"; Eq. (8) from above
           rad_NIR(i,j) = rad_sw(i,j) - rad_PAR(i,j) - rad_UV(i,j) ! This is "Rnir"; Eq. (10) from above
-          IF(fsw <= 0.2_wp) THEN
-            fract_PAR_diffuse(i,j) = 1._wp                                                 ! Eq. (12)-(15) from above
-          ELSE IF(fsw >= 0.9_wp) THEN
-            fract_PAR_diffuse(i,j) = 0.08_wp                                               ! Eq. (12)-(15) from above
+          IF(fsw <= 0.2_jp) THEN
+            fract_PAR_diffuse(i,j) = 1._jp                                                 ! Eq. (12)-(15) from above
+          ELSE IF(fsw >= 0.9_jp) THEN
+            fract_PAR_diffuse(i,j) = 0.08_jp                                               ! Eq. (12)-(15) from above
           ELSE
-            fract_PAR_diffuse(i,j) = 1._wp - &
-                                  & (1._wp- ((0.9_wp -fsw)/0.7_wp)**(2._wp/3._wp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
+            fract_PAR_diffuse(i,j) = 1._jp - &
+                                  & (1._jp- ((0.9_jp -fsw)/0.7_jp)**(2._jp/3._jp))*hlp3_r/hlp4_r ! Eq. (12)-(15) from above
           END IF
         ELSE ! zenith angle larger than 89 degrees - changed Aug. 2017 following T. Raddatz, Jan. 2015
-          rad_UV(i,j) = 0._wp
-          rad_PAR(i,j) = rad_sw(i,j) * 0.5_wp
-          rad_NIR(i,j) = rad_sw(i,j) * 0.5_wp
-          fract_PAR_diffuse(i,j) = 1._wp ! (could also be another value in this case)
+          rad_UV(i,j) = 0._jp
+          rad_PAR(i,j) = rad_sw(i,j) * 0.5_jp
+          rad_NIR(i,j) = rad_sw(i,j) * 0.5_jp
+          fract_PAR_diffuse(i,j) = 1._jp ! (could also be another value in this case)
           rad_sw_pot(i,j)  = rad_sw(i,j)
         END IF
       END DO
@@ -2712,7 +2712,7 @@ CONTAINS
     REAL(jp) :: hlp_r   ! helper
 
     hlp_r = air_temp + tmelt                                ! Celsius --> Kelvin
-    dtmp = 0.5_wp * (Tmax + Tmin) + tmelt
+    dtmp = 0.5_jp * (Tmax + Tmin) + tmelt
     longwave_from_daily_longwave = longwave_down_daily * (hlp_r**4) / (dtmp**4)      ! lw-radiation flux Eq. (1)
 
   END FUNCTION longwave_from_daily_longwave

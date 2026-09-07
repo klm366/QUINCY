@@ -508,7 +508,7 @@ CONTAINS
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_jp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
     CALL this%Set_fract_ptr(tmp_fract)
@@ -520,7 +520,7 @@ CONTAINS
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE., &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_jp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -542,7 +542,7 @@ CONTAINS
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), jp)
       ELSE ! tile is the box tile, fraction of the tile is set to 1
-        tmp_fract(:,:) = 1._wp
+        tmp_fract(:,:) = 1._jp
       END IF
       ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
@@ -550,10 +550,10 @@ CONTAINS
       IF(ASSOCIATED(this%parent_tile)) THEN
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         IF (.NOT. this%Is_first_child()) THEN
-          tmp_fract(:,:) = 0._wp
+          tmp_fract(:,:) = 0._jp
         END IF
       ELSE
-        tmp_fract(:,:) = 1._wp
+        tmp_fract(:,:) = 1._jp
       END IF
       CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSE
@@ -579,17 +579,17 @@ CONTAINS
                                                                    ! fraction in the model is relative to box tile, but
                                                                    ! fraction in the input file is relative to parent tile
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
+        CALL this%Set_fraction(fract=MAX(0._jp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
         IF (is_sitelevel .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
           ! For site-level, set fraction of box tile to 1
-          tmp_fract(:,:) = 1._wp
+          tmp_fract(:,:) = 1._jp
           CALL this%Set_fraction(fract=tmp_fract(:,:))
         ELSE
           CALL this%Set_fraction(fract=return_pointer(:,:))
         END IF
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
-        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
+        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._jp
         !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
       END IF
       ! Close the input file
@@ -639,7 +639,7 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                                 &
-        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+        & initval_r=0.0_jp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
@@ -963,7 +963,7 @@ CONTAINS
 
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     ALLOCATE(sum_fract(hgrid%nproma, hgrid%nblks))
-    sum_fract(:,:) = 0.0_wp
+    sum_fract(:,:) = 0.0_jp
 
     current_child => this%Get_first_child_tile()
 
@@ -972,8 +972,8 @@ CONTAINS
       i_tile = i_tile + 1
       CALL current_child%Get_fraction(fract=tmp_fract(:,:))
 
-      tmp_fract(:,:) = MIN(1.0_wp, tmp_fract(:,:))
-      tmp_fract(:,:) = MAX(0.0_wp, tmp_fract(:,:))
+      tmp_fract(:,:) = MIN(1.0_jp, tmp_fract(:,:))
+      tmp_fract(:,:) = MAX(0.0_jp, tmp_fract(:,:))
 
       CALL current_child%Set_fraction(fract=tmp_fract(:,:))
 
@@ -983,7 +983,7 @@ CONTAINS
 
     ! Assert that sum is "equal" to tile fraction (whereby the threshold is arbitraryly chosen here)
     CALL this%Get_fraction(fract=tmp_fract(:,:))
-    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_wp)) THEN
+    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_jp)) THEN
 
       CALL finish(TRIM(routine), 'Fractions of '//TRIM(this%name)//' not equal to sum of child cf.'// &
         &  ' MAX diff: ' //real2string(ABS(MAXVAL(tmp_fract(:,:) - sum_fract(:,:)))))

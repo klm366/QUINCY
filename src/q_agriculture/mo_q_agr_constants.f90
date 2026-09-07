@@ -143,71 +143,71 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_agr_constants'
 
     ! general crop parameters
-    qs_def_n_fertiliser               = 100._wp / 10._wp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
-    iq_background_n_fertiliser_rate   = 20._wp / 10._wp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
-    crop_planting_mass                = 4.5_wp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
-    fstore_seed_min                   = 2.0_wp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
-    fstore_seed_max                   = 20.0_wp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
-    max_harvesting_rate               = 0.1_wp                      !< harvesting season takes 1/par days
-    fract_crop_to_slash               = 0.08_wp                     !< from IPCC bookkeeping model
-    fcs_fertappl_day1                 = 0.0_wp                      !< at planting
-    fcs_fertappl_day2                 = 0.10_wp                     !< intermediate
-    fcs_fertappl_day3                 = 0.35_wp                     !< intermediate
-    fcs_fertappl_day4                 = 0.55_wp                     !< during grainfilling
-    frac_fertil_nh4                   = 7._wp / 8._wp               !< an global average value
-    frac_fertil_po4                   = 0.5_wp * 0.4366197_wp * &   !< FAO statistic global N:P2O5 application
+    qs_def_n_fertiliser               = 100._jp / 10._jp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
+    iq_background_n_fertiliser_rate   = 20._jp / 10._jp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
+    crop_planting_mass                = 4.5_jp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
+    fstore_seed_min                   = 2.0_jp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
+    fstore_seed_max                   = 20.0_jp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
+    max_harvesting_rate               = 0.1_jp                      !< harvesting season takes 1/par days
+    fract_crop_to_slash               = 0.08_jp                     !< from IPCC bookkeeping model
+    fcs_fertappl_day1                 = 0.0_jp                      !< at planting
+    fcs_fertappl_day2                 = 0.10_jp                     !< intermediate
+    fcs_fertappl_day3                 = 0.35_jp                     !< intermediate
+    fcs_fertappl_day4                 = 0.55_jp                     !< during grainfilling
+    frac_fertil_nh4                   = 7._jp / 8._jp               !< an global average value
+    frac_fertil_po4                   = 0.5_jp * 0.4366197_jp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
-    canopy_mode_correction_factor     = 0.8_wp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
-    eta_fertiliser                    = 0._wp                       !< not clear how to design this now
+    canopy_mode_correction_factor     = 0.8_jp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
+    eta_fertiliser                    = 0._jp                       !< not clear how to design this now
 
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
-    mavg_period_cropseason            = 20.0_wp                     !< AgroIBIS/CLM5
-    gdd_t_thres_dormseason            = 8.0_wp + Tzero              !< AgroIBIS/CLM5
+    mavg_period_cropseason            = 20.0_jp                     !< AgroIBIS/CLM5
+    gdd_t_thres_dormseason            = 8.0_jp + Tzero              !< AgroIBIS/CLM5
     cttab_t_thres_planting = &
-      & (/ 7._wp, 10._wp, 13._wp, 21._wp, 21._wp, 21._wp, 21._wp, 21._wp /) + TZero
+      & (/ 7._jp, 10._jp, 13._jp, 21._jp, 21._jp, 21._jp, 21._jp, 21._jp /) + TZero
     cttab_t_thres_gdd_gs = &
-      & (/ 5._wp, 8._wp, 10._wp, 5._wp, 5._wp, 8._wp, 10._wp, 10._wp /) + TZero
+      & (/ 5._jp, 8._jp, 10._jp, 5._jp, 5._jp, 8._jp, 10._jp, 10._jp /) + TZero
     cttab_fgdd_mat = &
-      & (/ 1._wp, 0.85_wp, 1._wp, 0.85_wp, 1._wp, 1._wp, 1._wp, 1._wp /)
+      & (/ 1._jp, 0.85_jp, 1._jp, 0.85_jp, 1._jp, 1._jp, 1._jp, 1._jp /)
     cttab_gdd_mat_min = &
-      & (/ 0._wp, 950._wp, 0._wp , 0._wp, 0._wp, 950._wp, 950._wp, 0._wp /)
+      & (/ 0._jp, 950._jp, 0._jp , 0._jp, 0._jp, 950._jp, 950._jp, 0._jp /)
     cttab_gdd_mat_max = &
-      & (/ 1700._wp, 1850._wp, 1900._wp, 1700._wp, 2100._wp, 1850._wp, 1850._wp, 2100._wp/)
+      & (/ 1700._jp, 1850._jp, 1900._jp, 1700._jp, 2100._jp, 1850._jp, 1850._jp, 2100._jp/)
     cttab_gdd_max = &
-      & (/ 26._wp, 30._wp, 30._wp, 26._wp, 26._wp, 30._wp, 30._wp, 30._wp/)
+      & (/ 26._jp, 30._jp, 30._jp, 26._jp, 26._jp, 30._jp, 30._jp, 30._jp/)
     cttab_nd_gs_max = &
-      & (/ 150._wp, 165._wp, 150._wp, 160._wp, 150._wp, 300._wp, 160._wp, 150._wp /)
+      & (/ 150._jp, 165._jp, 150._jp, 160._jp, 150._jp, 300._jp, 160._jp, 150._jp /)
     cttab_nd_dorm_max = &
-      & (/ 100._wp, 100._wp, 100._wp, 50._wp, 50._wp, 50._wp, 30._wp, 30._wp /)
+      & (/ 100._jp, 100._jp, 100._jp, 50._jp, 50._jp, 50._jp, 30._jp, 30._jp /)
     cttab_min_daylength = &
-      & (/ 12._wp, 12._wp, 12._wp, 8._wp, 6._wp, 8._wp, 8._wp, 8._wp /) * 3600._wp
+      & (/ 12._jp, 12._jp, 12._jp, 8._jp, 6._jp, 8._jp, 8._jp, 8._jp /) * 3600._jp
     cttab_fract_gdd_mat_gp2to3 = &
-      & (/ 0.6_wp, 0.65_wp, 0.5_wp, 0.5_wp, 0.4_wp, 0.65_wp, 0.5_wp, 0.5_wp /)
+      & (/ 0.6_jp, 0.65_jp, 0.5_jp, 0.5_jp, 0.4_jp, 0.65_jp, 0.5_jp, 0.5_jp /)
     cttab_crop_season_max = &
-      & (/ 1._wp, 1._wp, 1._wp, 1._wp, 2._wp, 2._wp, 2._wp, 2._wp /)
+      & (/ 1._jp, 1._jp, 1._jp, 1._jp, 2._jp, 2._jp, 2._jp, 2._jp /)
 
     ! allocation parameters per crop type
-    k_heatindex                             = 0.1_wp      ! AgroIBIS/CLM5 parameter b
-    leaf2sapwood_min_ratio                  = 3.0_wp      ! calibrated
+    k_heatindex                             = 0.1_jp      ! AgroIBIS/CLM5 parameter b
+    leaf2sapwood_min_ratio                  = 3.0_jp      ! calibrated
 
     cttab_k_hi_leaf = &
-      & (/ 3._wp, 5._wp, 2._wp, 2._wp, 3._wp, 5._wp, 5._wp, 2._wp /)
+      & (/ 3._jp, 5._jp, 2._jp, 2._jp, 3._jp, 5._jp, 5._jp, 2._jp /)
     cttab_k_hi_stem = &
-      & (/ 1._wp, 2._wp, 5._wp, 5._wp, 1._wp, 2._wp, 2._wp, 5._wp /)
+      & (/ 1._jp, 2._jp, 5._jp, 5._jp, 1._jp, 2._jp, 2._jp, 5._jp /)
     cttab_leaf2root_mass_init = &
-      & (/ 2.0_wp, 1.5_wp, 1.5_wp, 2.0_wp, 1.7_wp, 1.5_wp, 1.5_wp, 1.5_wp /)
+      & (/ 2.0_jp, 1.5_jp, 1.5_jp, 2.0_jp, 1.7_jp, 1.5_jp, 1.5_jp, 1.5_jp /)
     cttab_leaf2root_mass_fin = &
-      & (/ 1.2_wp, 1.0_wp, 1.0_wp, 1.25_wp, 1.2_wp, 1.0_wp, 1.0_wp, 1.2_wp /)
+      & (/ 1.2_jp, 1.0_jp, 1.0_jp, 1.25_jp, 1.2_jp, 1.0_jp, 1.0_jp, 1.2_jp /)
     cttab_sapwood2leaf_mass_init = &
-      & (/ 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp /)
+      & (/ 0.01_jp, 0.01_jp, 0.01_jp, 0.01_jp, 0.01_jp, 0.01_jp, 0.01_jp, 0.01_jp /)
     cttab_sapwood2leaf_mass_fin = &
-      & (/ 0.1_wp, 0.1_wp, 0.3_wp, 0.3_wp, 0.1_wp, 0.1_wp, 0.1_wp, 0.3_wp /)
+      & (/ 0.1_jp, 0.1_jp, 0.3_jp, 0.3_jp, 0.1_jp, 0.1_jp, 0.1_jp, 0.3_jp /)
     cttab_falloc_fruit_max = &
-      & (/ 0.8_wp, 0.7_wp, 0.6_wp, 0.6_wp, 0.7_wp, 0.8_wp, 0.6_wp, 0.6_wp /)
+      & (/ 0.8_jp, 0.7_jp, 0.6_jp, 0.6_jp, 0.7_jp, 0.8_jp, 0.6_jp, 0.6_jp /)
     cttab_active_n_fixation = &
-      & (/ 0._wp, 0._wp, 1._wp, 0._wp, 0._wp, 0._wp, 0._wp, 1._wp /)
+      & (/ 0._jp, 0._jp, 1._jp, 0._jp, 0._jp, 0._jp, 0._jp, 1._jp /)
     cttab_lai_max = &
-      & (/ 7._wp, 5._wp, 6._wp, 6._wp, 7._wp, 5._wp, 5._wp, 6._wp /)
+      & (/ 7._jp, 5._jp, 6._jp, 6._jp, 7._jp, 5._jp, 5._jp, 6._jp /)
 
     !$ACC UPDATE DEVICE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate) ASYNC(1)
     !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max) ASYNC(1)

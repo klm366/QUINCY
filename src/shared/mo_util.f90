@@ -59,9 +59,9 @@ CONTAINS
 
     nsoil = SIZE(dz)
 
-    depth_l(:,:,:) = 0._wp  ! Init
-    bottom = 0._wp
-    bottom_m1 = 0._wp
+    depth_l(:,:,:) = 0._jp  ! Init
+    bottom = 0._jp
+    bottom_m1 = 0._jp
     DO i=1,nsoil            ! From top layer to lowest layer
       bottom = bottom + dz(i)
       WHERE (depth(:,:) >= bottom)             ! When the depth is larger than the soil layer: i
@@ -100,9 +100,9 @@ CONTAINS
     nsoil_out = SIZE(soil_depth)
 
     zsoil(1:nsoil_out) = soil_depth(:)
-    zsoil(0)           = 0._wp
+    zsoil(0)           = 0._jp
     zifs(1:nsoil_in) = ifs_depth(:)
-    zifs(0)          = 0._wp
+    zifs(0)          = 0._jp
     zifs(nsoil_in+1) = soil_depth(nsoil_out)
     ifs(:,1:nsoil_in,:) = ifs_3d(:,:,:)
     IF (PRESENT(ifs_sfc)) THEN
@@ -112,7 +112,7 @@ CONTAINS
     END IF
     ifs(:,nsoil_in+1,:) = ifs_3d(:,nsoil_in,:)
 
-    soil_3d(:,:,:) = 0._wp
+    soil_3d(:,:,:) = 0._jp
 
     IF (PRESENT(ifs_sfc)) THEN
       soil_3d(:,1,:) = ifs_sfc(:,:)
@@ -121,16 +121,16 @@ CONTAINS
       ik1 = 1
     END IF
     DO isoil_out = ik1, nsoil_out
-      zwt_sum        = 0._wp
+      zwt_sum        = 0._jp
       DO isoil_in = 1,nsoil_in+1
         IF (zifs(isoil_in) <= zsoil(isoil_out-1)) THEN
           ! Do nothing
-          zwt = 0._wp
+          zwt = 0._jp
         ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out)) THEN
           ! Do nothing
-          zwt = 0._wp
+          zwt = 0._jp
         ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
-          zwt = 1._wp
+          zwt = 1._jp
           zwt_sum = zwt_sum + zwt
           soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
         ELSE IF (zifs(isoil_in) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
@@ -144,7 +144,7 @@ CONTAINS
         END IF
         ! print*, 'AAA isoil_out, isoil_in, zwt, zwt_sum', isoil_out, isoil_in, zwt, zwt_sum
       END DO
-      IF (zwt_sum < EPSILON(1._wp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
+      IF (zwt_sum < EPSILON(1._jp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
       soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) / zwt_sum
     END DO
 
@@ -172,11 +172,11 @@ CONTAINS
 
     ! Compute texture based soil parameter
     parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
-      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      * 0.5_jp * parameter_sand) +                  &
       &                      ((fraction_silt + fraction_silt_deep)         &
-      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      * 0.5_jp * parameter_silt) +                  &
       &                      ((fraction_clay + fraction_clay_deep)         &
-      &                      * 0.5_wp * parameter_clay)
+      &                      * 0.5_jp * parameter_clay)
 
     ! Ensure the parameter is within the correct bounds
     parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
@@ -267,7 +267,7 @@ CONTAINS
       END IF
       IF (PRESENT(default)) THEN
         ! Set missing values to a default value
-        datafield(:,:) = MERGE(datafield(:,:), default, ABS(datafield(:,:) - missval) > 1.0E-10_wp)
+        datafield(:,:) = MERGE(datafield(:,:), default, ABS(datafield(:,:) - missval) > 1.0E-10_jp)
       END IF
       IF (PRESENT(llimit)) THEN
         ! If a lower limit is given, set all values < llimit to the lower limit.

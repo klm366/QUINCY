@@ -663,7 +663,7 @@ CONTAINS
           CASE ('tau_c_woods')                              ! PFT-specific time_scale for c_woods (and vegetation dynamics)
              READ(line(pos:length),*) lctlib(1:nlct)%tau_c_woods
              ! Conversion from years to days
-             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._wp
+             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._jp
              exist_tau_c_woods = .TRUE.
           CASE ('lai_shed_constant')                               ! Time constant by which leaves are constantly shedded [days-1]
              READ(line(pos:length),*) lctlib(1:nlct)%LAI_shed_constant
@@ -759,7 +759,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values don't add up to 1 carbon is not conserved
-                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._jp) .GE. EPSILON(1._jp)) &
                      CALL finish('init_lctlib','invalid value for LitVeg_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_litveg_coef = .TRUE.
@@ -771,7 +771,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._jp) .GE. EPSILON(1._jp)) &
                      CALL finish('init_lctlib','invalid value for LeafLit_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_leaflit_coef = .TRUE.
@@ -783,7 +783,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._jp) .GE. EPSILON(1._jp)) &
                      CALL finish('init_lctlib','invalid value for WoodLit_coef_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_woodlit_coef = .TRUE.
@@ -1089,7 +1089,7 @@ CONTAINS
          IF(.NOT. exist_PhenologyType) &
               CALL finish('init_lctlib','No data for PhenologyType found in '//TRIM(lctlib_file_name))
          IF (.NOT. exist_CanopyResistanceMin) &
-              lctlib%CanopyResistanceMin = -1.0_wp
+              lctlib%CanopyResistanceMin = -1.0_jp
          IF(.NOT. exist_MaxLAI) &
               CALL finish('init_lctlib','No data for MaxLAI found in '//TRIM(lctlib_file_name))
          IF(.NOT. exist_StemArea) &
@@ -1196,8 +1196,8 @@ CONTAINS
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
          ! SET e-transport rate to [Mol(CO2)/m^2/s]
          DO i=1,nlct
-           lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_wp
-           lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
+           lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_jp
+           lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_jp
          END DO
          !------------------------------------------------------------------------------------------
        END IF
@@ -1357,50 +1357,50 @@ CONTAINS
        IF (model_scheme_char == "quincy") THEN
        ! sla
          DO i = 1,nlct
-             lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
+             lctlib(i)%sla = 1._jp / carbon_per_dryweight_leaf / 1000.0_jp * molar_mass_C * lctlib(i)%sla
          END DO
        ! cn_leaf
          DO i = 1,nlct
-           lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
+           lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._jp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
          END DO
        ! cn_leaf_min
          DO i = 1,nlct
-           lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
+           lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._jp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
          END DO
        ! cn_leaf_max
          DO i = 1,nlct
-           lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
+           lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._jp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
          END DO
        ! np_leaf
          DO i = 1,nlct
-           lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._jp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                 lctlib(i)%np_leaf
          END DO
        ! np_leaf_min
          DO i = 1,nlct
-           lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._jp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_min
          END DO
        ! np_leaf_max
          DO i = 1,nlct
-           lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._jp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_max
          END DO
        ! fn_oth_min
          DO i = 1,nlct
-           lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
+           lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_jp/molar_mass_n * 0.5_jp * 1.e3_jp * 71.4_jp * molar_mass_N / 1.e6_jp
          END DO
        ! tau_leaf
          DO i = 1,nlct
-           lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
+           lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_jp
          END DO
        ! bnf_base
          DO i = 1,nlct
-          lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+          lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_jp
          END DO
        ! vmax_symb_bnf
          DO i = 1,nlct
-          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_wp
+          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_jp
          END DO
        ! km_symb_bnf
          DO i = 1,nlct
@@ -1412,25 +1412,25 @@ CONTAINS
          END DO
        ! wood_density
          DO i = 1,nlct
-           lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
+           lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_jp/ molar_mass_C
          END DO
        ! k_root
          DO i = 1,nlct
-           lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
+           lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_jp
          END DO
        ! k_sapwood
          DO i = 1,nlct
-           lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
+           lctlib(i)%k_sapwood = 1.e-3_jp * lctlib(i)%k_sapwood
          END DO
         ! k_rtos
          DO i = 1,nlct
           SELECT CASE (lctlib(i)%growthform)
           CASE (itree)
-            lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+            lctlib(i)%k_rtos = 1.75_jp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
             !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
             !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
           CASE (igrass,icrop)
-            lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+            lctlib(i)%k_rtos = 0.5_jp / sm2lm_grass
           END SELECT
          END DO
          ! c0_allom
@@ -1440,7 +1440,7 @@ CONTAINS
                                        lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
                                   lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
            ELSE
-             lctlib(i)%c0_allom = 0.0_wp
+             lctlib(i)%c0_allom = 0.0_jp
            END IF
          END DO
        ! derive C4flag from ps_pathway

@@ -261,9 +261,9 @@ CONTAINS
           beta_soil_gs_daytime(ic) = beta_soil_gs_daytime_dacc(ic) / daytime_counter(ic)
         END IF
         ! zero the accumulation variables after daily average has been calculated
-        beta_air_daytime_dacc(ic)     = 0.0_wp
-        beta_soil_ps_daytime_dacc(ic) = 0.0_wp
-        beta_soil_gs_daytime_dacc(ic) = 0.0_wp
+        beta_air_daytime_dacc(ic)     = 0.0_jp
+        beta_soil_ps_daytime_dacc(ic) = 0.0_jp
+        beta_soil_gs_daytime_dacc(ic) = 0.0_jp
       END IF
 
       ! ----------------------------------------------------------------------------------------------------- !

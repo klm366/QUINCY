@@ -101,7 +101,7 @@ CONTAINS
         & output_level = NONE, &
         & lrestart = .TRUE., &
         & lrestart_cont = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
         CALL mem%Add_var('fract_wood_to_slash', mem%fract_wood_to_slash, &
@@ -113,7 +113,7 @@ CONTAINS
           & output_level = NONE, &
           & lrestart = .TRUE., &
           & lrestart_cont = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_jp)
       END IF ! IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
     END IF
 
@@ -128,7 +128,7 @@ CONTAINS
         & output_level = BASIC, &
         & lrestart = .TRUE., &
         & lrestart_cont = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
     END IF
   END SUBROUTINE Init_q_syl_memory
 

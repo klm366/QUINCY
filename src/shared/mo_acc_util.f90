@@ -18,7 +18,7 @@
 
 #ifdef _ICON_STYLE_
 #define _REAL_TYPE_ jp
-#define _ZERO_DP_ 0.0_wp
+#define _ZERO_DP_ 0.0_jp
 #else
 #define _REAL_TYPE_ 8
 #define _ZERO_DP_ 0.0

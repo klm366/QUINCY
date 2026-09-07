@@ -90,13 +90,13 @@ CONTAINS
     lrestart_cont              = .FALSE.     ! TRUE: Continue although TURB variables are missing in restart file
     bc_filename                = 'bc_land_phys.nc'
     ic_filename                = 'ic_land_phys.nc'
-    blending_height            = 100._wp
-    roughness_snow             = 0.001_wp
-    roughness_bare             = 0.005_wp
-    roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
-    roughness_lai_saturation   = 0.4_wp
-    roughness_momentum_to_heat = 10._wp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
-    max_ini_rough_m            = -1._wp      ! No limit
+    blending_height            = 100._jp
+    roughness_snow             = 0.001_jp
+    roughness_bare             = 0.005_jp
+    roughness_water            = 0.0002_jp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
+    roughness_lai_saturation   = 0.4_jp
+    roughness_momentum_to_heat = 10._jp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
+    max_ini_rough_m            = -1._jp      ! No limit
     l_roughness_lai            = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))

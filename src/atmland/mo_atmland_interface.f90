@@ -470,14 +470,14 @@ CONTAINS
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
           ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
-          CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
+          CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._jp
         END DO
 
         IF (.NOT. PRESENT(co2_dC13)) THEN
           co2_dC13_constant = calc_mixing_ratio_C13C12(def_co2_deltaC13)
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO i=1,nc
-            CO2_mixing_ratio_c13_ptr(i) = CO2_air(i) / (1._wp + 1._wp / co2_dC13_constant)
+            CO2_mixing_ratio_c13_ptr(i) = CO2_air(i) / (1._jp + 1._jp / co2_dC13_constant)
           END DO
         END IF
 
@@ -485,7 +485,7 @@ CONTAINS
           co2_dC14_constant = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO i=1,nc
-            CO2_mixing_ratio_c14_ptr(i) = CO2_air(i) / (1._wp + 1._wp / co2_dC14_constant)
+            CO2_mixing_ratio_c14_ptr(i) = CO2_air(i) / (1._jp + 1._jp / co2_dC14_constant)
           END DO
         END IF
       END IF ! IF (model_scheme == MODEL_QUINCY) THEN
@@ -726,16 +726,16 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         fact_lake(i) = tile%lcts(j)%fract(ics+i-1,iblk)      ! Lake fraction
-        fact_land(i) = 1._wp - fact_lake(i)            ! Land fraction
-        IF (fact_lake(i) > 0._wp) THEN
-          fact_lake(i) = 1._wp / fact_lake(i)          ! Lake factor: 1/lake_fraction
+        fact_land(i) = 1._jp - fact_lake(i)            ! Land fraction
+        IF (fact_lake(i) > 0._jp) THEN
+          fact_lake(i) = 1._jp / fact_lake(i)          ! Lake factor: 1/lake_fraction
         ELSE
-          fact_lake(i) = 1._wp
+          fact_lake(i) = 1._jp
         END IF
-        IF (fact_land(i) > 0._wp) THEN
-          fact_land(i) = 1._wp / fact_land(i)          ! Land factor: 1/land_fraction
+        IF (fact_land(i) > 0._jp) THEN
+          fact_land(i) = 1._jp / fact_land(i)          ! Land factor: 1/land_fraction
         ELSE
-          fact_land(i) = 1._wp
+          fact_land(i) = 1._jp
         END IF
       END DO
       !$ACC END LOOP
@@ -745,8 +745,8 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO i=1,nc
-        fact_land(i) = 1._wp
-        fact_lake(i) = 0._wp
+        fact_land(i) = 1._jp
+        fact_lake(i) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -855,7 +855,7 @@ CONTAINS
       IF (PRESENT(t_srf_rad)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          t_srf_rad(i) = t_rad_ptr(i)**0.25_wp
+          t_srf_rad(i) = t_rad_ptr(i)**0.25_jp
         END DO
       END IF
       IF (PRESENT(evapotrans)) THEN
@@ -905,7 +905,7 @@ CONTAINS
     IF (PRESENT(t_eff_srf)) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO i=1,nc
-        t_eff_srf(i) = t_eff_ptr(i)**0.25_wp
+        t_eff_srf(i) = t_eff_ptr(i)**0.25_jp
       END DO
     END IF
     IF (PRESENT(qsat_srf)) THEN
@@ -1009,16 +1009,16 @@ CONTAINS
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO i=1,nc
             ! micro-mol CO2 m-2 s-1 -> kg(CO2) m-2 s-1
-            ! * -1.0_wp because the atmosphere expects CO2 sources as positive and sinks as negative values
+            ! * -1.0_jp because the atmosphere expects CO2 sources as positive and sinks as negative values
             !   ... differs to the convention for fluxes in ICON which would be "fluxes point downwards"
             !   ... note: in jsbach the negation of the fluxes is already done in the carbon interface
-            CO2_flux(i) = fact_land(i) * net_biosphere_production_ptr(i) * molarMassCO2 * 0.000001_wp * (-1.0_wp)
+            CO2_flux(i) = fact_land(i) * net_biosphere_production_ptr(i) * molarMassCO2 * 0.000001_jp * (-1.0_jp)
           END DO
         END IF
       ELSE
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          CO2_flux(i) = 0._wp
+          CO2_flux(i) = 0._jp
         END DO
       END IF
     END IF
@@ -1128,43 +1128,43 @@ CONTAINS
       IF (PRESENT(t_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          t_lwtr(i) = 0._wp
+          t_lwtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(qsat_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          qsat_lwtr(i) = 0._wp
+          qsat_lwtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(s_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          s_lwtr(i) = 0._wp
+          s_lwtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(evapo_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          evapo_wtr(i) = 0._wp
+          evapo_wtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(latent_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          latent_hflx_wtr(i) = 0._wp
+          latent_hflx_wtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(sensible_hflx_wtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          sensible_hflx_wtr(i) = 0._wp
+          sensible_hflx_wtr(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(albedo_lwtr)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          albedo_lwtr(i) = 0.07_wp
+          albedo_lwtr(i) = 0.07_jp
         END DO
       END IF
 
@@ -1174,7 +1174,7 @@ CONTAINS
       IF (PRESENT(ice_fract_lake)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          ice_fract_lake(i) = 0._wp
+          ice_fract_lake(i) = 0._jp
         END DO
       END IF
 
@@ -1240,43 +1240,43 @@ CONTAINS
       IF (PRESENT(t_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          t_lice(i) = 273.15_wp
+          t_lice(i) = 273.15_jp
         END DO
       END IF
       IF (PRESENT(qsat_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          qsat_lice(i) = 0.0075_wp
+          qsat_lice(i) = 0.0075_jp
         END DO
       END IF
       IF (PRESENT(s_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          s_lice(i) = 2.9E5_wp
+          s_lice(i) = 2.9E5_jp
         END DO
       END IF
       IF (PRESENT(evapo_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          evapo_ice(i) = 0._wp
+          evapo_ice(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(latent_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          latent_hflx_ice(i) = 0._wp
+          latent_hflx_ice(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(sensible_hflx_ice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          sensible_hflx_ice(i) = 0._wp
+          sensible_hflx_ice(i) = 0._jp
         END DO
       END IF
       IF (PRESENT(albedo_lice)) THEN
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO i=1,nc
-          albedo_lice(i) = 0.55_wp
+          albedo_lice(i) = 0.55_jp
         END DO
       END IF
 

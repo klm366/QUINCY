@@ -181,7 +181,7 @@ ELEMENTAL &
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
 
-    q_effective = fsat * qsat + (1._wp -fair) * qair
+    q_effective = fsat * qsat + (1._jp -fair) * qair
 
   END FUNCTION q_effective
 
@@ -208,7 +208,7 @@ ELEMENTAL &
     IF (jsb_standalone) THEN
       ! Todo: Check if this formulation is valid. We re-implement it here, as it was used up to now in
       !       jsbach:dev, and we do not want to change the model behavior with this merge.
-      surface_dry_static_energy = t_srf * cpd_or_cvd * ( 1._wp + cpvd1 * qsat_srf)
+      surface_dry_static_energy = t_srf * cpd_or_cvd * ( 1._jp + cpvd1 * qsat_srf)
     ELSE
       surface_dry_static_energy = t_srf * cpd_or_cvd
     END IF
@@ -232,7 +232,7 @@ ELEMENTAL &
 
     REAL(jp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf**4._wp
+    thermal_radiation = stbo * zemiss_def * t_srf**4._jp
 
   END FUNCTION thermal_radiation
 
@@ -253,7 +253,7 @@ ELEMENTAL &
     REAL(jp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(jp), INTENT(in) :: t_srf    ! surface temperature
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._jp)
 
   END FUNCTION lwnet_from_lwdown
 
@@ -311,11 +311,11 @@ ELEMENTAL &
     IF (Ea > eps8) THEN
       hlp1            = temp - temp_opt
       hlp2            = temp * temp_opt * r_gas
-      frost_modifier  = MIN(MAX((temp - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_wp), 1.0_wp)
-      rate_modifier   = (Ed * EXP(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._wp - EXP(Ed * hlp1 / hlp2)))
+      frost_modifier  = MIN(MAX((temp - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_jp), 1.0_jp)
+      rate_modifier   = (Ed * EXP(Ea * hlp1 / hlp2)) / (Ed - Ea * (1._jp - EXP(Ed * hlp1 / hlp2)))
       rate_modifier   = rate_modifier * frost_modifier
     ELSE
-      rate_modifier = 1._wp
+      rate_modifier = 1._jp
     END IF
 
   END FUNCTION calc_peaked_arrhenius_function
@@ -378,19 +378,19 @@ ELEMENTAL &
 
     REAL(jp) :: dqsat_surf, dqsurf_eff, dztvs_act, dzril, dzscfl, dzucfhl, dzcfhl
 
-    REAL(jp), PARAMETER :: cb = 5._wp
-    REAL(jp), PARAMETER :: cc = 5._wp
+    REAL(jp), PARAMETER :: cb = 5._jp
+    REAL(jp), PARAMETER :: cc = 5._jp
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_drag'
 
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(height)
 
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
-    ! zcons8  = 2._wp * cb  ! quincy specific
-    zcons9  = 3._wp * cb
-    zcons11 = 3._wp * cb * cc
+    ! zcons8  = 2._jp * cb  ! quincy specific
+    zcons9  = 3._jp * cb
+    zcons11 = 3._jp * cb * cc
     zcons12 = time_step_len * grav / rd
-    zsigma  = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
+    zsigma  = 0.99615_jp        ! corresponds to lowest level of 47 layer echam
 
     IF (PRESENT(t_srf_upd) .AND. PRESENT(zril_old)) THEN
       l_zril_filter = .TRUE.
@@ -406,7 +406,7 @@ ELEMENTAL &
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        height(ic) = 0._wp
+        height(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -419,7 +419,7 @@ ELEMENTAL &
     DO ic = 1, nc
       ! NOTE: a segmentation fault for unplausible surface temperatures (outside [50,400] Kelvin) would occur in "calc_qsat()"
       qsat_surf = qsat_mixed(t_srf_proc(ic), pressure(ic))
-      dqsat_surf = 1e3_wp * (qsat_mixed(t_srf_proc(ic) + 1e-3_wp, pressure(ic)) - qsat_surf)
+      dqsat_surf = 1e3_jp * (qsat_mixed(t_srf_proc(ic) + 1e-3_jp, pressure(ic)) - qsat_surf)
       IF (l_zril_filter) THEN
         qsat_surf_upd = qsat_mixed(t_srf_upd(ic), pressure(ic))
       END IF
@@ -428,7 +428,7 @@ ELEMENTAL &
       ! Approximation of cdrag
       !------------------------------------------------------------------------------------
       ! squared wind shear ! minimum wind speed square from echam/mo_surface_land.f90:precalc_land
-      zdu2 = MAX(wind(ic) ** 2, 1._wp)
+      zdu2 = MAX(wind(ic) ** 2, 1._jp)
 
       ! virtual potential air temperature (see mo_surface_boundary.f90)
       ! according to Saucier, WJ Principles of Meteoroligical Analyses
@@ -436,79 +436,79 @@ ELEMENTAL &
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
       ! tvd = tair * (100000/p_pa)^rd_o_cps * (1 + rvd1 * qair) ! virtual potential temperature
       air_pressure = zsigma * pressure(ic)
-      ztvd = ( temp_air(ic) * ( 100000._wp / air_pressure)**rd_o_cpd ) * ( 1._wp + rvd1 * qair(ic))
-      ztvir = temp_air(ic) * ( 1._wp + rvd1 * qair(ic) )
+      ztvd = ( temp_air(ic) * ( 100000._jp / air_pressure)**rd_o_cpd ) * ( 1._jp + rvd1 * qair(ic))
+      ztvir = temp_air(ic) * ( 1._jp + rvd1 * qair(ic) )
 
-      r_exner_surf = ( 100000._wp / pressure(ic))**rd_o_cpd
-      qsurf_eff = fact_qsat_srf_proc(ic) * qsat_surf + ( 1._wp - fact_q_air_proc(ic) ) * qair(ic)
+      r_exner_surf = ( 100000._jp / pressure(ic))**rd_o_cpd
+      qsurf_eff = fact_qsat_srf_proc(ic) * qsat_surf + ( 1._jp - fact_q_air_proc(ic) ) * qair(ic)
       dqsurf_eff = fact_qsat_srf_proc(ic) * dqsat_surf
 
       ! virtual potential surface temperature for actual and updated states
-      ztvs_act = t_srf_proc(ic) * r_exner_surf * (1._wp + rvd1 * qsurf_eff)
-      dztvs_act = r_exner_surf * (1._wp + rvd1 * (qsurf_eff + t_srf_proc(ic) * dqsurf_eff))
+      ztvs_act = t_srf_proc(ic) * r_exner_surf * (1._jp + rvd1 * qsurf_eff)
+      dztvs_act = r_exner_surf * (1._jp + rvd1 * (qsurf_eff + t_srf_proc(ic) * dqsurf_eff))
       IF (l_zril_filter) THEN
-        ztvs_upd = t_srf_upd(ic) * ( 100000._wp / pressure(ic))**rd_o_cpd * &
-          & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(ic) * qsat_surf_upd + ( 1._wp - fact_q_air_proc(ic) ) &
+        ztvs_upd = t_srf_upd(ic) * ( 100000._jp / pressure(ic))**rd_o_cpd * &
+          & ( 1._jp + rvd1 * ( fact_qsat_srf_proc(ic) * qsat_surf_upd + ( 1._jp - fact_q_air_proc(ic) ) &
           & * qair(ic)))
       END IF
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
-      IF(height_wind > 0._wp .AND. height_humidity > 0._wp) THEN
+      IF(height_wind > 0._jp .AND. height_humidity > 0._jp) THEN
         SELECT CASE (config_model_scheme)
         CASE (MODEL_JSBACH)
           zg  = height_wind * grav
           zgh = height_humidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
         CASE (MODEL_QUINCY)
-          zg  = (height_wind + 3._wp / 10._wp * height(ic)) * grav
+          zg  = (height_wind + 3._jp / 10._jp * height(ic)) * grav
           zgh = zg
         END SELECT
       ELSE
-        zg = ztvir * rd * LOG(1._wp / zsigma)
+        zg = ztvir * rd * LOG(1._jp / zsigma)
         zgh = zg
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
       ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
       IF (l_zril_filter) THEN
-        zril_act = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp )
-        zril_upd = zg * ( ztvd - ztvs_upd ) / ( zdu2 * (ztvd + ztvs_upd) / 2._wp )
+        zril_act = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._jp )
+        zril_upd = zg * ( ztvd - ztvs_upd ) / ( zdu2 * (ztvd + ztvs_upd) / 2._jp )
 
         ! Richardson number needs to be filtered for offline simulations in order to maintain stability
         zril = coef_ril_tm1 * zril_old(ic) &
           &  + coef_ril_t   * zril_act     &
           &  + coef_ril_tp1 * zril_upd
         zril_old(ic) = zril
-        dzril = -4._wp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act * coef_ril_t
+        dzril = -4._jp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act * coef_ril_t
       ELSE
         SELECT CASE (config_model_scheme)
         CASE (MODEL_JSBACH)
-          zril = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp )
+          zril = zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._jp )
         CASE (MODEL_QUINCY)
-          zril = MIN(zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._wp ), 0.5_wp)
+          zril = MIN(zg * ( ztvd - ztvs_act ) / ( zdu2 * (ztvd + ztvs_act) / 2._jp ), 0.5_jp)
         END SELECT
-      dzril = -4._wp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act
+      dzril = -4._jp * zg / zdu2 * ztvd / (ztvd + ztvs_act)**2 * dztvs_act
       END IF
 
       ! Neutral drag coefficient for
       ! momentum
-      ! zcdnl = (von_karman / LOG(1._wp + zg / (grav * rough_m_srf_proc(ic) ))) ** 2
+      ! zcdnl = (von_karman / LOG(1._jp + zg / (grav * rough_m_srf_proc(ic) ))) ** 2
       ! heat
-      zchnl = von_karman ** 2 / (LOG(1._wp + zg / (grav * rough_m_srf_proc(ic) )) &
+      zchnl = von_karman ** 2 / (LOG(1._jp + zg / (grav * rough_m_srf_proc(ic) )) &
                 * LOG( ( grav * rough_m_srf_proc(ic) + zgh ) / (grav * rough_h_srf_proc(ic) )))
 
       ! account for stable/unstable case: helper variables
       ! The stability factors are multiplied by Ri to cancel a singularity in the derivative of zucfhl.
-      sfact = SQRT(1._wp + 5._wp * ABS(zril))
+      sfact = SQRT(1._jp + 5._jp * ABS(zril))
       zscfl = zril * sfact
-      dzscfl = dzril * (sfact + 2.5_wp * zril / sfact)
+      dzscfl = dzril * (sfact + 2.5_jp * zril / sfact)
 
-      ufact = zcons11 * zchnl * SQRT(ABS(zril) * (1._wp + zgh / (grav * rough_h_srf_proc(ic))))
+      ufact = zcons11 * zchnl * SQRT(ABS(zril) * (1._jp + zgh / (grav * rough_h_srf_proc(ic))))
       ! momentum
-      ! zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp + zg  / (grav * rough_m_srf_proc(ic)))))
+      ! zucfl  = 1._jp / (1._jp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._jp + zg  / (grav * rough_m_srf_proc(ic)))))
       ! heat
-      zucfhl = - zril / (1._wp + ufact)
-      dzucfhl = - dzril * (1._wp + 0.5_wp * ufact) / (1._wp + ufact)**2
+      zucfhl = - zril / (1._jp + ufact)
+      dzucfhl = - dzril * (1._jp + 0.5_jp * ufact) / (1._jp + ufact)**2
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
       zcons = zcons12 * pressure(ic) / ztvir
@@ -518,15 +518,15 @@ ELEMENTAL &
       zcfnchl  = zcons * SQRT(zdu2) * zchnl
 
       ! Stable / Unstable case
-      IF ( zril > 0._wp ) THEN
+      IF ( zril > 0._jp ) THEN
         ! momentum
-        ! zcfml = zcfncl  / (1._wp + zcons8 * zril / zscfl)
+        ! zcfml = zcfncl  / (1._jp + zcons8 * zril / zscfl)
         ! heat
-        zcfhl = zcfnchl / (1._wp + zcons9 * zscfl)
-        dzcfhl = - zcfnchl * zcons9 * dzscfl / (1._wp + zcons9 * zscfl)**2
+        zcfhl = zcfnchl / (1._jp + zcons9 * zscfl)
+        dzcfhl = - zcfnchl * zcons9 * dzscfl / (1._jp + zcons9 * zscfl)**2
       ELSE
-        ! zcfml = zcfncl  * (1._wp - zcons8 * zril * zucfl)
-        zcfhl = zcfnchl * (1._wp + zcons9 * zucfhl)
+        ! zcfml = zcfncl  * (1._jp - zcons8 * zril * zucfl)
+        zcfhl = zcfnchl * (1._jp + zcons9 * zucfhl)
         dzcfhl = zcfnchl * zcons9 * dzucfhl
       END IF
 
@@ -538,9 +538,9 @@ ELEMENTAL &
       ! Computation of Richtmeyr-Morton Coefficients
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
-      t_acoef(ic) = 0.0_wp
-      t_bcoef(ic) = cpd * (1._wp + cpvd1 * qair(ic)) * temp_air(ic) + zgh
-      q_acoef(ic) = 0.0_wp
+      t_acoef(ic) = 0.0_jp
+      t_bcoef(ic) = cpd * (1._jp + cpvd1 * qair(ic)) * temp_air(ic) + zgh
+      q_acoef(ic) = 0.0_jp
       q_bcoef(ic) = qair(ic)
 
     END DO

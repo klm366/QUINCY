@@ -68,10 +68,10 @@ CONTAINS
 
 
     ! Find out the total fraction of anthropogenic PFTs
-    sum_anthro(:) = 0._wp
+    sum_anthro(:) = 0._jp
     DO itile = 1, npft
       DO ic = 1, nc
-        IF (.NOT. nlcc_tile(itile) .AND. cf_veg(ic) > 0._wp) THEN
+        IF (.NOT. nlcc_tile(itile) .AND. cf_veg(ic) > 0._jp) THEN
           sum_anthro(ic) = sum_anthro(ic) + MAX(cf_pft(ic,itile), fract_small)
         END IF
       END DO
@@ -81,20 +81,20 @@ CONTAINS
     ! Scaling is needed if the antropogenic PFT fractions exceed this area.
     ndyn = COUNT(nlcc_tile(:))
     DO ic = 1, nc
-      IF (sum_anthro(ic) > 1._wp - REAL(ndyn,jp)*fract_small + EPSILON(1._wp)) THEN
+      IF (sum_anthro(ic) > 1._jp - REAL(ndyn,jp)*fract_small + EPSILON(1._jp)) THEN
 
-        diff = sum_anthro(ic) - (1._wp - REAL(ndyn,jp)*fract_small)
+        diff = sum_anthro(ic) - (1._jp - REAL(ndyn,jp)*fract_small)
 
         ! Scale anthropogenic PFTs with relevant fractions:
         ! We only consider for scaling the area fractions exceeding fract_small by
         ! first subtracting this fraction, an re-adding it after the scaling.
-        to_scale = 0._wp
+        to_scale = 0._jp
         DO itile = 1, npft
           IF (.NOT. nlcc_tile(itile) .AND. cf_pft(ic,itile) > fract_small) THEN
             to_scale = to_scale + cf_pft(ic,itile) - fract_small
           END IF
         END DO
-        test_sum = 0._wp
+        test_sum = 0._jp
         DO itile = 1, npft
           IF (.NOT. nlcc_tile(itile) .AND. cf_pft(ic,itile) > fract_small) THEN
             cf_pft(ic,itile) = (cf_pft(ic,itile) - fract_small) * (to_scale - diff) / to_scale + fract_small
@@ -105,7 +105,7 @@ CONTAINS
         END DO
 
         ! Final test
-        IF (test_sum > 1._wp - REAL(ndyn,jp)*fract_small + EPSILON(1._wp)) THEN
+        IF (test_sum > 1._jp - REAL(ndyn,jp)*fract_small + EPSILON(1._jp)) THEN
           WRITE (message_text,*) &
             & ' Sum of anthropogenic PFT fractions still greater than (1. - ndyn*fract_small): ', &
             & ' ic: ', ic, ' PFT tile fractions: ', cf_pft(ic,:), ' Sum anthro: ', test_sum

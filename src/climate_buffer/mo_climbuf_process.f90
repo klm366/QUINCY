@@ -91,8 +91,8 @@ CONTAINS
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
-    REAL(jp), PARAMETER :: persist_wind     = 0.9995_wp   ! ~4 years
-    REAL(jp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
+    REAL(jp), PARAMETER :: persist_wind     = 0.9995_jp   ! ~4 years
+    REAL(jp), PARAMETER :: persist_rel_hum  = 0.95_jp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
 
     IF (.NOT. new_day .OR. lstart) THEN
@@ -113,10 +113,10 @@ CONTAINS
     !  ---------------------
     IF (new_year) THEN
       gdd5_prev_year = gdd5_sum_year
-      gdd5_sum_year = 0._wp
+      gdd5_sum_year = 0._jp
     END IF
     IF (new_day .AND. .NOT. lstart) THEN
-      gdd5_sum_year = gdd5_sum_year + MAX(0._wp, prev_day_mean_temp - tmelt - 5._wp)
+      gdd5_sum_year = gdd5_sum_year + MAX(0._jp, prev_day_mean_temp - tmelt - 5._jp)
     END IF
 
     !-- Multi-year minimum and maximum monthly mean temperatures
@@ -132,19 +132,19 @@ CONTAINS
           min_mmtemp_20yr = min_mmtemp_of_yr
           max_mmtemp_20yr = max_mmtemp_of_yr
         ELSE
-          min_mmtemp_20yr = (min_mmtemp_20yr * 19._wp + min_mmtemp_of_yr) / 20._wp
-          max_mmtemp_20yr = (max_mmtemp_20yr * 19._wp + max_mmtemp_of_yr) / 20._wp
+          min_mmtemp_20yr = (min_mmtemp_20yr * 19._jp + min_mmtemp_of_yr) / 20._jp
+          max_mmtemp_20yr = (max_mmtemp_20yr * 19._jp + max_mmtemp_of_yr) / 20._jp
         ENDIF
         ! --- reset for current year
-        min_mmtemp_of_yr =  1000._wp
-        max_mmtemp_of_yr = -1000._wp
+        min_mmtemp_of_yr =  1000._jp
+        max_mmtemp_of_yr = -1000._jp
       END IF ! new_year
     END IF
 
     !-- 15-day smoothing of temperature and precipitation (needed with yasso)
     !  ---------------------
-    F_15d = EXP(-dtime / (15._wp * seconds_day))
-    N_15d = 1._wp - F_15d
+    F_15d = EXP(-dtime / (15._jp * seconds_day))
+    N_15d = 1._jp - F_15d
 
     temp_15d   = t_air         * N_15d  +  F_15d * temp_15d
     precip_15d = (rain + snow) * N_15d  +  F_15d * precip_15d
@@ -163,14 +163,14 @@ CONTAINS
     ELSE
       max_wind_yDay = max_wind_of_day
       ! Maximum wind speed smoothed in time
-      max_wind_4yr = max_wind_4yr * persist_wind + max_wind_of_day * (1._wp - persist_wind)
+      max_wind_4yr = max_wind_4yr * persist_wind + max_wind_of_day * (1._jp - persist_wind)
       max_wind_of_day = wind_10m
     END IF
 
     !-- Relative humidity
     !  ---------------------
     persist = persist_rel_hum ** (dtime/seconds_day)
-    q_rel_air_14d = q_rel_air_14d * persist + q_rel_air * (1._wp - persist)
+    q_rel_air_14d = q_rel_air_14d * persist + q_rel_air * (1._jp - persist)
     ! Save previous day variables
     IF (new_day .AND. .NOT. lstart) THEN
       q_rel_air_14d_yDay = q_rel_air_14d
@@ -212,10 +212,10 @@ CONTAINS
     ELSE
       air_qsat = qsat_mixed(air_temperature, air_press)
     END IF
-    relative_humidity_air = 100._wp * air_moisture                                           &
-                           * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
-                           / ( ((1._wp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
-    relative_humidity_air = MIN(100._wp, relative_humidity_air)
+    relative_humidity_air = 100._jp * air_moisture                                           &
+                           * (  (1._jp - rd / rv) * air_qsat + (rd / rv) )                   &
+                           / ( ((1._jp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
+    relative_humidity_air = MIN(100._jp, relative_humidity_air)
 
   END FUNCTION get_relative_humidity_air
 #endif

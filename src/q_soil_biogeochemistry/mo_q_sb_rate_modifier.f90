@@ -180,7 +180,7 @@ CONTAINS
           &                                                          ea_decomposition, &
           &                                                          ed_decomposition, &
           &                                                          t_ref_decomposition)
-        rmm_decomposition(ic, is)    = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
+        rmm_decomposition(ic, is)    = MAX(1._jp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_jp)
         !>  1.2 JSM
         !>
         rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_depolymerisation, &
@@ -209,7 +209,7 @@ CONTAINS
           &                                                                    temp_freeze_window_bio)
         rmm_nitrification(ic, is)             = calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_local)
         rmm_gasdiffusion(ic, is)              = MAX(min_rmm_gasdiffusion, &
-          &                                     1.0_wp - calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_local))
+          &                                     1.0_jp - calc_moisture_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_local))
         anaerobic_volume_fraction_sl(ic, is)  = calc_anaerobic_volume_fraction(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
           &                                     wtr_soil_sat_local, lambda_anvf, k_anvf)
 
@@ -218,14 +218,14 @@ CONTAINS
         !>
         rtm_asymb_bnf(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_symb_bnf, &
           &                                                    ed_symb_bnf, t_opt_symb_bnf)
-        rmm_asymb_bnf(ic, is) = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_wp)
+        rmm_asymb_bnf(ic, is) = MAX(1._jp - wtr_soil_pot_sl(ic, is) / kmr_asymb_bnf, 0.0_jp)
 
         !>3.0 root model
         !>
         hlp1 = MIN(MAX(t_soil_root_tacclim_mavg(ic) - Tzero, tacclim_uptake_min), tacclim_uptake_max)
         rtm_plant_uptake(ic, is) = calc_peaked_arrhenius_function(t_soil_sl(ic, is), ea_decomposition * k_ea_uptake * hlp1, &
           &                        ed_decomposition, t_ref_decomposition)
-        rmm_plant_uptake(ic, is) = MAX(1._wp - wtr_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_wp)
+        rmm_plant_uptake(ic, is) = MAX(1._jp - wtr_soil_pot_sl(ic, is) / lctlib%phi_leaf_min, 0.0_jp)
       ENDDO
     ENDDO
   END SUBROUTINE update_sb_rate_modifier
@@ -273,14 +273,14 @@ CONTAINS
       ! temp_freeze_window_bio is only given to the function for biological processes
       ! adjust rate modifier for the window of -2 degC to 2 degC
       IF (PRESENT(temp_freeze_window_bio)) THEN
-        frost_modifier = MIN(MAX((t_soil_sl - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_wp), 1.0_wp)
+        frost_modifier = MIN(MAX((t_soil_sl - (Tzero - temp_freeze_thres_bio)) / temp_freeze_window_bio, 0.0_jp), 1.0_jp)
       ELSE
-        frost_modifier = 1.0_wp
+        frost_modifier = 1.0_jp
       END IF
-      rate_modifier = EXP(-Ea / r_gas * (1._wp / t_soil_sl - 1._wp / temp_ref_tresponse))
+      rate_modifier = EXP(-Ea / r_gas * (1._jp / t_soil_sl - 1._jp / temp_ref_tresponse))
       rate_modifier = rate_modifier * frost_modifier
     ELSE
-      rate_modifier = 1._wp
+      rate_modifier = 1._jp
     END IF
 
   END FUNCTION calc_temperature_rate_modifier
@@ -321,13 +321,13 @@ CONTAINS
     IF (param > eps8 .AND. wtr_soil_fc_local > eps8 .AND. wtr_soil_sl > eps8) THEN
       IF (wtr_soil_fc_local > eps8) THEN
         air_filled_pore_space = (wtr_soil_fc_local - (wtr_soil_sl + ice_soil_sl * wtr_density / ice_density) ) / wtr_soil_fc_local
-        IF (air_filled_pore_space < 0.005_wp) air_filled_pore_space = 0.005_wp
+        IF (air_filled_pore_space < 0.005_jp) air_filled_pore_space = 0.005_jp
         rate_modifier = (air_filled_pore_space**k1_afps) / (param + (air_filled_pore_space**k1_afps))
       ELSE
-        rate_modifier = 1._wp
+        rate_modifier = 1._jp
       END IF
     ELSE
-      rate_modifier = 1._wp
+      rate_modifier = 1._jp
     END IF
 
   END FUNCTION calc_oxygen_rate_modifier
@@ -368,7 +368,7 @@ CONTAINS
         factor = hlp1
       END IF
     ELSE
-       factor = 1._wp
+       factor = 1._jp
     END IF
 
   END FUNCTION calc_convert_bulk_to_liquid
@@ -406,12 +406,12 @@ CONTAINS
     IF (param > eps8 .AND. wtr_soil_fc_local > eps8 .AND. wtr_soil_sl > eps8) THEN
        hlp1 = (wtr_soil_sl / wtr_soil_fc_local) ** k2_afps
        IF (hlp1 > param) THEN
-          rate_modifier = 1._wp / hlp1
+          rate_modifier = 1._jp / hlp1
        ELSE
-          rate_modifier = 1._wp / param
+          rate_modifier = 1._jp / param
        END IF
     ELSE
-      rate_modifier = 1._wp
+      rate_modifier = 1._jp
     END IF
 
   END FUNCTION calc_substrate_rate_modifier
@@ -450,11 +450,11 @@ CONTAINS
 
     ! calc air-filled pore space
     ! ensure a value between eps4 and '1-eps4'
-    air_filled_pore_space = MAX(eps4, MIN(1.0_wp - eps4, &
+    air_filled_pore_space = MAX(eps4, MIN(1.0_jp - eps4, &
       &                                   (wtr_soil_sat_local - (wtr_soil_sl + ice_soil_sl * wtr_density / ice_density)) &
       &                                   / wtr_soil_sat_local))
     ! calc rate modifier
-    rate_modifier = 1.0_wp - EXP(-(lambda * (1.0_wp - air_filled_pore_space)) ** k)
+    rate_modifier = 1.0_jp - EXP(-(lambda * (1.0_jp - air_filled_pore_space)) ** k)
   END FUNCTION calc_anaerobic_volume_fraction
 
   !-----------------------------------------------------------------------------------------------------
@@ -484,9 +484,9 @@ CONTAINS
 
     IF (wtr_soil_fc_local > eps8) THEN
       air_filled_pore_space = (wtr_soil_fc_local - wtr_soil_sl) / wtr_soil_fc_local
-      rate_modifier = 1.0_wp - air_filled_pore_space
+      rate_modifier = 1.0_jp - air_filled_pore_space
     ELSE
-      rate_modifier = 1._wp
+      rate_modifier = 1._jp
     END IF
 
   END FUNCTION calc_moisture_modifier

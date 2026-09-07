@@ -124,7 +124,7 @@ CONTAINS
 
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()
-      IF (eps > 0._wp) THEN
+      IF (eps > 0._jp) THEN
         WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
       ELSE
         WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
@@ -261,7 +261,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, hour=hour, minute=minute, second=second, ms=ms)
 
-    get_secs_of_day = 3600._wp * REAL(hour,jp) + 60._wp * REAL(minute,jp) + REAL(second,jp) + REAL(ms)/1000._wp
+    get_secs_of_day = 3600._jp * REAL(hour,jp) + 60._jp * REAL(minute,jp) + REAL(second,jp) + REAL(ms)/1000._jp
 
   END FUNCTION get_secs_of_day
 
@@ -277,7 +277,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, month=month, year=year)
     IF (month == 1) THEN
-      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),jp))
+      get_previous_month_length = NINT(31._jp * REAL(get_day_length(),jp))
     ELSE
       prev_month = month-1
       get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),jp) * REAL(get_day_length(),jp))
@@ -355,7 +355,7 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timestep_in_days = dt_loc / 86400._wp ! dt by number of seconds in a day
+    timestep_in_days = dt_loc / 86400._jp ! dt by number of seconds in a day
 
   END FUNCTION timestep_in_days
 
@@ -378,8 +378,8 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timesteps_per_day = NINT(86400._wp/dt_loc) ! Assert that day length is an integer multiple of the time step
-    IF (ABS(timesteps_per_day * dt_loc - 86400._wp) > EPSILON(1._wp)) &
+    timesteps_per_day = NINT(86400._jp/dt_loc) ! Assert that day length is an integer multiple of the time step
+    IF (ABS(timesteps_per_day * dt_loc - 86400._jp) > EPSILON(1._jp)) &
       & CALL finish(routine, 'Time step must fit into day length')
 
   END FUNCTION timesteps_per_day

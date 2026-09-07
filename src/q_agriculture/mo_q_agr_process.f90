@@ -156,9 +156,9 @@ MODULE mo_q_agr_process
       ix_ct = NINT(crop_type_index(ic))
       growing_season_old = growing_season(ic)
       IF (is_newyear) THEN
-        crop_season_per_year_mavg(ic) = crop_season_per_year_mavg(ic) * (1._wp - 1._wp/mavg_period_cropseason) + &
-                                       crop_season_per_year(ic) * 1._wp/mavg_period_cropseason
-        crop_season_per_year(ic) = 0.0_wp
+        crop_season_per_year_mavg(ic) = crop_season_per_year_mavg(ic) * (1._jp - 1._jp/mavg_period_cropseason) + &
+                                       crop_season_per_year(ic) * 1._jp/mavg_period_cropseason
+        crop_season_per_year(ic) = 0.0_jp
       END IF
 
       !>  1.0 check growing season has started or ended
@@ -172,9 +172,9 @@ MODULE mo_q_agr_process
             & .AND. nd_dormance(ic) > cttab_nd_dorm_max(ix_ct) &
             & .AND. crop_season_per_year(ic) < cttab_crop_season_max(ix_ct)) THEN
           growing_season(ic) = true
-          crop_season_per_year(ic) = crop_season_per_year(ic) + 1._wp
-          growth_req_n_tlabile_mavg(ic) = 1._wp / cn_leaf
-          growth_req_p_tlabile_mavg(ic) = 1._wp / np_leaf
+          crop_season_per_year(ic) = crop_season_per_year(ic) + 1._jp
+          growth_req_n_tlabile_mavg(ic) = 1._jp / cn_leaf
+          growth_req_p_tlabile_mavg(ic) = 1._jp / np_leaf
         END IF
       ! If in the growing season, check whether growing season has ended
       ELSE
@@ -191,8 +191,8 @@ MODULE mo_q_agr_process
       !>  2.0 update long-term average growing season length if now is the end of the season
       !>
       IF (growing_season(ic) <= test_false_true .AND. growing_season_old > test_false_true) THEN
-        gdd_mavg(ic) = gdd_mavg(ic) * (1._wp - 1._wp / mavg_period_cropseason) &
-          &                    + gdd(ic) * 1._wp / mavg_period_cropseason
+        gdd_mavg(ic) = gdd_mavg(ic) * (1._jp - 1._jp / mavg_period_cropseason) &
+          &                    + gdd(ic) * 1._jp / mavg_period_cropseason
       END IF
 
       !>  2.1 calculate current GDD increment
@@ -201,9 +201,9 @@ MODULE mo_q_agr_process
       !>    threshold for growing (crop-type specific) and dormant season
       !>    in the growing season, a maximum increment is applied
       IF (growing_season(ic) >= test_false_true) THEN
-        hlp1 = MIN(MAX(t_air(ic) - cttab_t_thres_gdd_gs(ix_ct),0.0_wp),cttab_gdd_max(ix_ct))
+        hlp1 = MIN(MAX(t_air(ic) - cttab_t_thres_gdd_gs(ix_ct),0.0_jp),cttab_gdd_max(ix_ct))
       ELSE
-        hlp1 = MAX(t_air(ic) - gdd_t_thres_dormseason,0.0_wp)
+        hlp1 = MAX(t_air(ic) - gdd_t_thres_dormseason,0.0_jp)
       END IF
       gdd(ic) = gdd(ic) + hlp1 * dtime / one_day
 
@@ -211,15 +211,15 @@ MODULE mo_q_agr_process
       !>       set growth phase to zero at start of growing season
       !>
       IF (growing_season(ic) <= test_false_true .AND. growing_season_old > test_false_true) THEN
-        gdd(ic) = 0.0_wp
+        gdd(ic) = 0.0_jp
       END IF
       IF (growing_season(ic) > test_false_true .AND. growing_season_old <= test_false_true) THEN
-        gdd(ic) = 0.0_wp
-        crop_growth_phase(ic) = 0.0_wp
+        gdd(ic) = 0.0_jp
+        crop_growth_phase(ic) = 0.0_jp
       END IF
       ! reset gdd when there is snow coverage and soil is frozen
       IF (t_air_tphen_mavg(ic) < Tzero .OR. t_soil_srf_tphen_mavg(ic) <= Tzero) THEN
-        gdd(ic) = 0.0_wp
+        gdd(ic) = 0.0_jp
       END IF
 
       !>  2.3 calculate current dormant days increment
@@ -227,7 +227,7 @@ MODULE mo_q_agr_process
       IF (growing_season(ic) < test_false_true) THEN
         nd_dormance(ic) = nd_dormance(ic) + dtime / one_day
       ELSE
-        nd_dormance(ic) = 0.0_wp
+        nd_dormance(ic) = 0.0_jp
       END IF
 
     END DO
@@ -360,7 +360,7 @@ MODULE mo_q_agr_process
           ! note this differs from AgroIBIS, which requires 5% of GDD_mat to be reached.
           ! this is a result of the labile pool in QUINCY, which ensures that crop growth starts only in
           ! favourable conditions.
-          crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_wp
+          crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_jp
 
         !> 1.2  when the crop is in emergence mode
         !>
@@ -369,7 +369,7 @@ MODULE mo_q_agr_process
           ! LAI has reached crop specific LAI maximum, move to phase 2 (grain filling)
           IF (gdd(ic) > cttab_fract_gdd_mat_gp2to3(ix_ct) * gdd_mat &
               & .OR. lai(ic) > cttab_lai_max(ix_ct)) THEN
-            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_wp
+            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_jp
           END IF
 
         !> 1.3  when the crop is in grainfilling mode
@@ -377,7 +377,7 @@ MODULE mo_q_agr_process
         CASE (ix_grainfilling)
           ! if GDD maturity is reached, move to phase 3 (harvest)
           IF (gdd(ic) > gdd_mat .OR. nd_crop_season(ic) >= cttab_nd_gs_max(ix_ct)) THEN
-            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_wp
+            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_jp
           END IF
 
         !> 1.4  when the crop is in harvesting mode
@@ -386,9 +386,9 @@ MODULE mo_q_agr_process
           ! if LAI reaches zero during harvest, enter phase 4 (currently undefined - can be intercrop later)
           ! and update the long-term average crop growing season length
           IF (lai(ic) < eps8) THEN
-            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_wp
-            nd_crop_season_mavg(ic) = nd_crop_season_mavg(ic) * (1._wp - 1._wp / mavg_period_cropseason) &
-              &                        + nd_crop_season(ic) * 1._wp / mavg_period_cropseason
+            crop_growth_phase(ic) = crop_growth_phase(ic) + 1.0_jp
+            nd_crop_season_mavg(ic) = nd_crop_season_mavg(ic) * (1._jp - 1._jp / mavg_period_cropseason) &
+              &                        + nd_crop_season(ic) * 1._jp / mavg_period_cropseason
           END IF
 
         CASE DEFAULT ! nothing to do, wait for reintialisation by crop phenology routine
@@ -400,7 +400,7 @@ MODULE mo_q_agr_process
       IF (crop_growth_phase(ic) <= ix_harvest) THEN
         nd_crop_season(ic) = nd_crop_season(ic) + dtime / one_day
       ELSE
-        nd_crop_season(ic) = 0.0_wp
+        nd_crop_season(ic) = 0.0_jp
       END IF
 
       !> 2.1 if crop growing season has been longer than allowed, set growth phase to harvest
@@ -467,7 +467,7 @@ MODULE mo_q_agr_process
       ! Heat index (defined as the fraction of GDD for maturity that induces grain filling)
       heat_index = cttab_fract_gdd_mat_gp2to3(ix_ct) * gdd_mat
       ! Normalised heat index
-      fheat_index = MIN(gdd(ic) / heat_index, 1._wp)
+      fheat_index = MIN(gdd(ic) / heat_index, 1._jp)
 
       !> 1.0  allometry of leaf, fine root and stem
       !>
@@ -478,11 +478,11 @@ MODULE mo_q_agr_process
       !> with rising maturity). Once the heat requirement for grainfilling is met, allocation is more strongly
       !> towards roots.
       !>
-      hlp1 = (exp(-k_heatindex) - exp(-k_heatindex*fheat_index))/(exp(-k_heatindex) - 1._wp)
+      hlp1 = (exp(-k_heatindex) - exp(-k_heatindex*fheat_index))/(exp(-k_heatindex) - 1._jp)
       leaf2root_mass_ratio(ic) = cttab_leaf2root_mass_fin(ix_ct) &
         &                        + (cttab_leaf2root_mass_init(ix_ct) - cttab_leaf2root_mass_fin(ix_ct)) * hlp1
-      leaf2sapwood_mass_ratio(ic) = 1._wp / (cttab_sapwood2leaf_mass_init(ix_ct) &
-        &                                    + cttab_sapwood2leaf_mass_fin(ix_ct) * (1._wp - hlp1))
+      leaf2sapwood_mass_ratio(ic) = 1._jp / (cttab_sapwood2leaf_mass_init(ix_ct) &
+        &                                    + cttab_sapwood2leaf_mass_fin(ix_ct) * (1._jp - hlp1))
 
       ! if maximum LAI is reached, reduce leaf allocation to minimum, implying that in the allocation
       ! routine the actual allocation to leaves will be zero
@@ -499,10 +499,10 @@ MODULE mo_q_agr_process
       !> of this formulation is nevertheless that leaf, root and shoot allocation decline in the grainfilling period
       !>
       IF (NINT(crop_growth_phase(ic)) == ix_grainfilling .OR. NINT(crop_growth_phase(ic)) == ix_harvest) THEN
-        hlp1 = MIN(1.0_wp,MAX(0.01_wp,(gdd(ic) - heat_index) / (gdd_mat - heat_index)))
-        falloc_fruit_crop(ic) = cttab_falloc_fruit_max(ix_ct) * (1._wp - (1._wp - hlp1)**cttab_k_hi_leaf(ix_ct))
+        hlp1 = MIN(1.0_jp,MAX(0.01_jp,(gdd(ic) - heat_index) / (gdd_mat - heat_index)))
+        falloc_fruit_crop(ic) = cttab_falloc_fruit_max(ix_ct) * (1._jp - (1._jp - hlp1)**cttab_k_hi_leaf(ix_ct))
       ELSE
-        falloc_fruit_crop(ic) = 0.0_wp
+        falloc_fruit_crop(ic) = 0.0_jp
       END IF
 
     END DO
@@ -573,15 +573,15 @@ MODULE mo_q_agr_process
       !> 2.0 Mineral fertiliser application for croplands
       !>
       IF (is_fertiliser_day) THEN
-        IF (crop_season_per_year_mavg(ic) > 1.5_wp) THEN
-          hlp1 = n_fertiliser(ic) / one_day * 1.e6_wp / 4._wp / 2._wp ! conversion and split into 4 doses per crop cycle
+        IF (crop_season_per_year_mavg(ic) > 1.5_jp) THEN
+          hlp1 = n_fertiliser(ic) / one_day * 1.e6_jp / 4._jp / 2._jp ! conversion and split into 4 doses per crop cycle
         ELSE
-          hlp1 = n_fertiliser(ic) / one_day * 1.e6_wp / 4._wp ! conversion and split into 4 doses
+          hlp1 = n_fertiliser(ic) / one_day * 1.e6_jp / 4._jp ! conversion and split into 4 doses
         END IF
         fertiliser_nh4(ic) = hlp1 * frac_fertil_nh4
-        fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser))
-        fertiliser_no3(ic) = hlp1 * (1._wp - frac_fertil_nh4)
-        fertiliser_no3_n15(ic) = fertiliser_no3(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(eta_fertiliser))
+        fertiliser_nh4_n15(ic) = fertiliser_nh4(ic) / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(eta_fertiliser))
+        fertiliser_no3(ic) = hlp1 * (1._jp - frac_fertil_nh4)
+        fertiliser_no3_n15(ic) = fertiliser_no3(ic) / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(eta_fertiliser))
         fertiliser_po4(ic) = hlp1 * frac_fertil_po4
       END IF
     END DO
@@ -622,13 +622,13 @@ MODULE mo_q_agr_process
     ix_ct = NINT(crop_type_index)
     IF (NINT(crop_growth_phase) == ix_harvest) THEN
       IF (lai > min_lai) THEN
-        fract_harvest_rel_to_tile = MIN(1.0_wp, MAX(eps4, max_harvesting_rate * dtime / one_day &
+        fract_harvest_rel_to_tile = MIN(1.0_jp, MAX(eps4, max_harvesting_rate * dtime / one_day &
           &                                             * cttab_lai_max(ix_ct) / lai))
       ELSE
-        fract_harvest_rel_to_tile = 1.0_wp
+        fract_harvest_rel_to_tile = 1.0_jp
       END IF
     ELSE
-      fract_harvest_rel_to_tile = 0.0_wp
+      fract_harvest_rel_to_tile = 0.0_jp
     END IF
 
   END FUNCTION calc_crop_harvest_fraction
@@ -708,9 +708,9 @@ MODULE mo_q_agr_process
           ! Heat index (defined as the fraction of GDD for maturity that induces grain filling)
           heat_index = cttab_fract_gdd_mat_gp2to3(ix_ct) * get_gdd_mat(ix_ct,gdd_mavg(ic))
           ! Normalised heat index
-          fheat_index = MIN(gdd(ic) / heat_index, 1._wp)
+          fheat_index = MIN(gdd(ic) / heat_index, 1._jp)
           veg_growth_leaf_carbon(ic) = MAX(fheat_index * lai_max / lctlib_sla &
-                                           - veg_pool_leaf_carbon(ic),0.0_wp)
+                                           - veg_pool_leaf_carbon(ic),0.0_jp)
           ! update growth and litterfall of leaf N:P pools
           veg_growth_leaf_nitrogen(ic) = veg_growth_leaf_carbon(ic) / lctlib_cn_leaf
           veg_growth_leaf_phosphorus(ic) = veg_growth_leaf_nitrogen(ic) / lctlib_np_leaf

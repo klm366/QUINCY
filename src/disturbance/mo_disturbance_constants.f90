@@ -34,8 +34,8 @@ MODULE mo_disturbance_constants
   !INTEGER , PARAMETER, PUBLIC  :: FIRE_ARORA            =  2
   !INTEGER , PARAMETER, PUBLIC  :: FIRE_THONICKE         =  3
 
-  REAL(jp), PARAMETER          :: persist_rel_hum  = 0.95_wp   ! factor concerning the smoothing of relative air humidity (~14 days)
-  REAL(jp), PARAMETER          :: persist_wind_10m = 0.9995_wp ! factor concerning the smoothing of daily maximum wind speed
+  REAL(jp), PARAMETER          :: persist_rel_hum  = 0.95_jp   ! factor concerning the smoothing of relative air humidity (~14 days)
+  REAL(jp), PARAMETER          :: persist_wind_10m = 0.9995_jp ! factor concerning the smoothing of daily maximum wind speed
 
 #endif
 END MODULE mo_disturbance_constants

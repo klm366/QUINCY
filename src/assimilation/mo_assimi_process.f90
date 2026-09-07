@@ -66,25 +66,25 @@ CONTAINS
     DO ic=1,nc
 
       ! initialize local arguments and variables
-      scaling_fact_cl(ic) = 1._wp
+      scaling_fact_cl(ic) = 1._jp
 
       ! Cosine of zenith angle at local noon:
       cos_zenith_noon = COS(declination) * COS(deg2rad * lat(ic)) +  SIN(declination) * SIN(deg2rad * lat(ic))
 
       ! Extinction factor
-      k12 = 0.5_wp / MAX(cos_zenith_noon, 1.E-3_wp) ! K = 1 / 2mue , Knorr (119c)
+      k12 = 0.5_jp / MAX(cos_zenith_noon, 1.E-3_jp) ! K = 1 / 2mue , Knorr (119c)
 
       ! R: Todo when offline and online versions exist...
       ! vg: in the current echam version inquire_declination at radiation time steps returns the declination at radiation time
       !     and not the current declination. This leads to slightly different result for offline and online jsbach simulations
       !     (https://code.zmaw.de/issues/4803). For that reason we use a k12 independent of the declination for the interface test.
-      ! IF (interface_test) k12(:)=1._wp ! interface_test=.FALSE./.TRUE.
+      ! IF (interface_test) k12(:)=1._jp ! interface_test=.FALSE./.TRUE.
 
       ! Condition: LAI>LaiLimit
       IF (lai(ic) >= LaiLimit) THEN
         ! R: Note this could be packed into an ELEMENTAL procedure, but I think it would make things only complicated without
         ! improving security
-        scaling_fact_cl(ic) = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai(ic))) !! see Eqs. (107), (108) in Knorr
+        scaling_fact_cl(ic) = MAX(1.e-10_jp,EXP( -k12 * canopy_bound_lai * lai(ic))) !! see Eqs. (107), (108) in Knorr
       END IF
 
     END DO
@@ -110,7 +110,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     USE mo_assimi_constants                                     ! we need all of them, except of f_aut_leaf and cCost.
-    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_jp;  argas =Universal gas constant [J/(mole*K)]
 
     LOGICAL,  INTENT(in) ::   &
       & C4Flag
@@ -170,7 +170,7 @@ CONTAINS
       CO2_conc_leaf_cl = FCI1C3 * CO2_mol_mixing_ratio
     END IF
 
-    T1 =  25._wp + tmelt   ! 25 degress Celsius expressed in Kelvin
+    T1 =  25._jp + tmelt   ! 25 degress Celsius expressed in Kelvin
 
     TC = t_air - tmelt     ! change temperature dimension from Kelvin to Celcius
 
@@ -210,7 +210,7 @@ CONTAINS
       ! dependant on vegetation temperature, Gamma* = 1.7 * TC (IF Gamma* in microMol/Mol)
       ! Here, Gam in Mol/Mol,       Knorr (105)
       !---------------------------------------------------------------------------------
-      GAM = MAX (1.7E-6_wp * TC, 0._wp)
+      GAM = MAX (1.7E-6_jp * TC, 0._jp)
 
       !---------------------------------------------------------------------------------
       ! PVM and PJM are not only temperature dependant but also differ inside the canopy.
@@ -230,7 +230,7 @@ CONTAINS
       !  J = J(25C) * TC / 25 WHERE J(25) = J0 * N_scaling_factors
       ! ?????????????????????/ minOfMaxCarboxrate=1E-12 vielleicht etwas gering
       !---------------------------------------------------------------------------------
-      JMAX = ETransport * N_scaling_factors * TC/25._wp
+      JMAX = ETransport * N_scaling_factors * TC/25._jp
       JMAX = MAX(JMAX,minOfMaxCarboxrate)
 
       !---------------------------------------------------------------------------------
@@ -251,15 +251,15 @@ CONTAINS
         J1 =   ALPHA * apar_per_lai_cl * JMAX &
           &  / SQRT(JMAX**2 + (ALPHA * apar_per_lai_cl)**2)
       ELSE
-        J1 = 0._wp
+        J1 = 0._jp
       END IF
 
-      JE = J1 * (CO2_conc_leaf_cl - GAM) / 4._wp / (CO2_conc_leaf_cl + 2._wp * GAM)
+      JE = J1 * (CO2_conc_leaf_cl - GAM) / 4._jp / (CO2_conc_leaf_cl + 2._jp * GAM)
 
       JC =   VCMAX * (CO2_conc_leaf_cl - GAM) &
-        &  / ( CO2_conc_leaf_cl + KC * (1._wp + OX * KO**(-1)) )
+        &  / ( CO2_conc_leaf_cl + KC * (1._jp + OX * KO**(-1)) )
 
-      HITINHIB = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
+      HITINHIB = 1._jp / ( 1._jp + EXP( 1.3_jp * ( TC - 55._jp ) ) )
       GASS = MIN (JE, JC) * HITINHIB
 
       !---------------------------------------------------------------------------------
@@ -272,7 +272,7 @@ CONTAINS
       ! PVM at 25C, therefore RD = const * PVM, but the temperature dependance goes with
       ! ER (for respiration) and not with EV (for PVM)
       !---------------------------------------------------------------------------------
-      DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp))
+      DARKINHIB = 0.5_jp + 0.5_jp * EXP(-2.e5_jp * MAX(par_down_mol,0.0_jp))
 
       DARK_RESP =   FRDC3 * CarboxRate * N_scaling_factors         &
                 & * EXP(ER * T0 / R_gas  * T1**(-1) * t_air**(-1)) &
@@ -293,7 +293,7 @@ CONTAINS
       !   => canopy_conductance = A(net)*1.6*RT/p/(CA-CI)
       !---------------------------------------------------------------------------------
       canopy_cond_cl = MAX ( &
-        & 1.6_wp * (GASS - DARK_RESP) / (CO2_mol_mixing_ratio - CO2_conc_leaf_cl) * R_gas * t_air * press_srf**(-1), &
+        & 1.6_jp * (GASS - DARK_RESP) / (CO2_mol_mixing_ratio - CO2_conc_leaf_cl) * R_gas * t_air * press_srf**(-1), &
         & minStomaConductance)
 
     ELSE IF (C4Flag) THEN
@@ -328,7 +328,7 @@ CONTAINS
       !   which is not considered in INITVEGDATA
       ! K scales of course with EK
       !---------------------------------------------------------------------------------
-      K =   ETransport * 1.E3_wp * N_scaling_factors &
+      K =   ETransport * 1.E3_jp * N_scaling_factors &
         & * EXP(EK * T0 / R_gas * T1**(-1) * t_air**(-1))
 
       !---------------------------------------------------------------------------------
@@ -341,8 +341,8 @@ CONTAINS
       !  same as C3, just the 25 degree Celsius proportional factor is different
       !    0.011 for C3,  0.0042 for C4
       !---------------------------------------------------------------------------------
-      DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol,0.0_wp))
-      HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
+      DARKINHIB = 0.5_jp + 0.5_jp * EXP(-2.e5_jp * MAX(par_down_mol,0.0_jp))
+      HITINHIB  = 1._jp / ( 1._jp + EXP( 1.3_jp * ( TC - 55._jp ) ) )
       DARK_RESP =    FRDC4 * CarboxRate * N_scaling_factors &
                 & *  EXP(ER * T0 / R_gas * T1**(-1) * t_air**(-1)) * HITINHIB * DARKINHIB
 
@@ -355,7 +355,7 @@ CONTAINS
       !    Ji = ALC4 * PAR
       !  J0 is the sum of the first two terms in JE
       !---------------------------------------------------------------------------------
-      J0 = (ALC4 * apar_per_lai_cl + VCMAX) /  2._wp / THETA
+      J0 = (ALC4 * apar_per_lai_cl + VCMAX) /  2._jp / THETA
       !---------------------------------------------------------------------------------
       !  last 2 terms:  with J0^2 = 1/4/Theta^2*(PVM+Ji)^2
       !       sqrt(1/4/Theta^2)*sqrt((PVM+Ji)^2 - 4*Theta*PVM*Ji))
@@ -378,7 +378,7 @@ CONTAINS
       !---------------------------------------------------------------------------------
       ! same as C3 (diffusion equation)
       !---------------------------------------------------------------------------------
-      canopy_cond_cl =   1.6_wp * (GASS - DARK_RESP) / (CO2_mol_mixing_ratio &
+      canopy_cond_cl =   1.6_jp * (GASS - DARK_RESP) / (CO2_mol_mixing_ratio &
         &              - CO2_conc_leaf_cl) * R_gas * t_air * press_srf**(-1)
       canopy_cond_cl = MAX(canopy_cond_cl, minStomaConductance)
 
@@ -410,7 +410,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  DECLARATIONS
     USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
-    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_jp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
@@ -501,7 +501,7 @@ CONTAINS
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc
 
-      T1 =  25._wp + tmelt   ! 25 degress Celsius expressed in Kelvin
+      T1 =  25._jp + tmelt   ! 25 degress Celsius expressed in Kelvin
 
       TC = t_air(ic) - tmelt     ! change temperature dimension from Kelvin to Celcius
 
@@ -526,17 +526,17 @@ CONTAINS
         !---------------------------------------------------------------------------------
         KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air(ic)**(-1) )
         KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air(ic)**(-1) )
-        GAM = MAX (1.7E-6_wp * TC, 0._wp)
+        GAM = MAX (1.7E-6_jp * TC, 0._jp)
         VCMAX = CarboxRate * N_scaling_factors(ic) &
                   * EXP(EV * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
 
-        DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol(ic),0.0_wp))
-        HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
+        DARKINHIB = 0.5_jp + 0.5_jp * EXP(-2.e5_jp * MAX(par_down_mol(ic),0.0_jp))
+        HITINHIB  = 1._jp / ( 1._jp + EXP( 1.3_jp * ( TC - 55._jp ) ) )
         DARK_RESP = FRDC3 * CarboxRate * N_scaling_factors(ic)          &     ! RD=RD0*N_scaling_factors*EXP(Energy scaled relative 25C)
                   * EXP(ER * T0  / R_gas * T1**(-1) * t_air(ic)**(-1) ) &            ! with RD0 proportional PVM0 at 25C
                   * HITINHIB * DARKINHIB
         JMAX = ETransport * N_scaling_factors(ic)       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
-                  * TC / 25._wp
+                  * TC / 25._jp
         JMAX = MAX(JMAX, minOfMaxCarboxrate)
 
         !---------------------------------------------------------------------------------
@@ -556,22 +556,22 @@ CONTAINS
           J1 = ALPHA * apar_per_lai_cl(ic) * JMAX &
                     / SQRT(JMAX**2 + (ALPHA * apar_per_lai_cl(ic))**2)
         ELSE
-          J1 = 0._wp
+          J1 = 0._jp
         END IF
         !---------------------------------------------------------------------------------
         !         Helping friends K1, W1, W2, K2
         !---------------------------------------------------------------------------------
-        K1 = 2._wp * GAM
-        W1 = J1 / 4._wp
+        K1 = 2._jp * GAM
+        W1 = J1 / 4._jp
         W2 = VCMAX
-        K2 = KC * (1._wp + OX / KO)
+        K2 = KC * (1._jp + OX / KO)
         !---------------------------------------------------------------------------------
         ! A = canopy_conductance / 1.6 * (CA - Ci) * p / R / t_air
         ! <=> Ci = CA - 1.6 * R * t_air / p / canopy_conductance * A = CA - A / G0
         !---------------------------------------------------------------------------------
         !if (R_gas < 0.1 .OR. t_air < 0.1 .OR. press_srf < 0.1) &
         !print*,iGP,R_gas,t_air,press_srf
-        G0 = canopy_cond_cl(ic) / 1.6_wp / R_gas * t_air(ic)**(-1) * press_srf(ic)
+        G0 = canopy_cond_cl(ic) / 1.6_jp / R_gas * t_air(ic)**(-1) * press_srf(ic)
         !---------------------------------------------------------------------------------
         ! A = min{JC, JE} - RD
         ! => A = JC - RD ^ A = JE - RD
@@ -589,9 +589,9 @@ CONTAINS
         !  take '-' as minimum value of formula
         !---------------------------------------------------------------------------------
         IF (JMAX .GT. minOfMaxCarboxrate) THEN
-          JE = B / 2._wp - SQRT ( MAX (B**2 / 4._wp - C, 0._wp))
+          JE = B / 2._jp - SQRT ( MAX (B**2 / 4._jp - C, 0._jp))
         ELSE
-          JE = 0._wp
+          JE = 0._jp
         END IF
         !---------------------------------------------------------------------------------
         ! Set Ci in
@@ -602,7 +602,7 @@ CONTAINS
         !---------------------------------------------------------------------------------
         B = DARK_RESP + W2 + G0 * (CO2_mol_mixing_ratio(ic) + K2)
         C = W2 * G0 * (CO2_mol_mixing_ratio(ic) - GAM) + W2 * DARK_RESP
-        JC = B / 2._wp - SQRT ( MAX(B**2 / 4._wp - C, 0._wp))
+        JC = B / 2._jp - SQRT ( MAX(B**2 / 4._jp - C, 0._jp))
         !---------------------------------------------------------------------------------
         ! A = min{JC, JE} - RD
         !  but here A = Gross Photosynthesis = iGPP
@@ -623,7 +623,7 @@ CONTAINS
         !   result for the actual canopy layer goes back to update_bethy as bethy%CO2_conc_leaf has no canopy layers.
         !   Therefore bethy%CO2_conc_leaf_acc is calculated inside the canopy loop!
         CO2_conc_leaf_cl(ic) = CO2_mol_mixing_ratio(ic) - &
-          & MAX((GASS - DARK_RESP) / MAX(G0, 1.E-6_wp), 0._wp)
+          & MAX((GASS - DARK_RESP) / MAX(G0, 1.E-6_jp), 0._jp)
         !---------------------------------------------------------------------------------
         ! Photorespiration
         ! Carboxylilation controlled assimilation:
@@ -632,8 +632,8 @@ CONTAINS
         ! Light limited Assimilation:
         ! JE = J * (Ci - Gam) / 4 / (Ci + 2 * Gam)
         ! Photorespiration = J * Gam / 4 / (Ci + 2 * Gam)
-  !!              PHOTO_RESP = MIN(VCMAX * GAM / ( CO2_conc_leaf_cl + KC * ( 1._wp + OX / KO )), &
-  !!                   J1 * GAM / 4._wp / (CO2_conc_leaf_cl + 2._wp * GAM))                      &
+  !!              PHOTO_RESP = MIN(VCMAX * GAM / ( CO2_conc_leaf_cl + KC * ( 1._jp + OX / KO )), &
+  !!                   J1 * GAM / 4._jp / (CO2_conc_leaf_cl + 2._jp * GAM))                      &
   !!                * HITINHIB
 
       ELSE
@@ -662,13 +662,13 @@ CONTAINS
         !   => A = JC - RD ^ A = JE - RD
         !---------------------------------------------------------------------------------
 
-        K = ETransport * 1.E3_wp * N_scaling_factors(ic)          &      ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        K = ETransport * 1.E3_jp * N_scaling_factors(ic)          &      ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
                 * EXP(EK * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )     ! in mmol CO2 Pecase for C4.
         VCMAX = CarboxRate * N_scaling_factors(ic) &                     ! PVM=PVM0*N_scaling_factors*EXP(Energie
                   * EXP(EV * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )
 
-        DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol(ic),0.0_wp))
-        HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
+        DARKINHIB = 0.5_jp + 0.5_jp * EXP(-2.e5_jp * MAX(par_down_mol(ic),0.0_jp))
+        HITINHIB  = 1._jp / ( 1._jp + EXP( 1.3_jp * ( TC - 55._jp ) ) )
         DARK_RESP = FRDC4 * CarboxRate * N_scaling_factors(ic)  &           ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative
                   * EXP(ER * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )   & !  25C) with RD0 proportional PVM0 at 25C
                   * HITINHIB * DARKINHIB                               ! Abweichung ab der 16. Stelle nach dem Komma
@@ -680,11 +680,11 @@ CONTAINS
         !---------------------------------------------------------------------------------
         !  Ci = CA - 1.6 * R * t_air / p / canopy_conductance * A = CA - A / G0
         !---------------------------------------------------------------------------------
-        G0 = canopy_cond_cl(ic) / 1.6_wp / R_gas * t_air(ic)**(-1) * press_srf(ic)
+        G0 = canopy_cond_cl(ic) / 1.6_jp / R_gas * t_air(ic)**(-1) * press_srf(ic)
         !---------------------------------------------------------------------------------
         !  J0=1/2/Theta *(PVM + Ji) = (alphai * PAR + PVM) / 2 / Theta
         !---------------------------------------------------------------------------------
-        J0 = (ALC4 * apar_per_lai_cl(ic) + VCMAX) /  2._wp / THETA
+        J0 = (ALC4 * apar_per_lai_cl(ic) + VCMAX) /  2._jp / THETA
         !---------------------------------------------------------------------------------
         !  JE = J0 - sqrt( J0^2 - PVM*alphai*PAR/Theta)
         !---------------------------------------------------------------------------------
@@ -692,7 +692,7 @@ CONTAINS
         !---------------------------------------------------------------------------------
         !  JC = (G0*CA + RD) / (1 + G0/K)
         !---------------------------------------------------------------------------------
-        JC = (G0 * CO2_mol_mixing_ratio(ic) + DARK_RESP) / (1._wp + G0 / K)
+        JC = (G0 * CO2_mol_mixing_ratio(ic) + DARK_RESP) / (1._jp + G0 / K)
         !---------------------------------------------------------------------------------
         !  A = min{JC, JE} - RD, but here: A = iGPP
         !---------------------------------------------------------------------------------
@@ -706,12 +706,12 @@ CONTAINS
         !    result for the actual canopy layer goes back to update_bethy as bethy%CO2_conc_leaf has no canopy layers.
         !    Therefore bethy%CO2_conc_leaf_acc is calculated inside the canopy loop!
         CO2_conc_leaf_cl(ic) = CO2_mol_mixing_ratio(ic) - &
-                MAX((GASS-DARK_RESP) / MAX(G0, 1.E-6_wp), 0._wp)
+                MAX((GASS-DARK_RESP) / MAX(G0, 1.E-6_jp), 0._jp)
         !---------------------------------------------------------------------------------
         ! No Photorespiration with C4 plants
         !---------------------------------------------------------------------------------
-        ! PHOTO_RESP = 0._wp
-        JMAX = 0._wp
+        ! PHOTO_RESP = 0._jp
+        JMAX = 0._jp
       END IF !  C3/C4
 
       !------------------------------------------------------------------------------------------------------------------
@@ -751,7 +751,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(jp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(jp),PARAMETER   :: hlp =  (cCost -1._jp) / cCost
     REAL(jp)             :: maintenanceRespiration ! R_m
     REAL(jp)             :: growthRespiration      ! R_g
     INTEGER :: nc, ic
@@ -769,7 +769,7 @@ CONTAINS
     !$ACC   PRIVATE(growthRespiration, maintenanceRespiration)
     DO ic=1,nc
       maintenanceRespiration = dark_respiration_ca(ic) / f_aut_leaf
-      growthRespiration = max(0._wp,hlp * (gross_assimilation_ca(ic) - maintenanceRespiration))
+      growthRespiration = max(0._jp,hlp * (gross_assimilation_ca(ic) - maintenanceRespiration))
       NPP_pot_rate_ca(ic) = gross_assimilation_ca(ic) - maintenanceRespiration - growthRespiration
     END DO
     !$ACC END PARALLEL LOOP
@@ -806,7 +806,7 @@ CONTAINS
       IF (init_running_means) THEN
          NPP_mean_5year = prev_year_mean_NPP
       ELSE
-         NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
+         NPP_mean_5year = (NPP_mean_5year * 4._jp + prev_year_mean_NPP) / 5._jp
       END IF
    ENDIF
 

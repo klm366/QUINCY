@@ -328,7 +328,7 @@ CONTAINS
       DO i=1,ncanopy
         !$ACC LOOP GANG VECTOR
         DO ic=1,nc
-          scaling_fact_cl(ic,i) = 1._wp
+          scaling_fact_cl(ic,i) = 1._jp
         END DO
       END DO
       !$ACC END PARALLEL
@@ -475,7 +475,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = 0._wp
+      canopy_cond_unlimited(ic) = 0._jp
     END DO
 
     !$ACC LOOP SEQ
@@ -501,7 +501,7 @@ CONTAINS
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
+      canopy_cond_unlimited(ic) = MAX(1.e-20_jp, canopy_cond_unlimited(ic))
     END DO
     !$ACC END PARALLEL
 
@@ -860,8 +860,8 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      gross_assimilation_ca(ic) = 0._wp
-      dark_respiration_ca(ic) = 0._wp
+      gross_assimilation_ca(ic) = 0._jp
+      dark_respiration_ca(ic) = 0._jp
     END DO
 
     !$ACC LOOP SEQ

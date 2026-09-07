@@ -157,7 +157,7 @@ CONTAINS
 
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(:,:,:))
-          this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_wp
+          this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm = 0.0_jp
           !$ACC UPDATE DEVICE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm) ASYNC(1)
 
           this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%nr_of_elems = nr_of_elements
@@ -175,7 +175,7 @@ CONTAINS
 
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(:,:,:,:))
-          this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_wp
+          this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm = 0.0_jp
           !$ACC UPDATE DEVICE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm) ASYNC(1)
 
           this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%nr_of_elems = nr_of_elements
@@ -209,7 +209,7 @@ CONTAINS
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(:,:,:,:))
-          this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_wp
+          this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm = 0.0_jp
           !$ACC UPDATE DEVICE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm) ASYNC(1)
 
           this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%nr_of_elems = nr_of_elements
@@ -224,7 +224,7 @@ CONTAINS
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(:,:,:,:,:))
-          this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_wp
+          this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm = 0.0_jp
           !$ACC UPDATE DEVICE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm) ASYNC(1)
 
           this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%nr_of_elems = nr_of_elements

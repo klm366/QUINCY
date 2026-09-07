@@ -253,20 +253,20 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      zero            (ic) = 0._wp
-      hcap_wtr        (ic) = 0._wp
+      zero            (ic) = 0._jp
+      hcap_wtr        (ic) = 0._jp
       l_ice_formation (ic) = .FALSE.
       l_ice_melting   (ic) = .FALSE.
       hflx_tmp(ic) = rad_net_lwtr(ic) + latent_hflx_wtr(ic) + sensible_hflx_wtr(ic)
       IF (config_l_ice_on_lakes) THEN
-        hcap_ice      (ic) = 0._wp
-        l_ice         (ic) = fract_lice(ic) > 0.5_wp
+        hcap_ice      (ic) = 0._jp
+        l_ice         (ic) = fract_lice(ic) > 0.5_jp
       ELSE
-        fract_lice    (ic) = 0._wp
+        fract_lice    (ic) = 0._jp
         l_ice         (ic) = .FALSE.
-        hflx_form_ice (ic) = 0._wp
+        hflx_form_ice (ic) = 0._jp
       END IF
-      forc_hflx       (ic) = 0._wp ! Always zero for lake
+      forc_hflx       (ic) = 0._jp ! Always zero for lake
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -331,12 +331,12 @@ CONTAINS
     ! min_hcap_wtr   = MINVAL(hcap_wtr)
     ! !$ACC END KERNELS
 
-    ! IF (min_fract_lice <= 0.5_wp .AND. min_hcap_wtr < EPSILON(1._wp)) THEN
+    ! IF (min_fract_lice <= 0.5_jp .AND. min_hcap_wtr < EPSILON(1._jp)) THEN
     !   CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     ! END IF
 
 #ifndef _OPENACC
-    IF (ANY(fract_lice(:) <= 0.5_wp .AND. hcap_wtr(:) < EPSILON(1._wp))) THEN
+    IF (ANY(fract_lice(:) <= 0.5_jp .AND. hcap_wtr(:) < EPSILON(1._jp))) THEN
       CALL finish(TRIM(routine),'hcap_wtr can"t be zero')
     END IF
 #endif
@@ -425,16 +425,16 @@ CONTAINS
         ELSE
           qsat_lice(ic) = qsat_mixed(t_lice(ic), press_srf(ic))
         END IF
-        t(ic)         = (1._wp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
+        t(ic)         = (1._jp - fract_lice(ic)) * t_lwtr(ic) + fract_lice(ic) * t_lice(ic)
         t_unfilt(ic)  = t(ic)
         s_lice(ic)    = surface_dry_static_energy(t_lice(ic), qsat_lice(ic), cpd_or_cvd, jsb_standalone)
         IF (use_tmx) THEN
-          s_star(ic) = (1._wp - fract_lice(ic)) * s_lwtr(ic)    + fract_lice(ic) * s_lice(ic)
-          t_rad4(ic) = (1._wp - fract_lice(ic)) * t_lwtr(ic)**4 + fract_lice(ic) * t_lice(ic)**4
+          s_star(ic) = (1._jp - fract_lice(ic)) * s_lwtr(ic)    + fract_lice(ic) * s_lice(ic)
+          t_rad4(ic) = (1._jp - fract_lice(ic)) * t_lwtr(ic)**4 + fract_lice(ic) * t_lice(ic)**4
           t_eff4(ic) = t_rad4(ic)
-          qsat_star(ic) = (1._wp - fract_lice(ic)) * qsat_lwtr(ic) + fract_lice(ic) * qsat_lice(ic)
+          qsat_star(ic) = (1._jp - fract_lice(ic)) * qsat_lwtr(ic) + fract_lice(ic) * qsat_lice(ic)
         END IF
-        heat_cap(ic)  = (1._wp - fract_lice(ic)) * hcap_wtr(ic) + fract_lice(ic) * hcap_ice(ic)
+        heat_cap(ic)  = (1._jp - fract_lice(ic)) * hcap_wtr(ic) + fract_lice(ic) * hcap_ice(ic)
         weq_snow(ic)  = fract_lice(ic) * weq_snow_lice(ic)
       END DO
       !$ACC END PARALLEL LOOP
@@ -453,7 +453,7 @@ CONTAINS
           qsat_star(ic) = qsat_lwtr(ic)
         END IF
         heat_cap(ic) = hcap_wtr(ic)
-        weq_snow(ic) = 0._wp
+        weq_snow(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -505,7 +505,7 @@ CONTAINS
 
     IF (l_ice_melting) THEN
       t_lwtr = t_lwtr + dtime * hflx_resid / hcap
-      hflx_resid = 0._wp
+      hflx_resid = 0._jp
       l_ice_melting = .FALSE.
     ELSE
       ! Heat capacity of lake over open water
@@ -520,7 +520,7 @@ CONTAINS
 
       IF (t_star >= tmelt) THEN              ! No ice formation
         t_lwtr = t_star
-        hflx_resid = 0._wp
+        hflx_resid = 0._jp
         l_ice_formation = .FALSE.
       ELSE                                   ! Realized or unrealized ice formation
         t_lwtr = tmelt
@@ -573,10 +573,10 @@ CONTAINS
 
     IF (hi < hi_min) THEN
       t_lice = tmelt
-      hflx_cond_ice = 0._wp
-      hflx_melt_snow = 0._wp
-      hflx_melt_lice = 0._wp
-      hs = 0._wp
+      hflx_cond_ice = 0._jp
+      hflx_melt_snow = 0._jp
+      hflx_melt_lice = 0._jp
+      hs = 0._jp
       RETURN
     END IF
 
@@ -584,15 +584,15 @@ CONTAINS
     hs = hs + (dtime / rhoh2o) * ( snowfall           & ! Snowfall
       &                          + fs * lhflx / als   & ! Sublimation (< 0) resp. deposition (> 0)
       &                          )
-    hs = MAX(hs, 0._wp)
+    hs = MAX(hs, 0._jp)
 
     ! Preliminary ice temperature
     t_lice = ( hflx + hflx_melt_lice + hcap_ice * t_lice / dtime + ki * tmelt / hi_eff ) / ( hcap_ice / dtime + ki / hi_eff)
 
-    hflx_melt_snow = 0._wp
-    hflx_melt_lice  = 0._wp
+    hflx_melt_snow = 0._jp
+    hflx_melt_lice  = 0._jp
 
-    IF (t_lice > tmelt .AND. hs > 0._wp) THEN        ! Melting for snow first
+    IF (t_lice > tmelt .AND. hs > 0._jp) THEN        ! Melting for snow first
       ! Excess heat which is available for melting of snow (first) and ice (as soon as snow is  melted away completely)
       hflx_melt = ( hcap_ice / dtime + ki /hi_eff ) * (t_lice - tmelt)
       ! Change in snow depth due to melting
@@ -656,28 +656,28 @@ CONTAINS
     IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
 
       hi = - hflx_form_ice * dtime / (rhoi * alf)
-      fi = 1._wp
-      hflx_form_ice = 0._wp
+      fi = 1._jp
+      hflx_form_ice = 0._jp
 
     ELSE IF (hi >= hi_min) THEN                            ! Ice already present
 
       hi = hi + (dtime / rhoi) * (   (hflx_cond_ice - hflx_melt_lice) / alf    &
-        &                          + (1._wp - fs) * lhflx / als               &
+        &                          + (1._jp - fs) * lhflx / als               &
         &                        )
 
       IF (hi >= hi_min) THEN
-        hflx_melt_lice = 0._wp
-        fi = 1._wp
+        hflx_melt_lice = 0._jp
+        fi = 1._jp
         l_ice_melting = .FALSE.
-      ELSE IF (hi <= 0._wp) THEN                              ! Complete melting
+      ELSE IF (hi <= 0._jp) THEN                              ! Complete melting
         hflx_melt_lice = - rhoi * alf * hi / dtime             ! >= 0
-        hi = 0._wp
-        fi = 0._wp
+        hi = 0._jp
+        fi = 0._jp
         l_ice_melting = .TRUE.
       ELSE                                                    ! Unrealized melting
         hflx_melt_lice = rhoi * alf * (hi_min - hi) / dtime    ! > 0
         hi = hi_min
-        fi = 1._wp
+        fi = 1._jp
         l_ice_melting = .FALSE.
       END IF
 
@@ -828,8 +828,8 @@ CONTAINS
 
         ! ================================================================================================================================
         ! Surface fluxes for lake (wtr and ice aggregated)
-        sensible_hflx(ic) = (1._wp - fract_lice(ic)) * sensible_hflx_wtr(ic) + fract_lice(ic) * sensible_hflx_ice(ic)
-        latent_hflx  (ic) = (1._wp - fract_lice(ic)) * latent_hflx_wtr  (ic) + fract_lice(ic) * latent_hflx_ice  (ic)
+        sensible_hflx(ic) = (1._jp - fract_lice(ic)) * sensible_hflx_wtr(ic) + fract_lice(ic) * sensible_hflx_ice(ic)
+        latent_hflx  (ic) = (1._jp - fract_lice(ic)) * latent_hflx_wtr  (ic) + fract_lice(ic) * latent_hflx_ice  (ic)
 
       END DO
       !$ACC END PARALLEL LOOP

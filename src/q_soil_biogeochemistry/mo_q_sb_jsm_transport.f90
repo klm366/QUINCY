@@ -141,29 +141,29 @@ CONTAINS
 
     !> init out var
     !>
-    lateral_loss_dom_carbon_sl(:,:)     = 0.0_wp
-    lateral_loss_dom_nitrogen_sl(:,:)   = 0.0_wp
-    lateral_loss_dom_phosphorus_sl(:,:) = 0.0_wp
-    lateral_loss_dom_carbon13_sl(:,:)   = 0.0_wp
-    lateral_loss_dom_carbon14_sl(:,:)   = 0.0_wp
-    lateral_loss_dom_nitrogen15_sl(:,:) = 0.0_wp
-    lateral_loss_nh4_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_no3_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_po4_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_wp
-    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_wp
-    transport_noy(:,:)                  = 0.0_wp
-    transport_noy_n15(:,:)              = 0.0_wp
-    transport_n2o(:,:)                  = 0.0_wp
-    transport_n2o_n15(:,:)              = 0.0_wp
-    transport_n2(:,:)                   = 0.0_wp
-    transport_n2_n15(:,:)               = 0.0_wp
-    emission_noy(:)                     = 0.0_wp
-    emission_noy_n15(:)                 = 0.0_wp
-    emission_n2o(:)                     = 0.0_wp
-    emission_n2o_n15(:)                 = 0.0_wp
-    emission_n2(:)                      = 0.0_wp
-    emission_n2_n15(:)                  = 0.0_wp
+    lateral_loss_dom_carbon_sl(:,:)     = 0.0_jp
+    lateral_loss_dom_nitrogen_sl(:,:)   = 0.0_jp
+    lateral_loss_dom_phosphorus_sl(:,:) = 0.0_jp
+    lateral_loss_dom_carbon13_sl(:,:)   = 0.0_jp
+    lateral_loss_dom_carbon14_sl(:,:)   = 0.0_jp
+    lateral_loss_dom_nitrogen15_sl(:,:) = 0.0_jp
+    lateral_loss_nh4_solute_sl(:,:)     = 0.0_jp
+    lateral_loss_no3_solute_sl(:,:)     = 0.0_jp
+    lateral_loss_po4_solute_sl(:,:)     = 0.0_jp
+    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_jp
+    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_jp
+    transport_noy(:,:)                  = 0.0_jp
+    transport_noy_n15(:,:)              = 0.0_jp
+    transport_n2o(:,:)                  = 0.0_jp
+    transport_n2o_n15(:,:)              = 0.0_jp
+    transport_n2(:,:)                   = 0.0_jp
+    transport_n2_n15(:,:)               = 0.0_jp
+    emission_noy(:)                     = 0.0_jp
+    emission_noy_n15(:)                 = 0.0_jp
+    emission_n2o(:)                     = 0.0_jp
+    emission_n2o_n15(:)                 = 0.0_jp
+    emission_n2(:)                      = 0.0_jp
+    emission_n2_n15(:)                  = 0.0_jp
 
 
     !>1.0 transport of dissolved organic matter (DOM)
@@ -222,12 +222,12 @@ CONTAINS
     !>  that from each layer a certain fraction excapes directly to the atmosphere. [umol m-3 s-1]
     !>
     ! transport
-    transport_noy(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy(:,:)     / one_day * 1.e6_wp
-    transport_noy_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy_n15(:,:) / one_day * 1.e6_wp
-    transport_n2o(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o(:,:)     / one_day * 1.e6_wp
-    transport_n2o_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o_n15(:,:) / one_day * 1.e6_wp
-    transport_n2(:,:)      = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2(:,:)      / one_day * 1.e6_wp
-    transport_n2_n15(:,:)  = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2_n15(:,:)  / one_day * 1.e6_wp
+    transport_noy(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy(:,:)     / one_day * 1.e6_jp
+    transport_noy_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * noy_n15(:,:) / one_day * 1.e6_jp
+    transport_n2o(:,:)     = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o(:,:)     / one_day * 1.e6_jp
+    transport_n2o_n15(:,:) = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2o_n15(:,:) / one_day * 1.e6_jp
+    transport_n2(:,:)      = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2(:,:)      / one_day * 1.e6_jp
+    transport_n2_n15(:,:)  = -rtm_gasdiffusion_act(:,:) * rmm_gasdiffusion_act(:,:) * n2_n15(:,:)  / one_day * 1.e6_jp
     ! emission rates as positive flux to the atmosphere, integrated over the soil column [umol m-2 s-1]
     emission_noy(:)     = SUM(-transport_noy(:,:)     * soil_depth_sl(:,:), DIM=2)
     emission_n2o(:)     = SUM(-transport_n2o(:,:)     * soil_depth_sl(:,:), DIM=2)
@@ -403,7 +403,7 @@ CONTAINS
       &   + sb_formation_mt(ix_microbial, ixC, :, 1)        - sb_loss_mt(ix_microbial, ixC, :, 1)         &
       &   + sb_formation_mt(ix_residue, ixC, :, 1)          - sb_loss_mt(ix_residue, ixC, :, 1)           &
       &   + sb_formation_mt(ix_residue_assoc, ixC, :, 1)    - sb_loss_mt(ix_residue_assoc, ixC, :, 1)  )  &
-      & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
+      & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._jp)
 
     ! For lower soil layers all compartments (including woody litter) are considered
     DO isoil = 2,nsoil_w
@@ -417,11 +417,11 @@ CONTAINS
       &   + sb_formation_mt(ix_microbial, ixC, :, isoil)           - sb_loss_mt(ix_microbial, ixC, :, isoil)         &
       &   + sb_formation_mt(ix_residue, ixC, :, isoil)             - sb_loss_mt(ix_residue, ixC, :, isoil)           &
       &   + sb_formation_mt(ix_residue_assoc, ixC, :, isoil)       - sb_loss_mt(ix_residue_assoc, ixC, :, isoil) )   &
-      & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
+      & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._jp)
       ! should be the same -- but is not bitidentical...:
       ! particle_fluxrate(:,isoil) = particle_fluxrate(:,isoil-1) + soil_depth_sl(:,isoil) &
       !   & * SUM((sb_formation_mt(: ,ixC,:,isoil) - sb_loss_mt(: ,ixC,:,isoil)),DIM=1)      &
-      !   & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._wp)
+      !   & / (carbon_per_dryweight_SOM / molar_mass_C * 1000._jp)
     ENDDO
 
     !>2.0 convert change in pools in density change and thus transport term (m per dtime)
@@ -676,12 +676,12 @@ CONTAINS
       nsoil = NINT(num_sl_above_bedrock(ic))
       IF (nsoil > 1) THEN
         DO isoil = 1, nsoil-1
-          IF (particle_fluxrate(ic, isoil) < 0.0_wp) THEN
+          IF (particle_fluxrate(ic, isoil) < 0.0_jp) THEN
             hlp1(ic) = particle_fluxrate(ic, isoil) * pool(ic, isoil + 1)
           ELSE
             ! when particle transport pushes down material, check if the fluxrate exceeds the soil layer depth
             isoil_hlp = isoil
-            hlp1(ic)  = 0._wp
+            hlp1(ic)  = 0._jp
             hlp2(ic)  = particle_fluxrate(ic, isoil)
             ! DO WHILE loop: only when fluxrate is more than the soil layer depth,
             !          push the whole layer downwards and store the rest in hlp2
@@ -703,11 +703,11 @@ CONTAINS
         !>2.0 lower boundary condition @TODO: mass balance check while enabling the last layer
         !>
         ! we simply skip the last soil layer to avoid mass loss of the system
-        hlp1(ic)            = 0.0_wp
+        hlp1(ic)            = 0.0_jp
         transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
       ! ELSEIF (nsoil == 1) THEN
         ! ! only one soil layer above bedbrock, allow only downward flux
-        ! hlp1(ic)            = MAX(0.0_wp, MIN(soil_depth_sl(ic, nsoil), particle_fluxrate(ic, nsoil))) * pool(ic, nsoil)
+        ! hlp1(ic)            = MAX(0.0_jp, MIN(soil_depth_sl(ic, nsoil), particle_fluxrate(ic, nsoil))) * pool(ic, nsoil)
         ! transport(ic,nsoil) = transport(ic, nsoil) - hlp1(ic) / soil_depth_sl(ic, nsoil)
       ELSE
         ! bare soil or nsoil == 1
@@ -760,8 +760,8 @@ CONTAINS
 
     !>0.9 init out var
     !>
-    leaching(:)                 = 0.0_wp
-    lateral_loss_material(:,:)  = 0.0_wp
+    leaching(:)                 = 0.0_jp
+    lateral_loss_material(:,:)  = 0.0_jp
 
     !>1.0 advective transport in the vertical axis of the soil (i.e., down, but see below TODO)
     !>
@@ -774,11 +774,11 @@ CONTAINS
       DO is = 1,(NINT(num_sl_above_bedrock(ic)) - 1)
         ! downward transport
         ! (incl. unit conversion of from s-1 to timestep-1 considering frac_wtr_transp_down_sl)
-        IF (frac_wtr_transp_down_sl(ic,is) > 0.0_wp) THEN
-          hlp1(ic) = frac_wtr_transp_down_sl(ic,is) * dtime / 1000._wp * pool(ic,is) * soil_depth_sl(ic,is)
+        IF (frac_wtr_transp_down_sl(ic,is) > 0.0_jp) THEN
+          hlp1(ic) = frac_wtr_transp_down_sl(ic,is) * dtime / 1000._jp * pool(ic,is) * soil_depth_sl(ic,is)
         ! upward transport - @TODO for now NO upward transport
         ELSE
-          hlp1(ic) = 0.0_wp ! frac_wtr_transp_down_sl(:,is) * dtime/1000._wp * pool(:,is+1) * soil_depth_sl(:,is+1)
+          hlp1(ic) = 0.0_jp ! frac_wtr_transp_down_sl(:,is) * dtime/1000._jp * pool(:,is+1) * soil_depth_sl(:,is+1)
         END IF
         ! remove from current soil layer is
         transport(ic,is)   = transport(ic,is)   - hlp1(ic) / soil_depth_sl(ic,is)
@@ -794,11 +794,11 @@ CONTAINS
     !
     ! the calculation incl. unit conversion of 'frac_wtr_transp_down_sl' from s-1 to timestep-1
     DO ic = 1,nc
-      IF (frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) > 0.0_wp) THEN
-        hlp1(ic) = frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) * dtime / 1000._wp &
+      IF (frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) > 0.0_jp) THEN
+        hlp1(ic) = frac_wtr_transp_down_sl(ic, NINT(num_sl_above_bedrock(ic))) * dtime / 1000._jp &
           &        * pool(ic, NINT(num_sl_above_bedrock(ic))) * soil_depth_sl(ic, NINT(num_sl_above_bedrock(ic)))
       ELSE
-        hlp1(ic) = 0.0_wp
+        hlp1(ic) = 0.0_jp
       END IF
       transport(ic, NINT(num_sl_above_bedrock(ic))) = transport(ic, NINT(num_sl_above_bedrock(ic))) - hlp1(ic) &
         &                                            / soil_depth_sl(ic, NINT(num_sl_above_bedrock(ic)))
@@ -809,16 +809,16 @@ CONTAINS
     !>
     !>  calculation of the the flux of lateral loss of material per soil layer
     !>  lateral_loss material flux =
-    !>    "fraction water lateral_loss" * material_pool (mol m-3) * soil_depth (m) * dtime / 1000._wp
+    !>    "fraction water lateral_loss" * material_pool (mol m-3) * soil_depth (m) * dtime / 1000._jp
     !>
     !
     ! the calculation incl. unit conversion of 'frac_wtr_transp_down_sl' from s-1 to timestep-1
     DO ic = 1,nc
       DO is = 1,NINT(num_sl_above_bedrock(ic))
-        IF (frac_w_lat_loss_sl(ic, is) > 0.0_wp) THEN
-          hlp1(ic) = frac_w_lat_loss_sl(ic, is) * pool(ic, is) * soil_depth_sl(ic, is) * dtime / 1000._wp
+        IF (frac_w_lat_loss_sl(ic, is) > 0.0_jp) THEN
+          hlp1(ic) = frac_w_lat_loss_sl(ic, is) * pool(ic, is) * soil_depth_sl(ic, is) * dtime / 1000._jp
         ELSE
-          hlp1(ic) = 0.0_wp
+          hlp1(ic) = 0.0_jp
         END IF
         lateral_loss_material(ic, is) = hlp1(ic) / soil_depth_sl(ic, is)
       ENDDO
@@ -857,11 +857,11 @@ CONTAINS
 
     !> init out var
     !>
-    k_bioturb(:,:) = 0.0_wp
+    k_bioturb(:,:) = 0.0_jp
 
     !>1.0 calculate root density relative to top-soil root density
     !>
-    hlp1(:,:) = 0.0_wp
+    hlp1(:,:) = 0.0_jp
     DO ic = 1,nc
       DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = root_fraction_sl(ic, is) / soil_depth_sl(ic, is)
@@ -873,7 +873,7 @@ CONTAINS
         IF (hlp1(ic, 1) > eps8) THEN
           hlp1(ic, is) = hlp1(ic, is) / hlp1(ic, 1)
         ELSE
-          hlp1(ic, is) = 0.0_wp
+          hlp1(ic, is) = 0.0_jp
         ENDIF
       ENDDO
     ENDDO
@@ -885,7 +885,7 @@ CONTAINS
         IF (bulk_dens_corr_sl(ic, is) > eps8) THEN
           k_bioturb(ic, is) = hlp1(ic, is) * k_diff_org / bulk_dens_corr_sl(ic, is)
         ELSE
-          k_bioturb(ic, is) = 0.0_wp
+          k_bioturb(ic, is) = 0.0_jp
         ENDIF
       ENDDO
     ENDDO
@@ -930,12 +930,12 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1,(NINT(num_sl_above_bedrock(ic)) - 1)
         ! distance between the centres of the soil layers
-        hlp1(ic) = (soil_depth_sl(ic,is) / 2.0_wp + soil_depth_sl(ic,is + 1) / 2.0_wp)
+        hlp1(ic) = (soil_depth_sl(ic,is) / 2.0_jp + soil_depth_sl(ic,is + 1) / 2.0_jp)
 
         IF (hlp1(ic) > eps8) THEN
           hlp2(ic) = k_bioturb(ic,is) * dtime * (pool(ic,is) - pool(ic,is + 1)) / hlp1(ic)
         ELSE
-          hlp2(ic) = 0.0_wp
+          hlp2(ic) = 0.0_jp
         ENDIF
         transport(ic,is)     = transport(ic,is)     - hlp2(ic) / soil_depth_sl(ic,is)
         transport(ic,is + 1) = transport(ic,is + 1) + hlp2(ic) / soil_depth_sl(ic,is + 1)

@@ -55,7 +55,7 @@ MODULE mo_fage_process
       END DO
 
       ! youngest is emptied
-      fract_per_age (:,1) = 0._wp
+      fract_per_age (:,1) = 0._jp
 
       !recalculate mean age
       mean_age (:) = get_mean_age(fract_per_age)
@@ -90,12 +90,12 @@ MODULE mo_fage_process
       thisMinAge = int(age_ubounds(i_ac-1)+1)
       thisMaxAge = int(age_ubounds(i_ac))
 
-      IF (ANY(fract_per_age(:,thisMinAge:thisMaxAge) < - EPSILON(1._wp))) THEN
+      IF (ANY(fract_per_age(:,thisMinAge:thisMaxAge) < - EPSILON(1._jp))) THEN
         WRITE (message_text,*) 'Violation of assertion: tracked age fraction got negative for age class ', &
           & i_ac, ' of pft ', pftid
         CALL finish (routine, message_text)
       END IF
-      fract_per_age(:,thisMinAge:thisMaxAge) = MAX(fract_per_age(:,thisMinAge:thisMaxAge), 0.0_wp)
+      fract_per_age(:,thisMinAge:thisMaxAge) = MAX(fract_per_age(:,thisMinAge:thisMaxAge), 0.0_jp)
 
       thisAreaSum = SUM(fract_per_age(:,thisMinAge:thisMaxAge), DIM=2)
 
@@ -146,7 +146,7 @@ MODULE mo_fage_process
 
     thisAreaSum(:) = SUM(fract_per_age(:,thisMinAge:thisMaxAge), DIM=2)
 
-    IF (ANY(thisAreaSum(:) .GT. 0._wp)) THEN
+    IF (ANY(thisAreaSum(:) .GT. 0._jp)) THEN
       ! Assertion: sum of available area needs to be larger than the disturbed area
       IF (ANY(this_cf_loss(:) .GT. thisAreaSum(:))) THEN
           WRITE (message_text,*) 'Violation of assertion: more area disturbed than available ' &
@@ -156,7 +156,7 @@ MODULE mo_fage_process
 
       ! Subtract proportionally from all ages within this age class
       DO k = thisMinAge,thisMaxAge
-        WHERE(thisAreaSum(:) > 0.0_wp)
+        WHERE(thisAreaSum(:) > 0.0_jp)
           fract_per_age(:,k) = fract_per_age(:,k) - (this_cf_loss(:) * (fract_per_age(:,k) / thisAreaSum(:)))
         END WHERE
       END DO
@@ -177,7 +177,7 @@ MODULE mo_fage_process
     REAL(jp), intent(in)    :: source_var       !< value of the variable in the source tile
     REAL(jp), intent(inout) :: target_var       !< value of the variable in the target tile
     ! -------------------------------------------------------------------------------------------------- !
-     IF (delta_fract .GT. 0._wp) THEN
+     IF (delta_fract .GT. 0._jp) THEN
       target_var = ((target_var * old_target_fract) + (source_var * delta_fract)) / (old_target_fract + delta_fract)
      END IF
 
@@ -203,7 +203,7 @@ MODULE mo_fage_process
     ! -------------------------------------------------------------------------------------------------- !
     REAL(jp) :: target_var, source_var
     ! -------------------------------------------------------------------------------------------------- !
-     IF (delta_fract .GT. 0._wp) THEN
+     IF (delta_fract .GT. 0._jp) THEN
 
       target_var = target_per_canopy_var * veg_fract_corr_target
       source_var = source_per_canopy_var * veg_fract_corr_source

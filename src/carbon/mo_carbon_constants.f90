@@ -29,23 +29,23 @@ MODULE mo_carbon_constants
   INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
 
   ! Further constants
-  REAL(jp), PARAMETER :: molarMassC_kg           = 12.01_wp * 1.e-3_wp  !< 12.01e-3_wp   -  Mass of 1 mol C   in kg
+  REAL(jp), PARAMETER :: molarMassC_kg           = 12.01_jp * 1.e-3_jp  !< 12.01e-3_jp   -  Mass of 1 mol C   in kg
   !$ACC DECLARE COPYIN(molarMassC_kg)
-  REAL(jp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_wp     !< 44.0095e-3_wp -  Mass of 1 mol CO2 in kg
+  REAL(jp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_jp     !< 44.0095e-3_jp -  Mass of 1 mol CO2 in kg
   !$ACC DECLARE COPYIN(molarMassCO2_kg)
 
-  REAL(jp), PARAMETER :: FireFracWood2Atmos      =  0.2_wp              !< Fraction of wood carbon emitted to the atm by fire.
+  REAL(jp), PARAMETER :: FireFracWood2Atmos      =  0.2_jp              !< Fraction of wood carbon emitted to the atm by fire.
                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
   !$ACC DECLARE COPYIN(FireFracWood2Atmos)
-  REAL(jp), PARAMETER :: fract_wood_aboveGround  = 0.7_wp               !< Fraction of C above ground in wood pool (for separation
+  REAL(jp), PARAMETER :: fract_wood_aboveGround  = 0.7_jp               !< Fraction of C above ground in wood pool (for separation
                                                                         !  of woody litter into above and below ground litter pools)
   !$ACC DECLARE COPYIN(fract_wood_aboveGround)
-  REAL(jp), PARAMETER :: fract_green_aboveGround = 0.5_wp               !< Fraction of C above ground in green pool (for separation
+  REAL(jp), PARAMETER :: fract_green_aboveGround = 0.5_jp               !< Fraction of C above ground in green pool (for separation
                                                                         !  of green litter into above and below ground litter pools)
   !$ACC DECLARE COPYIN(fract_green_aboveGround)
-  REAL(jp), PARAMETER :: sec_per_day             = 86400._wp            !< seconds per day
+  REAL(jp), PARAMETER :: sec_per_day             = 86400._jp            !< seconds per day
   !$ACC DECLARE COPYIN(sec_per_day)
-  REAL(jp), PARAMETER :: days_per_year           = 365.25_wp
+  REAL(jp), PARAMETER :: days_per_year           = 365.25_jp
   !$ACC DECLARE COPYIN(days_per_year)
   REAL(jp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)

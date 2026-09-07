@@ -92,7 +92,7 @@ CONTAINS
       & t_cf('cf_target_year', '', 'Target cover fractions read from forcing.'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & lrestart=.FALSE., initval_r=-0.1_wp)
+      & lrestart=.FALSE., initval_r=-0.1_jp)
 
     CALL mem%Add_var('cf_delta', mem%cf_delta,                                            &
       & hgrid, pft_vgrid,                                                                 &
@@ -100,7 +100,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
-      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_jp)
 
   END SUBROUTINE Init_alcc_memory
 

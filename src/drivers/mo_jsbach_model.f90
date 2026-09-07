@@ -968,7 +968,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) = 1._wp
+            evapo_act2pot(ic, iblk) = 1._jp
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -978,8 +978,8 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
-              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
+            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._jp)) &
+              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._jp))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -1084,7 +1084,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._jp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -1094,7 +1094,7 @@ CONTAINS
         DO iblk = 1, nblks
           DO ic = 1, nproma
             hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
-            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._jp + 1._jp / hlp1)
             hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
             CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
           END DO
@@ -1152,7 +1152,7 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._jp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue

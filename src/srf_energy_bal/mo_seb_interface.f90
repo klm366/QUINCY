@@ -576,7 +576,7 @@ CONTAINS
       ! Compute surface/skin temperature change
       delta_t_srf(ic) = t(ic) - t_old(ic)
 
-      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
+      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_jp)) THEN
         ! Compute energy flux residual (without surface/skin temperature change)
         net_srf_rad_balance(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
           &                     + forc_hflx(ic) + le_phase_change(ic) / dtime
@@ -590,9 +590,9 @@ CONTAINS
     ! compensate for it, and large values do not necessarily indicate a problem.
 #ifndef _OPENACC
     DO ic=1,nc
-      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
+      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._jp) THEN
         IF (ABS(net_srf_rad_balance(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
-          & ((t(ic) > 400._wp .OR. t(ic) < 50._wp).AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
+          & ((t(ic) > 400._jp .OR. t(ic) < 50._jp).AND. tile_fract(ic) > EPSILON(1.0_jp))) THEN
           n_cells = n_cells + 1       ! Count number of cells with energy balance issues of this time step
           cell_idx(n_cells) = ic      ! Index of the respective grid cell (on chunk)
         END IF
@@ -702,10 +702,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
 
       tile_fract => tile%fract(:,:)
-      IF (ANY(t(:,:) < 50._wp .OR. t(:,:) > 400._wp)) THEN
+      IF (ANY(t(:,:) < 50._jp .OR. t(:,:) > 400._jp)) THEN
         DO iblk = 1, grid%nblks
           DO ic = 1, grid%nproma
-            IF ((t(ic,iblk) < 50._wp .OR. t(ic,iblk) > 400._wp) .AND. tile_fract(ic,iblk) > 0._wp) THEN
+            IF ((t(ic,iblk) < 50._jp .OR. t(ic,iblk) > 400._jp) .AND. tile_fract(ic,iblk) > 0._jp) THEN
               WRITE (message_text,*) 'Temperature out of bound: ', t(ic,iblk), 'K',             NEW_LINE('a'), &
                 & 'on ',TRIM(tile%name),' tile at', lat(ic,iblk), 'N and ', lon(ic,iblk), 'E',  NEW_LINE('a'), &
                 & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:', tile_fract(ic,iblk),'):',          NEW_LINE('a'), &
@@ -750,7 +750,7 @@ CONTAINS
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     IF (SEB__mem%t_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(t_gmean, t, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(t_gmean, t, land_area_scaling, 1.0_jp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(SEB__mem%t_gmean%ptr(:))
     END IF
 

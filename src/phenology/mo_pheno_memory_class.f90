@@ -189,7 +189,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
         & hgrid, surface,                                                      &
@@ -197,7 +197,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=MINIMUM,                                                &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_jp, l_aggregate_all=.TRUE. )
 
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
         grib2_desc = t_grib2(2,0,228, grib_bits)
@@ -210,7 +210,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & output_level=MINIMUM,                                                &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_jp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_fpc_max', mem%fract_fpc_max,                    &
         & hgrid, surface,                                                      &
@@ -218,7 +218,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
         &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
@@ -227,7 +227,7 @@ CONTAINS
           & t_cf('forest_fraction', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix,                                                      &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_jp )
       END IF
 
       CALL mem%Add_var( 'veg_fract_correction', mem%veg_fract_correction,      &
@@ -237,7 +237,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
         & lrestart=.TRUE.,                                                     &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_jp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
@@ -246,105 +246,105 @@ CONTAINS
           & t_cf('growth_phase_SummerGreen', '', ''),                          &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & initval_r=-1.0_wp) ! Start in rest phase for summergreens
+          & initval_r=-1.0_jp) ! Start in rest phase for summergreens
 
         CALL mem%Add_var('growth_phase_eg', mem%growth_phase_EG,               &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_EverGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & initval_r=1.0_wp ) ! Start in vegetative phase for evergreens
+          & initval_r=1.0_jp ) ! Start in vegetative phase for evergreens
 
         CALL mem%Add_var('growth_phase_crp', mem%growth_phase_CRP,             &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_Crop', '', ''),                                 &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & initval_r=-1.0_wp )
+          & initval_r=-1.0_jp )
 
         CALL mem%Add_var('growth_days_eg', mem%days_since_growth_begin_EG,      &
           & hgrid, surface,                                                     &
           & t_cf('days_since_growth_begin_EverGreen', '', ''),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_jp )
 
         CALL mem%Add_var('growth_days_sg', mem%days_since_growth_begin_SG,      &
           & hgrid, surface,                                                     &
           & t_cf('days_since_growth_begin_SummerGreen', '', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_jp )
 
         CALL mem%Add_var('yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,      &
           & hgrid, surface,                                                          &
           & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._jp )
 
         ! CALL mem%Add_var('laimax_dyn', mem%laiMax_dyn,                         &
         !   & hgrid, surface,                                                    &
         !   & t_cf('laiMax_dyn', '', ''),                                        &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         !   & prefix, suffix,                                                    &
-        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=-1.0_wp)
+        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=-1.0_jp)
 
         ! CALL mem%Add_var('year_npp_sum', mem%year_NPP_sum,                      &
         !   & hgrid, surface,                                                     &
         !   & t_cf('year_NPP_sum', '', ''),                                       &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         !   & prefix, suffix,                                                     &
-        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=2.0_wp)
+        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=2.0_jp)
 
         CALL mem%Add_var('day_npp_sum', mem%day_NPP_sum,                       &
           & hgrid, surface,                                                    &
           & t_cf('day_NPP_sum', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._jp)
 
         CALL mem%Add_var('heat_sum_eg', mem%heat_sum_EG,                       &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_EG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_jp)
 
         CALL mem%Add_var('heat_sum_sg', mem%heat_sum_SG,                       &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_jp) ! has to be lower than -1
 
         CALL mem%Add_var('heat_sum_crp', mem%heat_sum_CRP,                     &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=9999.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=9999.0_jp)
 
         CALL mem%Add_var('heat_sum_winter', mem%heat_sum_winter,               &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-EPSILON(1._jp))
 
         CALL mem%Add_var('chill_days_eg', mem%chill_days_EG,                   &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._jp)
 
         CALL mem%Add_var('chill_days_sg', mem%chill_days_SG,                   &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._jp)
 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
@@ -353,7 +353,7 @@ CONTAINS
             & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_jp)
 
           !@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
           CALL mem%Add_var('individuals', mem%number_of_individuals,             &
@@ -361,14 +361,14 @@ CONTAINS
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_jp)
 
           CALL mem%Add_var('biomass_per_ind', mem%biomass_per_individual,        &
             & hgrid, surface,                                                    &
             & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
-            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+            & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_jp)
 
           CALL mem%Add_var( 'cconservation_allom', mem%cconservation_allom,             &
             & hgrid, surface,                                                           &
@@ -376,7 +376,7 @@ CONTAINS
               & 'Test for c conservation on rescaling of c states for allom.'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
             & prefix, suffix,                                                           &
-            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+            & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_jp, l_aggregate_all=.TRUE. )
 
         END IF ! l_forestRegrowth
       END IF ! logrop
@@ -390,14 +390,14 @@ CONTAINS
           & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_jp )
 
         CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
           & hgrid, surface,                                                           &
           & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
           & prefix, suffix,                                                           &
-          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_wp )
+          & output_groups=['mon'], lrestart=.FALSE., initval_r=0.0_jp )
 
       END IF
     END IF !  VEG / LAND

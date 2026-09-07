@@ -309,7 +309,7 @@ CONTAINS
     CASE DEFAULT
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        veg_height(ic) = 0._wp
+        veg_height(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END SELECT
@@ -327,7 +327,7 @@ CONTAINS
           IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
             !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic=1,nc
-              is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._wp
+              is_glacier(ic) = tile%lcts(ilct)%fract(ics+ic-1,iblk) > 0._jp
             END DO
             !$ACC END PARALLEL LOOP
             EXIT
@@ -346,7 +346,7 @@ CONTAINS
     ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=ics,ice
-      tile_fract_zero(ic-ics+1) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._wp
+      tile_fract_zero(ic-ics+1) = .NOT. grid%lsm(ic,iblk) .OR. tile%fract(ic,iblk) <= 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -394,9 +394,9 @@ CONTAINS
       ! Save old surface temperature and saturation spec. humidity
       IF (tile_fract_zero(ic)) THEN
         ! Fix needed for numerical reasons on grid cells without real land fraction
-        t_unfilt_old(ic) = 280._wp
-        t_srf_old(ic)    = 280._wp
-        t_old(ic)        = 280._wp
+        t_unfilt_old(ic) = 280._jp
+        t_srf_old(ic)    = 280._jp
+        t_old(ic)        = 280._jp
       ELSE
         t_unfilt_old(ic) = t_unfilt(ic)
         ! Note: t_srf is only in restart file if skin temperature scheme is used or for the atm/lnd
@@ -439,8 +439,8 @@ CONTAINS
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE
-        IF (ice_pond(ic) > EPSILON(1.0_wp)) THEN
-          frozen_fract(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_pond(ic)
+        IF (ice_pond(ic) > EPSILON(1.0_jp)) THEN
+          frozen_fract(ic) = fract_snow(ic) + (1._jp - fract_snow(ic)) * fract_pond(ic)
         ELSE
           frozen_fract(ic) = fract_snow(ic)
         END IF
@@ -526,15 +526,15 @@ CONTAINS
 #ifndef _OPENACC
     ! Security prints for more meaningfull error message than "lookup table overflow"
     IF (use_tmx) THEN
-      IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp .AND. tile%fract(ics:ice,iblk) > 0._wp)) THEN
-        ic = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+      IF (ANY(4._jp * t_star(:) - 3._jp * t_old(:) <= 0._jp .AND. tile%fract(ics:ice,iblk) > 0._jp)) THEN
+        ic = MINLOC(4._jp * t_star(:) - 3._jp * t_old(:), DIM=1)
         WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
           & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'
         CALL message(TRIM(routine), message_text)
       END IF
     ELSE
-      IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
-        ic = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+      IF (ANY(4._jp * t_star(:) - 3._jp * t_old(:) <= 0._jp)) THEN
+        ic = MINLOC(4._jp * t_star(:) - 3._jp * t_old(:), DIM=1)
         WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',         &
           & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'
         CALL finish(TRIM(routine), message_text)
@@ -545,7 +545,7 @@ CONTAINS
     ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      t_eff4(ic) = t_radref(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_radref(ic))
+      t_eff4(ic) = t_radref(ic)**3 * (4._jp * t_star(ic) - 3._jp * t_radref(ic))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -568,7 +568,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
 
     INTEGER, PARAMETER :: NUM_ITERS = 10
-    REAL(jp), PARAMETER :: LIMIT_DELTAT = 10._wp
+    REAL(jp), PARAMETER :: LIMIT_DELTAT = 10._jp
 
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
@@ -673,11 +673,11 @@ CONTAINS
           ! We are still missing the top-layer heat capacity here, so no actual skin temperature calculation is possible.
           s_star(ic) = t2s_conv(ic) * t(ic)
           s_srf(ic) = s_star(ic)
-          dt_sk_dt_srf(ic) = 1._wp
+          dt_sk_dt_srf(ic) = 1._jp
           t_radref(ic) = t(ic)
           qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
-          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
-          le_phase_change(ic) = 0._wp
+          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
+          le_phase_change(ic) = 0._jp
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
@@ -689,13 +689,13 @@ CONTAINS
 
           ! Initialize zero tile fractions.
           IF (tile_fract_zero(ic)) THEN
-            s_star(ic) = t2s_conv(ic) * 280._wp
+            s_star(ic) = t2s_conv(ic) * 280._jp
             s_srf(ic) = s_star(ic)
-            dt_sk_dt_srf(ic) = 1._wp
-            t_radref(ic) = 280._wp
-            qsat_star(ic) = qsat_mixed(280._wp, press_srf(ic))
-            dQdT(ic) = (qsat_mixed(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
-            le_phase_change(ic) = 0._wp
+            dt_sk_dt_srf(ic) = 1._jp
+            t_radref(ic) = 280._jp
+            qsat_star(ic) = qsat_mixed(280._jp, press_srf(ic))
+            dQdT(ic) = (qsat_mixed(280._jp + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
+            le_phase_change(ic) = 0._jp
           END IF
         END DO
         !$ACC END PARALLEL LOOP
@@ -724,7 +724,7 @@ CONTAINS
               rad_net_star = rad_srf_net(ic) + stbo * zemiss_def * (t(ic)**4 - t_star(ic)**4)
               t_radref(ic) = t_star(ic)
               qsat_star(ic) = qsat_mixed(t_star(ic), press_srf(ic))
-              dQdT(ic) = (qsat_mixed(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+              dQdT(ic) = (qsat_mixed(t_star(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
 
               s_ref = t2s_conv(ic) * t_star(ic)
 
@@ -762,7 +762,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
-        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
         t_radref(ic) = t(ic)
       END DO
       !$ACC END PARALLEL LOOP
@@ -790,11 +790,11 @@ CONTAINS
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
-          le_phase_change(ic) = 0._wp
+          le_phase_change(ic) = 0._jp
         ELSE IF (tile_fract_zero(ic)) THEN
           ! Fix needed for numerical reasons on grid cells without real land fraction
-          s_star(ic) = 280._wp * t2s_conv(ic)
-          le_phase_change(ic) = 0._wp
+          s_star(ic) = 280._jp * t2s_conv(ic)
+          le_phase_change(ic) = 0._jp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
           s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
@@ -816,8 +816,8 @@ CONTAINS
         t_star(ic) = s_star(ic) / t2s_conv(ic)
 
         ! Asselin filter (copy of the routine `update_asselin_land`)
-        IF (eps > 0._wp) THEN
-          t_star(ic) = t_unfilt(ic) + eps * (t(ic) - 2._wp * t_unfilt(ic) + t_star(ic))
+        IF (eps > 0._jp) THEN
+          t_star(ic) = t_unfilt(ic) + eps * (t(ic) - 2._jp * t_unfilt(ic) + t_star(ic))
         END IF
 
       END DO
@@ -843,11 +843,11 @@ CONTAINS
 
         IF (lstart) THEN
           s_star(ic) = t2s_conv(ic) * t(ic)
-          le_phase_change(ic) = 0._wp
+          le_phase_change(ic) = 0._jp
         ELSE IF (tile_fract_zero(ic)) THEN
           ! Fix needed for numerical reasons on grid cells without real land fraction
-          s_star(ic) = 280._wp * t2s_conv(ic)
-          le_phase_change(ic) = 0._wp
+          s_star(ic) = 280._jp * t2s_conv(ic)
+          le_phase_change(ic) = 0._jp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
           s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
@@ -865,7 +865,7 @@ CONTAINS
         END IF
 
         s_srf(ic) = s_star(ic)
-        dt_sk_dt_srf(ic) = 1._wp
+        dt_sk_dt_srf(ic) = 1._jp
 
         ! This is the actual qsat that is consistent with the implicit fluxes. Since we are linearizing, dQdT does not change.
         qsat_star(ic) = qsat_star(ic) + dQdT(ic) * (s_star(ic) / t2s_conv(ic) - t(ic))
@@ -937,11 +937,11 @@ CONTAINS
       DO ic = 1, nc
         s_star(ic) = t2s_conv(ic) * t(ic)
         s_srf(ic) = s_star(ic)
-        dt_sk_dt_srf(ic) = 1._wp
+        dt_sk_dt_srf(ic) = 1._jp
         t_radref(ic) = t(ic)
         qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
-        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
-        le_phase_change(ic) = 0._wp
+        dQdT(ic) = (qsat_mixed(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
+        le_phase_change(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -949,19 +949,19 @@ CONTAINS
       !$ACC   NO_CREATE(skin_conductivity) PRIVATE(s_ref, s_melt, heat_tcoef)
       DO ic = 1, nc
         IF (tile_fract_zero(ic)) THEN
-          s_star(ic) = t2s_conv(ic) * 280._wp
+          s_star(ic) = t2s_conv(ic) * 280._jp
           s_srf(ic) = s_star(ic)
-          dt_sk_dt_srf(ic) = 1._wp
-          t_radref(ic) = 280._wp
-          qsat_star(ic) = qsat_mixed(280._wp, press_srf(ic))
-          dQdT(ic) = (qsat_mixed(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
-          le_phase_change(ic) = 0._wp
+          dt_sk_dt_srf(ic) = 1._jp
+          t_radref(ic) = 280._jp
+          qsat_star(ic) = qsat_mixed(280._jp, press_srf(ic))
+          dQdT(ic) = (qsat_mixed(280._jp + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
+          le_phase_change(ic) = 0._jp
         ELSE
           heat_tcoef = heat_transfer_coef(drag_srf(ic), dtime, alpha)
 
           t_radref(ic) = t(ic)
           qsat_star(ic) = qsat_mixed(t(ic), press_srf(ic))
-          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+          dQdT(ic) = (qsat_mixed(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
 
           s_ref = t2s_conv(ic) * t(ic)
 
@@ -973,7 +973,7 @@ CONTAINS
               & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
               & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
               & rad_srf_net(ic), forc_hflx(ic), heat_tcoef,         & ! in
-              & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
+              & 0._jp,                                              & ! in (dheat_tcoef/dtsk)
               & fact_q_air(ic), fact_qsat_srf(ic), frozen_fract(ic),& ! in
               & heat_cap(ic), le_freeze_pot(ic), le_melt_pot(ic),   & ! in
               & skin_conductivity(ic),                              & ! in
@@ -997,7 +997,7 @@ CONTAINS
               & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
               & s_star(ic), le_phase_change(ic))                      ! out
             s_srf(ic) = s_star(ic)
-            dt_sk_dt_srf(ic) = 1._wp
+            dt_sk_dt_srf(ic) = 1._jp
           END IF
 
           qsat_star(ic) = qsat_star(ic) + dQdT(ic) * (s_star(ic) / t2s_conv(ic) - t(ic))
@@ -1100,16 +1100,16 @@ CONTAINS
       DO ic = 1, nc
         s_star(ic) = t2s_conv(ic) * t(ic)
         s_srf(ic) = s_star(ic)
-        dt_sk_dt_srf(ic) = 1._wp
+        dt_sk_dt_srf(ic) = 1._jp
         t_radref(ic) = t(ic)
         IF (is_glacier(ic)) THEN
           qsat_star(ic) = qsat_ice(t(ic), press_srf(ic))
-          dQdT(ic) = (qsat_ice(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+          dQdT(ic) = (qsat_ice(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
         ELSE
           qsat_star(ic) = qsat_water(t(ic), press_srf(ic))
-          dQdT(ic) = (qsat_water(t(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+          dQdT(ic) = (qsat_water(t(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
         END IF
-        le_phase_change(ic) = 0._wp
+        le_phase_change(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -1122,13 +1122,13 @@ CONTAINS
 
         ! Initialize zero tile fractions.
         IF (tile_fract_zero(ic)) THEN
-          s_star(ic) = t2s_conv(ic) * 280._wp
+          s_star(ic) = t2s_conv(ic) * 280._jp
           s_srf(ic) = s_star(ic)
-          dt_sk_dt_srf(ic) = 1._wp
-          t_radref(ic) = 280._wp
-          qsat_star(ic) = qsat_water(280._wp, press_srf(ic))
-          dQdT(ic) = (qsat_water(280._wp + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
-          le_phase_change(ic) = 0._wp
+          dt_sk_dt_srf(ic) = 1._jp
+          t_radref(ic) = 280._jp
+          qsat_star(ic) = qsat_water(280._jp, press_srf(ic))
+          dQdT(ic) = (qsat_water(280._jp + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
+          le_phase_change(ic) = 0._jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -1144,10 +1144,10 @@ CONTAINS
 
             IF (is_glacier(ic)) THEN
               qsat_star(ic) = qsat_ice(t_star(ic), press_srf(ic))
-              dQdT(ic) = (qsat_ice(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+              dQdT(ic) = (qsat_ice(t_star(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
             ELSE
               qsat_star(ic) = qsat_water(t_star(ic), press_srf(ic))
-              dQdT(ic) = (qsat_water(t_star(ic) + 0.001_wp, press_srf(ic)) - qsat_star(ic)) * 1000._wp
+              dQdT(ic) = (qsat_water(t_star(ic) + 0.001_jp, press_srf(ic)) - qsat_star(ic)) * 1000._jp
             END IF
 
             s_ref = t2s_conv(ic) * t_star(ic)
@@ -1161,7 +1161,7 @@ CONTAINS
                 & t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
                 & s_ref, qsat_star(ic), dQdT(ic),                     & ! in
                 & rad_net_star, forc_hflx(ic), ch(ic),                & ! in
-                & 0._wp,                                              & ! in (dheat_tcoef/dtsk)
+                & 0._jp,                                              & ! in (dheat_tcoef/dtsk)
                 & fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
                 & frozen_fract(ic), heat_cap(ic),                     & ! in
                 & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
@@ -1186,7 +1186,7 @@ CONTAINS
                 & le_freeze_pot(ic), le_melt_pot(ic),                 & ! in
                 & s_star(ic), le_phase_change(ic))                      ! out
               s_srf(ic) = s_star(ic)
-              dt_sk_dt_srf(ic) = 1._wp
+              dt_sk_dt_srf(ic) = 1._jp
             END IF
 
             t_star(ic) = s_star(ic) / t2s_conv(ic)
@@ -1250,7 +1250,7 @@ CONTAINS
       DO ic = 1, nc
         IF (l_freeze_config) THEN
           IF (l_supercool_config) THEN
-            hlp1 = MAX(wtr_soil_top(ic) - wtr_soil_pot_scool_top(ic), 0._wp)
+            hlp1 = MAX(wtr_soil_top(ic) - wtr_soil_pot_scool_top(ic), 0._jp)
           ELSE
             hlp1 = wtr_soil_top(ic)
           END IF
@@ -1259,7 +1259,7 @@ CONTAINS
           le_melt_pot(ic)   = -(weq_snow_soil(ic) + ice_pond(ic) + hlp2) * hlp3
         ELSE
           ! Without freezing, the only phase change is snowmelt
-          le_freeze_pot(ic) = 0._wp
+          le_freeze_pot(ic) = 0._jp
           le_melt_pot(ic)   = -weq_snow_soil(ic) * hlp3
         END IF
       END DO
@@ -1269,8 +1269,8 @@ CONTAINS
       ! Setting available snow to 1 m weq should be more than sufficient for one time step
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream)
       DO ic = 1, nc
-        le_freeze_pot(ic) = 0._wp
-        le_melt_pot(ic)   = -1.0_wp * hlp3
+        le_freeze_pot(ic) = 0._jp
+        le_melt_pot(ic)   = -1.0_jp * hlp3
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -1353,9 +1353,9 @@ CONTAINS
     dt = alpha * dtime
 
     ! For convenience in equations
-    cp_inv = 1.0_wp / heat_capacity
+    cp_inv = 1.0_jp / heat_capacity
     ground_hcap_s = ground_heat_capacity * cp_inv
-    s_melt_star = alpha * s_melt + (1._wp - alpha) * s_old
+    s_melt_star = alpha * s_melt + (1._jp - alpha) * s_old
 
     ! Get effective latent heat based on snow fraction
     latent_heat     = als * snow_fraction + alv * (q_sat - snow_fraction)
@@ -1364,13 +1364,13 @@ CONTAINS
     ! Calculate radiation feedback
     thermal_response_term = dt * ( &
       ! Thermal radiation feedback
-      & cp_inv * 4.0_wp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
+      & cp_inv * 4.0_jp * zemiss_def * stbo * ((cp_inv * s_old)**3) - &
       ! Latent heat feedback
       & heat_trans_coef * (latent_heat_air * q_acoef - latent_heat) * &
       & cp_inv * dqsat_dT )
 
     ! Calculate sensible heat flux term
-    sensible_heat_term = -dt * heat_trans_coef * (t_acoef - 1.0_wp)
+    sensible_heat_term = -dt * heat_trans_coef * (t_acoef - 1.0_jp)
 
     ! Calculate energy source terms
     energy_flux_term = dt * ( &
@@ -1390,19 +1390,19 @@ CONTAINS
       &  - sensible_heat_term * s_melt_star + energy_flux_term) / alpha
 
     ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
-    IF (avail_phc_energy < 0._wp) THEN
+    IF (avail_phc_energy < 0._jp) THEN
       le_phase_change = MAX(le_melt_pot, avail_phc_energy)
-    ELSE IF (avail_phc_energy > 0._wp) THEN
+    ELSE IF (avail_phc_energy > 0._jp) THEN
       le_phase_change = MIN(le_freeze_pot, avail_phc_energy)
     ELSE
-      le_phase_change = 0._wp
+      le_phase_change = 0._jp
     END IF
 
     ! Recompute new dry static energy while considering phase change
-    IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
+    IF (ABS(le_phase_change) > 0._jp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
       s_new = ((ground_hcap_s + thermal_response_term) * s_old + energy_flux_term + alpha * le_phase_change) / &
             & (ground_hcap_s + thermal_response_term + sensible_heat_term)
-    ELSE IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
+    ELSE IF (ABS(le_phase_change) > 0._jp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
       ! More phase change potential than available energy. Temperature stays at freezing.
       s_new = s_melt_star
     ELSE
@@ -1476,7 +1476,7 @@ CONTAINS
     REAL(jp) :: avail_phc_energy !< Energy flux available for phase change [W m-2]
 
     !> Skin conductivity for snow-covered surface [W/(m^2 K)].
-    REAL(jp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_wp
+    REAL(jp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_jp
 
 
     ! Set dT_sk = T_sk - T_old. Instead of solving for T_sk istelf, we solve for this difference.
@@ -1532,25 +1532,25 @@ CONTAINS
 
     t_old = s_old / t2s_conv
     t_srf_old = s_srf / t2s_conv
-    tmelt_star = alpha * tmelt + (1._wp - alpha) * t_srf_old
+    tmelt_star = alpha * tmelt + (1._jp - alpha) * t_srf_old
 
     ! This modification effectively deactivates the skin when the cell is snow-covered, ensuring s_star ~= s_srf.
     lambda_sk_eff = lambda_sk + fract_snow * (LAMBDA_SK_SNOW - lambda_sk)
 
     tl_impedance = alpha * dtime / heat_cap
-    t_tl_acoef = (tl_impedance * lambda_sk_eff) / (1._wp + tl_impedance * lambda_sk_eff)
-    t_tl_bcoef = (t_srf_old + tl_impedance * forc_hflx) / (1._wp + tl_impedance * lambda_sk_eff)
+    t_tl_acoef = (tl_impedance * lambda_sk_eff) / (1._jp + tl_impedance * lambda_sk_eff)
+    t_tl_bcoef = (t_srf_old + tl_impedance * forc_hflx) / (1._jp + tl_impedance * lambda_sk_eff)
 
-    L_a = fract_snow * als + (1._wp - fract_snow) * fact_q_air * alv
-    L_s = fract_snow * als + (1._wp - fract_snow) * fact_qsat_srf * alv
+    L_a = fract_snow * als + (1._jp - fract_snow) * fact_q_air * alv
+    L_s = fract_snow * als + (1._jp - fract_snow) * fact_qsat_srf * alv
 
     ! Differential sensible and latent heat conductivities between atmosphere and skin layer.
-    dcond_sen = MIN(0._wp, heat_tcoef * t2s_conv * (t_acoef - 1._wp) + dheat_tcoef &
-      &         * ((t_acoef - 1._wp) * s_old + t_bcoef))
-    dcond_lat = MIN(0._wp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef &
+    dcond_sen = MIN(0._jp, heat_tcoef * t2s_conv * (t_acoef - 1._jp) + dheat_tcoef &
+      &         * ((t_acoef - 1._jp) * s_old + t_bcoef))
+    dcond_lat = MIN(0._jp, heat_tcoef * (L_a * q_acoef - L_s) * dQdT + dheat_tcoef &
       &         * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old))
 
-    denom = lambda_sk_eff * (1._wp - t_tl_acoef) + 4._wp * stbo * zemiss_def * t_old**3 &
+    denom = lambda_sk_eff * (1._jp - t_tl_acoef) + 4._jp * stbo * zemiss_def * t_old**3 &
         & - dcond_sen - dcond_lat
     s_star = s_old + t2s_conv / denom * ( &
         & rad_srf_net &
@@ -1563,7 +1563,7 @@ CONTAINS
         & + heat_tcoef * ((t_acoef - 1) * s_old + t_bcoef) &
         & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
         & - lambda_sk_eff * (t_old - tmelt_star) &
-        & ) / (lambda_sk_eff + 4._wp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
+        & ) / (lambda_sk_eff + 4._jp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
 
     ! Compute the energy available for phase change at the surface. This is the difference between the
     ! energy needed to heat the surface to 0C and the incoming heat flux. If negative, there is energy available
@@ -1572,20 +1572,20 @@ CONTAINS
         & dtime * (lambda_sk_eff * (t_star_melt - tmelt_star) + forc_hflx)
 
     ! Compute energy sink (ice melting, negative) / source (water freezing, positive) due to phase change
-    IF (avail_phc_energy < 0._wp) THEN
+    IF (avail_phc_energy < 0._jp) THEN
       le_phase_change = MAX(le_melt_pot, avail_phc_energy)
-    ELSE IF (avail_phc_energy > 0._wp) THEN
+    ELSE IF (avail_phc_energy > 0._jp) THEN
       le_phase_change = MIN(le_freeze_pot, avail_phc_energy)
     ELSE
-      le_phase_change = 0._wp
+      le_phase_change = 0._jp
     END IF
 
-    IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
+    IF (ABS(le_phase_change) > 0._jp .AND. ABS(le_phase_change) < ABS(avail_phc_energy)) THEN
       ! Recompute t_tl_bcoef, s_star and s_srf to account for incomplete consumption of energy for phase change.
       ! For simplicity, this formulation assumes that the heat flux during the melting phase is `Lambda_sk *
       ! (T_sk - T_soil,new)` instead of `Lambda_sk (T_sk - Tmelt)`. This removes the nonlinearities in T_soil(T_sk).
       t_tl_bcoef = (t_srf_old + tl_impedance * (forc_hflx + le_phase_change / dtime)) &
-        &        / (1._wp + tl_impedance * lambda_sk_eff)
+        &        / (1._jp + tl_impedance * lambda_sk_eff)
 
       s_star = s_old + t2s_conv / denom * ( &
           & rad_srf_net &
@@ -1593,9 +1593,9 @@ CONTAINS
           & + heat_tcoef * (L_a * q_bcoef + (L_a * q_acoef - L_s) * qsat_srf_old) &
           & - lambda_sk_eff * ((1 - t_tl_acoef) * t_old - t_tl_bcoef))
 
-    ELSE IF (ABS(le_phase_change) > 0._wp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
+    ELSE IF (ABS(le_phase_change) > 0._jp .AND. ABS(le_phase_change) >= ABS(avail_phc_energy)) THEN
       ! More potential than available energy. Surface temperature is fixed at tmelt.
-      t_tl_acoef = 0._wp
+      t_tl_acoef = 0._jp
       t_tl_bcoef = tmelt_star
       s_star = t_star_melt * t2s_conv
 
@@ -1610,7 +1610,7 @@ CONTAINS
 
     s_srf = t_tl_acoef * s_star + t2s_conv * t_tl_bcoef
 
-    dT_sk_dT_srf = lambda_sk_eff / (lambda_sk_eff + 4._wp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
+    dT_sk_dT_srf = lambda_sk_eff / (lambda_sk_eff + 4._jp * stbo * zemiss_def * t_old**3 - dcond_sen - dcond_lat)
   END SUBROUTINE
   !
   ! ================================================================================================================================
@@ -1674,8 +1674,8 @@ CONTAINS
     eps = get_asselin_coef()
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      IF (eps > 0._wp) THEN
-        t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._wp * t_unfilt_old(ic) + t_unfilt(ic))
+      IF (eps > 0._jp) THEN
+        t_filt(ic) = t_unfilt_old(ic) + eps * (t_old(ic) - 2._jp * t_unfilt_old(ic) + t_unfilt(ic))
       ELSE
         t_filt(ic) = t_unfilt(ic)
       END IF
@@ -1803,8 +1803,8 @@ CONTAINS
       IF (tile%is_glacier) THEN
         frozen_fract(ic) = fract_snow(ic)
       ELSE
-        IF (ice_pond(ic) > EPSILON(1._wp)) THEN
-          frozen_fract(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_pond(ic)
+        IF (ice_pond(ic) > EPSILON(1._jp)) THEN
+          frozen_fract(ic) = fract_snow(ic) + (1._jp - fract_snow(ic)) * fract_pond(ic)
         ELSE
           frozen_fract(ic) = fract_snow(ic)
         END IF

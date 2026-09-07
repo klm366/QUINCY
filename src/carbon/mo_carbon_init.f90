@@ -226,7 +226,7 @@ CONTAINS
         & variable_name = invar_name,              &
         & fill_array = memory_pointer )
 
-      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._jp,  memory_pointer(:,:) >= 0._jp)
 
       !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
 

@@ -113,17 +113,17 @@ CONTAINS
     windbreak_algorithm    =  1
     lburn_pasture          = .FALSE.
     !
-    fire_litter_threshold  = 16.67_wp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
-    fire_rel_hum_threshold = 70._wp     ! maximal relative humidity for fire
-    fire_minimum_woody     =  0.002_wp  ! minimal fraction of act_fpc of woody PFT to be burned each year
-    fire_minimum_grass     =  0.006_wp  ! minimal fraction of act_fpc of grass PFT to be burned each year
-    fire_tau_woody         =  6.0_wp    ! return period of fire for woody PFT [year] at 0% relative humidity
-    fire_tau_grass         =  2.0_wp    ! return period of fire for grass PFT [year] at 0% relative humidity
+    fire_litter_threshold  = 16.67_jp   ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+    fire_rel_hum_threshold = 70._jp     ! maximal relative humidity for fire
+    fire_minimum_woody     =  0.002_jp  ! minimal fraction of act_fpc of woody PFT to be burned each year
+    fire_minimum_grass     =  0.006_jp  ! minimal fraction of act_fpc of grass PFT to be burned each year
+    fire_tau_woody         =  6.0_jp    ! return period of fire for woody PFT [year] at 0% relative humidity
+    fire_tau_grass         =  2.0_jp    ! return period of fire for grass PFT [year] at 0% relative humidity
     !
-    wnd_threshold          =  2.25_wp   ! factor by which the previous day maximum wind speed
+    wnd_threshold          =  2.25_jp   ! factor by which the previous day maximum wind speed
                                         ! must be larger than the climatological daily maximum
                                         ! wind speed to allow any wind damage
-    wnd_damage_scale       =  5.e-03_wp ! scaling factor for wind damage
+    wnd_damage_scale       =  5.e-03_jp ! scaling factor for wind damage
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))

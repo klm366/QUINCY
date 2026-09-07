@@ -96,7 +96,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('gdd', mem%gdd, &
         & hgrid, surface, &
@@ -107,7 +107,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('nd_dormance', mem%nd_dormance, &
         & hgrid, surface, &
@@ -118,7 +118,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
 
       CALL mem%Add_var('lai_max', mem%lai_max, &
         & hgrid, surface, &
@@ -129,7 +129,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_jp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('root_phenology_type', mem%root_phenology_type, &
@@ -141,7 +141,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_jp)
     END IF
   END SUBROUTINE Init_q_pheno_memory
 

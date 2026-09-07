@@ -128,60 +128,60 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_assimi_parameters'
 
     ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
-    jmax2n        = 17.6_wp / 4.0_wp                      !< .. reference
-    vcmax2n       = 1.8_wp                                !< .. reference
-    pepc2n        = 98777.97_wp                           !< .. reference
-    chl2n         = 1000._wp / 39.8_wp                    !< .. reference
-    k1_fn_struc   = 71.4_wp * molar_mass_N / 1000000._wp  !< .. reference
+    jmax2n        = 17.6_jp / 4.0_jp                      !< .. reference
+    vcmax2n       = 1.8_jp                                !< .. reference
+    pepc2n        = 98777.97_jp                           !< .. reference
+    chl2n         = 1000._jp / 39.8_jp                    !< .. reference
+    k1_fn_struc   = 71.4_jp * molar_mass_N / 1000000._jp  !< .. reference
 
     ! Parameters used in the photosynthesis routine (temperature sensitivies of PS processes)
-    E0kc            = 38.05_wp                          !< Bernacchi 2001
-    E1kc            = 79430.0_wp                        !< Bernacchi 2001
-    E0ko            = 20.3_wp                           !< Bernacchi 2001
-    E1ko            = 36380.0_wp                        !< Bernacchi 2001
-    E0pcp           = 19.02_wp                          !< Bernacchi 2001
-    E1pcp           = 37830.0_wp                        !< Bernacchi 2001
-    E0v             = 26.35_wp                          !< Bernacchi 2001
-    E1v             = 65330.0_wp                        !< Bernacchi 2001
-    t_jmax_offset   = 17.0_wp                           !< Friend 2009
-    t_jmax_slope    = 0.35_wp                           !< Friend 2009
+    E0kc            = 38.05_jp                          !< Bernacchi 2001
+    E1kc            = 79430.0_jp                        !< Bernacchi 2001
+    E0ko            = 20.3_jp                           !< Bernacchi 2001
+    E1ko            = 36380.0_jp                        !< Bernacchi 2001
+    E0pcp           = 19.02_jp                          !< Bernacchi 2001
+    E1pcp           = 37830.0_jp                        !< Bernacchi 2001
+    E0v             = 26.35_jp                          !< Bernacchi 2001
+    E1v             = 65330.0_jp                        !< Bernacchi 2001
+    t_jmax_offset   = 17.0_jp                           !< Friend 2009
+    t_jmax_slope    = 0.35_jp                           !< Friend 2009
     t_jmax_opt_min  = t_jmax_offset                     !<
-    t_jmax_opt_max  = 38.0_wp                           !< Friend 2009
-    Tref_pepc       = 25._wp                            !< Friend 2009
-    Tbase_pepc      = 10._wp                            !< Friend 2009
-    alpha_i         = 0.85_wp * 0.066_wp                !< .. reference
-    pO2             = 20.9_wp                           !< .. reference
-    CiCa_default_C3 = 0.7_wp                            !< .. reference
-    CiCa_default_C4 = 0.4_wp                            !< .. reference
-    ps_it_max       = 10._wp                            !< .. reference
-    ci_max          = 7800.0_wp                         !< .. reference
+    t_jmax_opt_max  = 38.0_jp                           !< Friend 2009
+    Tref_pepc       = 25._jp                            !< Friend 2009
+    Tbase_pepc      = 10._jp                            !< Friend 2009
+    alpha_i         = 0.85_jp * 0.066_jp                !< .. reference
+    pO2             = 20.9_jp                           !< .. reference
+    CiCa_default_C3 = 0.7_jp                            !< .. reference
+    CiCa_default_C4 = 0.4_jp                            !< .. reference
+    ps_it_max       = 10._jp                            !< .. reference
+    ci_max          = 7800.0_jp                         !< .. reference
 
     ! parameters describing the isotopic discrimination of PS (fractionation due to photosynthesis)
-    discr_ps_a_C13 = 4.4_wp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_b_C13 = 27.0_wp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_c_C13 = 5.7_wp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_a_C14 = 1.97_wp * discr_ps_a_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_b_C14 = 1.89_wp * discr_ps_b_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_c_C14 = 1.89_wp * discr_ps_c_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
-    discr_ps_phi   = 0.16_wp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_a_C13 = 4.4_jp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_b_C13 = 27.0_jp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_c_C13 = 5.7_jp                             !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_a_C14 = 1.97_jp * discr_ps_a_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_b_C14 = 1.89_jp * discr_ps_b_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_c_C14 = 1.89_jp * discr_ps_c_C13           !< derived from Drake 2014, Radiocarbon, 56, 29-38
+    discr_ps_phi   = 0.16_jp                            !< derived from Drake 2014, Radiocarbon, 56, 29-38
 
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
-    ka            = 0.005_wp                            !< .. reference
-    kn            = 0.11_wp                             !< .. reference
+    ka            = 0.005_jp                            !< .. reference
+    kn            = 0.11_jp                             !< .. reference
 
     ! ...
-    soa_b         = -0.5_wp                             !< .. reference
-    soa_t_s       = 5.0_wp                              !< .. reference
+    soa_b         = -0.5_jp                             !< .. reference
+    soa_t_s       = 5.0_jp                              !< .. reference
 
     ! parameters for chlorophyll fluorescence
-    heat_dissipation_enrg_dep_param_1               = 5.01_wp     !< Flexas 2002
-    heat_dissipation_enrg_dep_param_2               = 1.93_wp     !< Flexas 2002
-    heat_dissipation_enrg_dep_param_3               = 10.0_wp     !< Flexas 2002
-    k_fluorescence_rate                             = 0.05_wp     !< van der Tol 2014
-    thermal_dissipation_enrg_constitutive_max_rate  = 0.8738_wp   !< van der Tol 2014
-    thermal_dissipation_enrg_constitutive_param_1   = 0.0301_wp   !< van der Tol 2014
-    thermal_dissipation_enrg_constitutive_param_2   = 0.0773_wp   !< van der Tol 2014
-    k_photochemistry_rate                           = 4.0_wp      !< van der Tol 2014
+    heat_dissipation_enrg_dep_param_1               = 5.01_jp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_2               = 1.93_jp     !< Flexas 2002
+    heat_dissipation_enrg_dep_param_3               = 10.0_jp     !< Flexas 2002
+    k_fluorescence_rate                             = 0.05_jp     !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_max_rate  = 0.8738_jp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_1   = 0.0301_jp   !< van der Tol 2014
+    thermal_dissipation_enrg_constitutive_param_2   = 0.0773_jp   !< van der Tol 2014
+    k_photochemistry_rate                           = 4.0_jp      !< van der Tol 2014
 
     !$ACC UPDATE DEVICE(jmax2n, vcmax2n, pepc2n, chl2n, k1_fn_struc) ASYNC(1)
     !$ACC UPDATE DEVICE(E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v) ASYNC(1)

@@ -113,7 +113,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_wp
+    USE mo_jsb_physical_constants, ONLY : tmelt     ! tmelt =273.15_jp
 
     ! Arguments
     REAL(jp), INTENT(in)    :: LAI                    ! Yesterdays mean LAI
@@ -258,44 +258,44 @@ CONTAINS
 
     !LOGICAL  :: with_Nitrogen        !! .FALSE.: only Carbon pools are updated; .TRUE.: in addition also Nitrogen pools are updated
     !LOGICAL  :: with_yasso           !! .FALSE.: cbalance model for litter and soil carbon is used; .TRUE.: yasso model is used
-    !REAL(jp), PARAMETER :: N2O_ef_grazing = 0._wp  !! N2O grazing switched off; reasonable value for the emission factor: 0.0125_wp
+    !REAL(jp), PARAMETER :: N2O_ef_grazing = 0._jp  !! N2O grazing switched off; reasonable value for the emission factor: 0.0125_jp
 
 
     ! R: Normally parameters should be in mo_carbon_constants, but the following parameters are used only in this subroutine!
     !    Therefore I put them here. Is there any not structural advantage to put them into mo_carbon_constants?
     ! Parameter for Subroutine calc_Cpools
-    REAL(jp), PARAMETER :: Q10                    = 1.8_wp          ! Empirical parameter for temperature dependence of
+    REAL(jp), PARAMETER :: Q10                    = 1.8_jp          ! Empirical parameter for temperature dependence of
                                                                     !   heterotrophic respiration rate
-    REAL(jp), PARAMETER :: kappa                  = 1.0_wp          ! Empirical parameter for soil moisture dependence of
+    REAL(jp), PARAMETER :: kappa                  = 1.0_jp          ! Empirical parameter for soil moisture dependence of
                                                                     !   heterotrophic respiration rate
     REAL(jp), PARAMETER :: referenceTemp_Q10      = Tmelt           ! Reference temperature in the Q10 formula [Kelvin]
-    REAL(jp), PARAMETER :: tau_c_reserve          = 1.0_wp *365._wp ! time constant by which reserve pool is depreciated [days]
+    REAL(jp), PARAMETER :: tau_c_reserve          = 1.0_jp *365._jp ! time constant by which reserve pool is depreciated [days]
 
-    REAL(jp), PARAMETER :: tau_c_crop_harvest     = 1._wp*365._wp   ! time constant by which the crop harvest pool decays [days]
-    REAL(jp), PARAMETER :: greenC2leafC           = 4.0_wp          ! ratio of carbon green pool (leaves, fine roots, starches,
+    REAL(jp), PARAMETER :: tau_c_crop_harvest     = 1._jp*365._jp   ! time constant by which the crop harvest pool decays [days]
+    REAL(jp), PARAMETER :: greenC2leafC           = 4.0_jp          ! ratio of carbon green pool (leaves, fine roots, starches,
                                                                     !    sugars) to leaf carbon
-    REAL(jp), PARAMETER :: fract_C_faeces2_LG     = 0.3_wp          ! fraction of C from faces put into the litter green pool
-    REAL(jp), PARAMETER :: fract_C_crop_harvest   = 0.5_wp          ! fraction of C from ag litter flux put to the crop harvest pool
-    REAL(jp), PARAMETER :: N2O_rate_nitrification = 0.001_wp        ! JSBACH assumes lower bound of estimation in the literature as:
+    REAL(jp), PARAMETER :: fract_C_faeces2_LG     = 0.3_jp          ! fraction of C from faces put into the litter green pool
+    REAL(jp), PARAMETER :: fract_C_crop_harvest   = 0.5_jp          ! fraction of C from ag litter flux put to the crop harvest pool
+    REAL(jp), PARAMETER :: N2O_rate_nitrification = 0.001_jp        ! JSBACH assumes lower bound of estimation in the literature as:
                                                                     !   (0.1%) due to nitrification
-    REAL(jp), PARAMETER :: N2O_rate_denitrification = 0.00125_wp    ! 0.0025_wp  ! & (0.2%) due to denitrification
+    REAL(jp), PARAMETER :: N2O_rate_denitrification = 0.00125_jp    ! 0.0025_jp  ! & (0.2%) due to denitrification
                                                                     ! actually 0.2% of denitrified N, not of N inputs
                                                                     ! assumption: 50% loss of NO3 by leaching
-    REAL(jp), PARAMETER :: N2O_rate               = 0.005_wp        ! JSBACH assumes 0.5-1%
+    REAL(jp), PARAMETER :: N2O_rate               = 0.005_jp        ! JSBACH assumes 0.5-1%
                                                                     !    N2O emissions rate per day (<0.1%-0.2% nitrification );
                                                                     !    0.2-4.7% due to denit in Xu Ri, 2008 * therein
-    REAL(jp), PARAMETER :: sminn_NH4_fraction     = 0.4_wp          ! soil mineral NH4 is 40% of SMINN pool and rest in the form of
+    REAL(jp), PARAMETER :: sminn_NH4_fraction     = 0.4_jp          ! soil mineral NH4 is 40% of SMINN pool and rest in the form of
                                                                     !  NO3. Ref: Xu Ri, 2008
     ! Note: All fields with intent(out) are non-defined on return, even if the calling routine has set them.
 
-    soilResp_rate            = 0.0_wp
-    !soilResp_rate_pot        = 0.0_wp
-    NPP_act                  = 0.0_wp
-    ! redFact_Nlimitation      = 1.0_wp
+    soilResp_rate            = 0.0_jp
+    !soilResp_rate_pot        = 0.0_jp
+    NPP_act                  = 0.0_jp
+    ! redFact_Nlimitation      = 1.0_jp
 
     ! R: only for spitfire:
     !IF (PRESENT(fract_litter_wood_new)) THEN
-    !   litter_wood_new = 0.0_wp
+    !   litter_wood_new = 0.0_jp
     !END IF
 
     ! Preparations
@@ -308,16 +308,16 @@ CONTAINS
     END IF
 
     ! Initializations
-    NPP_flux_correction        = 0.0_wp
-    c_green_max                = 0.0_wp
-    c_reserve_optimal          = 0.0_wp
-    excess_NPP                 = 0.0_wp
-    root_exudates              = 0.0_wp
-    cflux_c_greenwood_2_litter = 0.0_wp
-    cflux_herbivory            = 0.0_wp
-    cflux_herb_2_littergreen   = 0.0_wp
-    cflux_herb_2_atm           = 0.0_wp
-    Cflx_2_crop_harvest        = 0.0_wp
+    NPP_flux_correction        = 0.0_jp
+    c_green_max                = 0.0_jp
+    c_reserve_optimal          = 0.0_jp
+    excess_NPP                 = 0.0_jp
+    root_exudates              = 0.0_jp
+    cflux_c_greenwood_2_litter = 0.0_jp
+    cflux_herbivory            = 0.0_jp
+    cflux_herb_2_littergreen   = 0.0_jp
+    cflux_herb_2_atm           = 0.0_jp
+    Cflx_2_crop_harvest        = 0.0_jp
 
     ! with yasso:
     Yasso_io_pools(1)  = c_acid_ag1
@@ -353,9 +353,9 @@ CONTAINS
     WoodLit_coefV(i_lctlib_nonsoluble) = WoodLit_coef_nonsoluble
     WoodLit_coefV(i_lctlib_humus)      = WoodLit_coef_humus
 
-    Yasso_out(1:18) = 0.0_wp           ! array to store the Yasso pools/fluxes
-    leafLitter      = 0.0_wp           ! amount of leafLitter
-    sizeZero        = 0.0_wp
+    Yasso_out(1:18) = 0.0_jp           ! array to store the Yasso pools/fluxes
+    leafLitter      = 0.0_jp           ! amount of leafLitter
+    sizeZero        = 0.0_jp
 
     ! on all veg tiles:
 
@@ -391,9 +391,9 @@ CONTAINS
            c_green)
     c_green = c_green - C_2_litter_greenPool              !! This removes carbon from the green pool
 
-    excess_carbon = max(0.0_wp,c_green - c_green_max)               !! If by the reduction of LAI the maximum value of the green
+    excess_carbon = max(0.0_jp,c_green - c_green_max)               !! If by the reduction of LAI the maximum value of the green
                                                                     !!    pool is still smaller than the current value, there is
-    IF (excess_carbon > 0._wp) THEN
+    IF (excess_carbon > 0._jp) THEN
       C_2_litter_greenPool = C_2_litter_greenPool + excess_carbon   !!    excess C that has also to be shedded to the green litter
       c_green = c_green - excess_carbon                             !!    pool and also subtracted from the green pool
     END IF
@@ -414,7 +414,7 @@ CONTAINS
     Cflx_faeces_2_LG  = Green_2_herbivory * fract_C_faeces2_LG             !! Cflux_faeces_2_LG to be stored in litter green pool
                                                                            !!      (not considered in cflux_c_greenwood_2_litter)
                                                                            !!      (no life times (tau) enter Cflx_faeces_2_LG!)
-    Cflx_faeces_2_atm = Green_2_herbivory * (1.0_wp - fract_C_faeces2_LG)  !! Cflux_faeces_2_atm to be lost to atmosphere
+    Cflx_faeces_2_atm = Green_2_herbivory * (1.0_jp - fract_C_faeces2_LG)  !! Cflux_faeces_2_atm to be lost to atmosphere
                                                                            !!      (dk: not added to CO2?)
     !! ---------------------------------------------------------------------------------
     !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
@@ -457,21 +457,21 @@ CONTAINS
     !! Preliminary determination of distribution of NPP to the various pools (may be corrected afterwards according to
     !!    avaialable Nitrogen)
 
-    IF (NPP_pot_yDayMean <= 0.0_wp) THEN                    !! In case of negative or zero NPP
+    IF (NPP_pot_yDayMean <= 0.0_jp) THEN                    !! In case of negative or zero NPP
 
       NPP_2_reservePool =  NPP_pot_yDayMean * sec_per_day   !! .. the plant looses C and
       c_reserve     = c_reserve + NPP_2_reservePool         !! .. we try to take it from the reserve pool
-      IF (c_reserve < 0.0_wp) THEN                          !! But if thereby the reserve pool gets negative
+      IF (c_reserve < 0.0_jp) THEN                          !! But if thereby the reserve pool gets negative
         NPP_2_reservePool = NPP_2_reservePool - c_reserve   !! .. we absorb negative NPP only up to zero reserve pool and
         NPP_flux_correction = -c_reserve / sec_per_day      !! .. give the deficit as a flux correction back to the
-        c_reserve = 0.0_wp                                  !! .. calling routine. Hence all Carbon from the reserve pool
+        c_reserve = 0.0_jp                                  !! .. calling routine. Hence all Carbon from the reserve pool
       END IF                                                !! .. is used up.
 
       !! For correct handling of nitrogen limitation below (which handles only the case of positive NPP) set NPP to zero:
-      NPP_2_reservePool = 0.0_wp
-      NPP_2_greenPool   = 0.0_wp   !! All other transfer rates are zero
-      NPP_2_woodPool    = 0.0_wp
-      NPP_2_rootExudates= 0.0_wp
+      NPP_2_reservePool = 0.0_jp
+      NPP_2_greenPool   = 0.0_jp   !! All other transfer rates are zero
+      NPP_2_woodPool    = 0.0_jp
+      NPP_2_rootExudates= 0.0_jp
       c_reserve_pot = c_reserve    !! remember modified reserve pool
 
     ELSE  !! NPP is positive
@@ -480,14 +480,14 @@ CONTAINS
                                                                                  !!    relative fraction
       NPP_2_reservePool = fract_npp_2_reservePool * NPP_pot_yDayMean * sec_per_day
       NPP_2_rootExudates= fract_npp_2_exudates * NPP_pot_yDayMean * sec_per_day
-      NPP_2_greenPool   = (1.0_wp - fract_npp_2_woodPool - fract_npp_2_reservePool                 &
+      NPP_2_greenPool   = (1.0_jp - fract_npp_2_woodPool - fract_npp_2_reservePool                 &
            - fract_npp_2_exudates) * NPP_pot_yDayMean * sec_per_day
 
       !! Growth of Wood Pool (structural carbon of living plants)
 
       c_woods_pot = c_woods_pot + NPP_2_woodPool                  !! Then it is attempted to put all NPP share into it
-      excess_carbon = max(0.0_wp,c_woods_pot-Max_C_content_woods) !! .. but thereby the pool may get too large
-      IF (excess_carbon > 0._wp) THEN
+      excess_carbon = max(0.0_jp,c_woods_pot-Max_C_content_woods) !! .. but thereby the pool may get too large
+      IF (excess_carbon > 0._jp) THEN
         c_woods_pot = c_woods_pot - excess_carbon                 !! .. so that the excess carbon has once more to be
                                                                   !! .. subtracted
         NPP_2_greenPool = NPP_2_greenPool + excess_carbon         !! .. and instead made available to the green pool
@@ -498,8 +498,8 @@ CONTAINS
       IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .. If the reserve pool is smaller than optimal,
         c_reserve_pot = c_reserve_pot +  NPP_2_reservePool        !! .... it is filled by the available NPP
         excess_carbon =                                         & !! .... Thereby it may happen that it gets larger than
-             max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !! .... optimal so that there is excess carbon
-        IF (excess_carbon > 0._wp) THEN
+             max(0.0_jp,c_reserve_pot - c_reserve_optimal)        !! .... optimal so that there is excess carbon
+        IF (excess_carbon > 0._jp) THEN
           c_reserve_pot = c_reserve_pot - excess_carbon           !! .... that needs not be taken up
           NPP_2_greenPool = NPP_2_greenPool + excess_carbon       !! .... but can better be used to increase the green
           NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... pool and the actual amount of NPP put to the
@@ -507,28 +507,28 @@ CONTAINS
                                                                   !! .... reserve pool is less.
       ELSE                                                        !! .... Otherwise (reserve pool is larger than optimal)
         NPP_2_greenPool = NPP_2_greenPool + NPP_2_reservePool     !! .... all NPP is left for the green pool
-        NPP_2_reservePool = 0.0_wp                                !! .... so that nothing is stored in the reserve pool.
+        NPP_2_reservePool = 0.0_jp                                !! .... so that nothing is stored in the reserve pool.
       END IF
 
       !! Growth of Green Pool (leaves and fine roots): (in case of too much NPP, try to put it into the reserve pool).
 
       c_green_pot = c_green_pot + NPP_2_greenPool                 !! Green pool is filled by the available NPP.
-      excess_carbon = max(0.0_wp,c_green_pot - c_green_max)       !! .. Thereby it may get larger than appropriate for
+      excess_carbon = max(0.0_jp,c_green_pot - c_green_max)       !! .. Thereby it may get larger than appropriate for
                                                                   !!    current LAI.
-      IF (excess_carbon > 0._wp) THEN
+      IF (excess_carbon > 0._jp) THEN
         NPP_2_greenPool = NPP_2_greenPool - excess_carbon         !! .. Hence the actual amount of NPP put to the green
                                                                   !!    pool is less.
         c_green_pot = c_green_pot - excess_carbon                 !! .. This excess carbon needs not be taken up but
       END IF
       IF (c_reserve_pot < c_reserve_optimal) THEN                 !! .... if the reserve pool is smaller than optimal
-        IF (excess_carbon > 0._wp) THEN
+        IF (excess_carbon > 0._jp) THEN
           c_reserve_pot = c_reserve_pot + excess_carbon           !! .... it is tried to put the carbon there,
           NPP_2_reservePool = NPP_2_reservePool + excess_carbon   !! .... which means that additional NPP is put to the
                                                                   !!      reserve pool.
         END IF
         excess_carbon =                                        &  !! .... Thereby it may happen that the reserve pool
-             max(0.0_wp,c_reserve_pot - c_reserve_optimal)        !!      increases beyond the optimal value.
-        IF (excess_carbon > 0._wp) THEN
+             max(0.0_jp,c_reserve_pot - c_reserve_optimal)        !!      increases beyond the optimal value.
+        IF (excess_carbon > 0._jp) THEN
           c_reserve_pot = c_reserve_pot - excess_carbon           !! .... In that case the excess carbon is once more
                                                                   !!      removed from the reserve pool
           NPP_2_reservePool = NPP_2_reservePool - excess_carbon   !! .... so that the actual amount of NPP put into the
@@ -551,8 +551,8 @@ CONTAINS
     Cflx_NPP_2_green_pot    = NPP_2_greenPool     !! potential growth of green carbon
     Cflx_NPP_2_wood_pot     = NPP_2_woodPool      !! potential growth of wood carbon
 
-    NPP_2_green_via_mobileN = 0.0_wp
-    NPP_2_wood_via_mobileN  = 0.0_wp
+    NPP_2_green_via_mobileN = 0.0_jp
+    NPP_2_wood_via_mobileN  = 0.0_jp
 
     Cflx_NPP_2_green_pot = Cflx_NPP_2_green_pot - NPP_2_green_via_mobileN
     Cflx_NPP_2_wood_pot  = Cflx_NPP_2_wood_pot  - NPP_2_wood_via_mobileN
@@ -567,7 +567,7 @@ CONTAINS
 
     Cflx_NPP_2_reserve_pot        = NPP_2_reservePool                                     !! potential growth of reserve carbon
 
-    redFact_Nlimitation = 1.0_wp   !! This assures absence of nitrogen limitation in this mixed C-N code
+    redFact_Nlimitation = 1.0_jp   !! This assures absence of nitrogen limitation in this mixed C-N code
 
     !! ============== UPDATE ALL C-POOLS =======================================================================
 
@@ -577,19 +577,19 @@ CONTAINS
 
     !! ============== COMPUTE ACTUAL NPP (is needed outside the routine e.g. to recompute transpiration through stomata) =======
 
-    IF (NPP_pot_yDayMean > 0.0_wp) THEN
+    IF (NPP_pot_yDayMean > 0.0_jp) THEN
       NPP_act = (NPP_2_green_via_mobileN + NPP_2_wood_via_mobileN + NPP_2_rootExudates +               &
         & redFact_Nlimitation * (Cflx_NPP_2_green_pot + Cflx_NPP_2_wood_pot) + Cflx_NPP_2_reserve_pot  &
         & ) / sec_per_day
     ELSE
       NPP_act = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
-                                                                 ! except c_reserve was < 0.0_wp.
+                                                                 ! except c_reserve was < 0.0_jp.
     END IF
 
 
     !! ============== COMPUTE SOIL RESPIRATION ===================================================================
     leafLitter    = cflux_c_greenwood_2_litter - C_2_litter_woodPool + Cflx_faeces_2_LG - Cflx_2_crop_harvest
-    soilResp_rate = 0._wp
+    soilResp_rate = 0._jp
 
     !! call yasso for leaf litter; this time with nutrient effects
     CALL yasso(Yasso_io_pools(1:9), Weather, leafLitter, LeafLit_coefV,               &
@@ -613,7 +613,7 @@ CONTAINS
 
     !! call yasso for woody litter; this time with nutrient effects
     CALL yasso(Yasso_io_pools(10:18), Weather, C_2_litter_woodPool, WoodLit_coefV,       &
-      & WoodLitterSize, Yasso_out, fract_wood_aboveGround, 0.0_wp, redFact_Nlimitation) ! no exudates
+      & WoodLitterSize, Yasso_out, fract_wood_aboveGround, 0.0_jp, redFact_Nlimitation) ! no exudates
 
     c_acid_ag2        = Yasso_out(1)
     c_water_ag2       = Yasso_out(2)
@@ -660,10 +660,10 @@ CONTAINS
     !           else
     !             litter_wood_total = c_litter_wood_ag
     !           endif
-    !           if ((litter_wood_total >  EPSILON(1._wp)) .AND. (litter_wood_new < litter_wood_total)) then
+    !           if ((litter_wood_total >  EPSILON(1._jp)) .AND. (litter_wood_new < litter_wood_total)) then
     !              fract_litter_wood_new = litter_wood_new / litter_wood_total
     !           else
-    !              fract_litter_wood_new = 1._wp    ! fract_litter_wood_new=1 means fuel fractions will be reset to original values
+    !              fract_litter_wood_new = 1._jp    ! fract_litter_wood_new=1 means fuel fractions will be reset to original values
     !           endif
     !        endif
 
@@ -762,11 +762,11 @@ CONTAINS
 
       ! Amount of carbon released from the green and reserve pools entering the green litter pools
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
-        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
+        & (c_green(ic) + c_reserve(ic)) * (1._jp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
 
       ! Amount of carbon released from the wood pool entering the woody litter pools
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
-        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
+        & c_woods(ic) * (1._jp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
 
       ! Determin the amount of carbon released from the wood pool, the living tissue pools, and the
       ! litter pools going to the atmosphere
@@ -784,7 +784,7 @@ CONTAINS
         & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
-      fraction = 1._wp - burned_fract(ic)
+      fraction = 1._jp - burned_fract(ic)
       c_acid_ag1      (ic) = fraction * c_acid_ag1       (ic)
       c_water_ag1     (ic) = fraction * c_water_ag1      (ic)
       c_ethanol_ag1   (ic) = fraction * c_ethanol_ag1    (ic)
@@ -796,22 +796,22 @@ CONTAINS
       c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2 (ic)
 
       ! Add below ground fraction of the burned vegetation to the below ground green litter pools
-      fraction = (1._wp - fract_green_aboveGround) * burned_fract(ic)
+      fraction = (1._jp - fract_green_aboveGround) * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
         &                          non_woody_litter, fraction, LeafLit_coef)
 
       ! Distribute the remaings of burned wood to the yasso litter pools
       !  Above ground
-      fraction = (1._wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
+      fraction = (1._jp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
         &                          c_woods(ic), fraction, WoodLit_coef)
       !  Below ground
-      fraction = (1._wp - fract_wood_aboveGround) * burned_fract(ic)
+      fraction = (1._jp - fract_wood_aboveGround) * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
         &                          c_woods(ic), fraction, WoodLit_coef)
 
       ! Reduce the living plant carbon pools accordingly
-      fraction = 1._wp - burned_fract(ic)
+      fraction = 1._jp - burned_fract(ic)
       c_green(ic)   = c_green(ic)   * fraction
       c_woods(ic)   = c_woods(ic)   * fraction
       c_reserve(ic) = c_reserve(ic) * fraction
@@ -920,7 +920,7 @@ CONTAINS
       CALL distribute_yasso_litter(c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), c_nonsoluble_ag1(ic), c_humus_1(ic), &
         &                          non_woody_litter, fraction, LeafLit_coef)
       !  Below ground
-      fraction = (1._wp - fract_green_aboveGround) * damaged_fract(ic)
+      fraction = (1._jp - fract_green_aboveGround) * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
         &                          non_woody_litter, fraction, LeafLit_coef)
 
@@ -930,12 +930,12 @@ CONTAINS
       CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
         &                          c_woods(ic), fraction, WoodLit_coef)
       !  Below ground
-      fraction = (1._wp - fract_wood_aboveGround)  * damaged_fract(ic)
+      fraction = (1._jp - fract_wood_aboveGround)  * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
         &                          c_woods(ic), fraction, WoodLit_coef)
 
       ! Reduce the living plant carbon pools accordingly
-      fraction = 1._wp - damaged_fract(ic)
+      fraction = 1._jp - damaged_fract(ic)
       c_green(ic)   = c_green(ic)   * fraction
       c_woods(ic)   = c_woods(ic)   * fraction
       c_reserve(ic) = c_reserve(ic) * fraction
@@ -1061,20 +1061,20 @@ CONTAINS
 
     ! Yasso parameters (Tuomi '11)
     ! reference decompositation rates for T = 0C and unlimited water availability  in [1/yr]...
-    REAL(jp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !  ... acid-soluble fraction
-    REAL(jp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !  ... water-soluble fraction
-    REAL(jp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !  ... ethanol-soluble fraction
-    REAL(jp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !  ... nonsoluble-soluble fraction
-    REAL(jp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !  ... humus
+    REAL(jp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_jp    !  ... acid-soluble fraction
+    REAL(jp), PARAMETER   :: ref_decomp_rate_water      = -5.9_jp     !  ... water-soluble fraction
+    REAL(jp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_jp    !  ... ethanol-soluble fraction
+    REAL(jp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_jp   !  ... nonsoluble-soluble fraction
+    REAL(jp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_jp  !  ... humus
     ! parameters for temperature dependence
-    REAL(jp), PARAMETER   :: temp_p1                    = 0.095_wp    ! first  order temperature dependence [1/C]
-    REAL(jp), PARAMETER   :: temp_p2                    = -0.0014_wp  ! second order temperature dependence [1/C]
+    REAL(jp), PARAMETER   :: temp_p1                    = 0.095_jp    ! first  order temperature dependence [1/C]
+    REAL(jp), PARAMETER   :: temp_p2                    = -0.0014_jp  ! second order temperature dependence [1/C]
     ! parameter for precipitation dependence
-    REAL(jp), PARAMETER   :: precip_p1                  = -1.21_wp    ! first  order precipitation dependence [a/m]
+    REAL(jp), PARAMETER   :: precip_p1                  = -1.21_jp    ! first  order precipitation dependence [a/m]
     ! parameters for size dependence
-    REAL(jp), PARAMETER   :: size_p1                    = -1.71_wp    ! first  order size dependence [1/cm]
-    REAL(jp), PARAMETER   :: size_p2                    = 0.86_wp     ! second order size dependence [1/cm]
-    REAL(jp), PARAMETER   :: size_p3                    = -0.306_wp   ! size dependence power [ ]
+    REAL(jp), PARAMETER   :: size_p1                    = -1.71_jp    ! first  order size dependence [1/cm]
+    REAL(jp), PARAMETER   :: size_p2                    = 0.86_jp     ! second order size dependence [1/cm]
+    REAL(jp), PARAMETER   :: size_p3                    = -0.306_jp   ! size dependence power [ ]
 
     ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
@@ -1083,26 +1083,26 @@ CONTAINS
     !
     ! fractions of decomposition flux of acid soluble pool going to the other AWEN pools [ ]
     ! (8,11,14)
-    REAL(jp), PARAMETER   :: A_2_W                      =  0.99_wp
-    REAL(jp), PARAMETER   :: A_2_E                      =  0.00_wp
-    REAL(jp), PARAMETER   :: A_2_N                      =  0.00_wp
+    REAL(jp), PARAMETER   :: A_2_W                      =  0.99_jp
+    REAL(jp), PARAMETER   :: A_2_E                      =  0.00_jp
+    REAL(jp), PARAMETER   :: A_2_N                      =  0.00_jp
     ! fractions of decomposition flux of water soluble pool going to the other AWEN pools [ ]
     ! (5,12,15)
-    REAL(jp), PARAMETER   :: W_2_A                      = 0.48_wp
-    REAL(jp), PARAMETER   :: W_2_E                      = 0.00_wp
-    REAL(jp), PARAMETER   :: W_2_N                      = 0.015_wp
+    REAL(jp), PARAMETER   :: W_2_A                      = 0.48_jp
+    REAL(jp), PARAMETER   :: W_2_E                      = 0.00_jp
+    REAL(jp), PARAMETER   :: W_2_N                      = 0.015_jp
     ! fractions of decomposition flux of ethanol soluble pool going to the other AWEN pools [ ]
     ! (6,9,16)
-    REAL(jp), PARAMETER   :: E_2_A                      = 0.01_wp
-    REAL(jp), PARAMETER   :: E_2_W                      = 0.00_wp
-    REAL(jp), PARAMETER   :: E_2_N                      = 0.95_wp
+    REAL(jp), PARAMETER   :: E_2_A                      = 0.01_jp
+    REAL(jp), PARAMETER   :: E_2_W                      = 0.00_jp
+    REAL(jp), PARAMETER   :: E_2_N                      = 0.95_jp
     ! fractions of decomposition flux of non soluble pool going to the other AWEN pools [ ]
     ! (7,10,13)
-    REAL(jp), PARAMETER   :: N_2_A                      = 0.83_wp
-    REAL(jp), PARAMETER   :: N_2_W                      = 0.01_wp
-    REAL(jp), PARAMETER   :: N_2_E                      = 0.02_wp
+    REAL(jp), PARAMETER   :: N_2_A                      = 0.83_jp
+    REAL(jp), PARAMETER   :: N_2_W                      = 0.01_jp
+    REAL(jp), PARAMETER   :: N_2_E                      = 0.02_jp
     ! fraction of decomposition fluxes of AWEN pools which enters the humus pool [ ]
-    REAL(jp), PARAMETER   :: AWEN_2_H                   = 0.0045_wp
+    REAL(jp), PARAMETER   :: AWEN_2_H                   = 0.0045_jp
 
     ! climatic drivers
     REAL(jp)     :: precip                  ! 15 runnning mean of precipitation      [m/a]
@@ -1117,12 +1117,12 @@ CONTAINS
     ! time stepping; the parameterization of yasso is done on a annual time
     ! step, thus the fluxes have to be scaled up to annual rates.
     REAL(jp)     :: dt
-    dt = 1.0_wp/days_per_year
+    dt = 1.0_jp/days_per_year
 
     IF(PRESENT(redFact_Nlimit)) THEN ! nitrogen cycle active & we know already the Nlimitation factor
         redFactor  = redFact_Nlimit
     ELSE
-        redFactor  = 1.0_wp
+        redFactor  = 1.0_jp
     ENDIF
 
    ! 0. Preparations
@@ -1150,7 +1150,7 @@ CONTAINS
                         + c_nonsoluble_bg
 
     ! Change units of climatic forcing variables
-    precip = Weather(2)*sec_per_year/1000._wp  ! mm/s -> m/a
+    precip = Weather(2)*sec_per_year/1000._jp  ! mm/s -> m/a
     temp   = Weather(1) - Tmelt                ! K -> C
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1160,11 +1160,11 @@ CONTAINS
     ! 1. Calculate decomposition rates
 
     ! Temperature dependence of decomposition
-    d_temp   = EXP(temp_p1*temp + temp_p2*temp**2.0_wp)
+    d_temp   = EXP(temp_p1*temp + temp_p2*temp**2.0_jp)
     ! Precipitation dependence of decomposition
-    d_precip = 1.0_wp - EXP(precip_p1*precip)
+    d_precip = 1.0_jp - EXP(precip_p1*precip)
     ! Litter size dependence of decomposition -- no effect if WoodlitterSize = 0.0
-    d_size   = MIN(1.0_wp,(1.0_wp + size_p1 * WoodLitterSize + size_p2 * WoodLitterSize**2.0_wp)**size_p3)
+    d_size   = MIN(1.0_jp,(1.0_jp + size_p1 * WoodLitterSize + size_p2 * WoodLitterSize**2.0_jp)**size_p3)
 
      ! decomposition rates accounting for temperature, precipitation, litter size, and nutrient limitation
      d_acid       =  redFactor * ref_decomp_rate_acid       * d_temp * d_precip * d_size
@@ -1240,73 +1240,73 @@ CONTAINS
 
     ! the remaining fractions of the loss fluxes enter the atmosphere as respiration
     soilResp_rateYasso    =  (Cflx_from_acid_ag + Cflx_from_acid_bg)               &
-                             * (1.0_wp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
+                             * (1.0_jp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
                              + (Cflx_from_water_ag + Cflx_from_water_bg)           &
-                             * (1.0_wp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
+                             * (1.0_jp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
                              + (Cflx_from_ethanol_ag + Cflx_from_ethanol_bg)       &
-                             * (1.0_wp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
+                             * (1.0_jp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
                              + (Cflx_from_nonsoluble_ag + Cflx_from_nonsoluble_bg) &
-                             * (1.0_wp - N_2_A - N_2_W - N_2_E - AWEN_2_H)         &
+                             * (1.0_jp - N_2_A - N_2_W - N_2_E - AWEN_2_H)         &
                              + Cflx_from_humus
 
     ! litter ag & bg respiration (needed for N cycle)
     soilResp_rateLitterAG   =  (Cflx_from_acid_ag )                                &
-                             * (1.0_wp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
+                             * (1.0_jp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
                              + (Cflx_from_water_ag )                               &
-                             * (1.0_wp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
+                             * (1.0_jp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
                              + (Cflx_from_ethanol_ag )                             &
-                             * (1.0_wp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
+                             * (1.0_jp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
                              + (Cflx_from_nonsoluble_ag )                          &
-                             * (1.0_wp - N_2_A - N_2_W - N_2_E - AWEN_2_H)
+                             * (1.0_jp - N_2_A - N_2_W - N_2_E - AWEN_2_H)
 
     soilResp_rateLitterBG   =  (Cflx_from_acid_bg )                                &
-                             * (1.0_wp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
+                             * (1.0_jp - A_2_W - A_2_E - A_2_N - AWEN_2_H)         &
                              + (Cflx_from_water_bg )                               &
-                             * (1.0_wp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
+                             * (1.0_jp - W_2_A - W_2_E - W_2_N - AWEN_2_H)         &
                              + (Cflx_from_ethanol_bg )                             &
-                             * (1.0_wp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
+                             * (1.0_jp - E_2_A - E_2_W - E_2_N - AWEN_2_H)         &
                              + (Cflx_from_nonsoluble_bg )                          &
-                             * (1.0_wp - N_2_A - N_2_W - N_2_E - AWEN_2_H)
+                             * (1.0_jp - N_2_A - N_2_W - N_2_E - AWEN_2_H)
 
     ! 3. update Yasso pools
 
     ! 3a. redistribution among yasso pools
-    c_acid_ag           = MAX(0.0_wp,                                         &
+    c_acid_ag           = MAX(0.0_jp,                                         &
                              c_acid_ag                                        & ! old pool
                              + (Cflx_from_acid_ag                             & ! incoming flux from AWEN pools
                                + Cflx_2_acid_ag) *dt)
-    c_water_ag          = MAX(0.0_wp,                                         & ! and so on .....
+    c_water_ag          = MAX(0.0_jp,                                         & ! and so on .....
                              c_water_ag                                       &
                              + (Cflx_from_water_ag                            &
                                + Cflx_2_water_ag) *dt)
-    c_ethanol_ag        = MAX(0.0_wp,                                         &
+    c_ethanol_ag        = MAX(0.0_jp,                                         &
                              c_ethanol_ag                                     &
                              + (Cflx_from_ethanol_ag                          &
                                + Cflx_2_ethanol_ag) *dt)
-    c_nonsoluble_ag     = MAX(0.0_wp,                                         &
+    c_nonsoluble_ag     = MAX(0.0_jp,                                         &
                              c_nonsoluble_ag                                  &
                              + (Cflx_from_nonsoluble_ag                       &
                                + Cflx_2_nonsoluble_ag) *dt)
 
-    c_acid_bg           = MAX(0.0_wp,                                         &
+    c_acid_bg           = MAX(0.0_jp,                                         &
                              c_acid_bg                                        & ! old pool
                              + (Cflx_from_acid_bg                             & ! incoming flux from AWEN pools
                                + Cflx_2_acid_bg) *dt)
-    c_water_bg          = MAX(0.0_wp,                                         & ! ...
+    c_water_bg          = MAX(0.0_jp,                                         & ! ...
                              c_water_bg                                       &
                              + (Cflx_from_water_bg                            &
                                + Cflx_2_water_bg) *dt                         &
                              + NPP_2_rootExudates)                               ! exudates are carbohydrates only and belowground
-    c_ethanol_bg        = MAX(0.0_wp,                                         &
+    c_ethanol_bg        = MAX(0.0_jp,                                         &
                              c_ethanol_bg                                     &
                              + (Cflx_from_ethanol_bg                          &
                                + Cflx_2_ethanol_bg) *dt)
-    c_nonsoluble_bg     = MAX(0.0_wp,                                         &
+    c_nonsoluble_bg     = MAX(0.0_jp,                                         &
                              c_nonsoluble_bg                                  &
                              + (Cflx_from_nonsoluble_bg                       &
                                + Cflx_2_nonsoluble_bg) *dt)
 
-    c_humus          = MAX(0.0_wp,                            &
+    c_humus          = MAX(0.0_jp,                            &
                              c_humus                          &
                              + (Cflx_from_humus               &
                                + Cflx_2_humus) *dt)
@@ -1317,7 +1317,7 @@ CONTAINS
       &                          litter, fract_aboveground, Lit_coefV)
     ! bg
     CALL distribute_yasso_litter(c_acid_bg, c_water_bg, c_ethanol_bg, c_nonsoluble_bg, c_humus, &
-      &                          litter, 1.0_wp - fract_aboveground, Lit_coefV)
+      &                          litter, 1.0_jp - fract_aboveground, Lit_coefV)
 
     ! Cflx_litter_2_humus is not only required for distribution, but possibly also as output for the eq script
     Cflx_litter_2_humus = Lit_coefV(i_lctlib_humus) * litter
@@ -1327,7 +1327,7 @@ CONTAINS
     !    d_P = ----     &   Flx = ----------   --->   d_P = -----------  - 1
     !          Pool(t)             Pool(t+1)                 Pool(t)
 
-    IF (Pseudo_litter_green .GT. 0.0_wp) THEN
+    IF (Pseudo_litter_green .GT. 0.0_jp) THEN
        d_litter_green = (c_acid_ag            &
                          + c_water_ag         &
                          + c_ethanol_ag       &
@@ -1336,9 +1336,9 @@ CONTAINS
                          + c_water_bg         &
                          + c_ethanol_bg       &
                          + c_nonsoluble_bg)   &
-                         / Pseudo_litter_green - 1._wp
+                         / Pseudo_litter_green - 1._jp
     ELSE
-      d_litter_green = 0.0_wp
+      d_litter_green = 0.0_jp
     ENDIF
 
     ! 4.1 Write pools into the output array
@@ -1369,7 +1369,7 @@ CONTAINS
     ENDIF
 
     ! 4.3 Write diagnostics to determine equilibrium of humus pools (according to jsb3 svn rev. )
-    Yasso_out(17)           = -1._wp * Cflx_from_humus * dt
+    Yasso_out(17)           = -1._jp * Cflx_from_humus * dt
     Yasso_out(18)           = (Cflx_2_humus * dt) + Cflx_litter_2_humus
 
   END SUBROUTINE yasso
@@ -1426,7 +1426,7 @@ CONTAINS
     REAL(jp), INTENT(IN)    :: fraction      !< fraction of litter put into this pool (BG vs AG) [ ]
     REAL(jp), INTENT(IN)    :: coefficient   !< litter coefficient (acid vs water vs ...) [ ]
     ! -------------------------------------------------------------------------------------------------- !
-    this_pool           = MAX(0.0_wp, this_pool + (fraction * coefficient * litter))
+    this_pool           = MAX(0.0_jp, this_pool + (fraction * coefficient * litter))
 
   END SUBROUTINE add_litter_to_yasso_pool
 

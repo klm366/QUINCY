@@ -139,8 +139,8 @@ CONTAINS
     active           = .TRUE.
     lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
-    dz_snow(:)       = 0._wp
-    dz_snow(1:nsnow) = 0.05_wp
+    dz_snow(:)       = 0._jp
+    dz_snow(1:nsnow) = 0.05_jp
     l_dynsnow        = .TRUE.
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
@@ -151,17 +151,17 @@ CONTAINS
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
     l_uniform_snow   = .TRUE.
-    w_soil_critical  = 5.85036E-3_wp
+    w_soil_critical  = 5.85036E-3_jp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
-    qs_soil_sand            = 0.3_wp
-    qs_soil_silt            = 0.4_wp
-    qs_soil_clay            = 0.3_wp
-    qs_bulk_density         = 1500.0_wp
+    qs_soil_sand            = 0.3_jp
+    qs_soil_silt            = 0.4_jp
+    qs_soil_clay            = 0.3_jp
+    qs_bulk_density         = 1500.0_jp
 #endif
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -216,7 +216,7 @@ CONTAINS
     ! quincy standalone
     config%qs_soil_sand    = qs_soil_sand
     config%qs_soil_silt    = qs_soil_silt
-    config%qs_soil_clay    = 1.0_wp - qs_soil_sand - qs_soil_silt
+    config%qs_soil_clay    = 1.0_jp - qs_soil_sand - qs_soil_silt
     config%qs_bulk_density = qs_bulk_density
 
     ! check for an error in clay content of soil
@@ -241,9 +241,9 @@ CONTAINS
       nsoil = SIZE(ptr_1D)
       ALLOCATE(depths(nsoil+1))
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
+      depths(1) = 0._jp
       depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._jp
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()
@@ -268,8 +268,8 @@ CONTAINS
       END IF
 
       ! parameter for soil layer calculations
-      k_soil_profile  = 0.25_wp
-      min_layer_depth = 0.065_wp
+      k_soil_profile  = 0.25_jp
+      min_layer_depth = 0.065_jp
 
       nsoil = config%quincy_nsoil_e
       ALLOCATE(ubounds_soil_lay_energy(nsoil))
@@ -290,7 +290,7 @@ CONTAINS
             &   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
         END DO
       ELSE
-        dz_energy(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+        dz_energy(1:nsoil) = (/0.065_jp,0.254_jp,0.913_jp,2.902_jp,5.700_jp/)
       END IF
 
       ! calc upper bound of soil layers (water and energy) from layer thickness
@@ -306,7 +306,7 @@ CONTAINS
       !!
       !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
-      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_jp * (lbounds(:) + ubounds(:))
       vgrid_soil_e => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
         &   longname='Soil (energy) layers from SSE_ config', &
         &   units='m', &
@@ -339,11 +339,11 @@ CONTAINS
     END IF
     ALLOCATE(depths(nsnow+1))
     ALLOCATE(mids(nsnow))
-    depths(1) = 0._wp
+    depths(1) = 0._jp
     DO i=1,nsnow
       depths(i+1) = depths(i) + dz_snow(i)
     END DO
-    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
+    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._jp
 
     vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
       & levels    = mids                 (1:nsnow  ),                         &

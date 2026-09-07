@@ -211,9 +211,9 @@ CONTAINS
     dsl4jsb_Get_lcc_area_matrix(initial_area)
     dsl4jsb_Get_lcc_area_matrix(lost_area)
     dsl4jsb_Get_lcc_area_matrix(gained_area)
-    initial_area(:,:) = 0.0_wp
-    lost_area(:,:) = 0.0_wp
-    gained_area(:,:) = 0.0_wp
+    initial_area(:,:) = 0.0_jp
+    lost_area(:,:) = 0.0_jp
+    gained_area(:,:) = 0.0_jp
 
     !>
     !> 2. loop including init, start, end, dealloc moving area only from one age class to the next
@@ -238,15 +238,15 @@ CONTAINS
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! init gained and lost area
-      lost_area(:,:) = 0.0_wp
-      gained_area(:,:) = 0.0_wp
+      lost_area(:,:) = 0.0_jp
+      gained_area(:,:) = 0.0_jp
 
       !----- care for shifts among age class boundaries
       ! area is moved from the younger to the older age class
       lost_area(:,i-1) = fract_per_age(:, INT(ac_ubound(i - 1)))
       gained_area(:,i) = lost_area(:,i-1)
 
-      IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, :) > 0.0_jp)) THEN
         !>     When acs are merged: also merge variables that are no cqs but used for bookkeeping
         CALL merge_pheno_variables_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
         CALL merge_carbon_vars_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
@@ -261,7 +261,7 @@ CONTAINS
       CALL current_child%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
       ! Only needs to be executed if there is area to be moved
-      IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, :) > 0.0_jp)) THEN
         !>
         !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
         !>
@@ -368,7 +368,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
 
-    IF (ANY(disturbed_area(:) .GT. 0._wp)) THEN
+    IF (ANY(disturbed_area(:) .GT. 0._jp)) THEN
       ! Put into age 0-1
       fract_per_age(:,1) = fract_per_age(:,1) + disturbed_area(:)
 
@@ -496,7 +496,7 @@ CONTAINS
 
     age_class_tile => tile%Get_first_child_tile()
 
-    IF (ANY(cf_loss .GT. 0._wp)) THEN
+    IF (ANY(cf_loss .GT. 0._jp)) THEN
       IF (dsl4jsb_Config(FAGE_)%alcc_age_fract_scheme == 'prop' ) THEN
         ! ---------------------------------------------------------------------------------------------- !
         ! iterate over each age class - with the prop (proportional scheme)
@@ -507,8 +507,8 @@ CONTAINS
           ! -------------------------------------------------------------------------------------------- !
           ! determine the share of the loss of this age class
           CALL age_class_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
-          this_cf_loss = 0._wp
-          WHERE(forest_pft_fract(:) > 0._wp) !JN-TODO: replace WHERE!
+          this_cf_loss = 0._jp
+          WHERE(forest_pft_fract(:) > 0._jp) !JN-TODO: replace WHERE!
             this_cf_loss(:) = cf_loss(:) * (current_fract(:) / forest_pft_fract(:))
           END WHERE
           ! -------------------------------------------------------------------------------------------- !

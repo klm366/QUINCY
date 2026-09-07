@@ -280,7 +280,7 @@ CONTAINS
     new_day = is_newday(options%current_datetime, options%dtime)
 
     ALLOCATE (cover_fract_sum(nc))
-    cover_fract_sum(:) = 0._wp
+    cover_fract_sum(:) = 0._jp
     DO itile = 1,no_children
       ! Point to the correct pft
       IF (itile == 1) THEN
@@ -293,7 +293,7 @@ CONTAINS
       cover_fract_sum(:) = cover_fract_sum(:) + cover_fract(:,itile)
     END DO ! itile
     ! scale cover_fract to fractions relative to the veg_tile
-    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_wp)
+    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_jp)
 !!$    WRITE (*,*) 'sum of cover_fract: ',SUM(cover_fract(:,:),DIM=2)
 
     ! allocate more local variables
@@ -303,7 +303,7 @@ CONTAINS
     ! initialize act_fpc, bare fpc, and pot_fpc
     IF (lstart) THEN
        act_fpc(:,:) = cover_fract(:,:)
-       bare_fpc(:) = 0._wp
+       bare_fpc(:) = 0._jp
        CALL scale_fpc(routine, nc, iblk, no_children, is_dynamic, act_fpc, bare_fpc)
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
@@ -345,10 +345,10 @@ CONTAINS
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
                                sum_green_bio_memory(:), desert_fpc(:))
-!!$ TR          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
+!!$ TR          fract_fpc_max(:) = MAX(1.e-10_jp,1._jp - desert_fpc(:))
           !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
           ALLOCATE(fract_fpc_max(nc,no_children))
-          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
+          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_jp,1._jp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
           CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
        ENDIF ! not lstart
     ENDIF ! new_year

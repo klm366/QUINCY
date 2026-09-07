@@ -150,12 +150,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Since harvest only is happening daily or annually (or in QS even just once at the stand replacing year)
     ! the default would be that nothing is harvested in this timestep
-    fract_forest_harvest(:) = 0._wp
+    fract_forest_harvest(:) = 0._jp
 
     ! Check if some harvest is to be done or if we can RETURN here
     IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest) THEN
       IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest_event) THEN
-        fract_forest_harvest(:) =  1._wp
+        fract_forest_harvest(:) =  1._jp
       ELSE
         ! If we run QS and use stand replacing harvest nothing needs to be done
         IF (debug_on() .AND. iblk==1) CALL message(routine, 'Returned.')
@@ -212,7 +212,7 @@ CONTAINS
         IF (tree_fract_box_tile(ic) > eps8) THEN
           fact_harvest_share(ic) = cover_fraction(ic) / tree_fract_box_tile(ic)
         ELSE
-          fact_harvest_share(ic) = 0.0_wp
+          fact_harvest_share(ic) = 0.0_jp
         END IF
       END DO
 #endif
@@ -233,7 +233,7 @@ CONTAINS
         !         !NOTE: i.e. not including the slash fraction!
         fract_sum = fract_wood_to_pp_fuel + fract_wood_to_pp_paper + fract_wood_to_pp_fiberboard   &
           &         + fract_wood_to_pp_oirw + fract_wood_to_pp_pv + fract_wood_to_pp_sawnwood
-        IF (ABS(fract_sum - 1._wp) >= eps8) THEN
+        IF (ABS(fract_sum - 1._jp) >= eps8) THEN
           WRITE(message_text,*) 'A sum of allocation fractions to different pools does not sum up to one, but was: ', &
             &                    fract_sum,'! Please check!'
           CALL finish(TRIM(routine),message_text)
@@ -241,7 +241,7 @@ CONTAINS
       END IF
       DO ic = 1,nc
         ! Assert: harvest fraction should not be negative
-        IF (fract_forest_harvest(ic) < 0._wp) THEN
+        IF (fract_forest_harvest(ic) < 0._jp) THEN
           WRITE(message_text,*) 'The harvested fraction (', fract_forest_harvest(ic), &
             &                    ') should not be negative. Please check!'
           CALL finish(TRIM(routine),message_text)

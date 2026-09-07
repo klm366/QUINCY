@@ -83,7 +83,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(Q_SYL_, fract_wood_to_slash)
 
       ! QS previously used a wood_extraction_rate of 0.8, thus, we use an initial default slash of 0.2 (= 1.0 - 0.8)
-      fract_wood_to_slash(:,:) = 0.2_wp
+      fract_wood_to_slash(:,:) = 0.2_jp
 
 #ifndef __QUINCY_STANDALONE__
       ! for IQ slash is overwritten with spatially varrying values from a bc file

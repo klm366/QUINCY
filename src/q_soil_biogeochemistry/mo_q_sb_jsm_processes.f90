@@ -95,17 +95,17 @@ CONTAINS
     hlp1(:,:)                       = decay_rate(:,:) * pool_mt_litter(ixC, :, :)
     loss_mt_litter(ixC, :, :)       = loss_mt_litter(ixC, :, :) + hlp1(:,:)
     formation_mt_sink(ixC, :, :)    = formation_mt_sink(ixC, :, :) + fc_litter2sink * hlp1(:,:)
-    het_respiration(:,:)            = het_respiration(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime
+    het_respiration(:,:)            = het_respiration(:,:) + (1._jp - fc_litter2sink) * hlp1(:,:) * 1000000._jp / dtime
     ! C13
     hlp1(:,:)                       = decay_rate(:,:) * pool_mt_litter(ixC13, :, :)
     loss_mt_litter(ixC13, :, :)     = loss_mt_litter(ixC13, :, :) + hlp1(:,:)
     formation_mt_sink(ixC13, :, :)  = formation_mt_sink(ixC13, :, :) + fc_litter2sink * hlp1(:,:)
-    het_respiration_c13(:,:)        = het_respiration_c13(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime
+    het_respiration_c13(:,:)        = het_respiration_c13(:,:) + (1._jp - fc_litter2sink) * hlp1(:,:) * 1000000._jp / dtime
     ! C14
     hlp1(:,:)                       = decay_rate(:,:) * pool_mt_litter(ixC14, :, :)
     loss_mt_litter(ixC14, :, :)     = loss_mt_litter(ixC14, :, :) + hlp1(:,:)
     formation_mt_sink(ixC14, :, :)  = formation_mt_sink(ixC14, :, :) + fc_litter2sink * hlp1(:,:)
-    het_respiration_c14(:,:)        = het_respiration_c14(:,:) + (1._wp - fc_litter2sink) * hlp1(:,:) * 1000000._wp / dtime
+    het_respiration_c14(:,:)        = het_respiration_c14(:,:) + (1._jp - fc_litter2sink) * hlp1(:,:) * 1000000._jp / dtime
     ! N
     hlp1(:,:)                       = decay_rate(:,:) * pool_mt_litter(ixN, :, :)
     loss_mt_litter(ixN, :, :)       = loss_mt_litter(ixN, :, :) + hlp1(:,:)
@@ -255,14 +255,14 @@ CONTAINS
 
     !> 0.9 init out var
     !>
-    biochem_min_po4(:,:)   = 0.0_wp
-    gross_min_po4(:,:)     = 0.0_wp
-    weathering_po4(:,:)    = 0.0_wp
-    mic_upt_nh4(:,:)       = 0.0_wp
-    mic_upt_no3(:,:)       = 0.0_wp
-    mic_upt_po4(:,:)       = 0.0_wp
-    occlusion_po4(:,:)     = 0.0_wp
-    slow_exchange_po4(:,:) = 0.0_wp
+    biochem_min_po4(:,:)   = 0.0_jp
+    gross_min_po4(:,:)     = 0.0_jp
+    weathering_po4(:,:)    = 0.0_jp
+    mic_upt_nh4(:,:)       = 0.0_jp
+    mic_upt_no3(:,:)       = 0.0_jp
+    mic_upt_po4(:,:)       = 0.0_jp
+    occlusion_po4(:,:)     = 0.0_jp
+    slow_exchange_po4(:,:) = 0.0_jp
 
     !> 1.0 calculate the gross P mineralization, based on the potential depolymerization of DOM
     !>
@@ -271,9 +271,9 @@ CONTAINS
         hlp1     = dom_carbon(ic,is) / (km_mic_uptake * rtm_hsc(ic,is) * rmm_hsc(ic,is) + dom_carbon(ic,is) )
         uptake_c = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * hlp1 * microbial_carbon(ic,is)
         IF (dom_carbon(ic,is) > eps8) THEN
-          f_uptake = MIN(uptake_c / dom_carbon(ic,is), 1._wp * 1.E6_wp / dtime)
+          f_uptake = MIN(uptake_c / dom_carbon(ic,is), 1._jp * 1.E6_jp / dtime)
         ELSE
-          f_uptake = 0.0_wp
+          f_uptake = 0.0_jp
         END IF
         uptake_p = f_uptake * dom_phosphorus(ic,is)
         uptake_n = f_uptake * dom_nitrogen(ic,is)
@@ -281,8 +281,8 @@ CONTAINS
 
         !> 1.1 calculate the potential microbial N, P uptake
         !>
-        mic_upt_po4(ic,is) = MAX(0._wp, uptake_c * microbial_cue_max / microbial_cn / microbial_np - uptake_p * microbial_pue)
-        mic_upt_n          = MAX(0._wp, uptake_c * microbial_cue_max / microbial_cn - uptake_n * microbial_nue)
+        mic_upt_po4(ic,is) = MAX(0._jp, uptake_c * microbial_cue_max / microbial_cn / microbial_np - uptake_p * microbial_pue)
+        mic_upt_n          = MAX(0._jp, uptake_c * microbial_cue_max / microbial_cn - uptake_n * microbial_nue)
         hlp1               = vmax_mic_uptake_nh4 * microbial_carbon(ic,is) * solute_nh4(ic,is) / (solute_nh4(ic,is) &
           &                  + km_mic_uptake_nh4)
         hlp2               = vmax_mic_uptake_no3 * microbial_carbon(ic,is) * solute_no3(ic,is) / (solute_no3(ic,is) &
@@ -291,10 +291,10 @@ CONTAINS
           mic_upt_nh4(ic,is) = mic_upt_n * hlp1 / (hlp1 + hlp2)
           mic_upt_no3(ic,is) = mic_upt_n * hlp2 / (hlp1 + hlp2)
         ELSE
-          mic_upt_nh4(ic,is) = 0._wp
-          mic_upt_no3(ic,is) = 0._wp
+          mic_upt_nh4(ic,is) = 0._jp
+          mic_upt_no3(ic,is) = 0._jp
         END IF
-        gross_mineralisation_nh4(ic,is) = (1._wp - microbial_nue) * uptake_n
+        gross_mineralisation_nh4(ic,is) = (1._jp - microbial_nue) * uptake_n
       END DO
     END DO
 
@@ -312,17 +312,17 @@ CONTAINS
                 &         + microbial_carbon(ic,is) * enzyme_frac_total * enzyme_frac_AP(ic,is)
               hlp4      = enzyme_AP / (rtm_hsc(ic,is) * rmm_hsc(ic,is) * km_mic_biochem_po4 + enzyme_AP)
               ! instantaneous rate of biochemical mineralisation 1/s,
-              ! needs to multiply by 1.E6_wp for standard flux rate unit
+              ! needs to multiply by 1.E6_jp for standard flux rate unit
               biochem_min_po4(ic,is) = rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * vmax_biochem_po4 * hlp4
 
               ! unit of loss terms: mol/m3/timestep
               ! loss from mineral associated DOM
               IF (dom_assoc_carbon(ic,is) <eps8) THEN
-                hlp5 = 0.0_wp
+                hlp5 = 0.0_jp
               ELSE
                 som_pc = dom_assoc_po4(ic,is) / dom_assoc_carbon(ic,is)
                 IF (som_pc < biomin_threshold_pc_ratio_min_assoc_om) THEN
-                  hlp5 = 0.0_wp
+                  hlp5 = 0.0_jp
                 ELSE
                   hlp5 = som_pc / ( km_pc_biochem_po4 + som_pc)
                 END IF
@@ -331,11 +331,11 @@ CONTAINS
 
               ! loss from mineral associated residue
               IF (residue_assoc_carbon(ic,is) <eps8) THEN
-                hlp6 = 0.0_wp
+                hlp6 = 0.0_jp
               ELSE
                 som_pc = residue_assoc_po4(ic,is) / residue_assoc_carbon(ic,is)
                 IF (som_pc < biomin_threshold_pc_ratio_min_assoc_om) THEN
-                  hlp6 = 0.0_wp
+                  hlp6 = 0.0_jp
                 ELSE
                   hlp6 = som_pc / ( km_pc_biochem_po4 + som_pc)
                 END IF
@@ -345,35 +345,35 @@ CONTAINS
 
               ! loss from microbial residue
               IF (residue_carbon(ic,is) <eps8) THEN
-                hlp7 = 0._wp
+                hlp7 = 0._jp
               ELSE
                 som_pc = residue_po4(ic,is) / residue_carbon(ic,is)
                 IF (som_pc < biomin_threshold_pc_ratio_mic_res) THEN
-                  hlp7 = 0.0_wp
+                  hlp7 = 0.0_jp
                 ELSE
-                  hlp7 = som_pc / ( km_pc_biochem_po4 / 5._wp + som_pc)
+                  hlp7 = som_pc / ( km_pc_biochem_po4 / 5._jp + som_pc)
                 END IF
               END IF
               loss_residue_po4(ic,is) = loss_residue_po4(ic,is) + biochem_min_po4(ic,is) * residue_po4(ic,is) * hlp7 * dtime
 
               ! loss from dom
               IF (dom_phosphorus(ic,is) <eps8) THEN
-                gross_min_po4(ic,is) = 0._wp
+                gross_min_po4(ic,is) = 0._jp
               ELSE
-                gross_min_po4(ic,is) = MAX(0._wp, MIN( (dom_phosphorus(ic,is)-uptake_p) / dtime, biochem_min_po4(ic,is) &
-                  &                    * dom_phosphorus(ic,is))) * 1.E6_wp
+                gross_min_po4(ic,is) = MAX(0._jp, MIN( (dom_phosphorus(ic,is)-uptake_p) / dtime, biochem_min_po4(ic,is) &
+                  &                    * dom_phosphorus(ic,is))) * 1.E6_jp
               END IF
-              loss_dom_po4(ic,is)  = loss_dom_po4(ic,is) + gross_min_po4(ic,is) * dtime / 1.E6_wp
+              loss_dom_po4(ic,is)  = loss_dom_po4(ic,is) + gross_min_po4(ic,is) * dtime / 1.E6_jp
 
               ! biochemical mineralisation in micro-mol P / m3 / s
               biochem_min_po4(ic,is) = biochem_min_po4(ic,is) * (dom_assoc_po4(ic,is) * hlp5 + residue_po4(ic,is) &
-                &                      * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.E6_wp
+                &                      * hlp7 + residue_assoc_po4(ic,is) * hlp6) * 1.E6_jp
            ELSE ! IF (hlp1 > eps8)
-              biochem_min_po4(ic,is) = 0.0_wp
+              biochem_min_po4(ic,is) = 0.0_jp
            END IF
         ELSE  ! IF (.NOT. flag_sb_prescribe_po4)
-          biochem_min_po4(ic,is) = 0.0_wp
-          gross_min_po4(ic,is)   = 0._wp
+          biochem_min_po4(ic,is) = 0.0_jp
+          gross_min_po4(ic,is)   = 0._jp
         END IF
       END DO
     END DO
@@ -386,20 +386,20 @@ CONTAINS
         hlp3 = fine_root_carbon_sl(ic,is) * f_plant_carrier_po4 + microbial_carbon(ic,is) * f_mic_carrier_po4
         hlp4 = hlp3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is) * km_root_enzyme_weath_po4 + hlp3)
         ! minimum microbial biomass to exudate bio-weathering enzyme
-        hlp5 = 0.1_wp
+        hlp5 = 0.1_jp
         IF (fine_root_carbon_sl(ic,is) < eps8 .AND. microbial_carbon(ic,is) < hlp5) THEN
-          hlp4 = 0._wp
+          hlp4 = 0._jp
         END IF
         weathering_po4(ic,is) = rtm_hsc(ic,is) / rmm_hsc(ic,is) * vmax_weath_mineral_sl(ic,is) * po4_primary(ic,is) &
-          &                     * (frac_background_weath_mineral + hlp4) * 1.E6_wp
-        IF ((weathering_po4(ic,is) / 1.E6_wp) > (po4_primary(ic,is) / dtime)) THEN
-          weathering_po4(ic,is) = po4_primary(ic,is) / dtime * 1.E6_wp
+          &                     * (frac_background_weath_mineral + hlp4) * 1.E6_jp
+        IF ((weathering_po4(ic,is) / 1.E6_jp) > (po4_primary(ic,is) / dtime)) THEN
+          weathering_po4(ic,is) = po4_primary(ic,is) / dtime * 1.E6_jp
         END IF
-        occlusion_po4(ic,is) = assoc_slow(ic,is) * k_occlude_po4 * 1.E6_wp
+        occlusion_po4(ic,is) = assoc_slow(ic,is) * k_occlude_po4 * 1.E6_jp
 
         hlp1 = rtm_desorption(ic,is) * k_desorpt_po4 * assoc_slow(ic,is)
         hlp2 = rtm_sorption(ic,is) * k_adsorpt_po4 * assoc_fast(ic,is)
-        slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.E6_wp
+        slow_exchange_po4(ic,is) = (hlp2 - hlp1) * 1.E6_jp
       END DO
     END DO
 
@@ -491,13 +491,13 @@ CONTAINS
     !>
     !> unit conversion from mol to micro-mol is introduced in the calculation when necessary
     !>
-    plant_uptake(:,:)         = 0.0_wp
-    plant_uptake_pot(:,:)     = 0.0_wp
+    plant_uptake(:,:)         = 0.0_jp
+    plant_uptake_pot(:,:)     = 0.0_jp
     IF (substrate == "po4" .OR. substrate == "nh4") THEN
-      fast_adsorpt(:,:)         = 0.0_wp
+      fast_adsorpt(:,:)         = 0.0_jp
     END IF
     IF (substrate == "nh4" .OR. substrate == "no3") THEN
-      flux_nitri_denitri(:,:)   = 0.0_wp
+      flux_nitri_denitri(:,:)   = 0.0_jp
     END IF
 
     !>0.9 init local variables
@@ -515,11 +515,11 @@ CONTAINS
         vmax_mic_uptake_sub   = vmax_mic_uptake_po4
         vmax_plant_uptake     = vmax_plant_uptake_po4
         k_desorpt_f           = k_desorpt_f_po4
-        km_nit_denit          = 0._wp
-        k_nit_denit           = 0._wp
-        f_nit_carrier         = 0._wp
-        vmax_nit_denit        = 0._wp
-        reaction_volume(:,:)  = 0._wp
+        km_nit_denit          = 0._jp
+        k_nit_denit           = 0._jp
+        f_nit_carrier         = 0._jp
+        vmax_nit_denit        = 0._jp
+        reaction_volume(:,:)  = 0._jp
       CASE ("nh4")
         f_mic_carrier         = f_mic_carrier_n
         km1_mic_uptake        = km_mic_uptake_nh4
@@ -536,7 +536,7 @@ CONTAINS
         km_nit_denit          = km_nitrification_nh4
         f_nit_carrier         = f_nit_carrier_nh4
         k_nit_denit           = k_nit_carrier_n
-        reaction_volume(:,:)  = 1._wp - anaerobic_volume_fraction(:,:)
+        reaction_volume(:,:)  = 1._jp - anaerobic_volume_fraction(:,:)
       CASE ("no3")
         f_mic_carrier         = f_mic_carrier_n
         km1_mic_uptake        = km_mic_uptake_no3
@@ -548,7 +548,7 @@ CONTAINS
         k_plant_uptake        = k_plant_uptake_no3
         vmax_mic_uptake_sub   = vmax_mic_uptake_no3
         vmax_plant_uptake     = vmax_plant_uptake_no3
-        k_desorpt_f           = 0._wp
+        k_desorpt_f           = 0._jp
         vmax_nit_denit        = vmax_denitrification_no3
         km_nit_denit          = km_denit_no3
         f_nit_carrier         = f_denit_carrier_no3
@@ -600,8 +600,8 @@ CONTAINS
               nitri_hlp    = nitri_hlp + &
                 &            km_nit_denit / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
               hlp1         = k_desorpt_f / km_adsorpt_sl(ic,is) * solute(ic,is)
-              fast_adsorpt(ic,is) = MIN(1._wp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
-                &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_wp
+              fast_adsorpt(ic,is) = MIN(1._jp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
+                &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_jp
             END IF
           ! po4
           ! including the effect of adsorption
@@ -611,8 +611,8 @@ CONTAINS
             plant_hlp    = plant_hlp + &
               &            km_plant_uptake / km_adsorpt_sl(ic,is) * avail_soil_surface_sorption_capacity_sl(ic,is)
             hlp1         = k_desorpt_f / km_adsorpt_sl(ic,is) * solute(ic,is)
-            fast_adsorpt(ic,is) = MIN(1._wp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
-              &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_wp
+            fast_adsorpt(ic,is) = MIN(1._jp / dtime, hlp1 * solute_available(ic,is) / mineral_hlp) &
+              &            * avail_soil_surface_sorption_capacity_sl(ic,is) * 1.E6_jp
           END IF
           ! eca_full, rates calculation based on enzyme abundance
           ! Calculate plant uptake, microbial uptake and nitrification/denitrification rates
@@ -652,9 +652,9 @@ CONTAINS
         DO is = 1, NINT(num_sl_above_bedrock(ic))
           plant_uptake(ic,is)   = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * fine_root_carbon(ic,is) &
             &                     * lctlib_vmax_uptake * solute(ic,is) &
-            &                     * (km1_upt(ic,is) + 1._wp / (km2_upt(ic,is) + solute(ic,is)))
+            &                     * (km1_upt(ic,is) + 1._jp / (km2_upt(ic,is) + solute(ic,is)))
           IF (substrate == "po4" .OR. substrate == "nh4") THEN
-            fast_adsorpt(ic,is) = 0._wp
+            fast_adsorpt(ic,is) = 0._jp
           END IF
           IF (substrate == "nh4" .OR. substrate == "no3") THEN
             flux_nitri_denitri(ic,is) = rtm_nit_denit_fication(ic,is) * rmm_nit_denit_fication(ic,is) &
@@ -672,19 +672,19 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (flag_sb_interactive_elem) THEN
-          fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.E6_wp
+          fast_desorpt = (solute_available(ic,is) - solute(ic,is)) * k_desorpt_f * 1.E6_jp
           SELECT CASE (substrate)
             CASE("po4")
               hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is)
-              hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
+              hlp2 = MAX(0._jp, ((solute(ic,is)) / dtime * 1.E6_jp - fast_adsorpt(ic,is) + fast_desorpt))
             CASE("nh4")
               hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-              hlp2 = MAX(0._wp, ((solute(ic,is)) / dtime * 1.E6_wp - fast_adsorpt(ic,is) + fast_desorpt))
+              hlp2 = MAX(0._jp, ((solute(ic,is)) / dtime * 1.E6_jp - fast_adsorpt(ic,is) + fast_desorpt))
             CASE("no3")
               hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
-              hlp2 = MAX(0._wp, (solute(ic,is)) / dtime * 1.E6_wp)
+              hlp2 = MAX(0._jp, (solute(ic,is)) / dtime * 1.E6_jp)
           END SELECT
-          IF (hlp1 > hlp2 .AND. hlp1 > 0._wp) THEN
+          IF (hlp1 > hlp2 .AND. hlp1 > 0._jp) THEN
             microbial_uptake(ic,is)   = microbial_uptake(ic,is)   * hlp2 / hlp1
             plant_uptake(ic,is)       = plant_uptake(ic,is)       * hlp2 / hlp1
             SELECT CASE (substrate)
@@ -777,13 +777,13 @@ CONTAINS
     !> 2.0 case of fixed N losses: N loss proportional to net mineralisation
     !!
     ELSE
-      WHERE(net_mineralisation_nh4(:,:) > 0.0_wp)
+      WHERE(net_mineralisation_nh4(:,:) > 0.0_jp)
         ! N lost to atmosphere during processing of net mineralisation [mol m-3 timestep-1]
         volatilisation_nh4(:,:)      = net_mineralisation_nh4(:,:)     * floss_nmin
         volatilisation_nh4_n15(:,:)  = net_mineralisation_nh4_n15(:,:) * floss_nmin
         ! NH4 transformed to NO3 [mol m-3 timestep-1]
-        nitrification_no3(:,:)     = net_mineralisation_nh4(:,:)     * (1._wp - floss_nmin) * fnit_nmin
-        nitrification_no3_n15(:,:) = net_mineralisation_nh4_n15(:,:) * (1._wp - floss_nmin) * fnit_nmin
+        nitrification_no3(:,:)     = net_mineralisation_nh4(:,:)     * (1._jp - floss_nmin) * fnit_nmin
+        nitrification_no3_n15(:,:) = net_mineralisation_nh4_n15(:,:) * (1._jp - floss_nmin) * fnit_nmin
       ENDWHERE
       ! report volatilisation losses as N2 emission [mol m-2 timestep-1]
       emission_n2(:)     = SUM(volatilisation_nh4(:,:)     * soil_depth_sl(:,:), DIM=2)
@@ -842,11 +842,11 @@ CONTAINS
         !>  Fractional of N and P in microbial necromass is recycled to DOM,
         !>    regulated by the microbial nutritional scalors following exponential decline curve
         !>
-        hlp2 = MIN(MAX(fact_n_status_mic_c_growth(ic,is), eps4), 1.0_wp)
-        hlp3 = MIN(MAX(fact_p_status_mic_c_growth(ic,is), eps4), 1.0_wp)
+        hlp2 = MIN(MAX(fact_n_status_mic_c_growth(ic,is), eps4), 1.0_jp)
+        hlp3 = MIN(MAX(fact_p_status_mic_c_growth(ic,is), eps4), 1.0_jp)
 
-        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._wp, EXP(hlp2 * (-1._wp)) ** k_n_recyc_corr)
-        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._wp, EXP(hlp3 * (-1._wp)) ** k_p_recyc_corr)
+        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._jp, EXP(hlp2 * (-1._jp)) ** k_n_recyc_corr)
+        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._jp, EXP(hlp3 * (-1._jp)) ** k_p_recyc_corr)
 
         !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
         !>
@@ -854,9 +854,9 @@ CONTAINS
         hlp1(ic,is)           = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
         IF ((sb_pool_mt_microbial(ixC, ic, is) - hlp1(ic,is)) < min_mic_biomass) THEN
           IF (sb_pool_mt_microbial(ixC, ic, is) > eps8) THEN
-            mortality_rate(ic,is) = MAX(0._wp, 1._wp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
+            mortality_rate(ic,is) = MAX(0._jp, 1._jp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
           ELSE
-            mortality_rate(ic,is) = 0._wp
+            mortality_rate(ic,is) = 0._jp
           END IF
         END IF
 
@@ -870,41 +870,41 @@ CONTAINS
         hlp1(ic,is)                              = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
         sb_loss_mt_microbial(ixC, ic, is)        = sb_loss_mt_microbial(ixC, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixC, ic, is)     = sb_formation_mt(ix_dom, ixC, ic, is) + f_soluable_residue * hlp1(ic,is)
-        sb_formation_mt(ix_residue, ixC, ic, is) = sb_formation_mt(ix_residue, ixC, ic, is) + (1._wp - f_soluable_residue) &
+        sb_formation_mt(ix_residue, ixC, ic, is) = sb_formation_mt(ix_residue, ixC, ic, is) + (1._jp - f_soluable_residue) &
                                                    * hlp1(ic,is)
         ! N
         hlp1(ic,is)                              = mortality_rate(ic,is) * sb_pool_mt_microbial(ixN, ic, is)
         sb_loss_mt_microbial(ixN, ic, is)        = sb_loss_mt_microbial(ixN, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixN, ic, is)     = sb_formation_mt(ix_dom, ixN, ic, is) + f_soluable_residue * hlp1(ic,is) &
-          &                                      + (1._wp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
-        sb_formation_mt(ix_residue, ixN, ic, is) = sb_formation_mt(ix_residue, ixN, ic, is) + (1._wp - f_soluable_residue) &
-          &                                      * (1._wp - n_res2dom(ic,is)) * hlp1(ic,is)
+          &                                      + (1._jp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
+        sb_formation_mt(ix_residue, ixN, ic, is) = sb_formation_mt(ix_residue, ixN, ic, is) + (1._jp - f_soluable_residue) &
+          &                                      * (1._jp - n_res2dom(ic,is)) * hlp1(ic,is)
         ! P
         hlp1(ic,is)                              = mortality_rate(ic,is) * sb_pool_mt_microbial(ixP, ic, is)
         sb_loss_mt_microbial(ixP, ic, is)        = sb_loss_mt_microbial(ixP, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixP, ic, is)     = sb_formation_mt(ix_dom, ixP, ic, is) + f_soluable_residue * hlp1(ic,is) &
-          &                                      + (1._wp - f_soluable_residue) * hlp1(ic,is) * p_res2dom(ic,is)
-        sb_formation_mt(ix_residue, ixP, ic, is) = sb_formation_mt(ix_residue, ixP, ic, is) + (1._wp - f_soluable_residue) &
-          &                                      * (1._wp - p_res2dom(ic,is)) * hlp1(ic,is)
+          &                                      + (1._jp - f_soluable_residue) * hlp1(ic,is) * p_res2dom(ic,is)
+        sb_formation_mt(ix_residue, ixP, ic, is) = sb_formation_mt(ix_residue, ixP, ic, is) + (1._jp - f_soluable_residue) &
+          &                                      * (1._jp - p_res2dom(ic,is)) * hlp1(ic,is)
         ! C13
         hlp1(ic,is)                                = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC13, ic, is)
         sb_loss_mt_microbial(ixC13, ic, is)        = sb_loss_mt_microbial(ixC13, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixC13, ic, is)     = sb_formation_mt(ix_dom, ixC13, ic, is) + f_soluable_residue * hlp1(ic,is)
-        sb_formation_mt(ix_residue, ixC13, ic, is) = sb_formation_mt(ix_residue, ixC13, ic, is) + (1._wp - f_soluable_residue) &
+        sb_formation_mt(ix_residue, ixC13, ic, is) = sb_formation_mt(ix_residue, ixC13, ic, is) + (1._jp - f_soluable_residue) &
                                                      * hlp1(ic,is)
         ! C14
         hlp1(ic,is)                                = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC14, ic, is)
         sb_loss_mt_microbial(ixC14, ic, is)        = sb_loss_mt_microbial(ixC14, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixC14, ic, is)     = sb_formation_mt(ix_dom, ixC14, ic, is) + f_soluable_residue * hlp1(ic,is)
-        sb_formation_mt(ix_residue, ixC14, ic, is) = sb_formation_mt(ix_residue, ixC14, ic, is) + (1._wp - f_soluable_residue) &
+        sb_formation_mt(ix_residue, ixC14, ic, is) = sb_formation_mt(ix_residue, ixC14, ic, is) + (1._jp - f_soluable_residue) &
                                                      * hlp1(ic,is)
         ! N15
         hlp1(ic,is)                                = mortality_rate(ic,is) * sb_pool_mt_microbial(ixN15, ic, is)
         sb_loss_mt_microbial(ixN15, ic, is)        = sb_loss_mt_microbial(ixN15, ic, is) + hlp1(ic,is)
         sb_formation_mt(ix_dom, ixN15, ic, is)     = sb_formation_mt(ix_dom, ixN15, ic, is) + f_soluable_residue * hlp1(ic,is) &
-          &                                        + (1._wp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
-        sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + (1._wp - f_soluable_residue) &
-          &                                        * (1._wp - n_res2dom(ic,is)) * hlp1(ic,is)
+          &                                        + (1._jp - f_soluable_residue) * hlp1(ic,is) * n_res2dom(ic,is)
+        sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + (1._jp - f_soluable_residue) &
+          &                                        * (1._jp - n_res2dom(ic,is)) * hlp1(ic,is)
       END DO
     END DO
   END SUBROUTINE calc_microbial_turnover
@@ -935,9 +935,9 @@ CONTAINS
     !>1.0 rate modifier for mineral soil nitrogen
     !>
     IF (nh4_solute + no3_solute > eps8) THEN
-      f_nav = MIN(1.0_wp, 1.0_wp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
+      f_nav = MIN(1.0_jp, 1.0_jp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
     ELSE
-      f_nav = 1._wp
+      f_nav = 1._jp
     ENDIF
     ! ...
     asymb_bnf_fraction = vmax_asymb_bnf * rtm_asymb_bnf * rmm_asymb_bnf * f_nav
@@ -1063,9 +1063,9 @@ CONTAINS
         uptake_c(ic,is) = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) &
           &               * hlp1(ic,is) * sb_pool_mt(ix_microbial, ixC, ic, is)
         IF (sb_pool_mt(ix_dom, ixC, ic, is) > eps8) THEN
-          f_uptake(ic,is) = MIN(uptake_c(ic,is) / sb_pool_mt(ix_dom, ixC, ic, is), 1._wp * 1.E6_wp / dtime)
+          f_uptake(ic,is) = MIN(uptake_c(ic,is) / sb_pool_mt(ix_dom, ixC, ic, is), 1._jp * 1.E6_jp / dtime)
         ELSE
-          f_uptake(ic,is) = 0.0_wp
+          f_uptake(ic,is) = 0.0_jp
         END IF
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
@@ -1077,14 +1077,14 @@ CONTAINS
         !  ("fixed" is only available in the VEG_ symbiotic N fixation)
         CASE("dynamic", "fixed")
           asymb_n_fixation(ic,is) = asymb_n_fixation_rel_rate(ic,is) * &
-            &                     MAX(0.0_wp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
+            &                     MAX(0.0_jp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
             &                     microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is))
         CASE("unlimited")
-          asymb_n_fixation(ic,is) = MAX(0.0_wp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
+          asymb_n_fixation(ic,is) = MAX(0.0_jp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
             &                     microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) - &
             &                     microbial_uptake_nh4_sl(ic,is) - microbial_uptake_no3_sl(ic,is))
         CASE("none")
-          asymb_n_fixation(ic,is) = 0.0_wp
+          asymb_n_fixation(ic,is) = 0.0_jp
         CASE DEFAULT
           CALL finish(TRIM(routine),'No such bnf_scheme available here.')
         END SELECT
@@ -1116,8 +1116,8 @@ CONTAINS
           fact_n_status_mic_c_growth(ic,is) = growth_n(ic,is) / growth_c(ic,is)
           fact_p_status_mic_c_growth(ic,is) = growth_p(ic,is) / growth_c(ic,is)
         ELSE
-          fact_n_status_mic_c_growth(ic,is) = 1._wp
-          fact_p_status_mic_c_growth(ic,is) = 1._wp
+          fact_n_status_mic_c_growth(ic,is) = 1._jp
+          fact_p_status_mic_c_growth(ic,is) = 1._jp
         END IF
         IF (growth_c(ic,is) <= growth_n(ic,is) .AND. growth_c(ic,is) <= growth_p(ic,is)) THEN
           ! carbon uptake is limiting
@@ -1147,7 +1147,7 @@ CONTAINS
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * uptake_c(ic,is)
         ! ensure asymb_n_fixation does not exceed uptake demand
         IF (asymb_n_fixation(ic,is) > growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is)) THEN
-          asymb_n_fixation(ic,is) = MAX(0.0_wp, growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is))
+          asymb_n_fixation(ic,is) = MAX(0.0_jp, growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is))
         END IF
 
         IF (growth_c(ic,is) <= growth_n(ic,is) .AND. growth_c(ic,is) <= growth_p(ic,is)) THEN
@@ -1158,7 +1158,7 @@ CONTAINS
                   * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn) > eps8) THEN
           ! nitrogen uptake is limiting
           ! calculate uptake rate that satisfies N constraint and CUE
-          f_uptake(ic,is) = MAX(0.0_wp,MIN(f_uptake(ic,is), &
+          f_uptake(ic,is) = MAX(0.0_jp,MIN(f_uptake(ic,is), &
             &   ((asymb_n_fixation(ic,is) + microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn) / &
             &   (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
             &    microbial_nue * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn)))
@@ -1167,12 +1167,12 @@ CONTAINS
                  * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn) > eps8) THEN
           ! phosphorus uptake is limiting
           ! calculate uptake rate that satisfies P constraint and CUE
-          f_uptake(ic,is) = MAX(0.0_wp,MIN(f_uptake(ic,is), &
+          f_uptake(ic,is) = MAX(0.0_jp,MIN(f_uptake(ic,is), &
             &             (microbial_uptake_po4_sl(ic,is) * microbial_np * microbial_cn) / &
             &             (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
             &              microbial_pue * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn)))
         ELSE
-          f_uptake(ic,is) = 0.0_wp
+          f_uptake(ic,is) = 0.0_jp
         END IF
 
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
@@ -1190,11 +1190,11 @@ CONTAINS
         IF (growth_c(ic,is) < growth_n(ic,is)) THEN
           ! inorganic N immobilisation flux in agreement with C growth, taking into account current fixation rate
           ! by design, N fixation is not larger than the deficit
-          hlp1(ic,is) = MAX(growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is) - asymb_n_fixation(ic,is),0.0_wp)
+          hlp1(ic,is) = MAX(growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is) - asymb_n_fixation(ic,is),0.0_jp)
           IF ((microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) > eps8) THEN
             scal(ic,is) = hlp1(ic,is) / (microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is))
           ELSE
-            scal(ic,is) = 0.0_wp
+            scal(ic,is) = 0.0_jp
           END IF
           microbial_uptake_nh4_sl(ic,is)     = microbial_uptake_nh4_sl(ic,is)     * scal(ic,is)
           microbial_uptake_nh4_n15_sl(ic,is) = microbial_uptake_nh4_n15_sl(ic,is) * scal(ic,is)
@@ -1207,7 +1207,7 @@ CONTAINS
               &                      uptake_n(ic,is))
           END IF
         END IF
-        gross_mineralisation_nh4(ic,is)     = (1._wp - microbial_nue_eff(ic,is)) * uptake_n(ic,is)
+        gross_mineralisation_nh4(ic,is)     = (1._jp - microbial_nue_eff(ic,is)) * uptake_n(ic,is)
         gross_mineralisation_nh4_n15(ic,is) = gross_mineralisation_nh4(ic,is) * calc_fractionation( &
           &                                                                                sb_pool_mt(ix_dom, ixN, ic, is), &
           &                                                                                sb_pool_mt(ix_dom, ixN15, ic, is), &
@@ -1220,14 +1220,14 @@ CONTAINS
         IF (growth_c(ic,is) < growth_p(ic,is)) THEN
           ! inorganic P immobilisation flux, in agreement with C and N uptake
           microbial_uptake_po4_sl(ic,is) = MAX(growth_c(ic,is) / microbial_cn / microbial_np &
-                                           - microbial_pue * uptake_p(ic,is),0.0_wp)
+                                           - microbial_pue * uptake_p(ic,is),0.0_jp)
           ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
           IF (uptake_p(ic,is) > eps8) THEN
             microbial_pue_eff(ic,is) = ( growth_c(ic,is) / microbial_cn / microbial_np - microbial_uptake_po4_sl(ic,is) ) &
                                        / uptake_p(ic,is)
           END IF
         END IF
-        gross_mineralisation_po4(ic,is) = gross_mineralisation_po4(ic,is) + (1._wp - microbial_pue_eff(ic,is)) * uptake_p(ic,is)
+        gross_mineralisation_po4(ic,is) = gross_mineralisation_po4(ic,is) + (1._jp - microbial_pue_eff(ic,is)) * uptake_p(ic,is)
 
         !>3.0 update fluxes
         !>  note that loss and formation of organic matter is in [mol / m3 / timestep]
@@ -1235,55 +1235,55 @@ CONTAINS
         !>
         ! carbon
         uptake_dom(ic,is)                          = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
-        sb_loss_mt(ix_dom, ixC, ic, is)            = sb_loss_mt(ix_dom, ixC, ic, is) + uptake_dom(ic,is) * dtime / 1000000._wp
+        sb_loss_mt(ix_dom, ixC, ic, is)            = sb_loss_mt(ix_dom, ixC, ic, is) + uptake_dom(ic,is) * dtime / 1000000._jp
         sb_formation_mt(ix_microbial, ixC, ic, is) = sb_formation_mt(ix_microbial, ixC, ic, is) &
-          &                                        + microbial_cue_eff_tmic_mavg(ic,is) * uptake_dom(ic,is) * dtime / 1000000._wp
+          &                                        + microbial_cue_eff_tmic_mavg(ic,is) * uptake_dom(ic,is) * dtime / 1000000._jp
         het_respiration(ic,is)                     = het_respiration(ic,is) &
-          &                                        + (1._wp - microbial_cue_eff_tmic_mavg(ic,is)) * uptake_dom(ic,is)
+          &                                        + (1._jp - microbial_cue_eff_tmic_mavg(ic,is)) * uptake_dom(ic,is)
         ! nitrogen
         net_mineralisation_nh4(ic,is)              = gross_mineralisation_nh4(ic,is) - microbial_uptake_nh4_sl(ic,is)
         net_mineralisation_no3(ic,is)              = - microbial_uptake_no3_sl(ic,is)
         uptake_dom(ic,is)                          = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
-        sb_loss_mt(ix_dom, ixN, ic, is)            = sb_loss_mt(ix_dom, ixN, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_wp
+        sb_loss_mt(ix_dom, ixN, ic, is)            = sb_loss_mt(ix_dom, ixN, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_jp
         sb_formation_mt(ix_microbial, ixN, ic, is) = sb_formation_mt(ix_microbial, ixN, ic, is) &
           &                                        + (microbial_nue_eff(ic,is) * uptake_dom(ic,is) &
           &                                        + asymb_n_fixation(ic,is) &
           &                                        + microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) &
-          &                                        * dtime / 1000000.0_wp
+          &                                        * dtime / 1000000.0_jp
         ! phosphorus
         net_mineralisation_po4(ic,is)              = gross_mineralisation_po4(ic,is) - microbial_uptake_po4_sl(ic,is)
         uptake_dom(ic,is)                          = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
-        sb_loss_mt(ix_dom, ixP, ic, is)            = sb_loss_mt(ix_dom, ixP, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_wp
+        sb_loss_mt(ix_dom, ixP, ic, is)            = sb_loss_mt(ix_dom, ixP, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_jp
         sb_formation_mt(ix_microbial, ixP, ic, is) = sb_formation_mt(ix_microbial, ixP, ic, is) &
           &                                        + (microbial_pue_eff(ic,is) * uptake_dom(ic,is) &
-          &                                        + microbial_uptake_po4_sl(ic,is)) * dtime / 1000000.0_wp
+          &                                        + microbial_uptake_po4_sl(ic,is)) * dtime / 1000000.0_jp
         ! carbon13
         uptake_dom(ic,is)                            = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC13, ic, is)
-        sb_loss_mt(ix_dom, ixC13, ic, is)            = sb_loss_mt(ix_dom, ixC13, ic, is) + uptake_dom(ic,is) * dtime / 1000000._wp
+        sb_loss_mt(ix_dom, ixC13, ic, is)            = sb_loss_mt(ix_dom, ixC13, ic, is) + uptake_dom(ic,is) * dtime / 1000000._jp
         sb_formation_mt(ix_microbial, ixC13, ic, is) = sb_formation_mt(ix_microbial, ixC13, ic, is) &
           &                                          + microbial_cue_eff_tmic_mavg(ic,is) * uptake_dom(ic,is) &
-          &                                          * dtime / 1000000.0_wp
-        het_respiration_c13(ic,is)                   = het_respiration_c13(ic,is) + (1._wp - microbial_cue_eff_tmic_mavg(ic,is)) &
+          &                                          * dtime / 1000000.0_jp
+        het_respiration_c13(ic,is)                   = het_respiration_c13(ic,is) + (1._jp - microbial_cue_eff_tmic_mavg(ic,is)) &
           &                                          * uptake_dom(ic,is)
         ! carbon14
         uptake_dom(ic,is)                            = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC14, ic, is)
-        sb_loss_mt(ix_dom, ixC14, ic, is)            = sb_loss_mt(ix_dom, ixC14, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_wp
+        sb_loss_mt(ix_dom, ixC14, ic, is)            = sb_loss_mt(ix_dom, ixC14, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_jp
         sb_formation_mt(ix_microbial, ixC14, ic, is) = sb_formation_mt(ix_microbial, ixC14, ic, is) &
           &                                            + microbial_cue_eff_tmic_mavg(ic,is) * uptake_dom(ic,is) &
-          &                                            * dtime / 1000000.0_wp
-        het_respiration_c14(ic,is)                   = het_respiration_c14(ic,is) + (1._wp - microbial_cue_eff_tmic_mavg(ic,is) ) &
+          &                                            * dtime / 1000000.0_jp
+        het_respiration_c14(ic,is)                   = het_respiration_c14(ic,is) + (1._jp - microbial_cue_eff_tmic_mavg(ic,is) ) &
           &                                          * uptake_dom(ic,is)
         ! nitrogen15
         net_mineralisation_nh4_n15(ic,is)            = gross_mineralisation_nh4_n15(ic,is) - microbial_uptake_nh4_n15_sl(ic,is)
         net_mineralisation_no3_n15(ic,is)            = - microbial_uptake_no3_n15_sl(ic,is)
         uptake_dom(ic,is)                            = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN15, ic, is)
-        sb_loss_mt(ix_dom, ixN15, ic, is)            = sb_loss_mt(ix_dom, ixN15, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_wp
+        sb_loss_mt(ix_dom, ixN15, ic, is)            = sb_loss_mt(ix_dom, ixN15, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_jp
         sb_formation_mt(ix_microbial, ixN15, ic, is) = sb_formation_mt(ix_microbial, ixN15, ic, is) &
           &                                          + (microbial_nue * uptake_dom(ic,is) &
           &                                          + asymb_n_fixation(ic,is) &
-          &                                          / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(- eta_nfixation)) &
+          &                                          / ( 1._jp + 1._jp / calc_mixing_ratio_N15N14(- eta_nfixation)) &
           &                                          + microbial_uptake_nh4_n15_sl(ic,is) + microbial_uptake_no3_n15_sl(ic,is)) &
-          &                                          * dtime / 1000000.0_wp
+          &                                          * dtime / 1000000.0_jp
       END DO
     END DO
   END SUBROUTINE calc_microbial_growth
@@ -1358,15 +1358,15 @@ CONTAINS
 
     !>0.9 init local variables
     !>
-    depoly_c(:,:) = 0.0_wp
-    depoly_n(:,:) = 0.0_wp
-    depoly_p(:,:) = 0.0_wp
+    depoly_c(:,:) = 0.0_jp
+    depoly_n(:,:) = 0.0_jp
+    depoly_p(:,:) = 0.0_jp
 
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         !>1.0 calculate polymeric litter depolymerisation rate
         !>
-        hlp1(ic,is) = 1._wp
+        hlp1(ic,is) = 1._jp
         hlp1(ic,is) = enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is) &
           &         / (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is))
         hlp2(ic,is) = vmax_depolymerisation_litter * rtm_depolymerisation(ic,is) * rmm_depolymerisation(ic,is) &
@@ -1376,12 +1376,12 @@ CONTAINS
         IF (sb_pool_mt(ix_polymeric_litter, ixC, ic, is) > eps8) THEN
           poly_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
         ELSE
-          poly_depolymerisation_rate(ic,is) = 0.0_wp
+          poly_depolymerisation_rate(ic,is) = 0.0_jp
         END IF
 
         !>2.0 calculate microbial residue depolymerisation rate
         !>
-        hlp1(ic,is) = 1._wp
+        hlp1(ic,is) = 1._jp
         hlp1(ic,is) = enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is) &
           &         / (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is))
         hlp2(:,:) = vmax_depolymerisation_residue * rtm_depolymerisation(ic,is) &
@@ -1391,7 +1391,7 @@ CONTAINS
         IF (sb_pool_mt(ix_residue, ixC, ic, is) > eps8) THEN
           residue_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_residue, ixC, ic, is)
         ELSE
-          residue_depolymerisation_rate(ic,is) = 0.0_wp
+          residue_depolymerisation_rate(ic,is) = 0.0_jp
         END IF
 
         !>3.0 calculate the loss and formation of all elements in polymeric litter pool
@@ -1485,28 +1485,28 @@ CONTAINS
         hlp1(ic,is) = depoly_c(ic,is) * microbial_cue_mavg(ic,is)
         hlp2(ic,is) = depoly_n(ic,is) * microbial_cn * microbial_nue_mavg(ic,is)
         hlp3(ic,is) = depoly_p(ic,is) * microbial_cn * microbial_np * microbial_pue_mavg(ic,is)
-        enz_AP_direction(ic,is) = 1._wp
-        IF (hlp1(ic,is) > 0.0_wp .AND. hlp2(ic,is) > 0.0_wp .AND. hlp3(ic,is) > 0.0_wp) THEN
-          IF (fact_n_status_mic_c_growth(ic,is) > 1._wp .AND. fact_p_status_mic_c_growth(ic,is) > 1._wp) THEN
+        enz_AP_direction(ic,is) = 1._jp
+        IF (hlp1(ic,is) > 0.0_jp .AND. hlp2(ic,is) > 0.0_jp .AND. hlp3(ic,is) > 0.0_jp) THEN
+          IF (fact_n_status_mic_c_growth(ic,is) > 1._jp .AND. fact_p_status_mic_c_growth(ic,is) > 1._jp) THEN
             hlp_depoly(ic,is)       = enzyme_frac_poly_c_mavg(ic,is)
-          ELSE IF (fact_n_status_mic_c_growth(ic,is) > 1._wp .AND. fact_p_status_mic_c_growth(ic,is) <= 1._wp) THEN
+          ELSE IF (fact_n_status_mic_c_growth(ic,is) > 1._jp .AND. fact_p_status_mic_c_growth(ic,is) <= 1._jp) THEN
             hlp_depoly(ic,is)       = enzyme_frac_poly_c_mavg(ic,is)
-            enz_AP_direction(ic,is) = -1._wp
-          ELSE IF (fact_n_status_mic_c_growth(ic,is) <= 1._wp .AND. fact_p_status_mic_c_growth(ic,is) > 1._wp) THEN
+            enz_AP_direction(ic,is) = -1._jp
+          ELSE IF (fact_n_status_mic_c_growth(ic,is) <= 1._jp .AND. fact_p_status_mic_c_growth(ic,is) > 1._jp) THEN
             hlp_depoly(ic,is)       = enzyme_frac_poly_n_mavg(ic,is)
           ELSE
             hlp_depoly(ic,is)       = enzyme_frac_poly_n_mavg(ic,is)
             IF (fact_n_status_mic_c_growth(ic,is) > fact_p_status_mic_c_growth(ic,is)) THEN
-              enz_AP_direction(ic,is) = -1._wp
+              enz_AP_direction(ic,is) = -1._jp
             END IF
           END IF
         ELSE
           hlp_depoly(ic,is) = enzyme_frac_poly_c_mavg(ic,is)
         END IF
         enzyme_frac_poly(ic,is)    = MIN( MAX(enzyme_frac_poly(ic,is) + (hlp_depoly(ic,is) - enzyme_frac_poly(ic,is)) / &
-          &                        mavg_period_tenzyme / one_day * dtime, min_enzyme_fraction), (1._wp - min_enzyme_fraction))
-        enzyme_frac_residue(ic,is) = 1._wp - enzyme_frac_poly(ic,is)
-        enzyme_frac_AP(ic,is)      = MIN( MAX(enzyme_frac_AP(ic,is) * (1._wp - enz_AP_direction(ic,is) &
+          &                        mavg_period_tenzyme / one_day * dtime, min_enzyme_fraction), (1._jp - min_enzyme_fraction))
+        enzyme_frac_residue(ic,is) = 1._jp - enzyme_frac_poly(ic,is)
+        enzyme_frac_AP(ic,is)      = MIN( MAX(enzyme_frac_AP(ic,is) * (1._jp - enz_AP_direction(ic,is) &
           &                          / mavg_period_tenzyme / one_day * dtime), &
           &                          min_enzyme_fraction), max_enzyme_fraction)
       END DO
@@ -1542,8 +1542,8 @@ CONTAINS
 
     !>1.0 calculate organic matter density and litter density per soil layer [kg / m3]
     !>
-    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp
-    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp
+    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._jp
+    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._jp
 
     !>2.0 actual bulk density of the soil
     !>
@@ -1589,8 +1589,8 @@ CONTAINS
     !>1.0 calculate volume fraction filled by organic material
     !>  given assumed density and carbon content of OM and litter
     !>
-    vol_fraction_om = MIN(bulk_soil_carbon_sl * molar_mass_C / 1000._wp &
-      &               / carbon_per_dryweight_SOM / rho_bulk_org, 1.0_wp)
+    vol_fraction_om = MIN(bulk_soil_carbon_sl * molar_mass_C / 1000._jp &
+      &               / carbon_per_dryweight_SOM / rho_bulk_org, 1.0_jp)
 
     !>2.0 maximum sorption capacity per soil volume as the mix of OM and mineral sorption (mol/m3)
     !>
@@ -1652,11 +1652,11 @@ CONTAINS
       km = MAX(km1, km2)
     ELSE
       hlp  = (qmax1 + qmax2) / hlp
-      sol1 = (hlp - 2._wp * solute + SQRT(hlp * hlp - 4._wp * hlp * solute)) / 2._wp
-      sol2 = (hlp - 2._wp * solute - SQRT(hlp * hlp - 4._wp * hlp * solute)) / 2._wp
+      sol1 = (hlp - 2._jp * solute + SQRT(hlp * hlp - 4._jp * hlp * solute)) / 2._jp
+      sol2 = (hlp - 2._jp * solute - SQRT(hlp * hlp - 4._jp * hlp * solute)) / 2._jp
       IF (sol1 /= sol1 .OR. sol2 /= sol2) THEN
         km = MAX(km1, km2)
-      ELSE IF ((km1 - sol1) * (km2 - sol1) <= 0._wp) THEN
+      ELSE IF ((km1 - sol1) * (km2 - sol1) <= 0._jp) THEN
         km = sol1
       ELSE
         km = sol2
@@ -1732,18 +1732,18 @@ CONTAINS
     !>
     IF (sb_model_scheme == 'simple_1d') THEN
       bulk_soil_carbon_sl(:,:)   = bulk_soil_carbon_sl(:,:) + soil_litter_carbon_sl(:,:)
-      soil_litter_carbon_sl(:,:) = 0._wp
+      soil_litter_carbon_sl(:,:) = 0._jp
     ENDIF
 
     !>2.0 calculate the volume of mineral soil [m3/m3]
     !>  assuming the bulk soil is composed of OM, litter and soil mineral
     !>
-    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp    ! OM density [kg/m3]
-    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp  ! litter density [kg/m3]
+    om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._jp    ! OM density [kg/m3]
+    lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._jp  ! litter density [kg/m3]
     DO ic = 1,nc
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
-        volume_min_sl(ic,isoil) = MAX(0.01_wp, &
-          &   MIN( 0.99_wp, 1._wp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org))
+        volume_min_sl(ic,isoil) = MAX(0.01_jp, &
+          &   MIN( 0.99_jp, 1._jp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org))
       END DO
     END DO
   END SUBROUTINE calc_bulk_soil_carbon
@@ -1770,7 +1770,7 @@ CONTAINS
     ! based on the assumption that labile P is the sum of both,
     ! and they follow the Langmuir equilibrium
     ! Labile_p - fast_po4 = fast_po4 * km / (Labile_p * (Qmax - fast_po4))
-    fast_po4 = (Labile_p + Qmax + km - SQRT((Labile_p + Qmax + km) ** 2._wp - 4._wp * Labile_p * Qmax)) / 2._wp
+    fast_po4 = (Labile_p + Qmax + km - SQRT((Labile_p + Qmax + km) ** 2._jp - 4._jp * Labile_p * Qmax)) / 2._jp
   END FUNCTION calc_fast_po4
 
   ! ======================================================================================================= !
@@ -1798,12 +1798,12 @@ CONTAINS
     ! Solution of the equation:
     !   dL/dR=alpha(km+alpha*Cmic)/((1-alpha)*(km+Cmic*(1-alpha)))
     !   only one of the solution fits in the range [0,1]
-    hlp1  = 4._wp * Cmic ** 2._wp * dL * dR &
-      &     + 8._wp * Cmic * km * dL * dR &
-      &     + km ** 2._wp * dL ** 2._wp &
-      &     + 2._wp * km ** 2._wp * dL * dR &
-      &     + km ** 2._wp * dR ** 2._wp
-    alpha = (dL * km + 2._wp * dL * Cmic + dR * km - SQRT(hlp1)) / (2._wp * Cmic * (dL - dR))
+    hlp1  = 4._jp * Cmic ** 2._jp * dL * dR &
+      &     + 8._jp * Cmic * km * dL * dR &
+      &     + km ** 2._jp * dL ** 2._jp &
+      &     + 2._jp * km ** 2._jp * dL * dR &
+      &     + km ** 2._jp * dR ** 2._jp
+    alpha = (dL * km + 2._jp * dL * Cmic + dR * km - SQRT(hlp1)) / (2._jp * Cmic * (dL - dR))
   END FUNCTION calc_enzyme_allocation
 
   ! ======================================================================================================= !
@@ -1857,7 +1857,7 @@ CONTAINS
 
     !>1.0 Determine available sorption sites [mol C m-3]
     !>
-    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_org(:,:) &
+    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._jp, qmax_org(:,:) &
       &                                            - (sb_pool_mt(ix_dom_assoc, ixC, :, :) &
       &                                            + sb_pool_mt(ix_residue_assoc, ixC, :, :)))
 
@@ -1942,12 +1942,12 @@ CONTAINS
 
     !>0.8 initialize local variable
     !>
-    sand_sl = 1._wp - clay_sl - silt_sl
+    sand_sl = 1._jp - clay_sl - silt_sl
 
     !>0.9 set Qmax_AlFe_cor zero if lower eps8
     !>
     IF (Qmax_AlFe_cor < eps8) THEN
-      Qmax_AlFe_cor = 0._wp
+      Qmax_AlFe_cor = 0._jp
     END IF
 
     !>1.0 double-surface Langmuir
@@ -1957,7 +1957,7 @@ CONTAINS
       !>
       ! fine soil + sandy soil [mol P /kg soil]
       qmax_po4_min_sl = (calc_qmax_texture(qmax_po4_silt, clay_sl, silt_sl) + &
-        & calc_qmax_texture(qmax_po4_sand, 0._wp, sand_sl)) * Qmax_AlFe_cor
+        & calc_qmax_texture(qmax_po4_sand, 0._jp, sand_sl)) * Qmax_AlFe_cor
       ! soil OM [mol P /kg OM]
       qmax_po4_om_sl = qmax_po4_OM
       CALL calc_qmax_bulk_density_correction( &
@@ -1970,7 +1970,7 @@ CONTAINS
         & qmax_fast=qmax_fast_po4, &
         & qmax_slow=qmax_slow_po4)
       ! Fe/Al in OM [mol P/m3]
-      hlp1 = calc_qmax_texture(qmax_po4_clay, 0._wp, clay_sl) * volume_min_sl * bulk_dens_sl * Qmax_AlFe_cor
+      hlp1 = calc_qmax_texture(qmax_po4_clay, 0._jp, clay_sl) * volume_min_sl * bulk_dens_sl * Qmax_AlFe_cor
       ! update qmax_fast_po4 and qmax_po4
       qmax_fast_po4 = qmax_fast_po4 + hlp1
       qmax_po4      = qmax_po4 + hlp1
@@ -1984,13 +1984,13 @@ CONTAINS
       km_fast_po4 = calc_km_qmax_correction(po4_solute, hlp1, hlp2, hlp3, hlp4, w_soil=soil_water)
       ! km for the clay-silt-sand pool, slow pool
       IF (qmax_slow_po4 < eps8) THEN
-        qmax_slow_po4 = 0._wp
+        qmax_slow_po4 = 0._jp
         hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
         hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4    ! km for sand [mol P/L]
         km_slow_po4 = MAX(hlp3, hlp4)
       ELSE
         hlp1        = qmax_slow_po4 * MIN(calc_qmax_texture(qmax_po4_silt, clay_sl, silt_sl) * &
-          & Qmax_AlFe_cor / qmax_po4_min_sl, (1._wp - min_fraction_default_sb)) ! qmax for clay/silt
+          & Qmax_AlFe_cor / qmax_po4_min_sl, (1._jp - min_fraction_default_sb)) ! qmax for clay/silt
         hlp2        = qmax_slow_po4 - hlp1                                      ! qmax for sand
         hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4                   ! km for clay/silt [mol P/L]
         hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4                   ! km for sand [mol P/L]
@@ -2003,7 +2003,7 @@ CONTAINS
     !>
     ! Qmax and km are based on texture and calculated both as the sum of OM and mineral soil
     ELSE
-      qmax_po4_min_sl   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
+      qmax_po4_min_sl   = calc_qmax_texture(qmax_po4_mineral, 0.0_jp, 1._jp)
       qmax_po4_om_sl    = qmax_po4_min_sl * min_fraction_default_sb
       CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
         &                                    qmax_po4_om_sl, qmax_po4_min_sl, &

@@ -56,15 +56,15 @@ CONTAINS
                          &  fract_water, fract_ice, layer_depth, dz
     REAL(jp)             :: vol_heat_cap
 
-    IF (layer_depth > 0._wp) THEN  ! above bedrock
-      vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
-        &              * ( (1._wp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
+    IF (layer_depth > 0._jp) THEN  ! above bedrock
+      vol_heat_cap = (1._jp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
+        &              * ( (1._jp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
         &                  +        fract_organic  * vol_heat_cap_soil_dry_organic & ! heat cap of organic soil
         &                )                                                         &
         &            + fract_water * vol_hcap_water                                & ! heat cap of liquid water
         &            + fract_ice   * vol_hcap_ice                                  & ! heat cap of frozen water
         ! @todo : porosity - fract_water - fract_ice should not become lower than zero.
-        &            + MAX((porosity - fract_water - fract_ice),0._wp) * vol_hcap_air  ! heat cap of remaining free pores
+        &            + MAX((porosity - fract_water - fract_ice),0._jp) * vol_hcap_air  ! heat cap of remaining free pores
       vol_heat_cap = ( vol_heat_cap * layer_depth + vol_hcap_bedrock * (dz - layer_depth) ) / dz ! soil and bedrock mixture
     ELSE
       vol_heat_cap = vol_hcap_bedrock
@@ -146,20 +146,20 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    IF (layer_depth > 0._wp) THEN  ! above bedrock
+    IF (layer_depth > 0._jp) THEN  ! above bedrock
       ! Thermal conductivity of dry soil
-      porosity_mineral = (porosity - fract_organic * vol_porosity_org) / (1._wp - fract_organic)
-      dens_bulk = dens_soil * (1._wp - porosity_mineral)
-      hcond_dry_min = (0.135_wp * dens_bulk + 64.7_wp) / (dens_soil - 0.947_wp * dens_bulk)
-      hcond_dry = (1._wp - fract_organic) * hcond_dry_min + fract_organic * hcond_dry_org
+      porosity_mineral = (porosity - fract_organic * vol_porosity_org) / (1._jp - fract_organic)
+      dens_bulk = dens_soil * (1._jp - porosity_mineral)
+      hcond_dry_min = (0.135_jp * dens_bulk + 64.7_jp) / (dens_soil - 0.947_jp * dens_bulk)
+      hcond_dry = (1._jp - fract_organic) * hcond_dry_min + fract_organic * hcond_dry_org
 
-      IF (water + ice <= EPSILON(1._wp)) THEN
+      IF (water + ice <= EPSILON(1._jp)) THEN
         heat_cond = hcond_dry
       ELSE
 
 
         ! Thermal conductivity of soil solids
-        hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
+        hcond_soil = (1._jp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
 
         ! Thermal conductivity of saturated soil
         saturation = (water + ice) / layer_depth / porosity  ! fractional volume of water/ice rel. to pore volume
@@ -167,56 +167,56 @@ CONTAINS
         ! ! --- Alternate formulation ---
         ! ! @todo: in jsbach3, frozen soil is checked by t_soil_sl1 <= tmelt, however, the computations in calc_soil_temperature
         ! ! are such that some ice can remain in a layer even if t_soil_sl1 > tmelt.
-        ! IF (ice > 0._wp) THEN  ! Frozen case
+        ! IF (ice > 0._jp) THEN  ! Frozen case
         !   kersten = saturation
         !   fract_water = water / layer_depth
         !   fract_ice   = porosity - fract_water
-        !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
+        !   hcond_sat =   hcond_soil      ** (1._jp-porosity) &
         !     &         * hcond_water     ** fract_water      &
         !     &         * hcond_ice       ** fract_ice
         ! ELSE                   ! Unfrozen case
         !   ! ! This is the case for fine unfrozen soil
-        !   ! IF (saturation > 0.1_wp) THEN
-        !   !   kersten = LOG10(saturation) + 1._wp
+        !   ! IF (saturation > 0.1_jp) THEN
+        !   !   kersten = LOG10(saturation) + 1._jp
         !   ! ELSE
-        !   !   kersten = 0._wp
+        !   !   kersten = 0._jp
         !   ! END IF
         !   ! This is the case for coarse unfrozen soil
-        !   IF (saturation > 0.05_wp) THEN
-        !     kersten = 0.7_wp * LOG10(saturation) + 1._wp
+        !   IF (saturation > 0.05_jp) THEN
+        !     kersten = 0.7_jp * LOG10(saturation) + 1._jp
         !   ELSE
-        !     kersten = 0._wp
+        !     kersten = 0._jp
         !   END IF
         !   fract_water = porosity
-        !   hcond_sat =   hcond_soil      ** (1._wp-porosity) &
+        !   hcond_sat =   hcond_soil      ** (1._jp-porosity) &
         !     &         * hcond_water     ** porosity
         ! END IF
 
         ! @todo: in jsbach3, frozen soil is checked by t_soil_sl1 <= tmelt, however, the computations in calc_soil_temperature
         ! are such that some ice can remain in a layer even if t_soil_sl1 > tmelt.
-        IF (ice > 0._wp) THEN  ! Frozen case
+        IF (ice > 0._jp) THEN  ! Frozen case
           kersten = saturation
         ELSE                   ! Unfrozen case
           ! This is the case for fine unfrozen soil
-          IF (saturation > 0.1_wp) THEN
-            kersten = LOG10(saturation) + 1._wp
+          IF (saturation > 0.1_jp) THEN
+            kersten = LOG10(saturation) + 1._jp
           ELSE
-            kersten = 0._wp
+            kersten = 0._jp
           END IF
           ! ! This is the case for coarse unfrozen soil
-          ! IF (saturation > 0.05_wp) THEN
-          !   kersten = 0.7_wp * LOG10(saturation) + 1._wp
+          ! IF (saturation > 0.05_jp) THEN
+          !   kersten = 0.7_jp * LOG10(saturation) + 1._jp
           ! ELSE
-          !   kersten = 0._wp
+          !   kersten = 0._jp
           ! END IF
         END IF
         ! The scaling is changed compared to earlier versions. The current implementation interpretes the fractions
         ! of the individual components such that fract_water + fract_ice equals porosity, which is also supported by
         ! Nikoosokhan et al (2016), equation 4
-        sat_fact    = MAX(0._wp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
+        sat_fact    = MAX(0._jp, porosity / ((water + ice) / layer_depth)) ! Scaling factor to upscale water/ice to saturation
         fract_water = (water / layer_depth) * sat_fact ! Water fraction rel. to completely saturated soil
         fract_ice   = (  ice / layer_depth) * sat_fact ! Ice fraction rel. to completely saturated soil
-        hcond_sat   = hcond_soil      ** (1._wp-fract_water-fract_ice) &
+        hcond_sat   = hcond_soil      ** (1._jp-fract_water-fract_ice) &
           &         * hcond_water     ** fract_water                   &
           &         * hcond_ice       ** fract_ice
 
@@ -252,13 +252,13 @@ CONTAINS
     REAL(jp) :: moisture
 
     moisture = MIN(ws, ws_max)
-    IF (moisture > 0._wp) THEN
+    IF (moisture > 0._jp) THEN
       ! Soil moisture values below ws_min result in a rel. humidity of 0, for values above ws_max the
       ! rel. humidity is 1. Between ws_min and ws_max rel. humidity increases using the Cosine function
       ! resulting leads in a smooth transitions at ws_min and was_max.
-      relative_humidity_soil = 0.5_wp * (1._wp - COS(MAX(moisture - ws_min, 0._wp) / (ws_max - ws_min) * pi))
+      relative_humidity_soil = 0.5_jp * (1._jp - COS(MAX(moisture - ws_min, 0._jp) / (ws_max - ws_min) * pi))
     ELSE
-      relative_humidity_soil = 0._wp
+      relative_humidity_soil = 0._jp
     END IF
 
   END FUNCTION relative_humidity_soil
@@ -295,7 +295,7 @@ CONTAINS
     REAL(jp)                  :: year_len, day_in_year
     REAL(jp)                  :: month_len(12), month_mid(12)
 
-    REAL(jp), PARAMETER :: cmid_offset = 0.07_wp
+    REAL(jp), PARAMETER :: cmid_offset = 0.07_jp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_temperature'
 
@@ -304,7 +304,7 @@ CONTAINS
 
     ALLOCATE(zrange(ndim), jmax(ndim), zdmax(ndim))
 
-    zkap = 7.5e-7_wp
+    zkap = 7.5e-7_jp
 
     inidate => get_time_start()
     iniyear = get_year(inidate)
@@ -315,7 +315,7 @@ CONTAINS
 
     DO im=1,12
       month_len(im) = REAL(get_month_length(iniyear, im), jp)
-      month_mid(im) = month_len(im) * 0.5_wp
+      month_mid(im) = month_len(im) * 0.5_jp
     END DO
 
     zsqrt = SQRT(zkap * year_len * get_day_length() / pi)
@@ -327,7 +327,7 @@ CONTAINS
     zrange(:) = MAXVAL(tclim(:,:), DIM=2) - MINVAL(tclim(:,:), DIM=2)
 
     ! Calendar day of maximum surface temperature
-    zdmax(:) = 0._wp
+    zdmax(:) = 0._jp
     DO ic=1,ndim
       DO im=1,jmax(ic)
         zdmax(ic) = zdmax(ic) + month_len(im)
@@ -337,9 +337,9 @@ CONTAINS
 
     ! Initialize soil temperatures
     DO i=1,nsoil
-      tsoil(:,i) = SUM(tclim(:,:), DIM=2) / 12._wp                            &
-                 & + 0.5_wp * zrange(:) * EXP(-(cmid(i)-cmid_offset) / zsqrt) &
-                 &   * COS(2._wp * pi * (day_in_year - zdmax(:)) / year_len - (cmid(i)-cmid_offset) / zsqrt)
+      tsoil(:,i) = SUM(tclim(:,:), DIM=2) / 12._jp                            &
+                 & + 0.5_jp * zrange(:) * EXP(-(cmid(i)-cmid_offset) / zsqrt) &
+                 &   * COS(2._jp * pi * (day_in_year - zdmax(:)) / year_len - (cmid(i)-cmid_offset) / zsqrt)
     END DO
 
     DEALLOCATE(zrange, jmax, zdmax)
@@ -434,7 +434,7 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO is = 1,nsoil-1
-       zd1(is) = 1._wp / (mids(is+1) - mids(is))
+       zd1(is) = 1._jp / (mids(is+1) - mids(is))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -455,10 +455,10 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          frozen    (ic,is)  = 0._wp
-          melt      (ic,is)  = 0._wp
-          freeze_mass(ic,is) = 0._wp
-          melt_mass(ic,is)   = 0._wp
+          frozen    (ic,is)  = 0._jp
+          melt      (ic,is)  = 0._jp
+          freeze_mass(ic,is) = 0._jp
+          melt_mass(ic,is)   = 0._jp
           wtr_old(ic,is)     = wtr(ic,is)
           ice_old(ic,is)     = ice(ic,is)
         END DO
@@ -468,8 +468,8 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      thaw_depth(ic) = 0._wp
-      le_phase(ic) = 0._wp
+      thaw_depth(ic) = 0._jp
+      le_phase(ic) = 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -524,7 +524,7 @@ CONTAINS
             IF (t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
               freeze_mass(ic,is) = MIN((wtr(ic,is) - liquid_max(ic,is)) * rhoh2o, &
                 & heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / alf)
-            ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
+            ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._jp) THEN
               melt_mass(ic,is) = MIN(ice(ic,is) * rhoi, &
                 & heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf)
             END IF
@@ -561,8 +561,8 @@ CONTAINS
           error_flag(:) = .FALSE.
           DO is=1,nsoil
             DO ic=1,nc
-              IF (((wtr(ic,is) < -EPSILON(1._wp) .AND. frozen(ic,is) > EPSILON(1._wp)) .OR. &
-                & (ice(ic,is) < -EPSILON(1._wp) .AND. melt(ic,is) > EPSILON(1._wp))) .AND.  &
+              IF (((wtr(ic,is) < -EPSILON(1._jp) .AND. frozen(ic,is) > EPSILON(1._jp)) .OR. &
+                & (ice(ic,is) < -EPSILON(1._jp) .AND. melt(ic,is) > EPSILON(1._jp))) .AND.  &
                 & .NOT. error_flag(ic)) THEN
                 n_errors = n_errors + 1    ! count the soil moisture errors
                 error_idx(n_errors) = ic   ! keep the respective cell indices
@@ -594,8 +594,8 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is=1,nsoil
           DO ic=1,nc
-            wtr(ic,is) = MAX(0._wp, wtr(ic,is))
-            ice(ic,is) = MAX(0._wp, ice(ic,is))
+            wtr(ic,is) = MAX(0._jp, wtr(ic,is))
+            ice(ic,is) = MAX(0._jp, ice(ic,is))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -644,10 +644,10 @@ CONTAINS
         DO ic = 1, nc
           thaw_depth(ic) = bots(nsoil)      ! Initialize with maximum thaw depth
           IF (t_soil_sl(ic,1) < tmelt) THEN ! Top soil layer is frozen
-            thaw_depth(ic) = 0._wp
+            thaw_depth(ic) = 0._jp
           ELSE IF (t_soil_sl(ic,1) == tmelt) THEN ! Top soil layer is thawing
             ! in case water is present we diagnose thaw depth using ration of liquid / total water
-            IF (ice(ic,1) > 0._wp) THEN
+            IF (ice(ic,1) > 0._jp) THEN
               thaw_depth(ic) = dsoil(ic,1) * wtr(ic,1) / (wtr(ic,1) + ice(ic,1))
             ELSE
               thaw_depth(ic) = dz(1)
@@ -661,7 +661,7 @@ CONTAINS
           DO ic = 1, nc
             IF (thaw_depth(ic) == bots(nsoil)) THEN
               IF  (t_soil_sl(ic,is-1) > tmelt .AND. t_soil_sl(ic,is) == tmelt) THEN ! Lower layer is at zero degrees
-                IF (ice(ic,is) > 0._wp) THEN
+                IF (ice(ic,is) > 0._jp) THEN
                 ! in case water is present we diagnose thaw depth using ration of liquid / total water
                   thaw_depth(ic) = bots(is-1) + dsoil(ic,is) * wtr(ic,is) / (wtr(ic,is) + ice(ic,is))
                 ELSE
@@ -681,7 +681,7 @@ CONTAINS
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          thaw_depth(ic) = 0._wp
+          thaw_depth(ic) = 0._jp
         END DO
         !$ACC END PARALLEL LOOP
       END IF
@@ -691,7 +691,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is = 1, nsoil
           DO ic = 1, nc
-            liquid_max(ic,is) = 0._wp
+            liquid_max(ic,is) = 0._jp
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -705,7 +705,7 @@ CONTAINS
     DO is = 1, nsoil
       DO ic=1,nc
         zdz2(ic,is) = heat_cap(ic,is) / delta_time
-        z1(ic,is)   = 0._wp
+        z1(ic,is)   = 0._jp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
@@ -733,7 +733,7 @@ CONTAINS
     DO ic=1,nc
       !$ACC LOOP SEQ
       DO is = nsoil-1, 2, -1
-        z1(ic,is-1) = 1._wp / (zdz2(ic,is) + zdz1(ic,is-1) + zdz1(ic,is) * (1._wp - t_soil_bcoef(ic,is)))
+        z1(ic,is-1) = 1._jp / (zdz2(ic,is) + zdz1(ic,is-1) + zdz1(ic,is) * (1._jp - t_soil_bcoef(ic,is)))
         t_soil_acoef(ic,is-1) = (t_soil_sl(ic,is) * zdz2(ic,is) + zdz1(ic,is) * t_soil_acoef(ic,is)) * z1(ic,is-1)
         t_soil_bcoef(ic,is-1) = zdz1(ic,is-1) * z1(ic,is-1)
       END DO
@@ -747,8 +747,8 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      grnd_hflx(ic) = zdz1(ic,1) * (t_soil_acoef(ic,1) + (t_soil_bcoef(ic,1) - 1._wp) * t_soil_sl(ic,1))
-      hcap_grnd(ic) = (zdz2(ic,1) * delta_time + delta_time * (1._wp - t_soil_bcoef(ic,1)) * zdz1(ic,1))
+      grnd_hflx(ic) = zdz1(ic,1) * (t_soil_acoef(ic,1) + (t_soil_bcoef(ic,1) - 1._jp) * t_soil_sl(ic,1))
+      hcap_grnd(ic) = (zdz2(ic,1) * delta_time + delta_time * (1._jp - t_soil_bcoef(ic,1)) * zdz1(ic,1))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -913,8 +913,8 @@ CONTAINS
 
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      grnd_hflx(ic) = 0._wp
-      hcap_grnd(ic) = 0._wp
+      grnd_hflx(ic) = 0._jp
+      hcap_grnd(ic) = 0._jp
 
       !-----------------------------------------------------------------------------------------------
       !  Computation of useful constants
@@ -922,7 +922,7 @@ CONTAINS
       ! dz and zmid are zero for unused snow layers
       !
       ! mid of snow layers
-      zmid(ic,1) = dz(ic,1) / 2._wp
+      zmid(ic,1) = dz(ic,1) / 2._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -931,9 +931,9 @@ CONTAINS
     DO is=2,nsnow
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
-        zmid(ic,is) = zmid(ic,is-1) + 0.5_wp * (dz(ic,is-1) + dz(ic,is))
+        zmid(ic,is) = zmid(ic,is-1) + 0.5_jp * (dz(ic,is-1) + dz(ic,is))
         IF (zmid(ic,is) > zmid(ic,is-1)) THEN
-          zd1(ic,is-1) = 1._wp / (zmid(ic,is) - zmid(ic,is-1))
+          zd1(ic,is-1) = 1._jp / (zmid(ic,is) - zmid(ic,is-1))
         END IF
       END DO
       !$ACC END LOOP
@@ -944,10 +944,10 @@ CONTAINS
     ! mid of two uppermost soil layers
     !$ACC PARALLEL LOOP GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      zmid(ic,nsnow+1) = zmid(ic,nsnow) + 0.5_wp * (dz(ic,nsnow) + dz_soil(1))
-      zmid(ic,nsnow+2) = zmid(ic,nsnow+1) + 0.5_wp * (dz_soil(1) + dz_soil(2))
-      zd1(ic,nsnow) = 1._wp / (zmid(ic,nsnow+1) - zmid(ic,nsnow))
-      zd1(ic,nsnow+1) = 1._wp / (zmid(ic,nsnow+2) - zmid(ic,nsnow+1))
+      zmid(ic,nsnow+1) = zmid(ic,nsnow) + 0.5_jp * (dz(ic,nsnow) + dz_soil(1))
+      zmid(ic,nsnow+2) = zmid(ic,nsnow+1) + 0.5_jp * (dz_soil(1) + dz_soil(2))
+      zd1(ic,nsnow) = 1._jp / (zmid(ic,nsnow+1) - zmid(ic,nsnow))
+      zd1(ic,nsnow+1) = 1._jp / (zmid(ic,nsnow+2) - zmid(ic,nsnow+1))
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -962,8 +962,8 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic=1,nc
         IF (is <= itop(ic) - 1) THEN
-          t_snow_acoef(ic,is) = 0._wp
-          t_snow_bcoef(ic,is) = 0._wp
+          t_snow_acoef(ic,is) = 0._jp
+          t_snow_bcoef(ic,is) = 0._jp
         END IF
       END DO
       !$ACC END LOOP
@@ -989,12 +989,12 @@ CONTAINS
 
       ! lowest snow layer
       IF (itop(ic) <= nsnow) THEN  ! Snow present
-        z1 = 1._wp / (zdz2(ic,nsnow+1) + zdz1(ic,nsnow) + zdz1(ic,nsnow+1) * (1._wp - t_soil_bcoef(ic,1)))
+        z1 = 1._jp / (zdz2(ic,nsnow+1) + zdz1(ic,nsnow) + zdz1(ic,nsnow+1) * (1._jp - t_soil_bcoef(ic,1)))
         t_snow_acoef(ic,nsnow) = (t_soil_sl(ic,1) * zdz2(ic,nsnow+1) + zdz1(ic,nsnow+1) * t_soil_acoef(ic,1)) * z1
         t_snow_bcoef(ic,nsnow) = zdz1(ic,nsnow) * z1
       ELSE
-        t_snow_acoef(ic,nsnow) = 0._wp
-        t_snow_bcoef(ic,nsnow) = 0._wp
+        t_snow_acoef(ic,nsnow) = 0._jp
+        t_snow_bcoef(ic,nsnow) = 0._jp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -1006,7 +1006,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR PRIVATE(z1)
       DO ic=1,nc
         IF (is > itop(ic)) THEN
-          z1 = 1._wp / (zdz2(ic,is) + zdz1(ic,is-1) + zdz1(ic,is) * (1._wp - t_snow_bcoef(ic,is)))
+          z1 = 1._jp / (zdz2(ic,is) + zdz1(ic,is-1) + zdz1(ic,is) * (1._jp - t_snow_bcoef(ic,is)))
           t_snow_acoef(ic,is-1) = (t_snow(ic,is) * zdz2(ic,is) + zdz1(ic,is) * t_snow_acoef(ic,is)) * z1
           t_snow_bcoef(ic,is-1) = zdz1(ic,is-1) * z1
         END IF
@@ -1024,8 +1024,8 @@ CONTAINS
     DO ic=1,nc
       IF (itop(ic) <= nsnow) THEN
         is = itop(ic)
-        grnd_hflx(ic) = zdz1(ic,is) * (t_snow_acoef(ic,is) + (t_snow_bcoef(ic,is) - 1._wp) * t_snow(ic,is))
-        hcap_grnd(ic) = (zdz2(ic,is) * delta_time + delta_time * (1._wp - t_snow_bcoef(ic,is)) * zdz1(ic,is))
+        grnd_hflx(ic) = zdz1(ic,is) * (t_snow_acoef(ic,is) + (t_snow_bcoef(ic,is) - 1._jp) * t_snow(ic,is))
+        hcap_grnd(ic) = (zdz2(ic,is) * delta_time + delta_time * (1._jp - t_snow_bcoef(ic,is)) * zdz1(ic,is))
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -1053,14 +1053,14 @@ CONTAINS
       & temp, w_max, matric_pot, bclapp
     REAL(jp) :: liquid_max
 
-    IF (temp < tmelt - 1e-10_wp) THEN
+    IF (temp < tmelt - 1e-10_jp) THEN
       ! supercooled water equation (Niu&Yang,2006)
       liquid_max =                                                               &
         & w_max                                                                  & ! Maximum water storage
-        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp,  grav * temp * (-matric_pot)) ) &
-        &   ** ( -1._wp / MAX(1._wp, bclapp))
+        & * ( alf * (tmelt - temp) / MAX(1.e-10_jp,  grav * temp * (-matric_pot)) ) &
+        &   ** ( -1._jp / MAX(1._jp, bclapp))
     ELSE
-      liquid_max = 0._wp
+      liquid_max = 0._jp
     END IF
 
   END FUNCTION Get_liquid_max

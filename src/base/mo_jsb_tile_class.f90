@@ -807,13 +807,13 @@ CONTAINS
 
       !! Section for debugging
       !! It needs to be adapted to absolute tile fractions!
-      !!   => replace 1._wp by parent%fract
+      !!   => replace 1._jp by parent%fract
       !
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
       ! fract(:) = tile%fract(ics:ice,iblk)
       ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._jp - EPSILON(1._jp) .AND. fract(:) > 0._jp)) THEN
       ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
       ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
       ! !     &          all_print=.TRUE.)
@@ -859,7 +859,7 @@ CONTAINS
       ! ALLOCATE(fract_sum(ice-ics+1))
       ! fract(:) = tile%fract(ics:ice,iblk)
       ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._jp - EPSILON(1._jp) .AND. fract(:) > 0._jp)) THEN
       ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
       ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
       ! !     &          all_print=.TRUE.)
@@ -957,8 +957,8 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        data_sum (j,iblk) = 0._wp
-        fract_sum(j,iblk) = 0._wp
+        data_sum (j,iblk) = 0._jp
+        fract_sum(j,iblk) = 0._jp
       END DO
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
@@ -994,7 +994,7 @@ CONTAINS
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
-      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      ! IF (ANY(fract_sum(:) > 1._jp + EPSILON(1._jp))) THEN
       !   ! print*, fract_sum
       !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
       !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
@@ -1007,7 +1007,7 @@ CONTAINS
       IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._jp) THEN
             ! ichild: the only child that contained the variable
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
@@ -1015,7 +1015,7 @@ CONTAINS
       ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._jp) THEN
             ! Divide the data sum by the sum of the fractions
             var%ptr(j,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
           ! ELSE
@@ -1133,7 +1133,7 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        fract_sum(j,iblk) = 0._wp
+        fract_sum(j,iblk) = 0._jp
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
@@ -1158,7 +1158,7 @@ CONTAINS
       DO ilev = 1, nlev
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          data_sum (j,iblk) = 0._wp
+          data_sum (j,iblk) = 0._jp
         END DO
 
         !$ACC LOOP SEQ
@@ -1182,7 +1182,7 @@ CONTAINS
         IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._jp) THEN
               ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
@@ -1190,7 +1190,7 @@ CONTAINS
         ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._jp) THEN
               ! Divide the data sum by the sum of the fractions
               var%ptr(j,ilev,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
             END IF

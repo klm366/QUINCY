@@ -55,13 +55,13 @@ CONTAINS
     bottom    = SUM(dz (:))
     root_depth = SUM(dz_root(:))
 #ifndef _OPENACC
-    IF (root_depth > bottom + EPSILON(1._wp)) THEN
+    IF (root_depth > bottom + EPSILON(1._jp)) THEN
       CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
     ELSE
 #endif
-      bottom    = 0._wp
-      bottom_m1 = 0._wp
-      ws_root   = 0._wp
+      bottom    = 0._jp
+      bottom_m1 = 0._jp
+      ws_root   = 0._jp
       DO is = 1, nsoil
         bottom    = bottom + dz(is)
         IF (root_depth >= bottom) THEN                ! Root zone extends to below current layer
@@ -104,10 +104,10 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      root_depth(ic) = 0._wp
-      bottom(ic)     = 0._wp
-      bottom_m1(ic)  = 0._wp
-      ws_root(ic)    = 0._wp
+      root_depth(ic) = 0._jp
+      bottom(ic)     = 0._jp
+      bottom_m1(ic)  = 0._jp
+      ws_root(ic)    = 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -142,7 +142,7 @@ CONTAINS
 
 #ifndef _OPENACC
     DO ic = 1, SIZE(ws, 1)
-      IF (root_depth(ic) > bottom(ic) + EPSILON(1._wp)) THEN
+      IF (root_depth(ic) > bottom(ic) + EPSILON(1._jp)) THEN
         CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
       END IF
     END DO

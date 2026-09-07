@@ -119,7 +119,7 @@ CONTAINS
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    prod_decay_mt(:,:) = 0._wp
+    prod_decay_mt(:,:) = 0._jp
 
     IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
       CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_crop, veg_pp_crop_mt, prod_decay_mt)
@@ -163,14 +163,14 @@ CONTAINS
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
     ! turnover fraction
-    fract_turnover = 1.0_wp / tau / one_day / one_year * dtime
+    fract_turnover = 1.0_jp / tau / one_day / one_year * dtime
 
     DO ic = 1,nc
       DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
         IF (l_element_used(id_elem)) THEN
           ix_elem = elements_index_map(id_elem)
           prod_decay_mt(ix_elem , ic) = prod_decay_mt(ix_elem , ic) + (veg_pp_mt(ix_elem , ic) * fract_turnover)
-          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._wp - fract_turnover)
+          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._jp - fract_turnover)
         END IF
       END DO
     END DO

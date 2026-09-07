@@ -325,7 +325,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
-        itop_old(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._wp)
+        itop_old(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._jp)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -338,7 +338,7 @@ CONTAINS
 #endif
       DO isnow=1,nsnow
         DO ic = 1,nc
-          snow_depth_sl(ic,isnow) = 0._wp
+          snow_depth_sl(ic,isnow) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -351,13 +351,13 @@ CONTAINS
 #endif
       DO ic = 1,nc
         snow_fract(ic) = fract_snow_soil(ic)
-        IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._wp)) THEN
+        IF (snow_depth(ic) > snow_depth_min .AND. snow_fract(ic) > EPSILON(1._jp)) THEN
           IF (.NOT. l_uniform_snow) THEN
             snow_depth(ic) = snow_depth(ic) / snow_fract(ic)
           END IF
         ELSE
-          snow_depth(ic) = 0._wp
-          snow_fract(ic) = 0._wp
+          snow_depth(ic) = 0._jp
+          snow_fract(ic) = 0._jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -372,7 +372,7 @@ CONTAINS
       DO isnow=nsnow,1,-1
         !$ACC LOOP GANG VECTOR
         DO ic = 1,nc
-          IF (snow_depth(ic) > 0._wp) THEN
+          IF (snow_depth(ic) > 0._jp) THEN
             snow_depth_sl(ic,isnow) = MIN(snow_depth(ic), snow_e%dz(isnow))
             snow_depth(ic) = snow_depth(ic) - snow_depth_sl(ic,isnow)
           END IF
@@ -402,7 +402,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
-        itop(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._wp)
+        itop(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._jp)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -432,9 +432,9 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
         DO ic = 1, nc
-          IF (snow_depth_sl(ic, nsnow) > 0._wp) THEN
+          IF (snow_depth_sl(ic, nsnow) > 0._jp) THEN
             ! At least one snow layer above soil
-            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._wp - snow_fract(ic)) * t_srf(ic)
+            t_soil_top(ic) = snow_fract(ic) * t_soil_top(ic) + (1._jp - snow_fract(ic)) * t_srf(ic)
           ELSE
             ! No snow
             t_soil_top(ic) = t_srf(ic)
@@ -451,7 +451,7 @@ CONTAINS
 #endif
       DO isnow = 1,nsnow
         DO ic = 1, nc
-            snow_depth_sl(ic,isnow) = 0._wp
+            snow_depth_sl(ic,isnow) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -464,10 +464,10 @@ CONTAINS
 #endif
       DO ic = 1, nc
         snow_depth(ic) = weq_snow_soil(ic) * rhoh2o / dens_snow
-        snow_fract(ic) = 0._wp
+        snow_fract(ic) = 0._jp
         t_soil_top(ic) = t_srf(ic)
-        grnd_hflx_snow(ic) = 0._wp
-        hcap_grnd_snow(ic) = 0._wp
+        grnd_hflx_snow(ic) = 0._jp
+        hcap_grnd_snow(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -590,7 +590,7 @@ CONTAINS
 #endif
       DO ic = 1,nc
         thaw_depth_max_ym1(ic) = thaw_depth_max(ic)
-        thaw_depth_max(ic)     = 0._wp
+        thaw_depth_max(ic)     = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
@@ -614,9 +614,9 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
 #endif
       DO ic = 1,nc
-        IF (.NOT. l_uniform_snow .AND. snow_depth_sl(ic,nsnow) > 0._wp) THEN
-          grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._wp - snow_fract(ic)) * grnd_hflx_soil(ic)
-          hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._wp - snow_fract(ic)) * hcap_grnd_soil(ic)
+        IF (.NOT. l_uniform_snow .AND. snow_depth_sl(ic,nsnow) > 0._jp) THEN
+          grnd_hflx(ic) = snow_fract(ic) * grnd_hflx_snow(ic) + (1._jp - snow_fract(ic)) * grnd_hflx_soil(ic)
+          hcap_grnd(ic) = snow_fract(ic) * hcap_grnd_snow(ic) + (1._jp - snow_fract(ic)) * hcap_grnd_soil(ic)
         ELSE IF (l_uniform_snow .AND. snow_depth(ic) > snow_depth_min) THEN
           grnd_hflx(ic) = grnd_hflx_snow(ic)
           hcap_grnd(ic) = hcap_grnd_snow(ic)
@@ -822,7 +822,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          fract_org_sl(ic,is) = 0._wp
+          fract_org_sl(ic,is) = 0._jp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -835,12 +835,12 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          IF (soil_depth_sl(ic,is) > 0._wp) THEN
+          IF (soil_depth_sl(ic,is) > 0._jp) THEN
             fract_water(ic,is) = wtr_soil_sl(ic,is) / soil_depth_sl(ic,is)
             fract_ice  (ic,is) = ice_soil_sl(ic,is) / soil_depth_sl(ic,is)
           ELSE
-            fract_water(ic,is) = 0._wp
-            fract_ice  (ic,is) = 0._wp
+            fract_water(ic,is) = 0._jp
+            fract_ice  (ic,is) = 0._jp
           END IF
         END DO
       END DO
@@ -975,10 +975,10 @@ CONTAINS
       DO ic = 1, nc
         IF (snow_soil_dens(ic) > dens_snow_min) THEN         ! "old" or mixture of old and fresh snow
           vol_heat_cap_snow(ic) = ci * snow_soil_dens(ic)    ! Use specific heat of ice (Verseghy 1991)
-          ! heat_cond_snow   (:) = 2.576e-6_wp * snow_soil_dens(:) ** 2._wp + 0.074_wp                      ! Verseghy (1991)
-          ! heat_cond_snow   (:) = 2.9e-6_wp*snow_soil_dens(:)**2._wp                                       ! Goodrich (1982)
+          ! heat_cond_snow   (:) = 2.576e-6_jp * snow_soil_dens(:) ** 2._jp + 0.074_jp                      ! Verseghy (1991)
+          ! heat_cond_snow   (:) = 2.9e-6_jp*snow_soil_dens(:)**2._jp                                       ! Goodrich (1982)
           ! Calonne et al. (2011):
-          heat_cond_snow   (ic) = 2.5e-6_wp*snow_soil_dens(ic)**2._wp - 0.123e-3_wp*snow_soil_dens(ic) + 0.024_wp
+          heat_cond_snow   (ic) = 2.5e-6_jp*snow_soil_dens(ic)**2._jp - 0.123e-3_jp*snow_soil_dens(ic) + 0.024_jp
         ELSE                                         ! fresh snow
           ! @todo: these minimum values from mo_sse_constants.f90 don't match with the above equations and minimum snow density
           ! vol_heat_cap_snow(:) = vol_hcap_snow_min

@@ -330,7 +330,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) PRIVATE(qsat_lice)
         DO ic = 1, nc
           qsat_lice = qsat_ice(t_unfilt(ic), press_srf(ic))
-          qsat_srf(ic) = (1._wp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
+          qsat_srf(ic) = (1._jp - fract_lice(ic)) * qsat_srf(ic) + fract_lice(ic) * qsat_lice
         END DO
         !$ACC END PARALLEL LOOP
     END IF
@@ -351,9 +351,9 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      IF (tile%fract(ics+ic-1,iblk) <= 0._wp) THEN
-        km(ic) = 0._wp
-        kh(ic) = 0._wp
+      IF (tile%fract(ics+ic-1,iblk) <= 0._jp) THEN
+        km(ic) = 0._jp
+        kh(ic) = 0._jp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -607,7 +607,7 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      fract_fol_proj_cov(ic) = 0._wp
+      fract_fol_proj_cov(ic) = 0._jp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -650,8 +650,8 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        rough_bare_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_bare) ** 2
-        rough_snow_star(ic) = 1._wp  / LOG(config_blending_height / config_rough_snow) ** 2
+        rough_bare_star(ic) = 1._jp  / LOG(config_blending_height / config_rough_bare) ** 2
+        rough_snow_star(ic) = 1._jp  / LOG(config_blending_height / config_rough_snow) ** 2
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -692,7 +692,7 @@ CONTAINS
             !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
             DO ic = 1, nc
               rough_veg_star_local(ic) =                                                                           &
-                & 1._wp / LOG(config_blending_height                                                        &
+                & 1._jp / LOG(config_blending_height                                                        &
                 &             / (lctlib_MinVegRoughness + (lctlib_MaxVegRoughness - lctlib_MinVegRoughness) &
                 &                                         * TANH(lai(ic) * config_roughness_lai_saturation)) &
                 &            )**2
@@ -716,7 +716,7 @@ CONTAINS
           lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
-            rough_veg_star_local(ic) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness) ** 2
+            rough_veg_star_local(ic) = 1._jp / LOG(config_blending_height / lctlib_VegRoughness) ** 2
           END DO
           !$ACC END PARALLEL LOOP
         ENDIF
@@ -724,20 +724,20 @@ CONTAINS
         lctlib_ForestFlag = dsl4jsb_Lctlib_param(ForestFlag)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rough_m_star(ic) = (1._wp - fract_fol_proj_cov(ic)) &
+          rough_m_star(ic) = (1._jp - fract_fol_proj_cov(ic)) &
             &                * rough_bare_star(ic) + fract_fol_proj_cov(ic) * rough_veg_star_local(ic)
 
           ! Modify roughness length heat for non-vegetated part by snow cover
           ! TODO Note by TR from JSBACH3: lower z0 for snow covered surfaces should be discussed again,
           !      if a multi-layer snow model is implemented.
-          rough_bare_star(ic) = (1._wp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
+          rough_bare_star(ic) = (1._jp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
           ! Reduce roughness length of non-forest vegetation in case of snow
           IF (.NOT. lctlib_ForestFlag) THEN
-            rough_veg_star_local(ic) = (1._wp - fract_snow_soil(ic)) &
+            rough_veg_star_local(ic) = (1._jp - fract_snow_soil(ic)) &
               &                        * rough_veg_star_local(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
           END IF
 
-          rough_h_star(ic) = (1._wp - fract_fol_proj_cov(ic)) &
+          rough_h_star(ic) = (1._jp - fract_fol_proj_cov(ic)) &
             &                * rough_bare_star(ic) + fract_fol_proj_cov(ic) * rough_veg_star_local(ic)
         END DO
         !$ACC END PARALLEL LOOP
@@ -753,7 +753,7 @@ CONTAINS
         ! We don't have PFTs so use rough_m from ini file
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(ic)))**2 &
+          rough_h_star(ic) = (1._jp - fract_snow_soil(ic)) * 1._jp / LOG(config_blending_height / MIN(1._jp, rough_m(ic)))**2 &
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
         END DO
         !$ACC END PARALLEL LOOP
@@ -763,7 +763,7 @@ CONTAINS
         DO ic = 1, nc
           rough_m_star(ic) = rough_bare_star(ic)
           ! Modify roughness length heat for bare part by snow cover
-          rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
+          rough_h_star(ic) = (1._jp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
         END DO
         !$ACC END PARALLEL LOOP
 
@@ -772,14 +772,14 @@ CONTAINS
       IF (tile%lcts(1)%lib_id /= 0 .OR. .NOT. tile%is_vegetation) THEN ! PFT or bare/glacier
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
+          rough_m(ic) = config_blending_height * EXP(-1._jp / SQRT(rough_m_star(ic)))
         END DO
         !$ACC END PARALLEL LOOP
       END IF
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
+        rough_h(ic) = config_blending_height * EXP(-1._jp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -792,20 +792,20 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           rough_m_star(ic) =            fract_lice(ic)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
-            &               + (1._wp - fract_lice(ic)) / (LOG(config_blending_height / config_rough_water) ** 2)
+            &               + (1._jp - fract_lice(ic)) / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rough_m_star(ic) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
+          rough_m_star(ic) = 1._jp / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
         !$ACC END PARALLEL LOOP
       END IF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         rough_h_star(ic) = rough_m_star(ic)
-        rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
+        rough_m(ic) = config_blending_height * EXP(-1._jp / SQRT(rough_m_star(ic)))
         rough_h(ic) = rough_m(ic)
       END DO
       !$ACC END PARALLEL LOOP
@@ -817,7 +817,7 @@ CONTAINS
     ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
     ! $noACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     ! DO ic = 1, nc
-    !   rough_h(ic) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(ic))))
+    !   rough_h(ic) = MIN(1._jp, blending_height * EXP(-1._jp / SQRT(rough_h(ic))))
     ! END DO
     ! $noACC END PARALLEL LOOP
 
@@ -890,8 +890,8 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
-      rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
+      rough_m(ic) = config_blending_height * EXP(-1._jp / SQRT(rough_m_star(ic)))
+      rough_h(ic) = config_blending_height * EXP(-1._jp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1095,7 +1095,7 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          mask(ic) = canopy_conductance(ic) > eps8 .AND. (qsat_star(ic) - q_air(ic)) > 0.0_wp
+          mask(ic) = canopy_conductance(ic) > eps8 .AND. (qsat_star(ic) - q_air(ic)) > 0.0_jp
         END DO
         !$ACC END PARALLEL LOOP
       END SELECT
@@ -1103,15 +1103,15 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         IF (mask(ic)) THEN
-          fact_qsat_veg(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) *  &
-            & (fract_wet(ic) + ( 1._wp - fract_wet(ic)) /                  &
-            & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_conductance(ic))))
-          fact_qsat_trans(ic) = (1._wp - fract_snow(ic)) *  &
-            & (1._wp - fract_wet(ic)) /                     &
-            & (1._wp + ch_tmp(ic) * MAX(1._wp, wind_air(ic)) / MAX(1.E-20_wp, canopy_conductance(ic)))
+          fact_qsat_veg(ic) = fract_snow(ic) + (1._jp - fract_snow(ic)) *  &
+            & (fract_wet(ic) + ( 1._jp - fract_wet(ic)) /                  &
+            & (1._jp + ch_tmp(ic) * MAX(1._jp, wind_air(ic)) / MAX(1.E-20_jp, canopy_conductance(ic))))
+          fact_qsat_trans(ic) = (1._jp - fract_snow(ic)) *  &
+            & (1._jp - fract_wet(ic)) /                     &
+            & (1._jp + ch_tmp(ic) * MAX(1._jp, wind_air(ic)) / MAX(1.E-20_jp, canopy_conductance(ic)))
         ELSE
-          fact_qsat_veg(ic)   = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
-          fact_qsat_trans(ic) = 0._wp
+          fact_qsat_veg(ic)   = fract_snow(ic) + (1._jp - fract_snow(ic)) * fract_wet(ic)
+          fact_qsat_trans(ic) = 0._jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -1127,10 +1127,10 @@ CONTAINS
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        fact_qsat_veg(ic)   = 0._wp
-        fact_qsat_trans(ic) = 0._wp
-        fact_qair_veg(ic)   = 0._wp
-        zfract_fpc(ic)      = 0._wp
+        fact_qsat_veg(ic)   = 0._jp
+        fact_qsat_trans(ic) = 0._jp
+        fact_qair_veg(ic)   = 0._jp
+        zfract_fpc(ic)      = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -1141,17 +1141,17 @@ CONTAINS
         weq_wres_sl1 = vol_wres_sl(ic,1) * soil_depth_sl(ic,1)
         weq_wsat_sl1 = vol_porosity_sl(ic,1) * soil_depth_sl(ic,1)
         rel_hum      = relative_humidity_soil(wtr_soil_sl(ic,1), weq_wres_sl1, weq_wsat_sl1)
-        IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_wp) THEN
-          fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * &
-            & (fract_wet(ic) + (1._wp - fract_wet(ic)) * rel_hum)
-          fact_qair_soil(ic) = 1._wp
+        IF (qsat_star(ic) * rel_hum > q_air(ic) .AND. rel_hum > 1.e-10_jp) THEN
+          fact_qsat_soil(ic) = fract_snow(ic) + (1._jp - fract_snow(ic)) * &
+            & (fract_wet(ic) + (1._jp - fract_wet(ic)) * rel_hum)
+          fact_qair_soil(ic) = 1._jp
         ELSE
-          fact_qsat_soil(ic) = fract_snow(ic) + (1._wp - fract_snow(ic)) * fract_wet(ic)
+          fact_qsat_soil(ic) = fract_snow(ic) + (1._jp - fract_snow(ic)) * fract_wet(ic)
           fact_qair_soil(ic) = fact_qsat_soil(ic)
         END IF
         IF (q_air(ic) > qsat_star(ic)) THEN
-          fact_qsat_soil(ic) = 1._wp
-          fact_qair_soil(ic) = 1._wp
+          fact_qsat_soil(ic) = 1._jp
+          fact_qair_soil(ic) = 1._jp
         END IF
       END DO
       !$ACC END PARALLEL LOOP
@@ -1159,23 +1159,23 @@ CONTAINS
     ELSE IF (tile%contains_glacier .OR. tile%is_lake) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        fact_qsat_soil(ic) = 1._wp
-        fact_qair_soil(ic) = 1._wp
+        fact_qsat_soil(ic) = 1._jp
+        fact_qair_soil(ic) = 1._jp
       END DO
       !$ACC END PARALLEL LOOP
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        fact_qsat_soil(ic) = 0._wp
-        fact_qair_soil(ic) = 0._wp
+        fact_qsat_soil(ic) = 0._jp
+        fact_qair_soil(ic) = 0._jp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      fact_qsat_srf(ic) = zfract_fpc(ic) * fact_qsat_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qsat_soil(ic)
-      fact_q_air(ic)    = zfract_fpc(ic) * fact_qair_veg(ic) + (1._wp - zfract_fpc(ic)) * fact_qair_soil(ic)
+      fact_qsat_srf(ic) = zfract_fpc(ic) * fact_qsat_veg(ic) + (1._jp - zfract_fpc(ic)) * fact_qsat_soil(ic)
+      fact_q_air(ic)    = zfract_fpc(ic) * fact_qair_veg(ic) + (1._jp - zfract_fpc(ic)) * fact_qair_soil(ic)
       fact_qsat_trans_srf(ic) = zfract_fpc(ic) * fact_qsat_trans(ic)
     END DO
     !$ACC END PARALLEL LOOP
