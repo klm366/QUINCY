@@ -26,7 +26,7 @@ MODULE mo_hydro_config_class
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_util,               ONLY: real2string, tolower
   USE mo_io_units,           ONLY: filename_max
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_sse_config_class,   ONLY: max_soil_layers
@@ -45,7 +45,7 @@ MODULE mo_hydro_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename   !< Name of input file with orographic maps
     CHARACTER(len=filename_max) :: ic_moist_filename !TODO: remove
-    REAL(wp)               :: &
+    REAL(jp)               :: &
       & w_skin_max,           & !< Maximum amount of liquid water in skin reservoirs of soil
                                 !< and canopy [m], as well as maximum amount of snow on canopy
                                 !< [m water equivalent]
@@ -110,9 +110,9 @@ MODULE mo_hydro_config_class
     INTEGER     :: quincy_nsoil_w   !< number of soil layers for soil water calculations (equivalent 'quincy_nsoil_e' in SSE_)
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
-    REAL(wp)    :: qs_soil_depth            !< depth until bedrock
-    REAL(wp)    :: qs_soil_awc_prescribe    !< saturated water content
-    REAL(wp)    :: qs_soil_theta_prescribe  !< used for calculaton of initial water amount in root zone
+    REAL(jp)    :: qs_soil_depth            !< depth until bedrock
+    REAL(jp)    :: qs_soil_awc_prescribe    !< saturated water content
+    REAL(jp)    :: qs_soil_theta_prescribe  !< used for calculaton of initial water amount in root zone
 #endif
 
   CONTAINS
@@ -158,7 +158,7 @@ CONTAINS
       & ic_filename,          & !< Name of input file with initial conditions
       & bc_filename,          & !< Name of input file with boundary conditions
       & bc_sso_filename         !< Name of input file with orographic boundary conditions
-    REAL(wp) :: &
+    REAL(jp) :: &
       & w_skin_max,           & !< Maximum filling of skin reservoirs: soil (liquid water [m]) and
                                 !< canopy (liquid water [m]) or snow [m water equivalent]
       & snow_depth_max,       & !< Maximum snow depth [m water equivalent]
@@ -187,16 +187,16 @@ CONTAINS
                                 !< form small ponds
 
     ! quincy
-    REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
-    REAL(wp) :: k_soil_profile  !< for soil layer calculations
-    REAL(wp) :: min_layer_depth !< for soil layer calculations
+    REAL(jp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
+    REAL(jp) :: k_soil_profile  !< for soil layer calculations
+    REAL(jp) :: min_layer_depth !< for soil layer calculations
     INTEGER  :: isoil           !< loop over soil layers
     INTEGER  :: quincy_nsoil_w  !< Number of soil layers for soil water calculations (equivalent 'quincy_nsoil_e' in SSE_)
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
-    REAL(wp) :: qs_soil_depth   !< depth until bedrock
-    REAL(wp) :: qs_soil_awc_prescribe     !< Saturated water content
-    REAL(wp) :: qs_soil_theta_prescribe   !< Used for calculaton of initial water amount in root zone
+    REAL(jp) :: qs_soil_depth   !< depth until bedrock
+    REAL(jp) :: qs_soil_awc_prescribe     !< Saturated water content
+    REAL(jp) :: qs_soil_theta_prescribe   !< Used for calculaton of initial water amount in root zone
 #endif
 
     NAMELIST /jsb_hydro_nml/        &
@@ -239,11 +239,11 @@ CONTAINS
       & istat                             !< Status flag
 
     TYPE(t_input_file) :: input_file      !< Input file
-    REAL(wp), POINTER :: ptr_1D(:)        !< Pointer to a one dimensional variable
-    REAL(wp), ALLOCATABLE :: depths(:)    !< Upper/lower bounds of soil layers
-    REAL(wp), ALLOCATABLE :: mids(:)      !< Mid soil layer depth
-    REAL(wp), ALLOCATABLE :: dz_water(:)                !< thickness of soil layers
-    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_water(:)  !< upper bound of soil layers (larger value compared to lower bound)
+    REAL(jp), POINTER :: ptr_1D(:)        !< Pointer to a one dimensional variable
+    REAL(jp), ALLOCATABLE :: depths(:)    !< Upper/lower bounds of soil layers
+    REAL(jp), ALLOCATABLE :: mids(:)      !< Mid soil layer depth
+    REAL(jp), ALLOCATABLE :: dz_water(:)                !< thickness of soil layers
+    REAL(jp), ALLOCATABLE :: ubounds_soil_lay_water(:)  !< upper bound of soil layers (larger value compared to lower bound)
     INTEGER :: nsoil                                    !< Number of soil layers
 
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w  !< Vertical grid used for soil layers of HYDRO process
@@ -519,7 +519,7 @@ CONTAINS
         DO isoil = 1,nsoil
           soil_layer_profile_ubound_estimate(isoil) = &
             &   min_layer_depth &
-            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, wp) / REAL(nsoil, wp)) &
+            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, jp) / REAL(nsoil, jp)) &
             &   - min_layer_depth
         END DO
         ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness

@@ -23,7 +23,7 @@ MODULE mo_veg_config_class
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 
@@ -75,15 +75,15 @@ MODULE mo_veg_config_class
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of veg_constants parameters by the values of the below nml_* variables
-    REAL(wp)         :: nml_fmaint_rate_base
-    REAL(wp)         :: nml_fstore_sap_wood_max
-    REAL(wp)         :: nml_k_f_demand
-    REAL(wp)         :: nml_omega_nutrient_demand
-    REAL(wp)         :: nml_background_mort_rate_tree
-    REAL(wp)         :: nml_k_herbivory_grass
-    REAL(wp)         :: nml_k_herbivory_pasture
-    REAL(wp)         :: nml_sm2lm_grass
-    REAL(wp)         :: nml_k1_root_alloc
+    REAL(jp)         :: nml_fmaint_rate_base
+    REAL(jp)         :: nml_fstore_sap_wood_max
+    REAL(jp)         :: nml_k_f_demand
+    REAL(jp)         :: nml_omega_nutrient_demand
+    REAL(jp)         :: nml_background_mort_rate_tree
+    REAL(jp)         :: nml_k_herbivory_grass
+    REAL(jp)         :: nml_k_herbivory_pasture
+    REAL(jp)         :: nml_sm2lm_grass
+    REAL(jp)         :: nml_k1_root_alloc
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -137,15 +137,15 @@ CONTAINS
     LOGICAL                     :: flag_veg_interactive_p
     LOGICAL                     :: l_use_product_pools
     LOGICAL                     :: flag_apply_nml_parameters
-    REAL(wp)                    :: nml_fmaint_rate_base
-    REAL(wp)                    :: nml_fstore_sap_wood_max
-    REAL(wp)                    :: nml_k_f_demand
-    REAL(wp)                    :: nml_omega_nutrient_demand
-    REAL(wp)                    :: nml_background_mort_rate_tree
-    REAL(wp)                    :: nml_k_herbivory_grass
-    REAL(wp)                    :: nml_k_herbivory_pasture
-    REAL(wp)                    :: nml_sm2lm_grass
-    REAL(wp)                    :: nml_k1_root_alloc
+    REAL(jp)                    :: nml_fmaint_rate_base
+    REAL(jp)                    :: nml_fstore_sap_wood_max
+    REAL(jp)                    :: nml_k_f_demand
+    REAL(jp)                    :: nml_omega_nutrient_demand
+    REAL(jp)                    :: nml_background_mort_rate_tree
+    REAL(jp)                    :: nml_k_herbivory_grass
+    REAL(jp)                    :: nml_k_herbivory_pasture
+    REAL(jp)                    :: nml_sm2lm_grass
+    REAL(jp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /lnd_veg_nml/          &

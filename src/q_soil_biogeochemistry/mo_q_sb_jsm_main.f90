@@ -18,7 +18,7 @@
 MODULE mo_q_sb_jsm_main
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
 
@@ -79,24 +79,24 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: ic                   !< looping over points
     INTEGER                               :: isoil, is            !< looping over soil layers
-    REAL(wp)                              :: hlp1                 !< helper
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km_array                                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: avail_soil_surface_sorption_capacity_sl  !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_po4                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4_n15             !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_n_pot_sl                     !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
+    REAL(jp)                              :: hlp1                 !< helper
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: km_array                                 !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: avail_soil_surface_sorption_capacity_sl  !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_po4                 !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4                 !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4_n15             !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_n_pot_sl                     !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
-    REAL(wp)                              :: dtime                          !< timestep length
+    REAL(jp)                              :: dtime                          !< timestep length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt

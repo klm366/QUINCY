@@ -35,7 +35,7 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -131,7 +131,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
 
     TYPE(t_jsb_model), POINTER :: model
-    !X if necessary: REAL(wp) :: dtime
+    !X if necessary: REAL(jp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
@@ -182,7 +182,7 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime
+    !X if necessary: REAL(jp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
 
     ! Get local variables from options argument

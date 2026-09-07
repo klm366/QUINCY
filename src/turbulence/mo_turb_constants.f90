@@ -14,13 +14,13 @@
 MODULE mo_turb_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
 
   ! vegetation parameters for turbulence calculations
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & veg_height_to_rough_momentum, &   !< factor for vegetation height to momentum [unitless]
     & veg_min_roughness                 !< minimum vegetation roughness, similar to 'lctlib_MinVegRoughness' of jsbach
 

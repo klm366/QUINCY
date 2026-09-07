@@ -22,7 +22,7 @@ MODULE mo_carbon_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -165,21 +165,21 @@ CONTAINS
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
-    REAL(wp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
-    REAL(wp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
-    REAL(wp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
-    REAL(wp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
-    REAL(wp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
-    REAL(wp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
-    REAL(wp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_LeafLit_coef_humus
-    REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
-    REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_WoodLit_coef_humus
+    REAL(jp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
+    REAL(jp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
+    REAL(jp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
+    REAL(jp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
+    REAL(jp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
+    REAL(jp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
+    REAL(jp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
+    REAL(jp)                     :: lctlib_LeafLit_coef_humus
+    REAL(jp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
+    REAL(jp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
+    REAL(jp)                     :: lctlib_WoodLit_coef_humus
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
-    REAL(wp)                     :: dtime
-    REAL(wp), DIMENSION(options%nc) :: MaxLai
-    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(jp)                     :: dtime
+    REAL(jp), DIMENSION(options%nc) :: MaxLai
+    REAL(jp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
@@ -973,14 +973,14 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    REAL(wp),                   INTENT(in)            :: oldRefArea(:),  &
+    REAL(jp),                   INTENT(in)            :: oldRefArea(:),  &
                                                          newRefArea(:)
 
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
-    REAL(wp)                    :: refarea_scaling
+    REAL(jp)                    :: refarea_scaling
     INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green
@@ -1268,48 +1268,48 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_green(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_woods(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_reserve(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_crop_harvest(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_green(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_woods(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_reserve(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_crop_harvest(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_water_ag1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_acid_bg1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_water_bg1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg1(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_acid_ag2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_water_ag2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
+    REAL(jp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
@@ -1510,11 +1510,11 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
-    REAL(wp),                   INTENT(out)        :: current_c_state_sum_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_veg_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_humus_ta(:)
+    REAL(jp),                   INTENT(out)        :: current_c_state_sum_ta(:)
+    REAL(jp), OPTIONAL,         INTENT(out)        :: c_sum_veg_ta(:)
+    REAL(jp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag_ta(:)
+    REAL(jp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg_ta(:)
+    REAL(jp), OPTIONAL,         INTENT(out)        :: c_sum_humus_ta(:)
 
     dsl4jsb_Def_memory(CARBON_)
 
@@ -1665,9 +1665,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     INTEGER :: ic, k, i_pool, i_passive, i_litter_coefficient, nc, ics, ice, iblk
 
-    REAL(wp) :: litter_coefficient, fraction, this_fract
-    REAL(wp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
-    REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
+    REAL(jp) :: litter_coefficient, fraction, this_fract
+    REAL(jp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
+    REAL(jp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
 
     dsl4jsb_Def_config(CARBON_)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1781,9 +1781,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract),   INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),        INTENT(in)         :: options
-    REAL(wp), DIMENSION(options%nc), INTENT(in)         :: old_veg_fract_correction
+    REAL(jp), DIMENSION(options%nc), INTENT(in)         :: old_veg_fract_correction
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: veg_fract_corr_scaling
+    REAL(jp) :: veg_fract_corr_scaling
     INTEGER  :: iblk, ics, ice, nc, ic
 
     dsl4jsb_Def_memory(CARBON_)
@@ -1842,7 +1842,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: target     !< target age class
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: source     !< source age class
     TYPE(t_jsb_task_options),        INTENT(in)    :: options    !< Additional run-time parameters
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
+    REAL(jp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
 
@@ -1868,7 +1868,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_source
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_target
 
-    REAL(wp), DIMENSION(options%nc) :: target_fract
+    REAL(jp), DIMENSION(options%nc) :: target_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':merge_carbon_vars_upon_ageing'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1941,10 +1941,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
-    REAL(wp),                   INTENT(in)         :: old_c_state_sum_ta(:)
-    REAL(wp),                   INTENT(in)         :: cflux_ta(:)
+    REAL(jp),                   INTENT(in)         :: old_c_state_sum_ta(:)
+    REAL(jp),                   INTENT(in)         :: cflux_ta(:)
         ! Note: cflux is not really a flux, but already multiplied with time unit!
-    REAL(wp),                   INTENT(inout)      :: Cconserve(:)
+    REAL(jp),                   INTENT(inout)      :: Cconserve(:)
 
     ! Local variables
     INTEGER :: ic, nc
@@ -1990,7 +1990,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     TYPE(t_jsb_grid),  POINTER      :: grid
     TYPE(t_jsb_task_options)        :: options
 
-    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
+    REAL(jp), ALLOCATABLE :: C_flux_yday(:)
     INTEGER               :: ic, ics, ice, iblk, nc
 
     dsl4jsb_Get_memory(L2A_)
@@ -2090,7 +2090,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(jp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(CARBON_)
 
@@ -2105,14 +2105,14 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onDomain :: GPP_yDayMean_ta
     dsl4jsb_Real2D_onDomain :: soil_respiration_ta
 
-    REAL(wp), POINTER       :: C_sum_veg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_ag_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_bg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_humus_gsum(:)
-    REAL(wp), POINTER       :: C_sum_natural_gsum(:)
-    REAL(wp), POINTER       :: NPP_act_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: GPP_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: soil_respiration_gsum(:)
+    REAL(jp), POINTER       :: C_sum_veg_gsum(:)
+    REAL(jp), POINTER       :: C_sum_litter_ag_gsum(:)
+    REAL(jp), POINTER       :: C_sum_litter_bg_gsum(:)
+    REAL(jp), POINTER       :: C_sum_humus_gsum(:)
+    REAL(jp), POINTER       :: C_sum_natural_gsum(:)
+    REAL(jp), POINTER       :: NPP_act_yDayMean_gsum(:)
+    REAL(jp), POINTER       :: GPP_yDayMean_gsum(:)
+    REAL(jp), POINTER       :: soil_respiration_gsum(:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_veg_ta)                ! in

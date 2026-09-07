@@ -16,7 +16,7 @@ MODULE mo_turb_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_control,       ONLY: debug_on
@@ -29,7 +29,7 @@ MODULE mo_turb_config_class
   PUBLIC :: t_turb_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_turb_config
-    REAL(wp) :: &
+    REAL(jp) :: &
       & blending_height,             & !< Blending height [m]
       & roughness_snow,              & !< Roughness length of snow-covered surfaces [m]
       & roughness_bare,              & !< Roughness length of bare land surfaces [m]
@@ -60,7 +60,7 @@ CONTAINS
 
     LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    REAL(wp) :: &
+    REAL(jp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
       & roughness_lai_saturation, roughness_momentum_to_heat, max_ini_rough_m
     LOGICAL :: l_roughness_lai

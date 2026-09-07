@@ -20,7 +20,7 @@
 MODULE mo_q_veg_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: jp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model
@@ -891,21 +891,21 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(jp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(jp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':global_q_veg_diagnostics'
 
-    REAL(wp), POINTER       :: total_veg_c_gsum(:)
-    REAL(wp), POINTER       :: total_prod_c_gsum(:)
-    REAL(wp), POINTER       :: lai_gmean(:)
-    REAL(wp), POINTER       :: fract_fpc_gmean(:)
-    REAL(wp), POINTER       :: gpp_gsum(:)
-    REAL(wp), POINTER       :: npp_gsum(:)
-    REAL(wp), POINTER       :: nuptake_gsum(:)
-    REAL(wp)                :: hlp(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(jp), POINTER       :: total_veg_c_gsum(:)
+    REAL(jp), POINTER       :: total_prod_c_gsum(:)
+    REAL(jp), POINTER       :: lai_gmean(:)
+    REAL(jp), POINTER       :: fract_fpc_gmean(:)
+    REAL(jp), POINTER       :: gpp_gsum(:)
+    REAL(jp), POINTER       :: npp_gsum(:)
+    REAL(jp), POINTER       :: nuptake_gsum(:)
+    REAL(jp)                :: hlp(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
 
     INTEGER  :: blk, jc, nblks, nproma
 

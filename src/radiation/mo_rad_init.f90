@@ -14,7 +14,7 @@
 MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
@@ -36,7 +36,7 @@ MODULE mo_rad_init
   PUBLIC :: rad_init
 
   TYPE t_rad_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & alb_background(:,:), &
       & alb_vis_soil  (:,:), &
       & alb_nir_soil  (:,:), &
@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
 
     TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER  :: ptr_2D(:,:)
+    REAL(jp), POINTER  :: ptr_2D(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_read_init_vars'
 
@@ -269,7 +269,7 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_memory(RAD_)
 
-    REAL(wp) :: albedo_age_weight
+    REAL(jp) :: albedo_age_weight
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 

@@ -39,7 +39,7 @@
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
   USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
@@ -63,7 +63,7 @@ MODULE mo_jsb_lct_class
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
     CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
-    REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
+    REAL(jp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
     INTEGER           :: lib_id               !< Id of lct in lctlib
   CONTAINS
     PROCEDURE :: Get_name     => Get_lct_type_name

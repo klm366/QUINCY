@@ -16,7 +16,7 @@ MODULE mo_sse_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_util,              ONLY: real2string, int2string
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -42,17 +42,17 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
-    REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
+    REAL(jp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
     ! quincy
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
     INTEGER                     :: quincy_nsoil_e           !< number of soil layers for soil energy calculations (equivalent 'quincy_nsoil_w' in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
-    REAL(wp) :: qs_soil_sand         !< soil sand proportion - site specific from forcing info file
-    REAL(wp) :: qs_soil_silt         !< soil silt proportion - site specific from forcing info file
-    REAL(wp) :: qs_soil_clay         !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp) :: qs_bulk_density      !< soil bulk density
+    REAL(jp) :: qs_soil_sand         !< soil sand proportion - site specific from forcing info file
+    REAL(jp) :: qs_soil_silt         !< soil silt proportion - site specific from forcing info file
+    REAL(jp) :: qs_soil_clay         !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
+    REAL(jp) :: qs_bulk_density      !< soil bulk density
 #endif
 
   CONTAINS
@@ -81,24 +81,24 @@ CONTAINS
     LOGICAL  :: active, lrestart_cont
     LOGICAL  :: l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
     LOGICAL  :: l_freeze, l_supercool, l_soil_texture, l_uniform_snow
-    REAL(wp) :: w_soil_critical
+    REAL(jp) :: w_soil_critical
     INTEGER  :: nsnow
-    REAL(wp) :: dz_snow(max_snow_layers)
+    REAL(jp) :: dz_snow(max_snow_layers)
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     ! quincy
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
-    REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
-    REAL(wp) :: k_soil_profile  !< for soil layer calculations
-    REAL(wp) :: min_layer_depth !< for soil layer calculations
+    REAL(jp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
+    REAL(jp) :: k_soil_profile  !< for soil layer calculations
+    REAL(jp) :: min_layer_depth !< for soil layer calculations
     INTEGER  :: isoil           !< loop over soil layers
     INTEGER  :: quincy_nsoil_e  !< quincy specific number of soil layers
 #ifdef __QUINCY_STANDALONE__
     ! quincy standalone
-    REAL(wp) :: qs_soil_sand
-    REAL(wp) :: qs_soil_silt
-    REAL(wp) :: qs_soil_clay
-    REAL(wp) :: qs_bulk_density
+    REAL(jp) :: qs_soil_sand
+    REAL(jp) :: qs_soil_silt
+    REAL(jp) :: qs_soil_clay
+    REAL(jp) :: qs_bulk_density
 #endif
 
     NAMELIST /jsb_sse_nml/                      &
@@ -123,10 +123,10 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat, i
     TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER :: ptr_1D(:)
-    REAL(wp), ALLOCATABLE :: depths(:), mids(:)
-    REAL(wp), ALLOCATABLE :: dz_energy(:)               !< thickness of soil layers
-    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< upper bound of soil layers (larger value compared to lower bound)
+    REAL(jp), POINTER :: ptr_1D(:)
+    REAL(jp), ALLOCATABLE :: depths(:), mids(:)
+    REAL(jp), ALLOCATABLE :: dz_energy(:)               !< thickness of soil layers
+    REAL(jp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< upper bound of soil layers (larger value compared to lower bound)
     INTEGER :: nsoil
 
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_e, vgrid_snow_e
@@ -280,7 +280,7 @@ CONTAINS
         DO isoil = 1,nsoil
           soil_layer_profile_ubound_estimate(isoil) = &
             &   min_layer_depth &
-            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, wp) / REAL(nsoil, wp)) &
+            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, jp) / REAL(nsoil, jp)) &
             &   - min_layer_depth
         END DO
         ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness

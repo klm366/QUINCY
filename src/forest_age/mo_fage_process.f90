@@ -15,7 +15,7 @@
 MODULE mo_fage_process
 #ifndef __NO_JSBACH__
 
-   USE mo_kind,      ONLY: wp
+   USE mo_kind,      ONLY: jp
    USE mo_exception, ONLY: message, message_text, finish
 
    IMPLICIT NONE
@@ -39,8 +39,8 @@ MODULE mo_fage_process
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    ::  nidx !< vector length
     INTEGER,  INTENT(in)    ::  nage !< number of tracked ages, i.e. years
-    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age !< vector to track exact age fractions
-    REAL(wp), INTENT(inout), DIMENSION(nidx) :: mean_age            !< vector with the mean age of the pft
+    REAL(jp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age !< vector to track exact age fractions
+    REAL(jp), INTENT(inout), DIMENSION(nidx) :: mean_age            !< vector with the mean age of the pft
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: i
     ! -------------------------------------------------------------------------------------------------- !
@@ -77,12 +77,12 @@ MODULE mo_fage_process
     INTEGER,  INTENT(in)    ::  nacs     !< number of age classes (ac)
     INTEGER,  INTENT(in)    ::  i_ac     !< index of the considered age class
     INTEGER,  INTENT(in)    ::  pftid    !< id of this pft
-    REAL(wp), INTENT(inout), DIMENSION(nacs)       :: age_ubounds        !< max age of all acs
-    REAL(wp), INTENT(inout), DIMENSION(nidx)       :: fract              !< area fract of this ac
-    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age      !< tracked age fractions all acs
+    REAL(jp), INTENT(inout), DIMENSION(nacs)       :: age_ubounds        !< max age of all acs
+    REAL(jp), INTENT(inout), DIMENSION(nidx)       :: fract              !< area fract of this ac
+    REAL(jp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age      !< tracked age fractions all acs
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: j, thisMinAge, thisMaxAge
-    REAL(wp), DIMENSION(nidx) :: thisAreaSum
+    REAL(jp), DIMENSION(nidx) :: thisAreaSum
     CHARACTER(len=*), PARAMETER :: routine = modname//':synchronise_fracts'
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -128,12 +128,12 @@ MODULE mo_fage_process
     INTEGER,  INTENT(in)    ::  nage    !< number of tracked ages, i.e. years
     INTEGER,  INTENT(in)    ::  nacs    !< number of age classes
     INTEGER,  INTENT(in)    ::  i_ac    !< index of the age class with lost area
-    REAL(wp), INTENT(in), DIMENSION(nacs) :: age_ubounds  !< max age of all age classes
-    REAL(wp), INTENT(in), DIMENSION(nidx) :: this_cf_loss !< area fraction lost for this ac
-    REAL(wp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age !< tracked age fractions
+    REAL(jp), INTENT(in), DIMENSION(nacs) :: age_ubounds  !< max age of all age classes
+    REAL(jp), INTENT(in), DIMENSION(nidx) :: this_cf_loss !< area fraction lost for this ac
+    REAL(jp), INTENT(inout), DIMENSION(nidx, nage) :: fract_per_age !< tracked age fractions
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: j, k, thisMinAge, thisMaxAge
-    REAL(wp), DIMENSION(nidx) :: thisAreaSum
+    REAL(jp), DIMENSION(nidx) :: thisAreaSum
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':recalc_fract_per_age_proportionally'
     ! -------------------------------------------------------------------------------------------------- !
@@ -172,10 +172,10 @@ MODULE mo_fage_process
   ELEMENTAL SUBROUTINE weighted_avg_var_upon_area_movement(old_target_fract, delta_fract, source_var, target_var)
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp), intent(in)    :: old_target_fract !< area fraction of the target before changing area
-    REAL(wp), intent(in)    :: delta_fract      !< change in area
-    REAL(wp), intent(in)    :: source_var       !< value of the variable in the source tile
-    REAL(wp), intent(inout) :: target_var       !< value of the variable in the target tile
+    REAL(jp), intent(in)    :: old_target_fract !< area fraction of the target before changing area
+    REAL(jp), intent(in)    :: delta_fract      !< change in area
+    REAL(jp), intent(in)    :: source_var       !< value of the variable in the source tile
+    REAL(jp), intent(inout) :: target_var       !< value of the variable in the target tile
     ! -------------------------------------------------------------------------------------------------- !
      IF (delta_fract .GT. 0._wp) THEN
       target_var = ((target_var * old_target_fract) + (source_var * delta_fract)) / (old_target_fract + delta_fract)
@@ -194,14 +194,14 @@ MODULE mo_fage_process
     & veg_fract_corr_source, veg_fract_corr_target, source_per_canopy_var, target_per_canopy_var)
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp), intent(in)    :: old_target_fract      !< area fraction of the target before changing area
-    REAL(wp), intent(in)    :: delta_fract           !< change in area
-    REAL(wp), intent(in)    :: veg_fract_corr_source !< Clumpiness of source vegetation
-    REAL(wp), intent(in)    :: veg_fract_corr_target !< Clumpiness of target vegetation
-    REAL(wp), intent(in)    :: source_per_canopy_var !< value of the per canopy variable in the source
-    REAL(wp), intent(inout) :: target_per_canopy_var !< value of the per canopy variable in the target
+    REAL(jp), intent(in)    :: old_target_fract      !< area fraction of the target before changing area
+    REAL(jp), intent(in)    :: delta_fract           !< change in area
+    REAL(jp), intent(in)    :: veg_fract_corr_source !< Clumpiness of source vegetation
+    REAL(jp), intent(in)    :: veg_fract_corr_target !< Clumpiness of target vegetation
+    REAL(jp), intent(in)    :: source_per_canopy_var !< value of the per canopy variable in the source
+    REAL(jp), intent(inout) :: target_per_canopy_var !< value of the per canopy variable in the target
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: target_var, source_var
+    REAL(jp) :: target_var, source_var
     ! -------------------------------------------------------------------------------------------------- !
      IF (delta_fract .GT. 0._wp) THEN
 

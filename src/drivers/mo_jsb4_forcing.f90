@@ -28,7 +28,7 @@ MODULE mo_jsb4_forcing
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi
-  USE mo_kind,                   ONLY: wp, dp
+  USE mo_kind,                   ONLY: jp, dp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
@@ -55,7 +55,7 @@ MODULE mo_jsb4_forcing
   PUBLIC :: get_standalone_driver, setup_forcing, init_forcing, finalize_external_forcing, &
     &       forcing_options
 
-  REAL(wp), SAVE :: delta_time
+  REAL(jp), SAVE :: delta_time
   INTEGER,  SAVE :: time_steps_per_day
 
   LOGICAL, SAVE :: lstart, lresume
@@ -76,23 +76,23 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbalone_forcing'
 
 !>>>>> TODO: module for general constants / subroutine initialising general constants?
-  REAL(wp), PARAMETER :: gamma = 6.0E-3_wp  ! copied from jsbach3 - mo_jsbalone_forcing
+  REAL(jp), PARAMETER :: gamma = 6.0E-3_wp  ! copied from jsbach3 - mo_jsbalone_forcing
                                             ! fixed temperature gradient of atmosphere [K/m] (see Knorr, p. 31). Note that
                                             ! for the standard ICAO-atmosphere this value is different, namely 6.5E-3 !!!
-  REAL(wp), PARAMETER :: solar_const =  1361.371_wp      ! default solar constant (AMIP) [W/m2]
-  REAL(wp), PARAMETER :: conv_prec_day = 1._wp/86400._wp ! copied from jsbach3 - mo_jsbalone_forcing
+  REAL(jp), PARAMETER :: solar_const =  1361.371_wp      ! default solar constant (AMIP) [W/m2]
+  REAL(jp), PARAMETER :: conv_prec_day = 1._wp/86400._wp ! copied from jsbach3 - mo_jsbalone_forcing
                                                          ! Conversion factor for precipitation in [mm/day] to [kg/m^2/s]:
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
-  REAL(wp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
-  REAL(wp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
+  REAL(jp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
+  REAL(jp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
 
-  REAL(wp), PARAMETER :: defHeightWind = -1._wp        ! -1: for ECHAM lowest layer values
-  REAL(wp), PARAMETER :: defHeightHumidity = -1._wp    ! -1: for ECHAM lowest layer values
+  REAL(jp), PARAMETER :: defHeightWind = -1._wp        ! -1: for ECHAM lowest layer values
+  REAL(jp), PARAMETER :: defHeightHumidity = -1._wp    ! -1: for ECHAM lowest layer values
 
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
-  REAL(wp), PARAMETER :: cb = 5._wp
-  REAL(wp), PARAMETER :: cc = 5._wp
-  REAL(wp), PARAMETER :: ckap = 0.4_wp
+  REAL(jp), PARAMETER :: cb = 5._wp
+  REAL(jp), PARAMETER :: cc = 5._wp
+  REAL(jp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
 
@@ -152,9 +152,9 @@ MODULE mo_jsb4_forcing
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
-    REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
-    REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
-    REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
+    REAL(jp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+    REAL(jp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
+    REAL(jp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
 
@@ -167,13 +167,13 @@ MODULE mo_jsb4_forcing
     CHARACTER(NF90_MAX_NAME) :: file_name_prefix = ""  !! Prefix of files in which the variable is located
     CHARACTER(NF90_MAX_NAME) :: expectedUnit = ""      !! Unit for the variable expected in the file
     INTEGER                  :: frequency = 0          !! Input data frequency (see 'options controlling types of forcing data')
-    REAL(wp)                 :: ocean_value = 0._wp    !! Value used for ocean cells
-    REAL(wp)                 :: constantValue = 0._wp  !! Value in case of frequency 'constant'
-    REAL(wp)                 :: missval = 1.0e+20_wp   !! Missing value
+    REAL(jp)                 :: ocean_value = 0._wp    !! Value used for ocean cells
+    REAL(jp)                 :: constantValue = 0._wp  !! Value in case of frequency 'constant'
+    REAL(jp)                 :: missval = 1.0e+20_wp   !! Missing value
     INTEGER                  :: currentDayStart = 0    !! First time step in file corresponding to the current day
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
-    REAL(wp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
+    REAL(jp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
     REAL(dp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
                                                             !! double precision is required to store days and lower as REAL using format YYYYMMDD.xxx
     TYPE(t_input_file)       :: input_file
@@ -233,43 +233,43 @@ CONTAINS
     INTEGER,  INTENT(IN)  :: endidx(:)
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
-    REAL(wp), INTENT(IN)  :: elevation(:,:)
-    REAL(wp), INTENT(IN)  :: sinlat(:,:)
-    REAL(wp), INTENT(IN)  :: coslat(:,:)
-    REAL(wp), INTENT(IN)  :: lon(:,:)
-    REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
-    REAL(wp), INTENT(OUT) :: CO2_air(:,:)
-    REAL(wp), INTENT(OUT) :: t_air(:,:)
-    REAL(wp), INTENT(OUT) :: q_air(:,:)
-    REAL(wp), INTENT(OUT) :: rain(:,:)
-    REAL(wp), INTENT(OUT) :: snow(:,:)
-    REAL(wp), INTENT(OUT) :: wind_air(:,:)
-    REAL(wp), INTENT(OUT) :: wind_10m(:,:)
-    REAL(wp), INTENT(OUT) :: lw_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swvis_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swnir_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
-    REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_dc13(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_Dc14(:,:)
+    REAL(jp), INTENT(IN)  :: elevation(:,:)
+    REAL(jp), INTENT(IN)  :: sinlat(:,:)
+    REAL(jp), INTENT(IN)  :: coslat(:,:)
+    REAL(jp), INTENT(IN)  :: lon(:,:)
+    REAL(jp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
+    REAL(jp), INTENT(IN)  :: cos_zenith_angle(:,:)
+    REAL(jp), INTENT(OUT) :: CO2_air(:,:)
+    REAL(jp), INTENT(OUT) :: t_air(:,:)
+    REAL(jp), INTENT(OUT) :: q_air(:,:)
+    REAL(jp), INTENT(OUT) :: rain(:,:)
+    REAL(jp), INTENT(OUT) :: snow(:,:)
+    REAL(jp), INTENT(OUT) :: wind_air(:,:)
+    REAL(jp), INTENT(OUT) :: wind_10m(:,:)
+    REAL(jp), INTENT(OUT) :: lw_srf_down(:,:)
+    REAL(jp), INTENT(OUT) :: swvis_srf_down(:,:)
+    REAL(jp), INTENT(OUT) :: swnir_srf_down(:,:)
+    REAL(jp), INTENT(OUT) :: swpar_srf_down(:,:)
+    REAL(jp), INTENT(OUT) :: fract_par_diffuse(:,:)
+    REAL(jp), INTENT(OUT) :: press_srf(:,:)
+    REAL(jp), INTENT(OUT), OPTIONAL :: co2_air_dc13(:,:)
+    REAL(jp), INTENT(OUT), OPTIONAL :: co2_air_Dc14(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)              :: hlp_r
+    REAL(jp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic, it
     INTEGER               :: day_of_year
-    REAL(wp), ALLOCATABLE :: t_air_C(:,:), &
+    REAL(jp), ALLOCATABLE :: t_air_C(:,:), &
       &                      tmax_data(:,:), &
       &                      tmin_data(:,:), &
       &                      rad_uv_down(:,:), &
       &                      sat_spec_humidity(:,:), &
       &                      rel_humidity(:,:)
-    REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
+    REAL(jp), ALLOCATABLE :: temporary_data1(:,:)
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
-    REAL(wp), ALLOCATABLE :: help1(:,:)
-    REAL(wp), ALLOCATABLE :: help2(:,:)
-    REAL(wp), ALLOCATABLE :: tmp(:,:)
-    REAL(wp) :: argMin, argMax
+    REAL(jp), ALLOCATABLE :: help1(:,:)
+    REAL(jp), ALLOCATABLE :: help2(:,:)
+    REAL(jp), ALLOCATABLE :: tmp(:,:)
+    REAL(jp) :: argMin, argMax
     LOGICAL  :: use_quincy, force_c_isotopes
     TYPE(t_jsb_model), POINTER :: model
 
@@ -823,7 +823,7 @@ CONTAINS
 
     INTEGER,  INTENT(in) :: model_id
     CHARACTER(len=*), INTENT(in) :: namelist_filename
-    REAL(wp), INTENT(in) :: dtime
+    REAL(jp), INTENT(in) :: dtime
 
     TYPE(t_input_file) :: input_file
 
@@ -836,67 +836,67 @@ CONTAINS
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
     LOGICAL                :: forcing_set_miss_to_constants    !! Set missing value in forcing over land cells to constant values (= false)
-    REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-    REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+    REAL(jp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+    REAL(jp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
 
     !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
     CHARACTER(NF90_MAX_NAME) :: forcing_temp_file_prefix       !! Prefix for files with temperature forcing data
     CHARACTER(len=128)     :: forcing_temp_frequ               !! Frequency of temperature forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
-    REAL(wp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
-    REAL(wp)               :: forcing_temp_ocean               !! Constant value for ocean cells
+    REAL(jp)               :: forcing_temp_const_tmin          !! Constant value for minimum daily temperature
+    REAL(jp)               :: forcing_temp_const_tmax          !! Constant value for maximum daily temperature
+    REAL(jp)               :: forcing_temp_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_temp_unit                !! Expected unit of temp input
 
     CHARACTER(NF90_MAX_NAME) :: forcing_precip_file_prefix     !! Prefix for files with precipitation forcing data (unit: mm/day
     !! or kg/m^2/s, depending on 'forcing_precip_in_mm_per_day')
     CHARACTER(len=128)     :: forcing_precip_frequ             !! Frequency of precipitation forcing (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_precip_const_precip      !! Constant value for precipitation
-    REAL(wp)               :: forcing_precip_ocean             !! Constant value for ocean cells
+    REAL(jp)               :: forcing_precip_const_precip      !! Constant value for precipitation
+    REAL(jp)               :: forcing_precip_ocean             !! Constant value for ocean cells
     LOGICAL                :: forcing_precip_in_mm_per_day     !! Precipitation input in mm/day (true) or kg/m2/s (false)
     CHARACTER(len=128)     :: forcing_precip_unit              !! Expected unit of precip input
 
     CHARACTER(NF90_MAX_NAME) :: forcing_sw_file_prefix         !! Prefix for files with shortwave radiation data
     CHARACTER(len=128)     :: forcing_sw_frequ                 !! Frequency of shortwave forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
-    REAL(wp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
+    REAL(jp)               :: forcing_sw_const_shortwave       !! Constant value for downward shortwave radiation
+    REAL(jp)               :: forcing_sw_ocean                 !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_sw_unit                  !! Expected unit of shortwave input (default: [W/m^2])
 
     CHARACTER(NF90_MAX_NAME) :: forcing_lw_file_prefix         !! Prefix for files with longwave radiation data
     CHARACTER(len=128)     :: forcing_lw_frequ                 !! Frequency of longwave forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
-    REAL(wp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
+    REAL(jp)               :: forcing_lw_const_longwave        !! Constant value for downward longwave radiation
+    REAL(jp)               :: forcing_lw_ocean                 !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_lw_unit                  !! Expected unit of longwave input (default: [W/m^2])
 
     CHARACTER(NF90_MAX_NAME) :: forcing_co2_file_prefix        !! Prefix for files with CO2 data (unit: mol(CO2)/mol(air)
     !! or kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit'
     CHARACTER(len=128)     :: forcing_co2_frequ                !! Frequency of CO2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
+    REAL(jp)               :: forcing_co2_const_co2            !! Constant value for CO2-concentration (unit: mol(CO2)/mol(air) or
     !! kg(CO2)/kg(air) or ppmv, depending on 'forcing_co2_unit')
-    REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
+    REAL(jp)               :: forcing_co2_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
 
     CHARACTER(NF90_MAX_NAME) :: forcing_wind_file_prefix       !! Prefix for files with windspeed data
     CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
-    REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
-    REAL(wp)               :: forcing_wind_ocean               !! Constant value for ocean cells
+    REAL(jp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
+    REAL(jp)               :: forcing_wind_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_wind_unit                !! Expected unit of wind input (default: [m/s])
 
     CHARACTER(NF90_MAX_NAME) :: forcing_qair_file_prefix       !! Prefix for files with qair data
     CHARACTER(len=128)     :: forcing_qair_frequ               !! Frequency of qair forcing data (DAILY/CONST)
     CHARACTER(len=128)     :: forcing_qair_type                !! Type of input data used for forcing by atm. humidity
-    REAL(wp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
-    REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
+    REAL(jp)               :: forcing_qair_const_rh            !! Constant value for relative humidity
+    REAL(jp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
     CHARACTER(NF90_MAX_NAME) :: forcing_c13_file_prefix        !! Prefix for files with dc13
     CHARACTER(len=128)     :: forcing_c13_frequ                !! Frequency of dc13 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_c13_const_c13            !! Constant value for dc13
-    REAL(wp)               :: forcing_c13_ocean                !! Constant value for ocean cells
+    REAL(jp)               :: forcing_c13_const_c13            !! Constant value for dc13
+    REAL(jp)               :: forcing_c13_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_c13_unit                 !! Unit of dc13 input
     CHARACTER(NF90_MAX_NAME) :: forcing_c14_file_prefix        !! Prefix for files with Dc14 data
     CHARACTER(len=128)     :: forcing_c14_frequ                !! Frequency of Dc14 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_c14_const_c14            !! Constant value for Dc14
-    REAL(wp)               :: forcing_c14_ocean                !! Constant value for ocean cells
+    REAL(jp)               :: forcing_c14_const_c14            !! Constant value for Dc14
+    REAL(jp)               :: forcing_c14_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_c14_unit                 !! Unit of Dc14 input
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
@@ -1239,7 +1239,7 @@ CONTAINS
     INTEGER,                   INTENT(IN)    :: startblk, endblk, startidx(:), endidx(:), model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
-    REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
+    REAL(jp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_data_and_update_field'
 
@@ -1253,8 +1253,8 @@ CONTAINS
     CHARACTER(len=NF90_MAX_NAME)  :: readUnit
 
     INTEGER :: nproma, nblks
-    REAL(wp), POINTER :: return_pointer(:,:,:) !temporary pointer
-    REAL(wp) :: hlp_r(1)
+    REAL(jp), POINTER :: return_pointer(:,:,:) !temporary pointer
+    REAL(jp) :: hlp_r(1)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1518,10 +1518,10 @@ CONTAINS
 
     CHARACTER(len=*),INTENT(IN) :: variable_name
     CHARACTER(len=*),INTENT(IN) :: forcing_frequ_keyword
-    REAL(wp),        INTENT(IN) :: forcing_ocean_value
+    REAL(jp),        INTENT(IN) :: forcing_ocean_value
     CHARACTER(len=*),INTENT(IN) :: forcing_file_prefix
     CHARACTER(len=*),INTENT(IN) :: expected_unit
-    REAL(wp),        INTENT(IN) :: constantValue
+    REAL(jp),        INTENT(IN) :: constantValue
     TYPE(input_variable_type),INTENT(INOUT) :: forcing_input_variable ! structure filled in this subroutine
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing_input_variable'
@@ -1649,7 +1649,7 @@ CONTAINS
 
     INTEGER,         INTENT(IN)  :: file_id
     CHARACTER(len=*),INTENT(IN)  :: variable_name
-    REAL(wp),        INTENT(OUT) :: missval
+    REAL(jp),        INTENT(OUT) :: missval
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_missval'
 
@@ -1728,42 +1728,42 @@ CONTAINS
   SUBROUTINE spec_humidity_from_rel_humidity(ice, sinlat, coslat, rel_humidity, Tmin, Tmax, elevation, qair)
 
     INTEGER, INTENT(IN)  :: ice
-    REAL(wp),INTENT(IN)  :: sinlat(1:ice)
-    REAL(wp),INTENT(IN)  :: coslat(1:ice)
-    REAL(wp),INTENT(IN)  :: rel_humidity(1:ice)  !! mean daily relative humidity
-    REAL(wp),INTENT(IN)  :: Tmin(1:ice)          !! minimum temperature (= temperature at sunrise)
-    REAL(wp),INTENT(IN)  :: Tmax(1:ice)          !! maximum temperature (= at 2pm)
-    REAL(wp),INTENT(IN)  :: elevation(1:ice)     !! height above sea leavel
-    REAL(wp),INTENT(OUT) :: qair(1:ice)          !! the specific humidity of the day
+    REAL(jp),INTENT(IN)  :: sinlat(1:ice)
+    REAL(jp),INTENT(IN)  :: coslat(1:ice)
+    REAL(jp),INTENT(IN)  :: rel_humidity(1:ice)  !! mean daily relative humidity
+    REAL(jp),INTENT(IN)  :: Tmin(1:ice)          !! minimum temperature (= temperature at sunrise)
+    REAL(jp),INTENT(IN)  :: Tmax(1:ice)          !! maximum temperature (= at 2pm)
+    REAL(jp),INTENT(IN)  :: elevation(1:ice)     !! height above sea leavel
+    REAL(jp),INTENT(OUT) :: qair(1:ice)          !! the specific humidity of the day
 
     ! constants
-    REAL(wp), PARAMETER :: pio180 = pi/180._wp     ! conversion factor from degrees to radians ("pi over 180")
-    REAL(wp), PARAMETER :: rat1=14._wp/24._wp      ! day fraction at which maximum temperature shall occur
-    REAL(wp), PARAMETER :: rat2=4._wp/24._wp       ! minimum length of normal day (as fraction of day)
-    REAL(wp), PARAMETER :: rat3=20._wp/24._wp      ! maximum length of normal day (as fraction of day)
-    REAL(wp), PARAMETER :: rat4=2._wp/24._wp       ! day fraction of dawn times (before sunrise + after sunset), used to set ...
+    REAL(jp), PARAMETER :: pio180 = pi/180._wp     ! conversion factor from degrees to radians ("pi over 180")
+    REAL(jp), PARAMETER :: rat1=14._wp/24._wp      ! day fraction at which maximum temperature shall occur
+    REAL(jp), PARAMETER :: rat2=4._wp/24._wp       ! minimum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat3=20._wp/24._wp      ! maximum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat4=2._wp/24._wp       ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                    ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
     ! Temperature calculations
-    REAL(wp) :: declination       ! solar declination
-    REAL(wp) :: cpds, spds        ! cosine and sine contributions to zenith angle
-    REAL(wp) :: fract_daylight     ! fraction of day between sunrise and sunset
-    REAL(wp) :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
-    REAL(wp) :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
-    REAL(wp) :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
-    REAL(wp) :: temp_sunset       ! temperature at sunset
-    REAL(wp) :: dtmp              ! mean day temperature
-    REAL(wp) :: dtran             ! day temperature range: maximum - minimum
-    REAL(wp) :: sd                ! modulation factor for temperature
-    REAL(wp) :: arg,nstep
-    REAL(wp),ALLOCATABLE :: tmp(:)  ! diurnal temperature
+    REAL(jp) :: declination       ! solar declination
+    REAL(jp) :: cpds, spds        ! cosine and sine contributions to zenith angle
+    REAL(jp) :: fract_daylight     ! fraction of day between sunrise and sunset
+    REAL(jp) :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
+    REAL(jp) :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
+    REAL(jp) :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
+    REAL(jp) :: temp_sunset       ! temperature at sunset
+    REAL(jp) :: dtmp              ! mean day temperature
+    REAL(jp) :: dtran             ! day temperature range: maximum - minimum
+    REAL(jp) :: sd                ! modulation factor for temperature
+    REAL(jp) :: arg,nstep
+    REAL(jp),ALLOCATABLE :: tmp(:)  ! diurnal temperature
 
     ! Qair calculations
-    REAL(wp) :: rh_test,rh_last,qsat_last ! temporary RH estimates
-    REAL(wp),ALLOCATABLE :: qsat(:)      ! diurnal saturated specific humidity
-    REAL(wp),ALLOCATABLE :: inv_qsat(:)  ! inverse diurnal saturated specific humidity
-    REAL(wp),ALLOCATABLE :: qair_test(:) ! diurnal actual specific humidity, temporary
-    REAL(wp),ALLOCATABLE :: pressure(:)  ! diurnal air pressure
-    REAL(wp) :: tstep        ! fractional time step of the day
+    REAL(jp) :: rh_test,rh_last,qsat_last ! temporary RH estimates
+    REAL(jp),ALLOCATABLE :: qsat(:)      ! diurnal saturated specific humidity
+    REAL(jp),ALLOCATABLE :: inv_qsat(:)  ! inverse diurnal saturated specific humidity
+    REAL(jp),ALLOCATABLE :: qair_test(:) ! diurnal actual specific humidity, temporary
+    REAL(jp),ALLOCATABLE :: pressure(:)  ! diurnal air pressure
+    REAL(jp) :: tstep        ! fractional time step of the day
 
     ! helpers
     INTEGER    :: i, j, jj
@@ -1914,9 +1914,9 @@ CONTAINS
 
     USE mo_phy_schemes, ONLY: qsat_mixed
 
-    REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat(:)
+    REAL(jp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
+    REAL(jp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
+    REAL(jp), INTENT(OUT):: qsat(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
@@ -1952,9 +1952,9 @@ CONTAINS
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
 
-    REAL(wp), INTENT(IN) :: temp      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat
+    REAL(jp), INTENT(IN) :: temp      ! Air temperature at level [K]
+    REAL(jp), INTENT(IN) :: pressure  ! Pressure at level [Pa]
+    REAL(jp), INTENT(OUT):: qsat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity_scalar'
 
@@ -1995,17 +1995,17 @@ CONTAINS
   !             p-(1-eps)*p_v
   !
   PURE ELEMENTAL FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
-    REAL(wp),INTENT(in) :: vapour_pressure        !< [N/m^2]
-    REAL(wp),INTENT(in) :: air_pressure           !< air pressure at bottom [N/m^2]
-    REAL(wp)            :: fun_specific_humidity  !< (from [0,1])
+    REAL(jp),INTENT(in) :: vapour_pressure        !< [N/m^2]
+    REAL(jp),INTENT(in) :: air_pressure           !< air pressure at bottom [N/m^2]
+    REAL(jp)            :: fun_specific_humidity  !< (from [0,1])
 
     fun_specific_humidity = rdv * vapour_pressure / (air_pressure - (1._wp - rdv) * vapour_pressure)
   END FUNCTION fun_specific_humidity
 
   SUBROUTINE fun_specific_humidity_2d(vapour_pressure, air_pressure, fun_specific_humidity)
-    REAL(wp), INTENT(IN)  :: vapour_pressure(:,:) !! [N/m^2]
-    REAL(wp), INTENT(IN)  :: air_pressure(:,:) !! air pressure at bottom [N/m^2]
-    REAL(wp), INTENT(OUT) :: fun_specific_humidity(:,:) !! (from [0,1])
+    REAL(jp), INTENT(IN)  :: vapour_pressure(:,:) !! [N/m^2]
+    REAL(jp), INTENT(IN)  :: air_pressure(:,:) !! air pressure at bottom [N/m^2]
+    REAL(jp), INTENT(OUT) :: fun_specific_humidity(:,:) !! (from [0,1])
     INTEGER               :: nproma, nblks, ic, iblk
 
 #ifdef _OPENACC
@@ -2065,17 +2065,17 @@ CONTAINS
     USE mo_phy_schemes, ONLY: sat_pres_mixed
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
-    REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
-    REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
-    REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
-    REAL(wp), INTENT(OUT) :: vpress(:,:)
+    REAL(jp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
+    REAL(jp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
+    REAL(jp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
+    REAL(jp), INTENT(OUT) :: vpress(:,:)
 
-    REAL(wp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
-    REAL(wp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
+    REAL(jp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
+    REAL(jp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
 
-    REAL(wp) :: evapo_sat        ! saturation pressure at actual temperature
-    REAL(wp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
-    REAL(wp) :: e0_vap           ! vapor pressure at sunrise
+    REAL(jp) :: evapo_sat        ! saturation pressure at actual temperature
+    REAL(jp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
+    REAL(jp) :: e0_vap           ! vapor pressure at sunrise
 
     INTEGER :: ib, ic, ics, ice
 
@@ -2132,8 +2132,8 @@ CONTAINS
 
     INTEGER,  INTENT(IN)    :: startblk, endblk, startidx(:), endidx(:)
     INTEGER,  INTENT(IN)    :: model_id
-    REAL(wp), INTENT(IN)    :: constant
-    REAL(wp), INTENT(INOUT) :: array(:,:)
+    REAL(jp), INTENT(IN)    :: constant
+    REAL(jp), INTENT(INOUT) :: array(:,:)
 
     TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -2172,8 +2172,8 @@ CONTAINS
 
     INTEGER, INTENT(IN)     :: startblk, endblk, startidx(:), endidx(:)
     INTEGER,  INTENT(IN)    :: model_id
-    REAL(wp), INTENT(IN)    :: missval, constant
-    REAL(wp), INTENT(INOUT) :: array(:,:)
+    REAL(jp), INTENT(IN)    :: missval, constant
+    REAL(jp), INTENT(INOUT) :: array(:,:)
 
     INTEGER :: ib, ic, ics, ice
 
@@ -2226,41 +2226,41 @@ CONTAINS
   !
   SUBROUTINE instantly_from_daily_temp_2(startblk, endblk, startidx, endidx, lon, sinlat, coslat, dtmp_min, dtmp_max, date, tmp)
 
-    REAL(wp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
-    REAL(wp), PARAMETER :: rat1=14._wp/24._wp  ! day fraction at which maximum temperature shall occur
-    REAL(wp), PARAMETER :: rat2=4._wp/24._wp   ! minimum length of normal day (as fraction of day)
-    REAL(wp), PARAMETER :: rat3=20._wp/24._wp  ! maximum length of normal day (as fraction of day)
-    REAL(wp), PARAMETER :: rat4=2._wp/24._wp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
+    REAL(jp), PARAMETER :: pio180 = pi/180._wp ! conversion factor from degrees to radians ("pi over 180")
+    REAL(jp), PARAMETER :: rat1=14._wp/24._wp  ! day fraction at which maximum temperature shall occur
+    REAL(jp), PARAMETER :: rat2=4._wp/24._wp   ! minimum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat3=20._wp/24._wp  ! maximum length of normal day (as fraction of day)
+    REAL(jp), PARAMETER :: rat4=2._wp/24._wp   ! day fraction of dawn times (before sunrise + after sunset), used to set ...
                                                ! ... temperature of a normal day to T_mean at sunrise-rat4/2 and sunset+rat4/2
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
-    REAL(wp), INTENT (IN) :: lon(:,:)       ! minimal temperature at the considered day
-    REAL(wp), INTENT (IN) :: sinlat(:,:)    ! maximal range at that day
-    REAL(wp), INTENT (IN) :: coslat(:,:)    ! maximal range at that day
-    REAL(wp), INTENT (IN) :: dtmp_min(:,:)  ! minimal temperature at the considered day
-    REAL(wp), INTENT (IN) :: dtmp_max(:,:)  ! maximal range at that day
+    REAL(jp), INTENT (IN) :: lon(:,:)       ! minimal temperature at the considered day
+    REAL(jp), INTENT (IN) :: sinlat(:,:)    ! maximal range at that day
+    REAL(jp), INTENT (IN) :: coslat(:,:)    ! maximal range at that day
+    REAL(jp), INTENT (IN) :: dtmp_min(:,:)  ! minimal temperature at the considered day
+    REAL(jp), INTENT (IN) :: dtmp_max(:,:)  ! maximal range at that day
     TYPE (t_datetime), POINTER, INTENT (IN)  :: date
-    REAL(wp), INTENT (OUT) :: tmp(:,:)      ! estimated temperature
+    REAL(jp), INTENT (OUT) :: tmp(:,:)      ! estimated temperature
 
 
     INTEGER    :: yearday           ! the number of the day of the current timestep in the current year
-    REAL(wp)   :: year_instant      ! the time of the current time step in yearday-fraction-of-day format
-    REAL(wp)   :: fract_timestep     ! the current time step expressed as the fraction of the current day
-    REAL(wp)   :: fract_localtime    ! local time at a particular grid point expressed as the fraction of the current ...
+    REAL(jp)   :: year_instant      ! the time of the current time step in yearday-fraction-of-day format
+    REAL(jp)   :: fract_timestep     ! the current time step expressed as the fraction of the current day
+    REAL(jp)   :: fract_localtime    ! local time at a particular grid point expressed as the fraction of the current ...
                                     ! ... day since midnight (mod 1
-    REAL(wp)   :: fract_UTC_offset   ! offset between UTC and local time (depends on longitude)
-    REAL(wp)   :: declination       ! solar declination
-    REAL(wp)   :: cpds, spds        ! cosine and sine contributions to zenith angle
-    REAL(wp)   :: fract_daylight     ! fraction of day between sunrise and sunset
-    REAL(wp)   :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
-    REAL(wp)   :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
-    REAL(wp)   :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
-    REAL(wp)   :: temp_sunset       ! temperature at sunset
-    REAL(wp)   :: dtmp              ! mean day temperature
-    REAL(wp)   :: dtran             ! day temperature range: maximum - minimum
+    REAL(jp)   :: fract_UTC_offset   ! offset between UTC and local time (depends on longitude)
+    REAL(jp)   :: declination       ! solar declination
+    REAL(jp)   :: cpds, spds        ! cosine and sine contributions to zenith angle
+    REAL(jp)   :: fract_daylight     ! fraction of day between sunrise and sunset
+    REAL(jp)   :: fract_since_sunset ! time between current time step and sunset expressed as fraction of day
+    REAL(jp)   :: fract_sunrise      ! time of sunrise expressed as fraction of day since midnight
+    REAL(jp)   :: fract_sunset       ! time of sunset expressed as fraction of day since midnight
+    REAL(jp)   :: temp_sunset       ! temperature at sunset
+    REAL(jp)   :: dtmp              ! mean day temperature
+    REAL(jp)   :: dtran             ! day temperature range: maximum - minimum
 
-    REAL(wp)   :: sd                ! modulation factor for temperature
-    REAL(wp)   :: arg
+    REAL(jp)   :: sd                ! modulation factor for temperature
+    REAL(jp)   :: arg
     INTEGER    :: ic, ib, ics, ice
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
@@ -2275,7 +2275,7 @@ CONTAINS
 
     year_instant=get_year_day(date)            ! conversion of current time step from day-seconds to yearday-dayfraction format
     yearday = INT(year_instant)                ! number of day of the current time step since the beginning of the current year
-    fract_timestep=year_instant-REAL(yearday,wp)   ! fractional part of the day of the current time step since midnight in UTC
+    fract_timestep=year_instant-REAL(yearday,jp)   ! fractional part of the day of the current time step since midnight in UTC
 
     DO ib = startblk, endblk
       ics = startidx(ib)
@@ -2367,7 +2367,7 @@ CONTAINS
   ! gradient "gamma" is prescribed, i.e. air temperature at height z is set to
   !     (1)     T(z)=T0-gamma*z,
   ! where T0 is the temperature at the bottom. Assuming further hydrostatic conditions the vertical pressure gradient is given by
-  !              wp
+  !              jp
   !     (2)     ---- = -g*rho,
   !              dz
   ! where rho is the air density and g the acceleration due to gravity. Pressure and Temperature are related by the state
@@ -2375,7 +2375,7 @@ CONTAINS
   !     (3)      p = rho*R*T,
   ! where R is the specific gas constant and T the temperature. By eliminating rho from (3) and (2) and entering (1) for T one
   ! obtains
-  !              wp        p*g
+  !              jp        p*g
   !     (4)     ---- = - --------------
   !              dz      R(T0-gamma*z)
   ! By integration one obtains the final result
@@ -2395,9 +2395,9 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(IN)  :: elevation
-    REAL(wp), INTENT(IN)  :: air_temperature
-    REAL(wp)              :: bottom_pressure
+    REAL(jp), INTENT(IN)  :: elevation
+    REAL(jp), INTENT(IN)  :: air_temperature
+    REAL(jp)              :: bottom_pressure
 
     bottom_pressure = &
       & p0sl_bg * (1._wp - elevation * gamma / (tmelt + air_temperature + elevation * gamma)) ** (grav / rd / gamma)
@@ -2424,10 +2424,10 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp),INTENT(IN)  :: precipitation   !< total precipitation (rain+snow) [kg/m^2/s]
-    REAL(wp),INTENT(IN)  :: air_temp_daily  !< daily mean air_temperature at surface [Celsius]
-    REAL(wp),INTENT(OUT) :: rain            !< rain [kg/m^2/s]
-    REAL(wp),INTENT(OUT) :: snow            !< snow [kg/m^2/s]
+    REAL(jp),INTENT(IN)  :: precipitation   !< total precipitation (rain+snow) [kg/m^2/s]
+    REAL(jp),INTENT(IN)  :: air_temp_daily  !< daily mean air_temperature at surface [Celsius]
+    REAL(jp),INTENT(OUT) :: rain            !< rain [kg/m^2/s]
+    REAL(jp),INTENT(OUT) :: snow            !< snow [kg/m^2/s]
 
     IF(air_temp_daily < -1.1_wp) THEN
        snow = precipitation
@@ -2539,14 +2539,14 @@ CONTAINS
 
     INTEGER,  INTENT(in)  :: model_id           !< model ID
     INTEGER,  INTENT(in)  :: day_of_year        !< day in year (from [1,365])
-    REAL(wp), INTENT(in), DIMENSION(:,:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:,:) :: &
       & cos_zenith,        & !< cosine of zenith angle
       & cos_lat,           & !< cosine of latitude
       & sin_lat,           & !< sine of latitude
       & air_pressure,      & !< air pressure at bottom (depending on local elevation) [N/m^2]
       & rad_sw_in            !< "Rtot": either timestep or daily average total solar shortwave radiation :
                              ! ... direct+diffuse, 280-3000 nm, (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:,:) :: &
       & rad_UV,            & !< "RUV": solar radiation flux (direct+diffuse) from the UV band 280-400 nm
                              ! .. arriving actually at the bottom (includes cloud shading and scattering) [W/m^2]
       & rad_PAR,           & !< "Rpar_act": solar radiation flux (direct+diffuse) from the visible band 400-700 nm .
@@ -2558,20 +2558,20 @@ CONTAINS
       & rad_sw,            & !< ..
       & rad_sw_pot           !< ..
 
-    REAL(wp) :: day_angle     !! day of year expressed as angle in radians
-    REAL(wp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
-    REAL(wp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
-    REAL(wp) :: fsw           !! "fsw": fraction of potential radiation solar shortwave radiation : direct+diffuse, 280-3000 nm, ,..
+    REAL(jp) :: day_angle     !! day of year expressed as angle in radians
+    REAL(jp) :: r_sun_earth_2 !! inverse squared earth-sun-distance normalized to mean distance
+    REAL(jp) :: Rpar_top      !! PAR flux incident to the outer atmosphere at particular zenith angle [W/m^2]
+    REAL(jp) :: fsw           !! "fsw": fraction of potential radiation solar shortwave radiation : direct+diffuse, 280-3000 nm, ,..
                               !! ... (i.e. PAR+NIR) that actually arrives at the bottom [W/m^2]
-    REAL(wp) :: F_invers      !! factor 1/F to obtain total shortwave from visible radiation (see Eq. (9))
-    REAL(wp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
-    REAL(wp) :: delta,K
+    REAL(jp) :: F_invers      !! factor 1/F to obtain total shortwave from visible radiation (see Eq. (9))
+    REAL(jp) :: hlp_r,hlp2_r,hlp3_r,hlp4_r
+    REAL(jp) :: delta,K
 
-    REAL(wp), PARAMETER  ::  fract_UV = 0.1_wp ! UV fraction of (UV + PAR)
+    REAL(jp), PARAMETER  ::  fract_UV = 0.1_wp ! UV fraction of (UV + PAR)
 
     INTEGER :: i, j, nc, nblks
 
-    REAL(wp), ALLOCATABLE :: u(:,:), v(:,:), hh(:,:), sinehh(:,:), rad_sw_in_corr(:,:)
+    REAL(jp), ALLOCATABLE :: u(:,:), v(:,:), hh(:,:), sinehh(:,:), rad_sw_in_corr(:,:)
 
     nc = SIZE(cos_zenith,1)
     nblks = SIZE(cos_zenith,2)
@@ -2702,14 +2702,14 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp)            :: longwave_from_daily_longwave !! hourly longwave downward radiation [W/m^2]
-    REAL(wp),INTENT(in) :: longwave_down_daily          !! daily average downward longwave radiation [W/m^2]
-    REAL(wp),INTENT(in) :: Tmin                         !! daily mimimum temperature [Celsius]
-    REAL(wp),INTENT(in) :: Tmax                         !! daily maximum temperature [Celsius]
-    REAL(wp),INTENT(in) :: air_temp                     !! air temperature at bottom [Celsius]
+    REAL(jp)            :: longwave_from_daily_longwave !! hourly longwave downward radiation [W/m^2]
+    REAL(jp),INTENT(in) :: longwave_down_daily          !! daily average downward longwave radiation [W/m^2]
+    REAL(jp),INTENT(in) :: Tmin                         !! daily mimimum temperature [Celsius]
+    REAL(jp),INTENT(in) :: Tmax                         !! daily maximum temperature [Celsius]
+    REAL(jp),INTENT(in) :: air_temp                     !! air temperature at bottom [Celsius]
 
-    REAL(wp) :: dtmp    ! daily average temperature
-    REAL(wp) :: hlp_r   ! helper
+    REAL(jp) :: dtmp    ! daily average temperature
+    REAL(jp) :: hlp_r   ! helper
 
     hlp_r = air_temp + tmelt                                ! Celsius --> Kelvin
     dtmp = 0.5_wp * (Tmax + Tmin) + tmelt

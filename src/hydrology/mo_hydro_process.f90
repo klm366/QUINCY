@@ -17,7 +17,7 @@
 MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_impl_constants, ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR
   USE mo_jsb_control, ONLY: acc_stream
@@ -35,7 +35,7 @@ MODULE mo_hydro_process
   END INTERFACE get_canopy_conductance
 
   !TODO: This parameter is only used in arno_scheme and should be defined there.
-  REAL(wp), PARAMETER ::  zwdmin = 0.05_wp
+  REAL(jp), PARAMETER ::  zwdmin = 0.05_wp
   !$ACC DECLARE COPYIN(zwdmin)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_process'
@@ -85,7 +85,7 @@ CONTAINS
     INTEGER, INTENT(in) ::       &
       & hydro_scale                !< Hydrology scale (Semi_distributed: with ARNO scheme; Uniform: e.g.
                                    !< for site level or HydroTiles)
-    REAL(wp), INTENT(in) ::      &
+    REAL(jp), INTENT(in) ::      &
       & dtime,                   & !< Time step length [s]
       & snow_depth_max,          & !< Maximum snow depth [m water equivalent]; -1. for no limit
       & steepness(:),            & !< Parameter representing subgrid scale slopes (for runoff calculation) []
@@ -113,7 +113,7 @@ CONTAINS
       & wtr_soil(:),             & !< (Liquid) water content of the soil [m]
       & hyd_cond_sat_sl1(:),     & !< Saturated hydraulic conductivity of the uppermost soil layer [m/s]
       & ice_impedance(:)           !< Impedance of infiltration due to frozen soil moisture []
-    REAL(wp), INTENT(inout) ::   &
+    REAL(jp), INTENT(inout) ::   &
       & wtr_skin(:),             & !< Water content of the skin reservoir (canopy and soil) [m]
       & weq_snow_soil(:),        & !< Amount of snow on the ground [m water equivalent]
       & weq_snow_can(:),         & !< Amount of snow on canopy [m water equivalent]
@@ -122,7 +122,7 @@ CONTAINS
       & ice_pond(:),             & !< Ice content of the pond reservoir [m water equivalent]
       & wtr_latflow_res_srf(:),  & !< Intermediary storage of surface runoff [m]
       & le_pc_remain(:)            !< Latent energy available for phase change [J m-2]
-    REAL(wp), INTENT(out) ::     &
+    REAL(jp), INTENT(out) ::     &
       & q_snocpymlt(:),          & !< Heating due to snow melt on canopy [W m-2]
       & snow_accum(:),           & !< Snow budget change within time step [m water equivalent]
       & snowmelt_soil(:),        & !< Snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
@@ -143,7 +143,7 @@ CONTAINS
     !
     !  local variables
     !
-    REAL(wp) ::               &
+    REAL(jp) ::               &
       & rain_in_m,            & !< Rainfall within time step [m]
       & new_snow,             & !< Snowfall within time step [m water equivalent]
       & weq_snow_soil_old,    & !< Amount of snow on the ground before updating it [m water equivalent]
@@ -187,13 +187,13 @@ CONTAINS
     !
     !  Parameters - compare JSBACH3 documentation, chapter 2, section 2.3.1.1 "Interception of snow by the canopy"
     !
-    REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp     !< Parameter for unloading of snow from canopy [K];
+    REAL(jp), PARAMETER :: zc1 = tmelt - 3._wp     !< Parameter for unloading of snow from canopy [K];
                                                    !< comp. JSBACH3 documentation
-    REAL(wp), PARAMETER :: zc2 = 1.87E5_wp         !< Parameter for unloading of snow from canopy [Ks];
+    REAL(jp), PARAMETER :: zc2 = 1.87E5_wp         !< Parameter for unloading of snow from canopy [Ks];
                                                    !< comp. JSBACH3 documentation
-    REAL(wp), PARAMETER :: zc3 = 1.56E5_wp         !< Parameter for unloading of snow from canopy [m];
+    REAL(jp), PARAMETER :: zc3 = 1.56E5_wp         !< Parameter for unloading of snow from canopy [m];
                                                    !< comp. JSBACH3 documentation
-    REAL(wp), PARAMETER :: k_sat_clay = 8.50E-8_wp !< Saturated hydraulic conductivity for clay (Terra model) [m s-1]
+    REAL(jp), PARAMETER :: k_sat_clay = 8.50E-8_wp !< Saturated hydraulic conductivity for clay (Terra model) [m s-1]
 
     nc = SIZE(snowmelt_soil)
 
@@ -624,17 +624,17 @@ CONTAINS
 
     LOGICAL,  INTENT(in) :: &
       & lstart                 !< True: beginning of the experiment
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & dtime, &               !< Time stp length [s]
       & fract_snow, &          !< Snow cover fraction []
       & evapotrans, &          !< Evapotranspiration incl. sublimation [kg m-2 s-1]
       & evapopot, &            !< Potential evaporation/sublimation [kg m-2 s-1]
       & rain, &                !< Liquid precipitation [kg m-2 s-1]
       & snow                   !< Solid precipitation [kg m-2 s-1]
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & weq_glac, &            !< Glacier depth (snow and ice) [m water equivalent]
       & le_pc_remain           !< Latent energy available for snow melt [J m-2]
-    REAL(wp), INTENT(out) :: &
+    REAL(jp), INTENT(out) :: &
       & q_snocpymlt, &         !< Heating due to snow melt on canopy [W m-2]
       & snowmelt, &            !< Snow/ice melt at glacier points [kg m-2 s-1]
       & runoff_glac, &         !< Glacier runoff (rain+snow/ice melt, no calving) [kg m-2 s-1]
@@ -643,7 +643,7 @@ CONTAINS
     !
     !  local variables
     !
-    REAL(wp) ::              &
+    REAL(jp) ::              &
       & rain_in_m,           & !< Amount of rainfall within time step [m]
       & new_snow,            & !< Amount of snowfall within time step [m water equivalent]
       & evapotrans_in_m,     & !< Amount of sublimation within time step [m water equivalent]
@@ -738,7 +738,7 @@ CONTAINS
       & hydro_scale,             & !< Effective area represented in calculations:
                                    !< Semi_Distributed: ARNO scheme; Uniform: e.g. site level
       & model_scheme               !< Land surface model
-    REAL(wp), INTENT(in) ::      &
+    REAL(jp), INTENT(in) ::      &
       & dtime,                   & !< Time step length [s]
       & w_soil_wilt_fract          !< Soil moisture at wilting point [m]
     LOGICAL, INTENT(in) ::       &
@@ -748,7 +748,7 @@ CONTAINS
     LOGICAL, INTENT(in), DIMENSION(:) :: &
       & l_fract,                 & !< Tile has a non-zero grid cell fraction
       & l_pf_soil                  !< Permafrost within the soil above bedrock
-    REAL(wp), INTENT(in), DIMENSION(:,:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl,           & !< Soil depth until bedrock within each layer [m]
       & root_depth_sl,           & !< Root depth within each soil layer [m]
       & hyd_cond_sat_sl,         & !< Saturated hydraulic conductivity on soil layers [m s-1]
@@ -760,7 +760,7 @@ CONTAINS
       & vol_p_wilt_sl,           & !< Volumetric wilting point of soil layers []
       & vol_wres_sl,             & !< Volumetric residual soil water content on soil layers []
       & wtr_soil_pot_scool_sl      !< Potential amount of supercooled water [m]
-    REAL(wp), INTENT(in), DIMENSION(:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:) :: &
       & lat,                     & !< Latitude [degree]
       & lon,                     & !< Longitude [degree]
       & slope,                   & !< Slope of grid cell or tile []
@@ -770,7 +770,7 @@ CONTAINS
       & transpiration,           & !< Transpiration [kg m-2 s-1]
       & ice_pond,                & !< Amount of pond ice [m water equivalent]
       & weq_pond_max               !< Maximum amount of pond water or ice [m water equivalent]
-    REAL(wp), INTENT(inout), DIMENSION(:) :: &
+    REAL(jp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow,            & !< Terraplanet: Overflow reservoir for soil water [m]
       & infilt,                  & !< Infiltration [kg m-2 s-1]
       & runoff,                  & !< Surface runoff [kg m-2 s-1]
@@ -778,16 +778,16 @@ CONTAINS
       & wtr_pond,                & !< Amount of pond water [m]
       & wtr_pond_net_flx,        & !< Net inflow into surface water ponds [kg m-2 s-1]
       & wtr_latflow_res_srf        !< Water in intermediate storage for surface runoff [m]
-    REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
+    REAL(jp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl,             & !< Amount of water in soil layer [m]
       & ice_soil_sl,             & !< Amount of ice in soil layer [m]
       & wtr_latflow_res_sl         !< Water in "lateral" subsurface drainage reservoirs [m]
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:) :: &
       & runoff_dunne,            & !< Dunne component of surface runoff (saturation excess) [kg m-2 s-1]
       & drainage,                & !< Drainage [kg m-2 s-1]
       & wtr_soilhyd_res,         & !< Residual of vertical soil water transport scheme [m]
       & drainage_lowest_soil_layer !< Bottom layer drainage [kg m-2 s-1]
-    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl,             & !< Saturation capacity of the soil layer (reduced by ice) [m]
       & wtr_field_cap_sl,        & !< Field capacity of the soil layer (reduced by ice) [m]
       & wtr_p_wilt_sl,           & !< Water content at wilting point in soil layer (reduced by ice) [m]
@@ -796,11 +796,11 @@ CONTAINS
       & drainage_sl,             & !< Drainage [kg m-2 s-1]
       & wtr_latflow_sl             !< Outflow from the intermediary reservoir representing
                                    !< lateral flow of subsurface drainage [kg m-2 s-1]
-    REAL(wp), OPTIONAL, INTENT(in), DIMENSION(:,:) :: &
+    REAL(jp), OPTIONAL, INTENT(in), DIMENSION(:,:) :: &
       & ftranspiration_sl          !< Transpiration fraction []
 
     ! Local variables
-    REAL(wp) ::                  &
+    REAL(jp) ::                  &
       & evapo_soil_in_m(nc),     & !< Evaporation from the soil (without transpiration) [m /(time step)]
       & transpiration_in_m(nc),  & !< Transpiration within time step [m /(time step)]
       & drain_bot(nc),           & !< Drainage towards bedrock [m /(time step)]
@@ -991,19 +991,19 @@ CONTAINS
       & nc, &            !< Vector length
       & nlat             !< Effective number of latitudes (for ICON grid)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & oro_stddev(:)    !< Standard deviation of orography [m]
-    REAL(wp), INTENT(out) :: &
+    REAL(jp), INTENT(out) :: &
       & steepness(:)     !< Parameter defining the subgrid slope distribution []
 
     INTEGER :: ic        !< Grid cell index
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & sigma_0, &       !< Minimum value (100 m); below b = 0.01
       & sigma_max        !< Resolution-dependent maximum
 
     sigma_0   = oro_var_min
-    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) !Todo: site level
+    sigma_max = oro_var_max * 64._wp / REAL(nlat, jp) !Todo: site level
 
     !----------------------------------------------------------
     ! The steepness parameter (b) is defined as
@@ -1045,19 +1045,19 @@ CONTAINS
     LOGICAL, INTENT(in)  ::        &
       & l_infil_subzero              !< Allow surface water infiltration at temperatures below 0 degree C
 
-    REAL(wp), INTENT(in) ::        &
+    REAL(jp), INTENT(in) ::        &
       & t_soil_sl1,                & !< Temperature of uppermost soil layer [K]
       & water_to_soil,             & !< Amount of water reaching the ground [m /(time step)]
       & wpi_rootzone,              & !< Liquid water + ice within the root zone [m]
       & steepness,                 & !< Parameter defining the subgrid slope distribution []
       & wpi_rootzone_max             !< Maximum water holding capacity (liquid + ice) of the root zone [m]
 
-    REAL(wp), INTENT(out) ::       &
+    REAL(jp), INTENT(out) ::       &
       & runoff,                    & !< Surface runoff [m /(time step)]
       & infilt                       !< Infiltration of water into the soil [m /(time step)]
 
     ! Local variables
-    REAL(wp) ::                    &
+    REAL(jp) ::                    &
       & ws_min_drain,              & !< Minimum amount of root zone soil water for drainage [m]
       & ws_rel,                    & !< Relative root zone soil moisture (water + ice)
       & zb1, zbm, zconw1, zvol       !< Parameters
@@ -1149,7 +1149,7 @@ CONTAINS
     LOGICAL, INTENT(IN) ::          &
       & l_fract(:),                 & !< True: grid cell fraction of tile is > 0
       & l_pf_soil(:)                  !< True: permafrost within the soil (above bedrock)
-    REAL(wp), INTENT(IN) ::         &
+    REAL(jp), INTENT(IN) ::         &
       & lat(:),                     & !< Grid cell latitudes [degree]
       & lon(:)                        !< Grid cell longitudes [degree]
     INTEGER, INTENT(IN) ::          &
@@ -1159,7 +1159,7 @@ CONTAINS
       & interpol_mean,              & !< Vertical interpolation scheme for soil hydraulic properties
       & hydro_scale,                & !< Hydrology scale scheme
       & model_scheme                  !< ICON-Land model scheme
-    REAL(wp), INTENT(in) ::         &
+    REAL(jp), INTENT(in) ::         &
       & w_soil_wilt_fract,          & !< Relative soil moisture at wilting point []
       & dtime,                      & !< Model time step legth [s]
       & slope(:),                   & !< Slope of gridcell / tile []
@@ -1183,14 +1183,14 @@ CONTAINS
       & root_depth_sl(:,:),         & !< Thicknesses of soil layers until rooting depth [m]
       & transpiration_in_m(:),      & !< Amount of transpiration within timestep [m]
       & evapo_soil_in_m(:)            !< Amount of soil evaporation within timestep [m]
-    REAL(wp), INTENT(INOUT) ::      &
+    REAL(jp), INTENT(INOUT) ::      &
       & infilt(:),                  & !< Amount of infiltration within timestep [m]
       & ice_soil_sl(:,:),           & !< Amount of ice in the soil [m]
       & wtr_soil_sl(:,:),           & !< Soil moisture of each layer [m]
       & runoff_dunne(:),            & !< Amount of saturation overflow (Dunne runoff) [m]
       & tpe_overflow(:),            & !< Terraplanet: soil water overflow reservoir [m]
       & evapo_deficit(:)              !< Water evaporated from unintended sources [m]
-    REAL(wp), INTENT(OUT) ::        &
+    REAL(jp), INTENT(OUT) ::        &
       & drain_bot(:),               & !< Drainage towards bedrock [m]
       & drainage_sl(:,:),           & !< Subsurface drainage on soil layers [m]
       & wtr_transp_down_sl(:,:),    & !< Vertical water transport into the next deeper soil layer [m]
@@ -1199,7 +1199,7 @@ CONTAINS
     LOGICAL, INTENT(IN) ::          &
       & ltpe_closed,                & !< Terraplanet setup with closed water balance
       & ltpe_open                     !< Terraplanet setup with additional moisture in deep soil layers
-    REAL(wp), OPTIONAL, INTENT(IN) :: &
+    REAL(jp), OPTIONAL, INTENT(IN) :: &
       & ftranspiration_sl(:,:)        !< Fraction oftranspiration [] ???
 
     ! Local variables
@@ -1210,7 +1210,7 @@ CONTAINS
 
     CHARACTER(len=4096) :: message_text_long !< long string for soil hydrology checks
 
-    REAL(wp) ::                     &
+    REAL(jp) ::                     &
       & weq_soil(nc),               & !< Total column soil moisture (water + ice) [m water equivalent]
       & ws_inter_sl(nc,nsoil),      & !< Soil moisture with infiltration added to first layer [m]
       & wtr_soil_sl_t0(nc,nsoil),   & !< Soil moisture state prior to vertical transport [m]
@@ -2059,26 +2059,26 @@ CONTAINS
     INTEGER,  INTENT(IN) ::         &
       & nc,                         & !< Number of cells
       & nsoil                         !< Number of soil layers
-    REAL(wp), INTENT(IN) ::         &
+    REAL(jp), INTENT(IN) ::         &
       & delta_time,                 & !< Time step length [s]
       & flowlag(:),                 & !< Lag factor determining the outflow []
       & hyd_cond_bot(:),            & !< Hydraulic conductivity of the bottom soil layer [m/s]
       & soil_depth_sl(:,:),         & !< Thicknesses of soil layers until bedrock [m]
       & vol_field_cap_sl(:,:),      & !< Volumetric field capacity []
       & ice_soil_sl(:,:)              !< Ice content [m]
-    REAL(wp), INTENT(INOUT) ::      &
+    REAL(jp), INTENT(INOUT) ::      &
       & wtr_soil_sl(:,:),           & !< Soil moisture of each layer [m]
       & wtr_latflow_res_sl(:,:),    & !< Water content in lateral flow reservoir [m]
       & drainage_sl(:,:),           & !< Drainage on layers [m /(time step)]
       & drain_bot(:)                  !< Bottom layer drainage [m /(time step)]
-    REAL(wp), INTENT(OUT) ::        &
+    REAL(jp), INTENT(OUT) ::        &
       & wtr_latflow_sl(:,:)           !< Lateral flux to downstream unit / river [m /(time step)]
 
     ! Local variables
     INTEGER ::                      &
       & ic,                         & !< Grid ell index
       & is                            !< Soil layer index
-    REAL(wp) ::                     &
+    REAL(jp) ::                     &
       & drain_bot_act,              & !< Contribution of layer to bottom layer drainage [m /(time step)]
       & drain_bot_pot(nc),          & !< Potential bottom layer drainage from column [m /(time step)]
       & weq_sl(nc,nsoil),           & !< Total water content of soil layer [m]
@@ -2176,10 +2176,10 @@ CONTAINS
 
   !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(IN)            :: flowlag               !< Factor accounting for retention in surface flow []
-    REAL(wp), INTENT(INOUT)         :: runoff                !< Surface runoff [m /(time step)]
-    REAL(wp), INTENT(INOUT)         :: wtr_latflow_res_srf   !< Water content in lateral flow reservoir [m]
-    REAL(wp), INTENT(OUT)           :: wtr_latflow_srf       !< Lateral flux to downstream unit / river [m /(time step)]
+    REAL(jp), INTENT(IN)            :: flowlag               !< Factor accounting for retention in surface flow []
+    REAL(jp), INTENT(INOUT)         :: runoff                !< Surface runoff [m /(time step)]
+    REAL(jp), INTENT(INOUT)         :: wtr_latflow_res_srf   !< Water content in lateral flow reservoir [m]
+    REAL(jp), INTENT(OUT)           :: wtr_latflow_srf       !< Lateral flux to downstream unit / river [m /(time step)]
 
     ! Adding surface runoff to storage reservoir and setting runoff to 0.
     wtr_latflow_res_srf = wtr_latflow_res_srf + runoff
@@ -2239,14 +2239,14 @@ CONTAINS
       & nc                           !< Vector length
     LOGICAL,  INTENT(in) ::        &
       & l_fract(:)                   !< Tile fraction is grater than 0.
-    REAL(wp), INTENT(in) ::        &
+    REAL(jp), INTENT(in) ::        &
       & lat(:),                    & !< Grid cell latitudes
       & lon(:)                       !< Grid cell longitudes
     INTEGER,  INTENT(in) ::        &
       & nsoil,                     & !< Number of soil layers (vertical grid dimension)
       & enforce_water_budget,      & !< Switch defining consequence of water balance issues
       & model_scheme                 !< Model scheme (e.g. jsbach / quincy)
-    REAL(wp), INTENT(in) ::        &
+    REAL(jp), INTENT(in) ::        &
       & w_soil_wilt_fract,         & !< Relative soil moisture at wilting point []
       & droot(:,:),                & !< Root depth within layer [m]
       & dsoil(:,:),                & !< Soil depth (until bedrock) within layer [m]
@@ -2255,16 +2255,16 @@ CONTAINS
       & evapo_soil_in_m(:),        & !< Bare soil evaporation [m /(time step)]
       & wtr_soil_sl(:,:)             !< Water content of the soil layer [m]
 
-    REAL(wp), INTENT(inout) ::     &
+    REAL(jp), INTENT(inout) ::     &
       & evapo_deficit(:)             !< Evaporation from unintended sources [m]
 
-    REAL(wp), INTENT(out) ::       &
+    REAL(jp), INTENT(out) ::       &
       & evapo_soil_sl1(:),         & !< Evaporation from the top soil layer [m/(time step)]
       & transpiration_sl(:,:),     & !< Transpiration from soil layers [m/(time step)]
       & deficit_trans(:),          & !< Unaccounted transpiration [m/(time step)]
       & deficit_sevap(:)             !< Unaccounted soil evaporation [m/(time step)]
 
-    REAL(wp), OPTIONAL, INTENT(in) :: &
+    REAL(jp), OPTIONAL, INTENT(in) :: &
       & ftranspiration_sl(:,:)       !< Fraction of transpiration per soil layer [m/(time step)] (fraction of what???)
 
     ! Local variables
@@ -2278,7 +2278,7 @@ CONTAINS
     CHARACTER(len=4096) ::         &
       & message_text_long            !< Extra long string for messages
 
-    REAL(wp) ::                    &
+    REAL(jp) ::                    &
       & dummy_wtr_soil(nc, nsoil), & !< Dummy soil moisture storage [m]
       & deficit,                   & !< Water deficit within the actual soil layer [m]
       & remaining,                 & !< Water remaining in the soil layer [m]
@@ -2566,8 +2566,8 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp),  INTENT(in)    :: weq_snow_lice    !< Snow depth on lake ice [m water equivalent]
-    REAL(wp),  INTENT(out)   :: fract_snow_lice  !< Snow fraction on lake ice []
+    REAL(jp),  INTENT(in)    :: weq_snow_lice    !< Snow depth on lake ice [m water equivalent]
+    REAL(jp),  INTENT(out)   :: fract_snow_lice  !< Snow fraction on lake ice []
 
     fract_snow_lice = TANH(weq_snow_lice * 100._wp)
 
@@ -2608,14 +2608,14 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & dtime
 
     INTEGER, INTENT(in)  :: pond_dynamics_scheme
 
     LOGICAL, INTENT(in) :: use_tmx
 
-    REAL(wp), INTENT(in), DIMENSION(:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:) :: &
       & oro_stddev,         & !< Standard deviation of the subgrid scale orography [m]
       & t_srf_old,          & !< Surface temperature prior to update [K]
       & press_srf,          & !< Surface pressure [Pa]
@@ -2629,7 +2629,7 @@ CONTAINS
       & weq_snow_soil,      & !< Amount of snow on the ground [m water equivalent]
       & weq_snow_can          !< Amount of snow on the canopy [m water equivalent]
 
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:) :: &
       & fract_snow_can,     & !< Snow fraction on the canopy []
       & fract_skin,         & !< Wet skin fraction (not including ponds) []
       & fract_pond,         & !< Pond fraction []
@@ -2637,7 +2637,7 @@ CONTAINS
       & fract_snow_soil       !< Snow fraction on the ground []
 
     ! Local variables
-    REAL(wp) ::             &
+    REAL(jp) ::             &
       & qsat_srf_old,       & !< Surface saturated humidity from beginning of time step []
       & evapo_pot             !< Potential evaporation
 
@@ -2749,7 +2749,7 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_hydro_constants,        ONLY: Quad_, Tanh_, oro_crit
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & dtime                 ! Time step length [s]
 
     INTEGER, INTENT(in) ::  &
@@ -2758,7 +2758,7 @@ CONTAINS
     LOGICAL, INTENT(in) ::  &
       & use_tmx               ! Use tmx scheme for turbulent vertical mixing of the atmosphere
 
-    REAL(wp), INTENT(in), DIMENSION(:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:) :: &
       & oro_stddev,         & ! Standard deviation of the subgrid scale topography [m]
       & t_srf_old,          & ! Surface temperature prior to being updated [K]
       & press_srf,          & ! Surface pressure [Pa]
@@ -2771,13 +2771,13 @@ CONTAINS
       & weq_pond,           & ! Amount of water/ice in ponds [m water equivalent]
       & weq_snow_soil         ! Amount of snow on the ground [m water equivalent]
 
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:) :: &
       & fract_skin,         & ! Wet skin fraction (not including ponds) []
       & fract_pond,         & ! Pond fraction []
       & fract_wet,          & ! Wet surface fraction (skin and ponds) []
       & fract_snow_soil       ! Snow fraction []
 
-    REAL(wp) ::             &
+    REAL(jp) ::             &
       & qsat_srf_old,       & ! Specific humidity at saturation []
       & evapo_pot             ! Potential evaporation [kg m-2 s-1]
 
@@ -2855,13 +2855,13 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  REAL(wp) FUNCTION Get_snow_fract_noforest(snow, orodev)
+  REAL(jp) FUNCTION Get_snow_fract_noforest(snow, orodev)
 
     !$ACC ROUTINE SEQ
 
   USE mo_hydro_constants, ONLY: wsn2fract_const, wsn2fract_eps, wsn2fract_sigfac
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & snow,   & !< Amount of snow on the ground [m water equivalent]
       & orodev    !< Standard deviation of the subgrid scale orography [m]
 
@@ -2879,17 +2879,17 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  REAL(wp) FUNCTION get_canopy_cond_unstressed_simple(lai, par) RESULT(conductance)
+  REAL(jp) FUNCTION get_canopy_cond_unstressed_simple(lai, par) RESULT(conductance)
 
     USE mo_hydro_constants, ONLY: k => conductance_k, a => conductance_a, b => conductance_b, c => conductance_c
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & lai,   & !< Leaf area index []
       & par      !< Photosynthetically active radiation [w/m2]
 
     ! Local variables
     !
-    REAL(wp) :: &
+    REAL(jp) :: &
       & d, zpar  !< Helper variables
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_canopy_cond_unstressed_simple'
@@ -2918,9 +2918,9 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL &
 #endif
-  REAL(wp) FUNCTION get_canopy_cond_stressed_simple(cond_unstressed, water_stress, air_is_saturated) RESULT(conductance)
+  REAL(jp) FUNCTION get_canopy_cond_stressed_simple(cond_unstressed, water_stress, air_is_saturated) RESULT(conductance)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & cond_unstressed,    & !< Canopy conductance without water stress [m/s]
       & water_stress          !< Water stress factor []
     LOGICAL,  INTENT(in) :: &
@@ -2956,17 +2956,17 @@ CONTAINS
     ! TODO
     ! TBD: Maybe change later so that it uses geographically dependent critical values (like wilting point)
 
-    REAL(wp), INTENT(in) ::  &
+    REAL(jp), INTENT(in) ::  &
       & w_soil,              & !< Plant available water in the root zone [m]
       & w_soil_max,          & !< Maximum possible available water in root zone [m]
       & w_soil_crit_fract,   & !< Relative root zone available water content at critical point,
                                !< i.e. below which plants sturt to suffer from water stress []
       & w_soil_wilt_fract      !< Relative root zone available water content at wilting point []
-    REAL(wp) ::              &
+    REAL(jp) ::              &
       & water_stress_factor    !< RESULT: water stress factor (0: extreme stress, 1: no stress) []
 
     ! Local variables
-    REAL(wp) ::              &
+    REAL(jp) ::              &
       & w_crit,              & !< Root zone available water content at critical point [m]
       & w_wilt                 !< Root zone available water content at wilting point [m]
 
@@ -2996,7 +2996,7 @@ CONTAINS
 
     INTEGER, INTENT(in) ::  &
       & n_act(:)              !< Number of layers
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & dt,                 & !< Time step
       & alpha,              & !< Alpha
       & top_bound(:),       & !< Upper boundary fluxes
@@ -3008,7 +3008,7 @@ CONTAINS
       & Q(:,:),             & !< Diffusivity at (upper) layer boundaries
       & P(:,:)                !< Conductivity at (upper) layer boundaries
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & X(:,:)                !< Normalized soil state for every layer
 
     ! Local variables
@@ -3017,7 +3017,7 @@ CONTAINS
       & ic,    & !< Looping index for grid cells
       & nc,    & !< Vector length
       & nsoil    !< Number of soil layers (vertical dimension)
-    REAL(wp) :: &
+    REAL(jp) :: &
       & dzh(SIZE(S,1),SIZE(S,2)),     & !< Distance between mid layer depth of current and above layer
       & matrix(SIZE(S,1),SIZE(S,2),4)   !< Matrix containing sub-diagonal (1), diagonal (2),
                                         !< super-diagonal (3) of triangular matrix and rhs (4) of
@@ -3127,33 +3127,33 @@ CONTAINS
     INTEGER,  INTENT(in)            :: interpol_mean      !< Method to derive values at layer interface (avg scheme)
     INTEGER,  INTENT(in)            :: nc                 !< Vector length
     INTEGER,  INTENT(in)            :: nsoil              !< Number of below ground layers
-    REAL(wp), INTENT(in)            :: dsoil(:,:)         !< Soil depth (until bedrock) per layer [m]
-    REAL(wp), INTENT(in)            :: wtr(:,:)           !< Soil water content [m]
-    REAL(wp), INTENT(in)            :: ice(:,:)           !< Soil ice content [m]
-    REAL(wp), INTENT(in)            :: wscools(:,:)       !< Amount of potentially supercooled water [m]
-    REAL(wp), INTENT(in)            :: wsat(:,:)          !< Soil depth (until bedrock) per layer [m]
-    REAL(wp), INTENT(in)            :: wres(:,:)          !< Residual water content [m]
-    REAL(wp), INTENT(in)            :: k_sat(:,:)         !< Hydraulic conductivity at saturation [m/s]
-    REAL(wp), INTENT(in)            :: mpot_sat(:,:)      !< Matric potential for saturated soils [m]
-    REAL(wp), INTENT(in)            :: bclapp(:,:)        !< Clapp & Hornberger exponent b []
-    REAL(wp), INTENT(in)            :: ps_index(:,:)      !< Pore size index []
-    REAL(wp), INTENT(in),  OPTIONAL :: dt                 !< Time step length [s]
+    REAL(jp), INTENT(in)            :: dsoil(:,:)         !< Soil depth (until bedrock) per layer [m]
+    REAL(jp), INTENT(in)            :: wtr(:,:)           !< Soil water content [m]
+    REAL(jp), INTENT(in)            :: ice(:,:)           !< Soil ice content [m]
+    REAL(jp), INTENT(in)            :: wscools(:,:)       !< Amount of potentially supercooled water [m]
+    REAL(jp), INTENT(in)            :: wsat(:,:)          !< Soil depth (until bedrock) per layer [m]
+    REAL(jp), INTENT(in)            :: wres(:,:)          !< Residual water content [m]
+    REAL(jp), INTENT(in)            :: k_sat(:,:)         !< Hydraulic conductivity at saturation [m/s]
+    REAL(jp), INTENT(in)            :: mpot_sat(:,:)      !< Matric potential for saturated soils [m]
+    REAL(jp), INTENT(in)            :: bclapp(:,:)        !< Clapp & Hornberger exponent b []
+    REAL(jp), INTENT(in)            :: ps_index(:,:)      !< Pore size index []
+    REAL(jp), INTENT(in),  OPTIONAL :: dt                 !< Time step length [s]
     INTEGER,  INTENT(in),  OPTIONAL :: last_soil_layer(:) !< Index of deepest soil layers (above bedrock)
-    REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !< Impedance factor to account for ice blocking flowpaths []
-    REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !< Hydraulic conductivity of the soil layer [m/s]
-    REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !< Diffusivity of the soil layer [m2/s]
-    REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !< Hydraulic conductivity at (upper) layer interface [m/s]
-    REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !< Diffusivity at (upper) layer interface [m2/s]
-    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !< Matric potential at actual soil state [m]
+    REAL(jp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !< Impedance factor to account for ice blocking flowpaths []
+    REAL(jp), INTENT(out), OPTIONAL :: K(:,:)             !< Hydraulic conductivity of the soil layer [m/s]
+    REAL(jp), INTENT(out), OPTIONAL :: D(:,:)             !< Diffusivity of the soil layer [m2/s]
+    REAL(jp), INTENT(out), OPTIONAL :: K_inter(:,:)       !< Hydraulic conductivity at (upper) layer interface [m/s]
+    REAL(jp), INTENT(out), OPTIONAL :: D_inter(:,:)       !< Diffusivity at (upper) layer interface [m2/s]
+    REAL(jp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !< Matric potential at actual soil state [m]
 
     ! Local variables
     INTEGER  ::                  &
       & ic,                      & !< Grid cell index
       & is                         !< Soil layer index
-    REAL(wp) ::                  &
+    REAL(jp) ::                  &
       & ck,                      & !< Parameter for matric potential formula (Zhang 2007)
       & local_dt                   !< Time step, copy needed for numerical reasons
-    REAL(wp) ::                  &
+    REAL(jp) ::                  &
       & wtr_vol(nc,nsoil),       & !< Volumetric soil water content []
       & ice_vol(nc,nsoil),       & !< Volumetric soil ice content []
       & scool_vol(nc,nsoil),     & !< Volumetric amount of supercooled water []

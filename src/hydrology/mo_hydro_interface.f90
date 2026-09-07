@@ -26,7 +26,7 @@ MODULE mo_hydro_interface
   ! Use of basic structures
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_exception,          ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -457,7 +457,7 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & skinres_max,               & !< Capacity of the skin reservoir (soil and canopy) [m]
       & skinres_canopy_max,        & !< Capacity of the canopy skin reservoir [m]
       & wpi_rootzone,              & !< Amount of water and ice in the root zone [m]
@@ -469,7 +469,7 @@ CONTAINS
       & flowlag_used,              & !< Lag factor to account for retention in surface runoff []
       & slope_used                   !< Effective slope on tile or steepness for ARNO scheme []
 
-    REAL(wp), DIMENSION(options%nc, options%nsoil_w) :: &
+    REAL(jp), DIMENSION(options%nc, options%nsoil_w) :: &
       & wpi_soil_sl_tmp,           & !< Actual amount of water and ice in soil layers [m]
       & wpi_wsat_soil_sl_tmp,      & !< Maximum amount of water and ice in soil layers [m]
       & wpi_wres_soil_sl_tmp,      & !< Residual water/ice content of soil layer [m]
@@ -487,10 +487,10 @@ CONTAINS
       & is, &         !< Soil layer index
       & isnow         !< Snow layer index
 
-    REAL(wp) :: dtime !< Time step length
+    REAL(jp) :: dtime !< Time step length
 
     ! Variables from process configuration
-    REAL(wp) :: &
+    REAL(jp) :: &
       & config_w_skin_max,       & !< Maximum amount of snow on canopy and liquid water in skin
                                    !< reservoirs (canopy and soil); snow on soil is not included
                                    !< [m water equivalent]
@@ -1160,20 +1160,20 @@ CONTAINS
       & nsoil,  &                       !< Number of soil layers (vertical dimension)
       & is                              !< Looping index for soil layers
 
-    REAL(wp) :: N_perc                                 !< Variable used in percolation theory
-    REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          !< Fraction of the soil with connected organic pathways
-    REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         !< Fraction of the soil with unconnected organic matter
-    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  !< Saturated hydraulic conductivity of 'unconnected'
+    REAL(jp) :: N_perc                                 !< Variable used in percolation theory
+    REAL(jp), ALLOCATABLE ::  fract_perc(:,:)          !< Fraction of the soil with connected organic pathways
+    REAL(jp), ALLOCATABLE ::  fract_uncon(:,:)         !< Fraction of the soil with unconnected organic matter
+    REAL(jp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  !< Saturated hydraulic conductivity of 'unconnected'
                                                        !< soil fraction
-    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)    !< Saturated hydraulic conductivity of organic matter [m/s]
-    REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)    !< Volumetric porosity of organic matter [m3/m3]
-    REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)          !< Clapp and Hornberger exponent B for organic matter []
-    REAL(wp), ALLOCATABLE ::  matric_pot_org(:,:)      !< Soil matric potential for organic matter [m]
-    REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:) !< Pore size index of organic matter []
-    REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)   !< Volumetric field capacity of organic matter [m/m]
-    REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)      !< Volumetric soil moisture at permanent wilting point
+    REAL(jp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)    !< Saturated hydraulic conductivity of organic matter [m/s]
+    REAL(jp), ALLOCATABLE ::  vol_porosity_org(:,:)    !< Volumetric porosity of organic matter [m3/m3]
+    REAL(jp), ALLOCATABLE ::  bclapp_org(:,:)          !< Clapp and Hornberger exponent B for organic matter []
+    REAL(jp), ALLOCATABLE ::  matric_pot_org(:,:)      !< Soil matric potential for organic matter [m]
+    REAL(jp), ALLOCATABLE ::  pore_size_index_org(:,:) !< Pore size index of organic matter []
+    REAL(jp), ALLOCATABLE ::  vol_field_cap_org(:,:)   !< Volumetric field capacity of organic matter [m/m]
+    REAL(jp), ALLOCATABLE ::  vol_p_wilt_org(:,:)      !< Volumetric soil moisture at permanent wilting point
                                                        !< in organic matter [m/m]
-    REAL(wp), ALLOCATABLE ::  vol_wres_org(:,:)        !< Volum. residual water content in organic matter [m/m]
+    REAL(jp), ALLOCATABLE ::  vol_wres_org(:,:)        !< Volum. residual water content in organic matter [m/m]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
@@ -1475,17 +1475,17 @@ CONTAINS
       & ic,     &                                !< Looping index for grid cells
       & is,     &                                !< Looping index for soil layers
       & nsoil                                    !< Number of vertical layers (grid dimension)
-    REAL(wp) :: dtime                            !< Time step length [s]
+    REAL(jp) :: dtime                            !< Time step length [s]
 
     INTEGER :: last_soil_layer(options%nc)       !< Deepest active soil layer index (above the bedrock boundary)
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & area(:), &                               !< Grid cell area [m2]
       & lat(:), &                                !< Grid cell center latitude [deg.]
       & lon(:), &                                !< Grid cell center longitude [deg.]
       & tile_fract(:)                            !< Grid cell fraction of the tile []
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & slope_used(options%nc), &                !< Effective slope on tile []
       & flowlag_used(options%nc), &              !< Lag factor for surface runoff (time step dependent) []
       & depth_thrsh(options%nc), &               !< Maximum active layer depth up to which permafrost
@@ -1498,7 +1498,7 @@ CONTAINS
     LOGICAL :: &
       & l_fract(options%nc), &                   !< Tile has a non-zero grid cell fraction
       & l_pf_soil(options%nc)                    !< Permafrost affects bottom layer drainage
-    REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
+    REAL(jp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -2100,16 +2100,16 @@ CONTAINS
       & nsoil, &                                     !< Number of vertical soil layers (grid dimension)
       & is                                           !< Looping index for soil layers
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & config_w_soil_crit_fract, &                  !< Below this critical relative soil moisture, plants
                                                      !< start to suffer from water stress.
       & config_w_soil_wilt_fract                     !< Below this relative soil moisture (wilting point)
                                                      !< transpiration is no longer possible.
-    REAL(wp) :: &
+    REAL(jp) :: &
       & wtr_soil_pot_scool_sl_min(options%nc, options%nsoil_w), & !< Actual amount of supercooled water [m]
       & wpi_fcap_soil_sl(options%nc, options%nsoil_w)             !< Volumetric amount of water and/or ice
                                                                   !< at field capacity [m] (???)
-    REAL(wp) :: &
+    REAL(jp) :: &
       & wpi_pwp_soil_sl(options%nc, options%nsoil_w), &           !< Volumetric amount of water and/or ice at wilting point [m]
       & wtr_soil_pwp_sl(options%nc, options%nsoil_w), &           !< Actual amount of water at wilting point
                                                                   !< (corrected for ice/supercooled) [m]
@@ -2117,8 +2117,8 @@ CONTAINS
       & wtr_soil_avail_max_sl(options%nc, options%nsoil_w), &     !< Actual maximum of plant available water [m]
       & wtr_soil_inaccessible_sl(options%nc, options%nsoil_w)     !< Actual amount of plant inaccessible water
                                                                   !< (ice+supercooled) [m]
-    REAL(wp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
-    REAL(wp) :: hlp1                                              !< helper variable
+    REAL(jp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
+    REAL(jp) :: hlp1                                              !< helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -2581,7 +2581,7 @@ CONTAINS
       & evapotrans, &           !< Potential evapotranspiration [kg m-2 s-1]
       & transpiration           !< Transpiration [kg m-2 s-1]
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & q_air, &                !< Specific humidity at lowest atmospheric level [kg kg-1]
       & q_air_eff, &            !< Effective specific humidity at lowest atmospheric level []
       & qsat_srf_eff, &         !< Effective surface saturation specific humidity []
@@ -2593,7 +2593,7 @@ CONTAINS
       & ice, &                  !< Index of last cell in block
       & nc, &                   !< Number of cells in block
       & ic                      !< Looping index for grid cells
-    REAL(wp) :: &
+    REAL(jp) :: &
       & dtime, &                !< Time step length [s]
       & alpha                   !< Implicitness factor []
 
@@ -2926,7 +2926,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model                     !< This instance of ICON-Land
     TYPE(t_jsb_grid),  POINTER :: grid                      !< Horizontal grid
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & skinres_canopy_max, &       !< Maximum amount of water/snow on canopy
       & skinres_max, &              !< Maximum amount of surface water/ice
       & heat_tcoef                  !< Heat transfer coefficient
@@ -2941,7 +2941,7 @@ CONTAINS
       & ic, &                       !< Looping index for cells
       & pond_dynamics_scheme        !< Selected scheme for pond dynamics
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & dtime, &                    !< Time step length - exception in initialization time step [s]
       & alpha, &                    !< Implicitness factor [] (compare [[mo_jsb_interface:interface_full]])
       & config_w_skin_max           !< Maximum amount of water in skin reservoir [m water equivalent]
@@ -3329,19 +3329,19 @@ CONTAINS
       & ice_soil_sl, &               !< Amount of ice in the soil layers [m]
       & wtr_latflow_res_sl           !< Amount of water in lateral flow reservoir [m]
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & tile_fract(:), &             !< Fraction of the tile (rel. to the grid cell) []
       & area(:), &                   !< Grid cell area [m2]
       & lat(:), &                    !< Grid cell center latitude
       & lon(:)                       !< Grid cell center longitude
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(jp) :: &
       & tile_area,    &              !< Area of the tile fraction [m2]
       & wb_threshold, &              !< Threshold for water balance errors
       & weq_land_new                 !< Total amount of land water, updated in this time step []
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & weq_soil, &                  !< Amount of water or ice in the soil [m water equivalent]
       & wtr_latflow_res              !< Amount of water in the reservoir representing lateral flow [m]
 
@@ -3356,7 +3356,7 @@ CONTAINS
       & ie                           !< Looping index for errors
     INTEGER :: error_idx(options%nc) !< Vector listing grid cells with water balance issue
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & dtime, &                     !< Time step length [s]
       & ice2weq                      !< Factor to convert ice column height to m water equivalent []
     LOGICAL :: &
@@ -3574,9 +3574,9 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: in_domain(:,:)         !< Mask out halo cells
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(jp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(jp),                   INTENT(in) :: in_domain(:,:)         !< Mask out halo cells
+    REAL(jp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(HYDRO_)      !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)      !< Memory of the hydrology process
@@ -3584,9 +3584,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
 
-    REAL(wp), POINTER            :: notsea(:,:)
-    REAL(wp)                     :: scaling(SIZE(in_domain,1), SIZE(in_domain,2))
-    REAL(wp)                     :: gsum_weq_balance_err_count(1)
+    REAL(jp), POINTER            :: notsea(:,:)
+    REAL(jp)                     :: scaling(SIZE(in_domain,1), SIZE(in_domain,2))
+    REAL(jp)                     :: gsum_weq_balance_err_count(1)
     CHARACTER(len=*),  PARAMETER :: routine = modname//':global_hydrology_diagnostics'
 
     ! Pointers to variables in memory
@@ -3602,14 +3602,14 @@ CONTAINS
 
     LOGICAL, SAVE           :: print_wb_warning = .TRUE.   !< Print a warning in case of water balance issues
 
-    REAL(wp), POINTER       :: trans_gmean(:)              !< Global mean transpiration on land [kg m-2 s-1]
-    REAL(wp), POINTER       :: evapotrans_gmean(:)         !< Global mean evapotranspiration on land [kg m-2 s-1]
-    REAL(wp), POINTER       :: weq_land_gsum(:)            !< Total amount of liquid or frozen land water [km3]
-    REAL(wp), POINTER       :: discharge_ocean_gsum(:)     !< Global sum of discharge to the ocean [Sv]
-    REAL(wp), POINTER       :: wtr_rootzone_rel_gmean(:)   !< Global mean relative root zone moisture []
-    REAL(wp), POINTER       :: fract_snow_gsum(:)          !< Global snow area [Mio m2]
-    REAL(wp), POINTER       :: weq_snow_gsum(:)            !< Global snow amount on non-glacier land [Gt]
-    REAL(wp), POINTER       :: weq_balance_err_gsum(:)     !< Global land water balance error [m3/(time step)]
+    REAL(jp), POINTER       :: trans_gmean(:)              !< Global mean transpiration on land [kg m-2 s-1]
+    REAL(jp), POINTER       :: evapotrans_gmean(:)         !< Global mean evapotranspiration on land [kg m-2 s-1]
+    REAL(jp), POINTER       :: weq_land_gsum(:)            !< Total amount of liquid or frozen land water [km3]
+    REAL(jp), POINTER       :: discharge_ocean_gsum(:)     !< Global sum of discharge to the ocean [Sv]
+    REAL(jp), POINTER       :: wtr_rootzone_rel_gmean(:)   !< Global mean relative root zone moisture []
+    REAL(jp), POINTER       :: fract_snow_gsum(:)          !< Global snow area [Mio m2]
+    REAL(jp), POINTER       :: weq_snow_gsum(:)            !< Global snow amount on non-glacier land [Gt]
+    REAL(jp), POINTER       :: weq_balance_err_gsum(:)     !< Global land water balance error [m3/(time step)]
 
     INTEGER  :: blk, jc, nblks, nproma
     ! ----------------------------------------------------------------------------------------------------- !

@@ -18,7 +18,7 @@
 MODULE mo_q_veg_canopy
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: jp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
   USE mo_exception,                   ONLY: message_text, finish
   USE mo_q_assimi_process,            ONLY: calc_photosynthesis
@@ -92,54 +92,54 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,          INTENT(in)              :: nc                    !< dimensions
     INTEGER,          INTENT(in)              :: ncanopy               !< number of canopy layers
-    REAL(wp),         INTENT(in)              :: dtime                 !< timestep length
-    REAL(wp),         INTENT(in)              :: dz(:)                 !< canopy layer thickness
-    REAL(wp),         INTENT(in)              :: lbounds(:)            !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
-    REAL(wp),         INTENT(in)              :: ubounds(:)            !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
+    REAL(jp),         INTENT(in)              :: dtime                 !< timestep length
+    REAL(jp),         INTENT(in)              :: dz(:)                 !< canopy layer thickness
+    REAL(jp),         INTENT(in)              :: lbounds(:)            !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
+    REAL(jp),         INTENT(in)              :: ubounds(:)            !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     INTEGER,          INTENT(in)              :: lctlib_ps_pathway     !< dimensions
-    REAL(wp),         INTENT(in)              :: lctlib_k0_fn_struc    !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_fn_oth_min     !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_sla            !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_np_leaf        !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_gmin           !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_g0             !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_g1             !< lctlib parameter
-    REAL(wp),         INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_k0_fn_struc    !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_fn_oth_min     !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_sla            !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_np_leaf        !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_gmin           !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_g0             !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_g1             !< lctlib parameter
+    REAL(jp),         INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter
     LOGICAL,          INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
     INTEGER,          INTENT(in)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),         INTENT(in)              :: leaf_nitrogen(:)      !< total canopy N (mol/m2)
-    REAL(wp),         INTENT(in)              :: lai(:)                !< total leaf area index
-    REAL(wp),         INTENT(inout)           :: ppfd_sunlit_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
-    REAL(wp),         INTENT(inout)           :: ppfd_shaded_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on shaded leafes (average over time)
-    REAL(wp),         INTENT(inout)           :: fleaf_sunlit_cl(:,:)  !< fraction of sunlit leaves (average over time)
-    REAL(wp),         INTENT(out)             :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
-    REAL(wp),         INTENT(out)             :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
-    REAL(wp),         INTENT(out)             :: fn_pepc_cl(:,:)       !< fraction of N in PepC
-    REAL(wp),         INTENT(inout)           :: fn_chl_cl(:,:)        !< fraction of N in Chloroplast
-    REAL(wp),         INTENT(out)             :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
-    REAL(wp),         INTENT(out)             :: lai_cl(:,:)           !< LAI of canopy layer
-    REAL(wp),         INTENT(out)             :: cumm_lai_cl(:,:)      !< cummlative LAI above canopy layer
-    REAL(wp),         INTENT(out)             :: leaf_nitrogen_cl(:,:) !< total N in canopy layer (mmol N/m2)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: t_air(:)              !< air temperature (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: t_acclim(:)           !< acclimation temperature (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: press_srf(:)          !< air pressure (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: co2_mixing_ratio(:)   !< CO2 concentration (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: aerodyn_cond(:)       !< aerodynamic conductance (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: beta_air(:)           !< beta air (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: beta_soa(:)           !< beta soa (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: beta_soil_ps(:)       !< beta soil ps (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: beta_sinklim_ps(:)    !< beta sinklim ps (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: beta_soil_gs(:)       !< beta soil gs (avg)
-    REAL(wp),         INTENT(in),   OPTIONAL  :: t_jmax_opt(:)         !< Jmax optimum temperature (avg)
+    REAL(jp),         INTENT(in)              :: leaf_nitrogen(:)      !< total canopy N (mol/m2)
+    REAL(jp),         INTENT(in)              :: lai(:)                !< total leaf area index
+    REAL(jp),         INTENT(inout)           :: ppfd_sunlit_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on sunlit leafes (average over time)
+    REAL(jp),         INTENT(inout)           :: ppfd_shaded_cl(:,:)   !< absorbed Photosynthetically Active Photon Flux Density on shaded leafes (average over time)
+    REAL(jp),         INTENT(inout)           :: fleaf_sunlit_cl(:,:)  !< fraction of sunlit leaves (average over time)
+    REAL(jp),         INTENT(out)             :: fn_rub_cl(:,:)        !< fraction of N in Rubisco
+    REAL(jp),         INTENT(out)             :: fn_et_cl(:,:)         !< fraction of N in Electron Transport
+    REAL(jp),         INTENT(out)             :: fn_pepc_cl(:,:)       !< fraction of N in PepC
+    REAL(jp),         INTENT(inout)           :: fn_chl_cl(:,:)        !< fraction of N in Chloroplast
+    REAL(jp),         INTENT(out)             :: fn_oth_cl(:,:)        !< fraction of N not associated with PS
+    REAL(jp),         INTENT(out)             :: lai_cl(:,:)           !< LAI of canopy layer
+    REAL(jp),         INTENT(out)             :: cumm_lai_cl(:,:)      !< cummlative LAI above canopy layer
+    REAL(jp),         INTENT(out)             :: leaf_nitrogen_cl(:,:) !< total N in canopy layer (mmol N/m2)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: t_air(:)              !< air temperature (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: t_acclim(:)           !< acclimation temperature (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: press_srf(:)          !< air pressure (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: co2_mixing_ratio(:)   !< CO2 concentration (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: aerodyn_cond(:)       !< aerodynamic conductance (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: beta_air(:)           !< beta air (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: beta_soa(:)           !< beta soa (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: beta_soil_ps(:)       !< beta soil ps (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: beta_sinklim_ps(:)    !< beta sinklim ps (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: beta_soil_gs(:)       !< beta soil gs (avg)
+    REAL(jp),         INTENT(in),   OPTIONAL  :: t_jmax_opt(:)         !< Jmax optimum temperature (avg)
     LOGICAL,          INTENT(in),   OPTIONAL  :: inquire_n_fractions   !< whether to return fractions or also run optimisation
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)         :: leaf_nitrogen_tc                ! top-of-the-canopy N content
-    REAL(wp)                        :: k0_fn_chl, k1_fn_chl            ! factors in chlorophyll profile calculation
-    REAL(wp)                        :: jmax2vcmax                      ! jmax to vcmax ratio
-    REAL(wp)                        :: f_pepc                          ! fraction of N in PEP Carboxylase
+    REAL(jp), DIMENSION(nc)         :: leaf_nitrogen_tc                ! top-of-the-canopy N content
+    REAL(jp)                        :: k0_fn_chl, k1_fn_chl            ! factors in chlorophyll profile calculation
+    REAL(jp)                        :: jmax2vcmax                      ! jmax to vcmax ratio
+    REAL(jp)                        :: f_pepc                          ! fraction of N in PEP Carboxylase
     LOGICAL                         :: optimise_n_fractions
     INTEGER                         :: icanopy, ii_canopy, ic          ! looping over ncanopy and nc
-    REAL(wp), DIMENSION(nc,ncanopy) :: mid_point_lai_cl
+    REAL(jp), DIMENSION(nc,ncanopy) :: mid_point_lai_cl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -536,15 +536,15 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp),                 INTENT(in)    :: dtime                  !< timestep length
-    REAL(wp),                 INTENT(in)    :: gmin            , &    !< land-cover-type library parameter
+    REAL(jp),                 INTENT(in)    :: dtime                  !< timestep length
+    REAL(jp),                 INTENT(in)    :: gmin            , &    !< land-cover-type library parameter
                                                g0              , &    !< land-cover-type library parameter
                                                g1              , &    !< land-cover-type library parameter
                                                t_jmax_omega           !< land-cover-type library parameter
     INTEGER,                  INTENT(in)    :: ps_pathway             !< land-cover-type library parameter
     INTEGER,                  INTENT(IN)    :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),                 INTENT(in)    :: lai_cl
-    REAL(wp),                 INTENT(in)    :: leaf_nitrogen_cl, &    !< total canopy N content
+    REAL(jp),                 INTENT(in)    :: lai_cl
+    REAL(jp),                 INTENT(in)    :: leaf_nitrogen_cl, &    !< total canopy N content
                                                ppfd_sunlit_cl,   &    !< Photosynthetically Active Photon Flux Density
                                                                       !!  on sunlit leaves (day-time running mean, muemol/ms/s)
                                                ppfd_shaded_cl,   &    !< Photosynthetically Active Photon Flux Density
@@ -561,18 +561,18 @@ CONTAINS
                                                beta_sinklim_ps,  &    !< beta sinklim for PS (day-time running mean, --)
                                                beta_soil_gs,     &    !< beta soil for GC (day-time running mean, --)
                                                t_jmax_opt             !< optimum temperature for Jmax (day-time running mean, degreeC)
-    REAL(wp),                 INTENT(in)    :: fn_oth_cl              !< fraction of leaf N not associated with PS
-    REAL(wp),                 INTENT(inout) :: fn_chl_cl,        &    !< fraction of leaf N in chlorophyll
+    REAL(jp),                 INTENT(in)    :: fn_oth_cl              !< fraction of leaf N not associated with PS
+    REAL(jp),                 INTENT(inout) :: fn_chl_cl,        &    !< fraction of leaf N in chlorophyll
                                                fn_rub_cl,        &    !< fraction of leaf N in rubisco
                                                fn_et_cl,         &    !< fraction of leaf N in electron transport
                                                fn_pepc_cl             !< fraction of leaf N in electron transport
     ! ---------------------------
     ! 0.2 Local
-    REAl(wp) :: ag0_cl, an0_cl, r0_cl, ci0_cl,gs0_cl           ! photosynthesis outputs of initial guess
-    REAL(wp) :: fn_chl0_cl, fn_rub0_cl, fn_et0_cl, fn_pepc0_cl ! N fractions of initial guess
-    REAL(wp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
-    REAL(wp) :: fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl    ! optimal N fractions
-    REAL(wp) :: m_rub, m_et, m_pepc                            ! specific PS rates
+    REAl(jp) :: ag0_cl, an0_cl, r0_cl, ci0_cl,gs0_cl           ! photosynthesis outputs of initial guess
+    REAL(jp) :: fn_chl0_cl, fn_rub0_cl, fn_et0_cl, fn_pepc0_cl ! N fractions of initial guess
+    REAL(jp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
+    REAL(jp) :: fn_rub_opt_cl, fn_et_opt_cl, fn_pepc_opt_cl    ! optimal N fractions
+    REAL(jp) :: m_rub, m_et, m_pepc                            ! specific PS rates
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':optimise_canopy_n_fractions'
 
 
@@ -757,16 +757,16 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,  INTENT(IN)              :: ps_pathway          !< land-cover-type library parameter
-    REAL(wp), INTENT(in)              :: fn_chl_cl           !< fraction of N in chlorophyll
-    REAL(wp), INTENT(in)              :: m_rub               !< N-specific rate constant for Rubisco
-    REAL(wp), INTENT(in)              :: m_et                !< N-specific rate constant for ET
-    REAL(wp), INTENT(in)              :: m_pepc              !< N-speficic rate constant for PepC (C4-only)
-    REAL(wp), INTENT(out)             :: fn_rub_opt_cl  , &  !< optimal fraction of N in Rubisco
+    REAL(jp), INTENT(in)              :: fn_chl_cl           !< fraction of N in chlorophyll
+    REAL(jp), INTENT(in)              :: m_rub               !< N-specific rate constant for Rubisco
+    REAL(jp), INTENT(in)              :: m_et                !< N-specific rate constant for ET
+    REAL(jp), INTENT(in)              :: m_pepc              !< N-speficic rate constant for PepC (C4-only)
+    REAL(jp), INTENT(out)             :: fn_rub_opt_cl  , &  !< optimal fraction of N in Rubisco
                                          fn_et_opt_cl   , &  !< optimal fraction of N in ET
                                          fn_pepc_opt_cl      !< optimal fraction of N in PepC (C4-only)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                    :: hlp1, hlp2
+    REAL(jp)                    :: hlp1, hlp2
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_coordination_n_fractions'
 
 
@@ -832,17 +832,17 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,    INTENT(in)          :: ps_pathway             !< land-cover-type library parameter
-    REAL(wp),   INTENT(in)          :: delta_n_fraction , &   !< maximum fractional change in this time-step
+    REAL(jp),   INTENT(in)          :: delta_n_fraction , &   !< maximum fractional change in this time-step
                                        fn_chl_cl        , &   !< fraction of N in chlorophyll
                                        fn_rub_opt_cl    , &   !< optimal fraction of N in Rubisco
                                        fn_et_opt_cl     , &   !< optimal fraction of N in ET
                                        fn_pepc_opt_cl         !< optimal fraction of N in PepC (C4-only)
-    REAL(wp),   INTENT(inout)       :: fn_rub_cl        , &   !< updated fraction of N in Rubisco
+    REAL(jp),   INTENT(inout)       :: fn_rub_cl        , &   !< updated fraction of N in Rubisco
                                        fn_et_cl         , &   !< updated fraction of N in ET
                                        fn_pepc_cl             !< updated fraction of N in PepC (C4-only)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                        :: hlp1, hlp2, hlp3
+    REAL(jp)                        :: hlp1, hlp2, hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_update_n_fractions'
 
 
@@ -959,24 +959,24 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in) :: nc                            !< dimensions
     INTEGER,                                INTENT(in) :: ncanopy                       !< number of canopy layers
-    REAL(wp),                               INTENT(in) :: dtime                         !< timestep length
-    REAL(wp),DIMENSION(ncanopy),            INTENT(in) :: dz                      , &   !< canopy layer thickness
+    REAL(jp),                               INTENT(in) :: dtime                         !< timestep length
+    REAL(jp),DIMENSION(ncanopy),            INTENT(in) :: dz                      , &   !< canopy layer thickness
                                                           lbounds                 , &   !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                           ubounds                       !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     INTEGER,                                INTENT(in) :: lctlib_ps_pathway             !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_sla                    !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_k0_fn_struc            !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_fn_oth_min             !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_np_leaf                !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_cn_leaf                !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_gmin                   !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_g0                     !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_g1                     !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
-    REAL(wp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_sla                    !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_k0_fn_struc            !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_fn_oth_min             !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_np_leaf                !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_cn_leaf                !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_gmin                   !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_g0                     !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_g1                     !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_t_jmax_omega           !< lctlib parameter
+    REAL(jp),                               INTENT(in) :: lctlib_sigma_vis              !< lctlib parameter
     LOGICAL,                                INTENT(in) :: flag_optimal_Nfraction        !< on/off optimise leaf internal N allocation
     INTEGER,                                INTENT(IN) :: canopy_cond_scheme            !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
+    REAL(jp),DIMENSION(nc),                 INTENT(in) :: t_air                   , &   !< air temperature (K)
                                                           press_srf               , &   !< air pressure (Pa)
                                                           q_air                   , &   !< air specific humidity (--)
                                                           co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
@@ -987,13 +987,13 @@ CONTAINS
                                                           beta_soa                , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
                                                           beta_soil_ps            , &   !< soil moisture limiting factor for photosynthesis
                                                           beta_soil_gs                  !< soil moisture limiting factor for canopy conductance
-    REAL(wp),DIMENSION(nc),                 INTENT(in) :: veg_pool_leaf_carbon    , &   !< ..
+    REAL(jp),DIMENSION(nc),                 INTENT(in) :: veg_pool_leaf_carbon    , &   !< ..
                                                           veg_pool_leaf_nitrogen  , &   !< ..
                                                           lai                     , &   !< lai
                                                           beta_sinklim_ps         , &   !< ..
                                                           t_air_tacclim_mavg      , &   !< ..
                                                           t_jmax_opt_mavg               !< ..
-    REAL(wp),DIMENSION(nc,ncanopy),         INTENT(in) :: fn_chl_cl               , &   !< ..
+    REAL(jp),DIMENSION(nc,ncanopy),         INTENT(in) :: fn_chl_cl               , &   !< ..
                                                           fn_et_cl                , &   !< ..
                                                           fn_rub_cl               , &   !< ..
                                                           fn_pepc_cl              , &   !< ..
@@ -1001,18 +1001,18 @@ CONTAINS
                                                           fleaf_sunlit_cl         , &   !< ..
                                                           ppfd_sunlit_cl          , &   !< ..
                                                           ppfd_shaded_cl                !< ..
-    REAl(wp),DIMENSION(nc),                 INTENT(in) :: swpar_srf_down          , &   !< ..
+    REAl(jp),DIMENSION(nc),                 INTENT(in) :: swpar_srf_down          , &   !< ..
                                                           fract_par_diffuse             !< ..
-    REAL(wp),DIMENSION(nc),                 INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
+    REAL(jp),DIMENSION(nc),                 INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
                                                           unit_transpiration            !< unit change of NPP per ??
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp),DIMENSION(nc)                             :: leaf_nitrogen_new
-    REAL(wp),DIMENSION(nc)                             :: lai_new
-    REAL(wp),DIMENSION(nc)                             :: net_assimilation_new
-    REAL(wp),DIMENSION(nc)                             :: canopy_cond_new
-    REAL(wp),DIMENSION(nc)                             :: beta_sinklim_local
-    REAL(wp),DIMENSION(nc,ncanopy)                     :: lai_new_cl                , &
+    REAL(jp),DIMENSION(nc)                             :: leaf_nitrogen_new
+    REAL(jp),DIMENSION(nc)                             :: lai_new
+    REAL(jp),DIMENSION(nc)                             :: net_assimilation_new
+    REAL(jp),DIMENSION(nc)                             :: canopy_cond_new
+    REAL(jp),DIMENSION(nc)                             :: beta_sinklim_local
+    REAL(jp),DIMENSION(nc,ncanopy)                     :: lai_new_cl                , &
                                                           cumm_lai_new_cl           , &
                                                           loc_ppfd_sunlit_cl        , &
                                                           loc_ppfd_shaded_cl        , &
@@ -1023,7 +1023,7 @@ CONTAINS
                                                           fn_et_new_cl              , &
                                                           fn_rub_new_cl             , &
                                                           fn_pepc_new_cl
-    REAL(wp),DIMENSION(nc)                             :: ag                        , &
+    REAL(jp),DIMENSION(nc)                             :: ag                        , &
                                                           an                        , &
                                                           resp                      , &
                                                           gs                        , &
@@ -1250,27 +1250,27 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                INTENT(in)    :: nc                             !< dimensions
     INTEGER,                                INTENT(in)    :: ncanopy                        !< number of canopy layers
-    REAL(wp),                               INTENT(in)    :: dtime                          !< timestep length
-    REAL(wp),DIMENSION(ncanopy),            INTENT(in)    :: dz                         , & !< canopy layer thickness
+    REAL(jp),                               INTENT(in)    :: dtime                          !< timestep length
+    REAL(jp),DIMENSION(ncanopy),            INTENT(in)    :: dz                         , & !< canopy layer thickness
                                                              lbounds                    , & !< lower bound of canopy layer (lbounds < ubounds; lbounds is at top of canopy layer)
                                                              ubounds                        !< upper bound of canopy layer (lbounds < ubounds; ubounds is at bottom of canopy layer)
     INTEGER,                                INTENT(in)    :: lctlib_ps_pathway              !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_k0_fn_struc             !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_fn_oth_min              !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_sla                     !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_np_leaf                 !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_gmin                    !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_g0                      !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_g1                      !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
-    REAL(wp),                               INTENT(in)    :: lctlib_tau_leaf                !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_k0_fn_struc             !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_fn_oth_min              !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_sla                     !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_np_leaf                 !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_gmin                    !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_g0                      !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_g1                      !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_t_jmax_omega            !< lctlib parameter
+    REAL(jp),                               INTENT(in)    :: lctlib_tau_leaf                !< lctlib parameter
     LOGICAL,                                INTENT(in)    :: flag_optimal_Nfraction         !< on/off optimise leaf internal N allocation
     INTEGER,                                INTENT(IN)    :: canopy_cond_scheme             !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
-    REAL(wp),DIMENSION(nc),                 INTENT(in)    :: veg_pool_leaf_carbon       , &
+    REAL(jp),DIMENSION(nc),                 INTENT(in)    :: growing_season                 !< growing season
+    REAL(jp),DIMENSION(nc),                 INTENT(in)    :: veg_pool_leaf_carbon       , &
                                                              veg_pool_leaf_nitrogen     , &
                                                              veg_pool_root_carbon
-    REAL(wp),DIMENSION(nc),                 INTENT(in)    :: lai                        , &
+    REAL(jp),DIMENSION(nc),                 INTENT(in)    :: lai                        , &
                                                              t_jmax_opt_mavg            , &
                                                              target_cn_leaf             , &
                                                              target_cn_fine_root        , &
@@ -1283,7 +1283,7 @@ CONTAINS
                                                              beta_soa_tphen_mavg        , &
                                                              beta_soil_ps_tcnl_mavg     , &
                                                              beta_soil_gs_tcnl_mavg
-    REAL(wp),DIMENSION(nc,ncanopy),         INTENT(in)    :: fn_chl_cl                  , &
+    REAL(jp),DIMENSION(nc,ncanopy),         INTENT(in)    :: fn_chl_cl                  , &
                                                              fn_et_cl                   , &
                                                              fn_rub_cl                  , &
                                                              fn_pepc_cl                 , &
@@ -1291,17 +1291,17 @@ CONTAINS
                                                              fleaf_sunlit_tcnl_mavg_cl  , &
                                                              ppfd_sunlit_tcnl_mavg_cl   , &
                                                              ppfd_shaded_tcnl_mavg_cl
-    REAL(wp),DIMENSION(nc),                 INTENT(in)    :: uptake_n                   , &
+    REAL(jp),DIMENSION(nc),                 INTENT(in)    :: uptake_n                   , &
                                                              growth_cn                  , &
                                                              npp                        , &
                                                              fmaint_rate                , &
                                                              labile_carbon              , &
                                                              labile_nitrogen
-    REAL(wp),DIMENSION(nc),                 INTENT(inout) :: leaf_cn_direction
+    REAL(jp),DIMENSION(nc),                 INTENT(inout) :: leaf_cn_direction
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp),DIMENSION(nc)                                :: leaf_nitrogen_new, root_nitrogen_new
-    REAL(wp),DIMENSION(nc,ncanopy)                        :: leaf_nitrogen_new_cl, &
+    REAL(jp),DIMENSION(nc)                                :: leaf_nitrogen_new, root_nitrogen_new
+    REAL(jp),DIMENSION(nc,ncanopy)                        :: leaf_nitrogen_new_cl, &
                                                              fn_oth_new_cl, &
                                                              fn_chl_new_cl, &
                                                              fn_et_new_cl, &
@@ -1309,14 +1309,14 @@ CONTAINS
                                                              fn_pepc_new_cl, &
                                                              lai_new_cl, &
                                                              cumm_lai_new_cl
-    REAL(wp),DIMENSION(nc,ncanopy)                        :: loc_ppfd_sunlit_cl   , &
+    REAL(jp),DIMENSION(nc,ncanopy)                        :: loc_ppfd_sunlit_cl   , &
                                                              loc_ppfd_shaded_cl   , &
                                                              loc_fleaf_sunlit_cl
-    REAL(wp),DIMENSION(3)                                 :: npp_direction
-    REAL(wp)                                              :: anl, agl, rl
-    REAL(wp)                                              :: hlp00, hlp0         ! calc_photosynthesis dummy output
-    REAL(wp)                                              :: direction
-    REAL(wp), DIMENSION(nc)                               :: beta_sinklim_ps_local
+    REAL(jp),DIMENSION(3)                                 :: npp_direction
+    REAL(jp)                                              :: anl, agl, rl
+    REAL(jp)                                              :: hlp00, hlp0         ! calc_photosynthesis dummy output
+    REAL(jp)                                              :: direction
+    REAL(jp), DIMENSION(nc)                               :: beta_sinklim_ps_local
     INTEGER                                               :: icanopy, dd, ic      ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
@@ -1358,7 +1358,7 @@ CONTAINS
                 !!
                 npp_direction(:) = 0.0_wp
                 DO dd = 1,3
-                   direction                 = REAL(dd,KIND=wp) - 2.0_wp
+                   direction                 = REAL(dd,KIND=jp) - 2.0_wp
                    leaf_nitrogen_new(ic) = veg_pool_leaf_carbon(ic) / target_cn_leaf(ic) * &
                         (1.0_wp + direction * delta_n_leaf * dtime/one_day)
                    root_nitrogen_new(ic) = veg_pool_root_carbon(ic) / target_cn_fine_root(ic) * &
@@ -1458,7 +1458,7 @@ CONTAINS
 
                 ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
                 !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-                leaf_cn_direction(ic) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
+                leaf_cn_direction(ic) = (REAL(MAXLOC(npp_direction, 1),KIND=jp) - 2.0_wp)
              ENDIF  ! if enough N available
 
           ELSE    ! IF(veg_pool_leaf_nitrogen(ic) > eps4)

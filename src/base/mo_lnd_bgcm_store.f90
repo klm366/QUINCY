@@ -19,7 +19,7 @@ MODULE mo_lnd_bgcm_store
 #ifndef __NO_JSBACH__
 
   USE mo_exception,             ONLY: finish, message
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_util,                  ONLY: int2string
   USE mo_lnd_bgcm_store_class,  ONLY: t_lnd_bgcm_store_abstract
@@ -276,10 +276,10 @@ CONTAINS
 
     ! temporary pointers used to copy data from bgcm variables to bgcm matrices
     ! introduced to enable update on GPU nodes
-    REAL(wp), POINTER                      :: ptr2D(:,:)
-    REAL(wp), POINTER                      :: ptr3D(:,:,:)
-    REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
-    REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
+    REAL(jp), POINTER                      :: ptr2D(:,:)
+    REAL(jp), POINTER                      :: ptr3D(:,:,:)
+    REAL(jp), POINTER                      :: ptr4D(:,:,:,:)
+    REAL(jp), POINTER                      :: ptr5D(:,:,:,:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcm_vars_in_matrices'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -381,10 +381,10 @@ CONTAINS
 
     ! temporary pointers used to copy data from bgcm matrices to bgcm variables
     ! introduced to enable update on GPU nodes
-    REAL(wp), POINTER                      :: ptr2D(:,:)
-    REAL(wp), POINTER                      :: ptr3D(:,:,:)
-    REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
-    REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
+    REAL(jp), POINTER                      :: ptr2D(:,:)
+    REAL(jp), POINTER                      :: ptr3D(:,:,:)
+    REAL(jp), POINTER                      :: ptr4D(:,:,:,:)
+    REAL(jp), POINTER                      :: ptr5D(:,:,:,:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrices_to_bgcm_vars'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -484,7 +484,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                !< end index
     INTEGER,                    INTENT(IN)    :: iblk               !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
-    REAL(wp),                   POINTER       :: bgcm_matrix(:,:,:) !< dims: (part,elem,nc)
+    REAL(jp),                   POINTER       :: bgcm_matrix(:,:,:) !< dims: (part,elem,nc)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
 
@@ -512,7 +512,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                  !< end index
     INTEGER,                    INTENT(IN)    :: iblk                 !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name            !< name of the current tile
-    REAL(wp),                   POINTER       :: bgcm_matrix(:,:,:,:) !< dims: (part,elem,nc,layer)
+    REAL(jp),                   POINTER       :: bgcm_matrix(:,:,:,:) !< dims: (part,elem,nc,layer)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
 
@@ -540,7 +540,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice              !< end index
     INTEGER,                    INTENT(IN)    :: iblk             !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name        !< name of the current tile
-    REAL(wp),                   POINTER       :: bgcm_matrix(:,:) !< dims: (elem,nc)
+    REAL(jp),                   POINTER       :: bgcm_matrix(:,:) !< dims: (elem,nc)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
 
@@ -568,7 +568,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                !< end index
     INTEGER,                    INTENT(IN)    :: iblk               !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
-    REAL(wp),                   POINTER       :: bgcm_matrix(:,:,:) !< dims: (elem,nc,layer)
+    REAL(jp),                   POINTER       :: bgcm_matrix(:,:,:) !< dims: (elem,nc,layer)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
 
@@ -595,7 +595,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                !< end index
     INTEGER,                    INTENT(IN)    :: iblk               !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
-    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (part,elem,nc)
+    REAL(jp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (part,elem,nc)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
     INTEGER                                   :: i_elem             !< iterator over elements
@@ -631,7 +631,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                  !< end index
     INTEGER,                    INTENT(IN)    :: iblk                 !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name            !< name of the current tile
-    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:,:) !< dims: (part,elem,nc,layer)
+    REAL(jp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:,:) !< dims: (part,elem,nc,layer)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx             !< index of bgcm queried from the store
     INTEGER                                   :: i_elem               !< iterator over elements
@@ -665,7 +665,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice              !< end index
     INTEGER,                    INTENT(IN)    :: iblk             !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name        !< name of the current tile
-    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:) !< dims: (elem,nc)
+    REAL(jp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:) !< dims: (elem,nc)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx         !< index of bgcm queried from the store
     INTEGER                                   :: i_elem           !< iterator over elements
@@ -695,7 +695,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice                !< end index
     INTEGER,                    INTENT(IN)    :: iblk               !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
-    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (elem,nc,layer)
+    REAL(jp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (elem,nc,layer)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
     INTEGER                                   :: i_elem             !< iterator over elements
@@ -727,7 +727,7 @@ CONTAINS
     INTEGER,                    INTENT(IN)    :: ice              !< end index
     INTEGER,                    INTENT(IN)    :: iblk             !< current block
     CHARACTER (len=*),          INTENT(IN)    :: tile_name        !< name of the current tile
-    REAL(wp),          POINTER, INTENT(INOUT) :: bgcm_matrix(:,:) !< dims: (elem,nc)
+    REAL(jp),          POINTER, INTENT(INOUT) :: bgcm_matrix(:,:) !< dims: (elem,nc)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: bgcm_idx         !< index of bgcm queried from the store
     INTEGER                                   :: i_elem           !< iterator over elements
@@ -804,8 +804,8 @@ CONTAINS
     INTEGER :: i_part                     !< index of compartment
     INTEGER :: i_elem                     !< index of element
     INTEGER :: i_dim3                     !< third dim index
-    REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
-    REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
+    REAL(jp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
+    REAL(jp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
     CHARACTER(len=:), ALLOCATABLE :: elem_name
     CHARACTER(len=:), ALLOCATABLE :: compartment_name
     CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix

@@ -14,7 +14,7 @@
 MODULE mo_alcc_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_exception,          ONLY: finish, message, message_text
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -46,16 +46,16 @@ CONTAINS
       & nc                       !< Vector length
     LOGICAL,  INTENT(in)    :: &
       & nlcc_tile(:)             !< The tile's fraction is calculated in NLCC
-    REAL(wp), INTENT(in)    :: &
+    REAL(jp), INTENT(in)    :: &
       & cf_veg(:)                !< Cover fraction of the veg tile
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & cf_pft(:,:)              !< Cover fractions of the PFT tiles
     !----------------------------------------------------------------------------------------------
     INTEGER ::                 &
       & ic,                    & !< Looping index for grid cells
       & itile,                 & !< Looping index for tiles
       & ndyn                     !< Number of PFTs participating in nlcc
-    REAL(wp) ::                &
+    REAL(jp) ::                &
       & sum_anthro(nc),        & !< Total fraction of anthropogenic PFTs
       & diff,                  & !< Mismatch of anthropogenic PFT fractions
       & to_scale,              & !< Sum of anthropogenic fractions participating in scaling
@@ -81,9 +81,9 @@ CONTAINS
     ! Scaling is needed if the antropogenic PFT fractions exceed this area.
     ndyn = COUNT(nlcc_tile(:))
     DO ic = 1, nc
-      IF (sum_anthro(ic) > 1._wp - REAL(ndyn,wp)*fract_small + EPSILON(1._wp)) THEN
+      IF (sum_anthro(ic) > 1._wp - REAL(ndyn,jp)*fract_small + EPSILON(1._wp)) THEN
 
-        diff = sum_anthro(ic) - (1._wp - REAL(ndyn,wp)*fract_small)
+        diff = sum_anthro(ic) - (1._wp - REAL(ndyn,jp)*fract_small)
 
         ! Scale anthropogenic PFTs with relevant fractions:
         ! We only consider for scaling the area fractions exceeding fract_small by
@@ -105,7 +105,7 @@ CONTAINS
         END DO
 
         ! Final test
-        IF (test_sum > 1._wp - REAL(ndyn,wp)*fract_small + EPSILON(1._wp)) THEN
+        IF (test_sum > 1._wp - REAL(ndyn,jp)*fract_small + EPSILON(1._wp)) THEN
           WRITE (message_text,*) &
             & ' Sum of anthropogenic PFT fractions still greater than (1. - ndyn*fract_small): ', &
             & ' ic: ', ic, ' PFT tile fractions: ', cf_pft(ic,:), ' Sum anthro: ', test_sum

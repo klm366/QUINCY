@@ -18,7 +18,7 @@
 MODULE mo_q_assimi_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, message_text, finish
@@ -71,16 +71,16 @@ CONTAINS
     INTEGER                               :: nsoil_w                 !< number of soil layers
     INTEGER                               :: ncanopy                  !< number of canopy layers
     INTEGER                               :: icanopy                  !< for looping across ncanopy layers
-    REAL(wp)                              :: hlp                      !< helper variable
+    REAL(jp)                              :: hlp                      !< helper variable
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
     INTEGER                               :: ic, is                   !< loop counter
-    REAL(wp)                              :: dtime                    !< step length
-    REAL(wp)                              :: alpha                    !< implicitness factor
+    REAL(jp)                              :: dtime                    !< step length
+    REAL(jp)                              :: alpha                    !< implicitness factor
 
     INTEGER                               :: canopy_cond_scheme       !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
-    REAL(wp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
+    REAL(jp)                              :: lctlib_g1                !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(jp)                              :: lctlib_phi_leaf_min, lctlib_gmin, lctlib_g0
+    REAL(jp)                              :: lctlib_t_jmax_omega, lctlib_t_jmax_opt
     INTEGER                               :: lctlib_phenology_type, lctlib_ps_pathway
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
@@ -492,7 +492,7 @@ CONTAINS
     INTEGER                               :: nsoil_w                  !< number of soil layers
     INTEGER                               :: iblk, ics, ice, nc       !< dimensions
     INTEGER                               :: ic, is                   !< loop increment
-    REAL(wp)                              :: lctlib_phi_leaf_min
+    REAL(jp)                              :: lctlib_phi_leaf_min
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_ftranspiration_per_sl'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -611,68 +611,68 @@ CONTAINS
   IMPLICIT NONE
   ! ---------------------------
   ! 0.1 InOut
-  REAL(wp),                 INTENT(IN) :: gmin            , &     !< land-cover-type library parameter
+  REAL(jp),                 INTENT(IN) :: gmin            , &     !< land-cover-type library parameter
     &                                     g0              , &     !< land-cover-type library parameter
     &                                     g1              , &     !< land-cover-type library parameter
     &                                     t_jmax_omega            !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: ps_pathway              !< land-cover-type library parameter
   INTEGER,                  INTENT(IN) :: canopy_cond_scheme      !< canopy_conductance_scheme: medlyn / ballberry
-  REAL(wp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
-  REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
-  REAL(wp),                 INTENT(IN) :: aerodyn_cond            !< ga -- aerodynamic conductance (m s-1)
-  REAL(wp),                 INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
-  REAL(wp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (micro-mol m-2 s-1)
-  REAL(wp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (micro-mol m-2 s-1)
-  REAL(wp),                 INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit
-  REAL(wp),                 INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
-  REAL(wp),                 INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
-  REAL(wp),                 INTENT(IN) :: beta_soa                !< scaling factor to account for spring in coniferous forests
-  REAL(wp),                 INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on photosynthesis
-  REAL(wp),                 INTENT(IN) :: beta_sinklim_ps         !< scaling factor to account for sink limitation constraints on photosynthesis
-  REAL(wp),                 INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
-  REAL(wp),                 INTENT(IN) :: fn_et_cl                !< fraction of foliar N allocated to electron transport
-  REAL(wp),                 INTENT(IN) :: fn_rub_cl               !< fraction of foliar N allocated to Rubisco
-  REAL(wp),                 INTENT(IN) :: fn_pepc_cl              !< fraction of foliar N allocated to PEPC complex (C4 only)
-  REAL(wp),                 INTENT(IN) :: fn_chl_cl               !< fraction of foliar N allocated to Chlorophyll
-  REAL(wp),                 INTENT(IN) :: lai_cl                  !< lai of the particular canopy layer
-  REAL(wp),                 INTENT(IN) :: leaf_nitrogen_cl        !< total foliar N content
-  REAL(wp),                 INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
-  REAL(wp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (micro-mol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (micro-mol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (micro-mol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s)
-  REAL(wp),                 INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
-  REAL(wp),       OPTIONAL, INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
-  REAL(wp),       OPTIONAL, INTENT(OUT) :: m_et                   !< CO2 limitation of ET factor for calculating optimal N fraction
-  REAL(wp),       OPTIONAL, INTENT(OUT) :: m_pepc                 !< CO2 limitation for PEPC factor for calculating optimal N fraction
-  REAL(wp),       OPTIONAL, INTENT(OUT) :: chlfl_yield_cl         !< leaf level chlorophyll fluorescence yield (unitless)
+  REAL(jp),                 INTENT(IN) :: t_air                   !< 2m air temperature [K]
+  REAL(jp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
+  REAL(jp),                 INTENT(IN) :: aerodyn_cond            !< ga -- aerodynamic conductance (m s-1)
+  REAL(jp),                 INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
+  REAL(jp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (micro-mol m-2 s-1)
+  REAL(jp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (micro-mol m-2 s-1)
+  REAL(jp),                 INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit
+  REAL(jp),                 INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
+  REAL(jp),                 INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
+  REAL(jp),                 INTENT(IN) :: beta_soa                !< scaling factor to account for spring in coniferous forests
+  REAL(jp),                 INTENT(IN) :: beta_soil_ps            !< scaling factor to account for soil moisture constraints on photosynthesis
+  REAL(jp),                 INTENT(IN) :: beta_sinklim_ps         !< scaling factor to account for sink limitation constraints on photosynthesis
+  REAL(jp),                 INTENT(IN) :: beta_soil_gs            !< scaling factor to account for soil moisture constraints on conductance
+  REAL(jp),                 INTENT(IN) :: fn_et_cl                !< fraction of foliar N allocated to electron transport
+  REAL(jp),                 INTENT(IN) :: fn_rub_cl               !< fraction of foliar N allocated to Rubisco
+  REAL(jp),                 INTENT(IN) :: fn_pepc_cl              !< fraction of foliar N allocated to PEPC complex (C4 only)
+  REAL(jp),                 INTENT(IN) :: fn_chl_cl               !< fraction of foliar N allocated to Chlorophyll
+  REAL(jp),                 INTENT(IN) :: lai_cl                  !< lai of the particular canopy layer
+  REAL(jp),                 INTENT(IN) :: leaf_nitrogen_cl        !< total foliar N content
+  REAL(jp),                 INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
+  REAL(jp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(jp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(jp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (micro-mol CO2 / m2 /s)
+  REAL(jp),                 INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s)
+  REAL(jp),                 INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
+  REAL(jp),       OPTIONAL, INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
+  REAL(jp),       OPTIONAL, INTENT(OUT) :: m_et                   !< CO2 limitation of ET factor for calculating optimal N fraction
+  REAL(jp),       OPTIONAL, INTENT(OUT) :: m_pepc                 !< CO2 limitation for PEPC factor for calculating optimal N fraction
+  REAL(jp),       OPTIONAL, INTENT(OUT) :: chlfl_yield_cl         !< leaf level chlorophyll fluorescence yield (unitless)
 
   ! ---------------------------
   ! 0.2 Local
-  REAL(wp) :: kc, ko, km                  !< Michaelis-Menten Kinetic parameters for Rubisco (Pa)
-  REAL(wp) :: pcp                         !< Photosynthetic compensation point (Pa)
-  REAL(wp) :: f_resp                      !< N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
-  REAL(wp) :: nsat,nlim                   !< foliar N that is light saturated / limited (mmol N)
-  REAL(wp) :: n1,n2,n3                    !< N specific rates of electron-transport/Rubisco/PEPc limited PS
-  REAL(wp) :: m1,m2,m3                    !< ci sensitivity of electron-transport/Rubisco/PEPc limited PS
-  REAL(wp) :: msat                        !< N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
-  REAL(wp) :: nco                         !< co-limitation factor
-  REAL(wp) :: agsh,agsl                   !< gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
-  REAL(wp) :: fabs,fabsb                  !< fractional light absorption on chloroplast
-  REAL(wp) :: ppm2Pa                      !< factor to convert gas concentrations from ppm to Pa
-  REAL(wp) :: rtck                        !< dry static energy
-  REAL(wp) :: an_cl_old,dan_cl            !< dummy variables needed for iteration loop of CI
-  REAL(wp) :: agsf1,agsf2                 !< dummy variables for PS calculation
+  REAL(jp) :: kc, ko, km                  !< Michaelis-Menten Kinetic parameters for Rubisco (Pa)
+  REAL(jp) :: pcp                         !< Photosynthetic compensation point (Pa)
+  REAL(jp) :: f_resp                      !< N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
+  REAL(jp) :: nsat,nlim                   !< foliar N that is light saturated / limited (mmol N)
+  REAL(jp) :: n1,n2,n3                    !< N specific rates of electron-transport/Rubisco/PEPc limited PS
+  REAL(jp) :: m1,m2,m3                    !< ci sensitivity of electron-transport/Rubisco/PEPc limited PS
+  REAL(jp) :: msat                        !< N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
+  REAL(jp) :: nco                         !< co-limitation factor
+  REAL(jp) :: agsh,agsl                   !< gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
+  REAL(jp) :: fabs,fabsb                  !< fractional light absorption on chloroplast
+  REAL(jp) :: ppm2Pa                      !< factor to convert gas concentrations from ppm to Pa
+  REAL(jp) :: rtck                        !< dry static energy
+  REAL(jp) :: an_cl_old,dan_cl            !< dummy variables needed for iteration loop of CI
+  REAL(jp) :: agsf1,agsf2                 !< dummy variables for PS calculation
   INTEGER  :: iterate                     !< Iteration loop counter
   LOGICAL  :: last_call                   !< boolean to stop iteration at low conductance
-  REAL(wp) :: ag_max_shaded_illumination  !< maximum photosynthesis, all light limited, for only shaded illumination (for ChlF)
-  REAL(wp) :: ag_max_sunlit               !< maximum photosynthesis, all light limited, for sunlit leaves (for ChlF)
-  REAL(wp) :: ag_max_shaded               !< maximum photosynthesis, all light limited, for shaded leaves (for ChlF)
-  REAL(wp) :: frac_tot_sunlit             !< fraction of how much photosynthesis taking place from maximum for sunlit (for ChlF)
-  REAL(wp) :: frac_tot_shaded             !< fraction of how much photosynthesis taking place from maximum for shaded (for ChlF)
-  REAL(wp) :: chlfl_yield_sunlit          !< chlorophyll fluorescence yield sunlit leafs
-  REAL(wp) :: chlfl_yield_shaded          !< chlorophyll fluorescence yield shaded leafs
-  REAL(wp) :: chlfl_yield                 !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
+  REAL(jp) :: ag_max_shaded_illumination  !< maximum photosynthesis, all light limited, for only shaded illumination (for ChlF)
+  REAL(jp) :: ag_max_sunlit               !< maximum photosynthesis, all light limited, for sunlit leaves (for ChlF)
+  REAL(jp) :: ag_max_shaded               !< maximum photosynthesis, all light limited, for shaded leaves (for ChlF)
+  REAL(jp) :: frac_tot_sunlit             !< fraction of how much photosynthesis taking place from maximum for sunlit (for ChlF)
+  REAL(jp) :: frac_tot_shaded             !< fraction of how much photosynthesis taking place from maximum for shaded (for ChlF)
+  REAL(jp) :: chlfl_yield_sunlit          !< chlorophyll fluorescence yield sunlit leafs
+  REAL(jp) :: chlfl_yield_shaded          !< chlorophyll fluorescence yield shaded leafs
+  REAL(jp) :: chlfl_yield                 !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_photosynthesis'
 
   !> init out variables
@@ -953,13 +953,13 @@ CONTAINS
     USE mo_atmland_constants,  ONLY: eps_vpd
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(IN)           :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry
-    REAL(wp),INTENT(in)           :: t_air                  !< air temperature in K
-    REAL(wp),INTENT(in)           :: q_air                  !< specific air humidity (g g-1)
-    REAL(wp),INTENT(in)           :: press_srf              !< air pressure (Pa)
-    REAL(wp)                      :: beta                   !< atmospheric moisture scalar for use in conductance calculation
+    REAL(jp),INTENT(in)           :: t_air                  !< air temperature in K
+    REAL(jp),INTENT(in)           :: q_air                  !< specific air humidity (g g-1)
+    REAL(jp),INTENT(in)           :: press_srf              !< air pressure (Pa)
+    REAL(jp)                      :: beta                   !< atmospheric moisture scalar for use in conductance calculation
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: q_sat                         !< saturating specific humidity
-    REAL(wp) :: vpd                           !< vapour pressure deficit
+    REAL(jp) :: q_sat                         !< saturating specific humidity
+    REAL(jp) :: vpd                           !< vapour pressure deficit
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_atm_moisture_stress'
 
     !>1.0 saturating specific humidity [kg kg-1]
@@ -1011,24 +1011,24 @@ CONTAINS
       &                                  thermal_dissipation_enrg_constitutive_param_2, &
       &                                  k_photochemistry_rate
 
-    REAL(wp),     INTENT(IN)  :: frac_tot        !< fraction of actual photosynthesis to max
-    REAL(wp),     INTENT(IN)  :: t_air           !< air temperature [K]
-    REAL(wp),     INTENT(OUT) :: chlfl_yield     !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
+    REAL(jp),     INTENT(IN)  :: frac_tot        !< fraction of actual photosynthesis to max
+    REAL(jp),     INTENT(IN)  :: t_air           !< air temperature [K]
+    REAL(jp),     INTENT(OUT) :: chlfl_yield     !< chlorophyll fluorescence yield sunlit/shaded leafs [unitless]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: thermal_dissipation_enrg_constitutive_rate  !< rate constant for energy constitutive thermal dissipation
-    REAL(wp) :: heat_dissipation_enrg_dep_rate  !< rate constant for energy dependent heat dissipation
-    REAL(wp) :: photochemical_yield_rel         !< x in eq. 14 (van der Tol et al., 2014)
-    REAL(wp) :: frac_dark_photochemistry        !< dark photochemistry fraction (Genty et al., 1989)
-    REAL(wp) :: photochemical_yield             !< photochemical yield
-    REAL(wp) :: light_saturation_rel            !< relative light saturation
-    REAL(wp) :: fluorescence_yield_fo_dark      !< dark adapted fluorescence yield Fo
-    REAL(wp) :: fluorescence_yield_fo_light     !< light adapted fluorescence yield Fo
-    REAL(wp) :: fluorescence_yield_fm_dark      !< dark adapted fluorescence yield Fm
-    REAL(wp) :: fluorescence_yield_fm_light     !< light adapted fluorescence yield Fm
-    REAL(wp) :: quenching_phot                  !< photochemical quenching
-    REAL(wp) :: quenching_nonphot               !< non-photochemical quenching
-    REAL(wp) :: chlfl_yield_scaled              !< scaled chlorophyll fluorescence yield
-    REAL(wp) :: photochemistry_rate             !< actual rate for photochemistry
+    REAL(jp) :: thermal_dissipation_enrg_constitutive_rate  !< rate constant for energy constitutive thermal dissipation
+    REAL(jp) :: heat_dissipation_enrg_dep_rate  !< rate constant for energy dependent heat dissipation
+    REAL(jp) :: photochemical_yield_rel         !< x in eq. 14 (van der Tol et al., 2014)
+    REAL(jp) :: frac_dark_photochemistry        !< dark photochemistry fraction (Genty et al., 1989)
+    REAL(jp) :: photochemical_yield             !< photochemical yield
+    REAL(jp) :: light_saturation_rel            !< relative light saturation
+    REAL(jp) :: fluorescence_yield_fo_dark      !< dark adapted fluorescence yield Fo
+    REAL(jp) :: fluorescence_yield_fo_light     !< light adapted fluorescence yield Fo
+    REAL(jp) :: fluorescence_yield_fm_dark      !< dark adapted fluorescence yield Fm
+    REAL(jp) :: fluorescence_yield_fm_light     !< light adapted fluorescence yield Fm
+    REAL(jp) :: quenching_phot                  !< photochemical quenching
+    REAL(jp) :: quenching_nonphot               !< non-photochemical quenching
+    REAL(jp) :: chlfl_yield_scaled              !< scaled chlorophyll fluorescence yield
+    REAL(jp) :: photochemistry_rate             !< actual rate for photochemistry
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':chlorophyll fluorescence yield'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1087,10 +1087,10 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
-    REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
+    REAL(jp),INTENT(in) :: phi               !< soil plant available water potential
+    REAL(jp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
                                              !<  or a modified value when called from 'calc_ftranspiration_sl'
-    REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
+    REAL(jp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_moisture_stress'!
 
@@ -1113,9 +1113,9 @@ CONTAINS
     USE mo_q_pheno_constants,          ONLY: ievergreen
     USE mo_q_assimi_parameters,        ONLY: soa_b, soa_t_s
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation
+    REAL(jp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation
     INTEGER,  INTENT(in)  :: phenology_type   !< phenology type of the plant
-    REAL(wp)              :: beta_soa         !< beta value of soa
+    REAL(jp)              :: beta_soa         !< beta value of soa
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_beta_soa'
 
@@ -1148,10 +1148,10 @@ CONTAINS
       &                                  discr_ps_phi
     USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
     !------------------------------------------------------------------------------------------------------ !
-    REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
-    REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
+    REAL(jp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
+    REAL(jp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
     INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
-    REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    REAL(jp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c13'
 
@@ -1172,10 +1172,10 @@ CONTAINS
       &                                  discr_ps_phi
     USE mo_q_assimi_constants,     ONLY: ic3phot !, ic4phot
     !------------------------------------------------------------------------------------------------------ !
-    REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
-    REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
+    REAL(jp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
+    REAL(jp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
     INTEGER,      INTENT(in) :: ps_pathway             !< photosynthetic pathway (C3 or C4) from lctlib
-    REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
+    REAL(jp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps_c14'
 
@@ -1207,17 +1207,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                       !< dimension chunk
     INTEGER,  INTENT(in)    :: nsoil_w                 !< dimension soil layers
-    REAL(wp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
-    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:)  !< number of soil layers above bedrock
-    REAL(wp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
-    REAL(wp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa)
-    REAL(wp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer
+    REAL(jp), INTENT(in)    :: lctlib_phi_leaf_min      !< leaf minimum water potential (MPa)
+    REAL(jp), INTENT(in)    :: num_sl_above_bedrock(:)  !< number of soil layers above bedrock
+    REAL(jp), INTENT(in)    :: root_fraction_sl(:,:)    !< fraction of fine roots per layer
+    REAL(jp), INTENT(in)    :: wtr_soil_pot_sl(:,:)     !< soil water matrix potential (MPa)
+    REAL(jp), INTENT(out)   :: ftranspiration_sl(:,:)   !< fraction of transpiration from layer
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic, is                 !< loop over grid cells and soil layers
     INTEGER                     :: iwpot                  !< looping [0,10]
-    REAL(wp)                    :: hlp
-    REAL(wp), DIMENSION(nc)     :: ftranspiration_sum     !< sum of ftranspiration_sl(:,:) over soil layers
-    REAL(wp)                    :: phi_inc                !< constant used for decrement lctlib_phi_leaf_min in [0,10] loop
+    REAL(jp)                    :: hlp
+    REAL(jp), DIMENSION(nc)     :: ftranspiration_sum     !< sum of ftranspiration_sl(:,:) over soil layers
+    REAL(jp)                    :: phi_inc                !< constant used for decrement lctlib_phi_leaf_min in [0,10] loop
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_ftranspiration_sl'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1250,7 +1250,7 @@ CONTAINS
             ftranspiration_sl(ic, is) = 0.0_wp
             IF ((is <= num_sl_above_bedrock(ic)) .AND. (root_fraction_sl(ic, is) > eps8)) THEN
               hlp = calc_soil_moisture_stress(wtr_soil_pot_sl(ic, is), &
-                &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, wp))
+                &                             lctlib_phi_leaf_min + phi_inc * REAL(iwpot, jp))
               IF (hlp > eps4) THEN
                 ftranspiration_sl(ic, is) = root_fraction_sl(ic, is) * hlp
                 ftranspiration_sum(ic)    = ftranspiration_sum(ic) + ftranspiration_sl(ic, is)

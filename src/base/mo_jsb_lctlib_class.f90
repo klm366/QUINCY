@@ -20,7 +20,7 @@
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
-  USE mo_kind,         ONLY: wp
+  USE mo_kind,         ONLY: jp
   USE mo_exception,    ONLY: message_text, finish
   USE mo_util,         ONLY: int2string
 
@@ -49,135 +49,135 @@ MODULE mo_jsb_lctlib_class
     LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
 
     ! --- Albedo ------------------------------------------------------------------------------------------------------------------
-    REAL(wp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowVisMax      !< Maximum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowNirMin      !< Minimum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowNirMax      !< Maximum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowMin         !< Minimum snow albedo
-    REAL(wp) :: AlbedoSnowMax         !< Maximum snow albedo
-    REAL(wp) :: AlbedoCanopyVIS       !< Albedo of the canopy (vegetation) in the visible range
-    REAL(wp) :: AlbedoCanopyNIR       !< Albedo of the canopy (vegetation) in the NIR range
-    REAL(wp) :: AlbedoLitterVis       !< Albedo of the leaf litter in the visible range
-    REAL(wp) :: AlbedoLitterNir       !< Albedo of the leaf litter in the NIR range
+    REAL(jp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
+    REAL(jp) :: AlbedoSnowVisMax      !< Maximum snow albedo in the visible range
+    REAL(jp) :: AlbedoSnowNirMin      !< Minimum snow albedo in the NIR range
+    REAL(jp) :: AlbedoSnowNirMax      !< Maximum snow albedo in the NIR range
+    REAL(jp) :: AlbedoSnowMin         !< Minimum snow albedo
+    REAL(jp) :: AlbedoSnowMax         !< Maximum snow albedo
+    REAL(jp) :: AlbedoCanopyVIS       !< Albedo of the canopy (vegetation) in the visible range
+    REAL(jp) :: AlbedoCanopyNIR       !< Albedo of the canopy (vegetation) in the NIR range
+    REAL(jp) :: AlbedoLitterVis       !< Albedo of the leaf litter in the visible range
+    REAL(jp) :: AlbedoLitterNir       !< Albedo of the leaf litter in the NIR range
 
     ! --- parameters used by bethy ------------------------------------------------------------------------------------------------
     LOGICAL  :: NitrogenScalingFlag   !< Indicates, whether nitrogen scaling shall be applied to that vegetation type
-    REAL(wp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
+    REAL(jp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
-    REAL(wp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
+    REAL(jp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
-    REAL(wp) :: VegHeight             !< Typical height of the vegetation classes [m]
-    REAL(wp) :: VegRoughness          !< Roughness length of the vegetation classes [m]
-    REAL(wp) :: MinVegRoughness       !< Minimal roughness length of the vegetation classes (LAI = 0) [m]
-    REAL(wp) :: MaxVegRoughness       !< Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
+    REAL(jp) :: VegHeight             !< Typical height of the vegetation classes [m]
+    REAL(jp) :: VegRoughness          !< Roughness length of the vegetation classes [m]
+    REAL(jp) :: MinVegRoughness       !< Minimal roughness length of the vegetation classes (LAI = 0) [m]
+    REAL(jp) :: MaxVegRoughness       !< Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
     ! --- Parameters used in LoGroP Phenology scheme --------------------------------------------------------------------------
     INTEGER  :: PhenologyType         !< Phenology type (only for natural vegetation):
                                                   !< ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
-    REAL(wp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
-    REAL(wp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
+    REAL(jp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
+    REAL(jp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
 
     ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
-    REAL(wp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
-    REAL(wp) :: beta_nr_ind           !< Parameter of self-thinning relationship
-    REAL(wp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass
-    REAL(wp) :: beta_leaf             !< Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(jp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
+    REAL(jp) :: beta_nr_ind           !< Parameter of self-thinning relationship
+    REAL(jp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(jp) :: beta_leaf             !< Parameter of relationship between total biomass per ind and leaf biomass
 
      ! --- Parameters used in Knorr Phenology scheme ---------------------------------------------------------------------------
-    REAL(wp) :: knorr_Tau_w           !< Time before leaf shedding  [days]
-    REAL(wp) :: knorr_T_phi           !< Temperature trigger for leaf growth [deg C]
-    REAL(wp) :: knorr_T_r             !< "Spread" (sigma) of T_phi [deg C]
-    REAL(wp) :: knorr_Day_c           !< Day-length at leaf shedding [hours]
-    REAL(wp) :: knorr_Day_r           !< "Spread" (sigma) of Day_c [hours]
-    REAL(wp) :: knorr_k_l             !< Inverse of leaf longevity [days-1]
-    REAL(wp) :: knorr_leaf_growth_rate !< Initial leaf growth rate [days-1]
-    REAL(wp) :: knorr_max_lai         !< Maximum LAI
+    REAL(jp) :: knorr_Tau_w           !< Time before leaf shedding  [days]
+    REAL(jp) :: knorr_T_phi           !< Temperature trigger for leaf growth [deg C]
+    REAL(jp) :: knorr_T_r             !< "Spread" (sigma) of T_phi [deg C]
+    REAL(jp) :: knorr_Day_c           !< Day-length at leaf shedding [hours]
+    REAL(jp) :: knorr_Day_r           !< "Spread" (sigma) of Day_c [hours]
+    REAL(jp) :: knorr_k_l             !< Inverse of leaf longevity [days-1]
+    REAL(jp) :: knorr_leaf_growth_rate !< Initial leaf growth rate [days-1]
+    REAL(jp) :: knorr_max_lai         !< Maximum LAI
 
     ! --- Parameters used in the carbon balance model -----------------------------------------------------------------------------
-    REAL(wp) :: reserveC2leafC        !< Ratio of opt. C content of the reserve pool to the opt. C content of leaves
-    REAL(wp) :: fract_npp_2_woodPool   !< Maximum fraction of NPP put into the wood pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_reservePool !< Optimal fraction of NPP put into the reserve pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_exudates   !< Optimal fraction of NPP put into the root exudates of the carbon balance model
-    REAL(wp) :: fract_green_2_herbivory !< Fraction of NPP that is grazed by herbivores
-    REAL(wp) :: LAI_shed_constant     !<
+    REAL(jp) :: reserveC2leafC        !< Ratio of opt. C content of the reserve pool to the opt. C content of leaves
+    REAL(jp) :: fract_npp_2_woodPool   !< Maximum fraction of NPP put into the wood pool of the carbon balance model
+    REAL(jp) :: fract_npp_2_reservePool !< Optimal fraction of NPP put into the reserve pool of the carbon balance model
+    REAL(jp) :: fract_npp_2_exudates   !< Optimal fraction of NPP put into the root exudates of the carbon balance model
+    REAL(jp) :: fract_green_2_herbivory !< Fraction of NPP that is grazed by herbivores
+    REAL(jp) :: LAI_shed_constant     !<
                                                       !< .. atmosphere (rest enters slow pool)
-    REAL(wp) :: Max_C_content_woods   !< Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
+    REAL(jp) :: Max_C_content_woods   !< Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
                                                   !< .. forests this is closely related to the yield, usually measured in
                                                   !< .. m^3(wood)/hectar)
-    REAL(wp) :: ClumpinessFactor      !< Factor to calculate vegetation clumpiness:
+    REAL(jp) :: ClumpinessFactor      !< Factor to calculate vegetation clumpiness:
                                                   !< Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
                                                   !< converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_onSite    !< Fraction of wood pool to anthropogenically controlled onSite pool wenn
+    REAL(jp) :: fract_wood_2_onSite    !< Fraction of wood pool to anthropogenically controlled onSite pool wenn
                                                   !< converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_paper     !< Fraction of wood pool to paper (intermediately longlived) pool wenn...
-    REAL(wp) :: fract_wood_2_construction !< Fract of wood pool to constructions (e.g. houses, furniture = longlived)
+    REAL(jp) :: fract_wood_2_paper     !< Fraction of wood pool to paper (intermediately longlived) pool wenn...
+    REAL(jp) :: fract_wood_2_construction !< Fract of wood pool to constructions (e.g. houses, furniture = longlived)
                                                   !<   pool when converting natural PFTs into agricultural PFTs
 
     ! --- Parameters used in the carbon balance model and the dynamic vegetation --------------------------------------------------
-    REAL(wp) :: tau_c_woods           !< PFT-specific time scale for woody (lignified) plant tissue
+    REAL(jp) :: tau_c_woods           !< PFT-specific time scale for woody (lignified) plant tissue
 
     ! --- Parameters used by the dynamic vegetation -------------------------------------------------------------------------------
     LOGICAL  :: dynamic_PFT               !< indicates those PFTs which shall take part in the vegetation dynamics
     LOGICAL  :: woody_PFT                 !< indicates those PFTs which are of woody type (in contrast to grasses)
     LOGICAL  :: pasture_PFT               !< indicates those PFTs which are pasture
-    REAL(wp) :: bclimit_min_cold_mmtemp   !< PFT-specific minimum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_cold_mmtemp   !< PFT-specific maximum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
-    REAL(wp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
-    REAL(wp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
+    REAL(jp) :: bclimit_min_cold_mmtemp   !< PFT-specific minimum coldest monthly mean temperature
+    REAL(jp) :: bclimit_max_cold_mmtemp   !< PFT-specific maximum coldest monthly mean temperature
+    REAL(jp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
+    REAL(jp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
+    REAL(jp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
-    REAL(wp) :: moist_extinction          !< PFT specific moisture of extinction
-    REAL(wp) :: fuel_dens                 !< fuel bulk density
-    REAL(wp) :: flame_length_f            !< f parameter for flame length(scorch height) parameter 45 in lpj
-    REAL(wp) :: crown_length              !< crown length parameter see table 1 in thonicke et al. 2010
-    REAL(wp) :: bark_par1                 !< bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: bark_par2                 !< bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: RCK                       !< resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
-    REAL(wp) :: mort_prob                 !< mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
+    REAL(jp) :: moist_extinction          !< PFT specific moisture of extinction
+    REAL(jp) :: fuel_dens                 !< fuel bulk density
+    REAL(jp) :: flame_length_f            !< f parameter for flame length(scorch height) parameter 45 in lpj
+    REAL(jp) :: crown_length              !< crown length parameter see table 1 in thonicke et al. 2010
+    REAL(jp) :: bark_par1                 !< bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(jp) :: bark_par2                 !< bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(jp) :: RCK                       !< resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
+    REAL(jp) :: mort_prob                 !< mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
 
     ! --- Parameters for the climate buffer ---------------------------------------------------------------------------------------
-    REAL(wp) :: gdd_base                  !< PFT-specific GDD base
-    REAL(wp) :: upper_tlim                !< PFT-specific base to calculate GDD_upper_tlim
+    REAL(jp) :: gdd_base                  !< PFT-specific GDD base
+    REAL(jp) :: upper_tlim                !< PFT-specific base to calculate GDD_upper_tlim
 
     ! --- Parameters used by the yasso soil carbon model -------------------------------------------------------------------------
-    REAL(wp) :: LitVeg_coef(5)       !< Yasso coefficient for separating litter into chemical pools
-    REAL(wp) :: LeafLit_coef(5)      !< Yasso coefficient for separating leaf litter into chemical pools
-    REAL(wp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
-    REAL(wp) :: WoodLitterSize       !< Yasso: size of the litter
+    REAL(jp) :: LitVeg_coef(5)       !< Yasso coefficient for separating litter into chemical pools
+    REAL(jp) :: LeafLit_coef(5)      !< Yasso coefficient for separating leaf litter into chemical pools
+    REAL(jp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
+    REAL(jp) :: WoodLitterSize       !< Yasso: size of the litter
 
     ! --- Other parameters --------------------------------------------------------------------------------------------------------
-    REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
+    REAL(jp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
-    REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
+    REAL(jp) :: StemArea             !< Area of stems and branches of woody plants
 
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
     INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
-    REAL(wp) :: lai_max
-    REAL(wp) :: vegetation_height
-    REAL(wp) :: sla
-    REAL(wp) :: sigma_vis
-    REAL(wp) :: sigma_nir
-    REAL(wp) :: omega_clumping
-    REAL(wp) :: crown_shape_factor
-    REAL(wp) :: cn_leaf
-    REAL(wp) :: cn_leaf_min
-    REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf
-    REAL(wp) :: np_leaf_min
-    REAL(wp) :: np_leaf_max
-    REAL(wp) :: k0_fn_struc
-    REAL(wp) :: fn_oth_min
-    REAL(wp) :: t_jmax_opt
-    REAL(wp) :: t_jmax_omega
-    REAL(wp) :: g0
-    REAL(wp) :: g1_medlyn
-    REAL(wp) :: g1_bberry
-    REAL(wp) :: gmin
+    REAL(jp) :: lai_max
+    REAL(jp) :: vegetation_height
+    REAL(jp) :: sla
+    REAL(jp) :: sigma_vis
+    REAL(jp) :: sigma_nir
+    REAL(jp) :: omega_clumping
+    REAL(jp) :: crown_shape_factor
+    REAL(jp) :: cn_leaf
+    REAL(jp) :: cn_leaf_min
+    REAL(jp) :: cn_leaf_max
+    REAL(jp) :: np_leaf
+    REAL(jp) :: np_leaf_min
+    REAL(jp) :: np_leaf_max
+    REAL(jp) :: k0_fn_struc
+    REAL(jp) :: fn_oth_min
+    REAL(jp) :: t_jmax_opt
+    REAL(jp) :: t_jmax_omega
+    REAL(jp) :: g0
+    REAL(jp) :: g1_medlyn
+    REAL(jp) :: g1_bberry
+    REAL(jp) :: gmin
 
     ! turnover times
-    REAL(wp) :: tau_leaf          , &
+    REAL(jp) :: tau_leaf          , &
                 tau_fine_root     , &
                 tau_coarse_root   , &
                 tau_branch        , &
@@ -188,20 +188,20 @@ MODULE mo_jsb_lctlib_class
                 tau_mycorrhiza
 
     ! N uptake parameters
-    REAL(wp) :: vmax_uptake_n     , &
+    REAL(jp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
                 bnf_base          , &
                 vmax_symb_bnf     , &
                 km_symb_bnf
 
     ! Vegetation dynamics parameters
-    REAL(wp) :: lambda_est_light  , &
+    REAL(jp) :: lambda_est_light  , &
                 k_est_light       , &
                 seed_size         , &
                 k1_mort_greff
 
     ! Phenology parameters
-    REAL(wp) :: beta_soil_flush       , &
+    REAL(jp) :: beta_soil_flush       , &
                 beta_soil_senescence  , &
                 gdd_req_max           , &
                 k_gdd_dormance        , &
@@ -209,7 +209,7 @@ MODULE mo_jsb_lctlib_class
                 min_leaf_age
 
     ! Allocation paramters
-    REAL(wp) :: frac_sapwood_branch   , &
+    REAL(jp) :: frac_sapwood_branch   , &
                 wood_density          , &
                 k_latosa              , &
                 k_crtos               , &
@@ -224,7 +224,7 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: &
+    REAL(jp) :: &
       & k_root_dist                   , &
       & k_som_fast_init               , &
       & k_som_slow_init

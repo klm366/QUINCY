@@ -19,7 +19,7 @@
 MODULE mo_climbuf_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   IMPLICIT NONE
@@ -54,7 +54,7 @@ CONTAINS
       & new_month,              & !< This is the first time step of the month
       & new_year                  !< This is the first time step of the year
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
       & seconds_day,            & !< Length of a day [s]
       & seconds_month,          & !< Length of the previous month [s]
@@ -64,7 +64,7 @@ CONTAINS
       & wind_10m,               & !< 10m wind speed [m/s]
       & q_rel_air                 !< Relative humidity [%]
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & temp_sum_day,           & !< Current temperature sum of the day [K]
       & temp_sum_month,         & !< Current temperature sum of the month [K]
       & min_mmtemp_of_yr,       & !< Current minimum monthly mean temperature of the year [K]
@@ -84,15 +84,15 @@ CONTAINS
       & q_rel_air_14d_yDay        !< Previous day value of smoothed relative humidity [%]
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(jp) :: &
       & prev_day_mean_temp,     & !< Air temperature of previous day [K]
       & prev_month_mean_temp,   & !< Air temperature of previous month [K]
       & persist,                & !< Persistence factor adapted to model time step
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
-    REAL(wp), PARAMETER :: persist_wind     = 0.9995_wp   ! ~4 years
-    REAL(wp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
+    REAL(jp), PARAMETER :: persist_wind     = 0.9995_wp   ! ~4 years
+    REAL(jp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
 
     IF (.NOT. new_day .OR. lstart) THEN
@@ -195,7 +195,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
 
     !$ACC ROUTINE SEQ
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & air_moisture,       & !< Specific humidity of air [kg kg-1]
       & air_temperature,    & !< Temperature of air [K]
       & air_press             !< Pressure of air [Pa]
@@ -203,7 +203,7 @@ CONTAINS
       & use_tmx               !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
                               !< if true, we use qsat_water, else qsat_mixed
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & air_qsat,           & !< Saturation specific humidity []
       & relative_humidity_air !< Relative humidity [%]
 

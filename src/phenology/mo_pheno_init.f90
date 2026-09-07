@@ -14,7 +14,7 @@
 MODULE mo_pheno_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
 
@@ -38,7 +38,7 @@ MODULE mo_pheno_init
   PUBLIC :: pheno_init
 
   TYPE t_pheno_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & lai_mon(:,:,:), &
       & fract_fpc_mon(:,:,:), &
       & fract_forest(:,:), &
@@ -94,7 +94,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & ptr_mon(:,:,:),   &
       & ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
@@ -255,17 +255,17 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: fract_fpc
     dsl4jsb_Real2D_onDomain :: fract_fpc_max
     dsl4jsb_Real2D_onDomain :: MaxLai_allom
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & lai_mon(:,:,:), &
       & fract_fpc_mon(:,:,:)
 
     dsl4jsb_Def_memory(PHENO_)
 
-    REAL(wp) :: wgt1, wgt2
+    REAL(jp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
     INTEGER  :: nblks, ib, nc, ic
 
-    REAL(wp) :: ClumpinessFactor_param, MaxLai_param
+    REAL(jp) :: ClumpinessFactor_param, MaxLai_param
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 

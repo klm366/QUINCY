@@ -14,7 +14,7 @@
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: jp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -48,8 +48,8 @@ MODULE mo_pheno_memory_class
       & lai_cl                            !< leaf area index per canopy layer [m2 m-2]
 
     ! variables NOT added to varlist
-    REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
-    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
+    REAL(jp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
+    REAL(jp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
 
     ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) ::           &

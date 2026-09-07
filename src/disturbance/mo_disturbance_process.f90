@@ -18,7 +18,7 @@
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
 
   IMPLICIT NONE
   PRIVATE
@@ -40,7 +40,7 @@ CONTAINS
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in) ::     &
+    REAL(jp), INTENT(in) ::     &
       & fire_rel_hum_threshold, &  ! Maximum relative humidity for fire
       & fire_litter_threshold,  &  ! Minimum amount of litter necessary for fire [mol(C)/m^2(grid box)]
       & fire_minimum,           &  ! Minimum fraction woody PFTs burning every year
@@ -49,12 +49,12 @@ CONTAINS
       & fuel(:)                    ! Amount of fuel [mol(C)/m^2(grid box)]
 
     ! Output Arguments
-    REAL(wp), INTENT(inout) :: burned_fract(:)
+    REAL(jp), INTENT(inout) :: burned_fract(:)
 
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(jp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
 
     nc = SIZE(fuel)
 
@@ -86,20 +86,20 @@ CONTAINS
     & )
 
     ! Arguments
-    REAL(wp), INTENT(in) ::       &
+    REAL(jp), INTENT(in) ::       &
       & wind_threshold,           &
       & wind_damage_scale,        &
       & cover_fract_pot(:),       &
       & max_wind_yDay(:),         &
       & max_wind_clim(:)
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & damaged_fract(:)
 
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(jp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
 
     nc = SIZE(max_wind_clim)
 

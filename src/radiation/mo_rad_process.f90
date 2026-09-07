@@ -15,7 +15,7 @@ MODULE mo_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: acc_stream
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
 
   IMPLICIT NONE
   PRIVATE
@@ -53,7 +53,7 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
-    REAL(wp),  INTENT(in), DIMENSION(:) :: &
+    REAL(jp),  INTENT(in), DIMENSION(:) :: &
       & swvis_down,          &
       & swnir_down,          &
       & alb_vis,             &
@@ -61,16 +61,16 @@ CONTAINS
       & lw_down,             &
       & t
 
-    REAL(wp),  INTENT(out) :: &
+    REAL(jp),  INTENT(out) :: &
       & rad_net(:)
 
-    REAL(wp),  INTENT(out), OPTIONAL, DIMENSION(:) :: &
+    REAL(jp),  INTENT(out), OPTIONAL, DIMENSION(:) :: &
       & swvis_net,                      & ! net shortwave radiation in visible range
       & swnir_net,                      & ! net shortwave radiation in near infrared range
       & sw_net,                         &
       & lw_net
 
-    REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
+    REAL(jp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
 
     INTEGER :: nc, ic
 
@@ -133,26 +133,26 @@ CONTAINS
     INTEGER,   INTENT(in)    :: ncanopy, &
                                 icanopy
     LOGICAL,   INTENT(in)    :: use_alb_veg_simple
-    REAL(wp),  INTENT(in)    :: canopy_bound_lai,      &
+    REAL(jp),  INTENT(in)    :: canopy_bound_lai,      &
                                 canopy_bound_lai_delta
 
-    REAL(wp),  INTENT(in)    :: par,                   &
+    REAL(jp),  INTENT(in)    :: par,                   &
                                 alb_vis_soil,          &
                                 lai,                   &
                                 cos_zenith_angle,      &
                                 fract_par_direct
-    REAL(wp),  INTENT(inout) :: B4_layer_above
-    REAL(wp),  INTENT(out)   :: par_down_mol,          &
+    REAL(jp),  INTENT(inout) :: B4_layer_above
+    REAL(jp),  INTENT(out)   :: par_down_mol,          &
                                 soil_reflectivity_par, &
                                 faPAR_cl,              &
                                 lai_cl,                &
                                 apar_per_lai_cl
 
-    REAL(wp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
+    REAL(jp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
                 EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
                 ZP0, EKL0, EHL0, X0, X1, X2, F    ! These variables do not vary per grid cell
 
-    REAL(wp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
+    REAL(jp), PARAMETER :: OMEGA = 0.12_wp   ! single leaf scattering albedo
 
     ! ---------------------------
     ! Go
@@ -453,14 +453,14 @@ CONTAINS
 
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
-    REAL(wp), INTENT(in)    :: dtime,               & !< model time step [s]
+    REAL(jp), INTENT(in)    :: dtime,               & !< model time step [s]
       &                        temperature_surface, & !< surface temperature [K]
       &                        snow,                & !< snowfall [kg m-2 s-1]
       &                        fract_snow_soil        !< Fraction of snow covered ground [-]
 
-    REAL(wp), INTENT(inout) :: snow_age               !< non-dimensional age of snow
+    REAL(jp), INTENT(inout) :: snow_age               !< non-dimensional age of snow
 
-    REAL(wp)                :: hlp1                   !< temporary variable
+    REAL(jp)                :: hlp1                   !< temporary variable
 
     ! ---------------------------
     ! Update snow age where ever there is snow on the ground
@@ -496,7 +496,7 @@ CONTAINS
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
       & l_day
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & alb_lwtr
 
     ! ---------------------------
@@ -530,15 +530,15 @@ CONTAINS
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
       & l_day
-    REAL(wp), INTENT(in)    :: &
+    REAL(jp), INTENT(in)    :: &
       & t,                     &
       & weq_snow_lice
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & alb_lice
 
     ! Local variables
-    REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
-    REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
+    REAL(jp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
+    REAL(jp) :: alb_min, alb_max ! Minimum and maximum snow albedo
 
     ! ---------------------------
     ! Go
@@ -593,9 +593,9 @@ CONTAINS
     ! Arguments
     LOGICAL,  INTENT(in)    :: &
       & l_day
-    REAL(wp), INTENT(in)    :: &
+    REAL(jp), INTENT(in)    :: &
       & t
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
       & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
 
@@ -674,16 +674,16 @@ CONTAINS
     LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
     INTEGER,          INTENT(in)  :: use_alb_soil_organic_int
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
-    REAL(wp),         INTENT(in)  :: &
+    REAL(jp),         INTENT(in)  :: &
       & litter_carbon,               &  ! Amount of litter carbon [mol(C)/m2(canopy)], used with use_alb_soil_litter
       & soil_carbon                     ! Amount of soil carbon [mol(C)/m2(canopy)], used with use_alb_soil_organic_C
-    REAL(wp),         INTENT(in)  :: &
+    REAL(jp),         INTENT(in)  :: &
       & SpecificLeafArea_C, &
       & AlbedoLitterVIS,    &
       & AlbedoLitterNIR
-    REAL(wp),         INTENT(in)  :: &
+    REAL(jp),         INTENT(in)  :: &
       & alb_background
-    REAL(wp),         INTENT(inout) :: &
+    REAL(jp),         INTENT(inout) :: &
       & alb_vis_mineralsoil,   & ! Albedo of soil without carbon or litter.
                                  ! "out" because it should be changed if use_alb_mineralsoil_const =.TRUE.
       & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
@@ -691,13 +691,13 @@ CONTAINS
       & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
 
     ! Local variables
-    REAL(wp), PARAMETER ::                                   &
+    REAL(jp), PARAMETER ::                                   &
                            Scalfact_SOC_to_alb_vis = 3.e-4 , & ! Factor to scale soil organic content (SOC)
                                                                       ! to a albedo reduction for the vis range
                            Scalfact_SOC_to_alb_nir = 3.e-4 , & ! See above, for the nir range
                            Soil_C_min              = 500.      !
 
-    REAL(wp)             ::                         &
+    REAL(jp)             ::                         &
                             alb_vis_soil_nolitter,  & ! Albedo of soil for the vis range (incl. the carbon within soil but
                                                       ! without the litter layer above)
                             alb_nir_soil_nolitter,  & ! See above, for the nir range
@@ -816,21 +816,21 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)  :: l_day
-    REAL(wp), INTENT(in)  :: fract_snow_soil,   & !< Fraction of snow covered ground
+    REAL(jp), INTENT(in)  :: fract_snow_soil,   & !< Fraction of snow covered ground
                              snow_age,          & !< non-dimensional age of snow
                              cos_zenith_angle,  & !< cosinus of zenith angle of incoming radiation
                              t_srf
 
-    REAL(wp), INTENT(in)  ::                    & !
+    REAL(jp), INTENT(in)  ::                    & !
                              albedo_age_weight    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                                   !                            the snow albedo resulting from both age and
                                                   !                            temperature schemes
-    REAL(wp), INTENT(inout) ::              &
+    REAL(jp), INTENT(inout) ::              &
                              alb_vis_snow,  & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_snow     ! Albedo of canopy in the NIR range without snow cover.
 
     ! Local variables
-    REAL(wp)              ::                    &
+    REAL(jp)              ::                    &
                              alb_vis_snow_age,  &
                              alb_nir_snow_age,  &
                              alb_vis_snow_temp, &
@@ -921,19 +921,19 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)  :: l_day
-    REAL(wp), INTENT(in)  :: cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
+    REAL(jp), INTENT(in)  :: cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
                              t,                 &
                              wtr_pond,          &
                              ice_pond
 
-    REAL(wp), INTENT(inout) :: alb_pond_vis,    & ! Albedo of ponds in the VIS range without snow cover
+    REAL(jp), INTENT(inout) :: alb_pond_vis,    & ! Albedo of ponds in the VIS range without snow cover
                                alb_pond_nir       ! Albedo of ponds in the NIR range without snow cover
 
     ! Local variables
 
-    REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
+    REAL(jp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
 
-    REAL(wp)              :: alb_min,           &
+    REAL(jp)              :: alb_min,           &
                              alb_max,           &
                              alb_wtr_pond_vis,  &
                              alb_wtr_pond_nir,  &
@@ -997,11 +997,11 @@ CONTAINS
 
     ! Arguments
     LOGICAL,  INTENT(in)  :: l_day
-    REAL(wp), INTENT(in)  :: lai,              & ! leaf area index
+    REAL(jp), INTENT(in)  :: lai,              & ! leaf area index
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle    ! cosinus of zenith angle of incoming radiationa
-    REAL(wp), INTENT(in)  :: StemArea
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(in)  :: StemArea
+    REAL(jp), INTENT(inout) :: &
       & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
                             ! (Falling with rising LAI.)
       & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
@@ -1054,12 +1054,12 @@ CONTAINS
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     LOGICAL,  INTENT(in) :: l_forest
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       AlbedoCanopySnow
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
       fract_pond,           & ! Fraction of ponds
@@ -1073,12 +1073,12 @@ CONTAINS
       alb_pond_vis,         & ! Albedo of ponds in the VIS range without snow cover.
       alb_pond_nir            ! Albedo of ponds in the NIR range without snow cover.
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(jp), INTENT(inout) :: &
       & alb_vis, &
       & alb_nir
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(jp) :: &
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems, &
@@ -1152,7 +1152,7 @@ CONTAINS
 #ifndef _OPENACC
   ELEMENTAL PURE &
 #endif
-  REAL(wp) FUNCTION get_surface_albedo_simple( &
+  REAL(jp) FUNCTION get_surface_albedo_simple( &
     & t_srf,             &
     & fract_forest,      &
     & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
@@ -1171,7 +1171,7 @@ CONTAINS
       &                                   AlbedoLakeWater, AlbedoLakeIceMin
 
     ! Arguments
-    REAL(wp), INTENT(in) ::                  &
+    REAL(jp), INTENT(in) ::                  &
                             t_srf,           &
                             fract_forest,    &
                             grnd_snow_fract, &
@@ -1181,7 +1181,7 @@ CONTAINS
                             alb_background
 
     ! Local variables
-    REAL(wp) ::                                   &
+    REAL(jp) ::                                   &
                             sky_view_fract,       &  ! R: how much of light reaches the ground through the canopy
                             forest_view_fract,    &  ! R: how much of light is catched only by forest
                             albedo_snow_grnd,     &  ! Albedo of snow on ground
@@ -1246,7 +1246,7 @@ CONTAINS
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & swvis, &
       & swnir
     LOGICAL :: l_day
@@ -1261,7 +1261,7 @@ CONTAINS
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & sw
     LOGICAL :: l_day
 
@@ -1279,7 +1279,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & c_acid_bg1,         &
       & c_water_bg1,        &
       & c_ethanol_bg1,      &
@@ -1291,7 +1291,7 @@ CONTAINS
       & c_humus_1,          &
       & c_humus_2
 
-    REAL(wp) :: soil_carbon  ! Amount of soil carbon relevant for soil albedo
+    REAL(jp) :: soil_carbon  ! Amount of soil carbon relevant for soil albedo
 
     soil_carbon =  c_acid_bg1 + c_water_bg1 + c_ethanol_bg1 + c_nonsoluble_bg1  &
       &          + c_acid_bg2 + c_water_bg2 + c_ethanol_bg2 + c_nonsoluble_bg2  &
@@ -1308,14 +1308,14 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & c_acid_ag1,         &
       & c_water_ag1,        &
       & c_ethanol_ag1,      &
       & c_nonsoluble_ag1,   &
       & c_humus_1
 
-    REAL(wp) :: ag_green_litter_carbon  ! Amount of litter carbon relevant for soil albedo
+    REAL(jp) :: ag_green_litter_carbon  ! Amount of litter carbon relevant for soil albedo
 
     ag_green_litter_carbon =  c_acid_ag1 + c_water_ag1 + c_ethanol_ag1 + c_nonsoluble_ag1  &
       &                     + c_humus_1
@@ -1385,62 +1385,62 @@ CONTAINS
     ! 0.1 InOut
     INTEGER                                , INTENT(in)  :: nc                 !< dimensions
     INTEGER                                , INTENT(in)  :: ncanopy            !< number of canopy layers
-    REAL(wp)                               , INTENT(in)  :: lctlib_sigma       !< lctlib parameter
-    REAL(wp)                               , INTENT(in)  :: lctlib_omega_clumping     !< lctlib parameter
-    REAL(wp)                               , INTENT(in)  :: lctlib_crown_shape_factor !< lctlib parameter
+    REAL(jp)                               , INTENT(in)  :: lctlib_sigma       !< lctlib parameter
+    REAL(jp)                               , INTENT(in)  :: lctlib_omega_clumping     !< lctlib parameter
+    REAL(jp)                               , INTENT(in)  :: lctlib_crown_shape_factor !< lctlib parameter
     CHARACTER(len=3)                       , INTENT(in)  :: vis_nir_id         !< vis nir identifier for this function only
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: fract_par_diffuse
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: fract_par_diffuse
       !< fraction of diffuse radiation (--). Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: cos_zenith_angle   !< solar angle (radians)
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: lai                !< leaf area index (m-2 m-2)
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: sai                !< stem area index (m-2 m-2)
-    REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2)
-    REAL(wp), DIMENSION(:,:)               , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
-    REAL(wp), DIMENSION(:)                 , INTENT(in)  :: alb_surface        !< merged soil and snow albedo
-    REAL(wp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)
-    REAL(wp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: appfd_sunlit_cl    !< absorbed radiation on sunlit leaves (mu mol m-2 s-1)
-    REAL(wp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: appfd_shaded_cl    !< absorbed radiation of shaded leaves (mu mol m-2 s-1)
-    REAL(wp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: fapar              !< fraction of absorbed radiation by the canopy+stem area (--)
-    REAL(wp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: alb_can            !< albedo of the canopy (including green and stem area)
-    REAL(wp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: alb_lnd            !< albedo of the tile (including soil albedo)
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: cos_zenith_angle   !< solar angle (radians)
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: lai                !< leaf area index (m-2 m-2)
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: sai                !< stem area index (m-2 m-2)
+    REAL(jp), DIMENSION(:,:)               , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2)
+    REAL(jp), DIMENSION(:,:)               , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
+    REAL(jp), DIMENSION(:)                 , INTENT(in)  :: alb_surface        !< merged soil and snow albedo
+    REAL(jp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)
+    REAL(jp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: appfd_sunlit_cl    !< absorbed radiation on sunlit leaves (mu mol m-2 s-1)
+    REAL(jp), DIMENSION(:,:), OPTIONAL     , INTENT(out) :: appfd_shaded_cl    !< absorbed radiation of shaded leaves (mu mol m-2 s-1)
+    REAL(jp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: fapar              !< fraction of absorbed radiation by the canopy+stem area (--)
+    REAL(jp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: alb_can            !< albedo of the canopy (including green and stem area)
+    REAL(jp), DIMENSION(:),   OPTIONAL     , INTENT(out) :: alb_lnd            !< albedo of the tile (including soil albedo)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc)                 :: tmp_cos_zenith_angle            ! local variable of solar angle (radians)
-    REAL(wp), DIMENSION(nc)                 :: kdf, kbl                        ! extinction coefficients for radiation over black canopy
-    REAL(wp), DIMENSION(nc)                 :: irad_dir_down, &                ! downward direct and diffuse radiation
+    REAL(jp), DIMENSION(nc)                 :: tmp_cos_zenith_angle            ! local variable of solar angle (radians)
+    REAL(jp), DIMENSION(nc)                 :: kdf, kbl                        ! extinction coefficients for radiation over black canopy
+    REAL(jp), DIMENSION(nc)                 :: irad_dir_down, &                ! downward direct and diffuse radiation
                                                irad_dif_down
-    REAL(wp), DIMENSION(nc)                 :: irad_dir_down_bc, &             ! light intensity at the bottom of the canopy
+    REAL(jp), DIMENSION(nc)                 :: irad_dir_down_bc, &             ! light intensity at the bottom of the canopy
                                                irad_dif_down_bc
-    REAL(wp), DIMENSION(nc)                 :: irad_dif_up                     ! upward diffuse shortwave radiation
-    REAL(wp), DIMENSION(nc)                 :: arad_can                        ! absorbed radiation by the canopy (W m-2)
-    REAL(wp), DIMENSION(nc)                 :: arad_soil                       ! absorbed radiation by the soil (W m-2)
-    REAL(wp), DIMENSION(nc)                 :: arad_can_up                     ! absorbed radiation by the canopy from the upward stream (W m-2)
-    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_can_shaded_up_cl           ! idem for canopy+stem layers
-    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_can_shaded_cl              ! absorbed shaded radiation for canopy+stem layers
-    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_can_sunlit_cl              ! absorbed sunlit radiation for canopy+stem layers
-    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_shaded_cl                  ! absorbed shaded radiation for canopy layers
-    REAL(wp), DIMENSION(nc,ncanopy)         :: arad_sunlit_cl                  ! absorbed sunlit radiation for canopy layers
-    REAL(wp), DIMENSION(nc,ncanopy)         :: fsunlit_cl                      ! fraction of sunlit canopy layer
-    REAL(wp), DIMENSION(nc,ncanopy)         :: sai_cl                          ! stem area index per canopy layer
-    REAL(wp), DIMENSION(nc,ncanopy)         :: cumm_sai_cl                     ! cummulative stem area index per canopy layer
-    REAL(wp), DIMENSION(nc)                 :: plai                            ! leaf+stem area index
-    REAL(wp), DIMENSION(nc,ncanopy)         :: plai_cl                         ! leaf+stem area index per canopy layer
-    REAL(wp), DIMENSION(nc,ncanopy)         :: cumm_plai_cl                    ! cummulative leaf+stem area index per canopy layer
-    REAL(wp), DIMENSION(nc)                 :: radf1, radf2, radf3             ! dummy variables
-    REAL(wp), DIMENSION(nc)                 :: radf4, radf5                    ! dummy variables
-    REAL(wp), DIMENSION(nc)                 :: radf1_leaf, radf2_leaf          ! dummy variables
-    REAL(wp), DIMENSION(nc)                 :: radf3_leaf, radf4_leaf          ! dummy variables
-    REAL(wp)                                :: alb_stem                        ! stem albedo (--)
-    REAL(wp)                                :: temp1, temp2, radf3b            ! dummy variables
-    REAL(wp)                                :: kbl0, kdf0                      ! hlp for local rad_constants variables, differentiating vis/nir
-    REAL(wp)                                :: idfa                            ! diffuse radiation penetrating foliage at lc
-    REAL(wp)                                :: idra                            ! direct radiation penetrating sunlit foliage at lc
-    REAL(wp)                                :: idrdra                          ! direct radiation remaining direct at lc
-    REAL(wp)                                :: omega                           ! clumping factor
-    REAL(wp)                                :: rho_leaf                        ! fraction reflected by green canopy (--)
-    REAL(wp)                                :: rho                             ! fraction reflected by canopy+stems (--)
-    REAL(wp)                                :: kdf_leaf, kbl_leaf              ! extinction coefficients for radiation over black canopy
+    REAL(jp), DIMENSION(nc)                 :: irad_dif_up                     ! upward diffuse shortwave radiation
+    REAL(jp), DIMENSION(nc)                 :: arad_can                        ! absorbed radiation by the canopy (W m-2)
+    REAL(jp), DIMENSION(nc)                 :: arad_soil                       ! absorbed radiation by the soil (W m-2)
+    REAL(jp), DIMENSION(nc)                 :: arad_can_up                     ! absorbed radiation by the canopy from the upward stream (W m-2)
+    REAL(jp), DIMENSION(nc,ncanopy)         :: arad_can_shaded_up_cl           ! idem for canopy+stem layers
+    REAL(jp), DIMENSION(nc,ncanopy)         :: arad_can_shaded_cl              ! absorbed shaded radiation for canopy+stem layers
+    REAL(jp), DIMENSION(nc,ncanopy)         :: arad_can_sunlit_cl              ! absorbed sunlit radiation for canopy+stem layers
+    REAL(jp), DIMENSION(nc,ncanopy)         :: arad_shaded_cl                  ! absorbed shaded radiation for canopy layers
+    REAL(jp), DIMENSION(nc,ncanopy)         :: arad_sunlit_cl                  ! absorbed sunlit radiation for canopy layers
+    REAL(jp), DIMENSION(nc,ncanopy)         :: fsunlit_cl                      ! fraction of sunlit canopy layer
+    REAL(jp), DIMENSION(nc,ncanopy)         :: sai_cl                          ! stem area index per canopy layer
+    REAL(jp), DIMENSION(nc,ncanopy)         :: cumm_sai_cl                     ! cummulative stem area index per canopy layer
+    REAL(jp), DIMENSION(nc)                 :: plai                            ! leaf+stem area index
+    REAL(jp), DIMENSION(nc,ncanopy)         :: plai_cl                         ! leaf+stem area index per canopy layer
+    REAL(jp), DIMENSION(nc,ncanopy)         :: cumm_plai_cl                    ! cummulative leaf+stem area index per canopy layer
+    REAL(jp), DIMENSION(nc)                 :: radf1, radf2, radf3             ! dummy variables
+    REAL(jp), DIMENSION(nc)                 :: radf4, radf5                    ! dummy variables
+    REAL(jp), DIMENSION(nc)                 :: radf1_leaf, radf2_leaf          ! dummy variables
+    REAL(jp), DIMENSION(nc)                 :: radf3_leaf, radf4_leaf          ! dummy variables
+    REAL(jp)                                :: alb_stem                        ! stem albedo (--)
+    REAL(jp)                                :: temp1, temp2, radf3b            ! dummy variables
+    REAL(jp)                                :: kbl0, kdf0                      ! hlp for local rad_constants variables, differentiating vis/nir
+    REAL(jp)                                :: idfa                            ! diffuse radiation penetrating foliage at lc
+    REAL(jp)                                :: idra                            ! direct radiation penetrating sunlit foliage at lc
+    REAL(jp)                                :: idrdra                          ! direct radiation remaining direct at lc
+    REAL(jp)                                :: omega                           ! clumping factor
+    REAL(jp)                                :: rho_leaf                        ! fraction reflected by green canopy (--)
+    REAL(jp)                                :: rho                             ! fraction reflected by canopy+stems (--)
+    REAL(jp)                                :: kdf_leaf, kbl_leaf              ! extinction coefficients for radiation over black canopy
     INTEGER                                 :: ic                              ! iteration over grid points
     INTEGER                                 :: icanopy                         ! iteration over canopy layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_radiation_budget'

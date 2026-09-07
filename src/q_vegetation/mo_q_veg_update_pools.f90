@@ -43,7 +43,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_veg_pools(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: jp
     USE mo_jsb_impl_constants,              ONLY: test_false_true
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
@@ -75,14 +75,14 @@ CONTAINS
     TYPE(t_jsb_grid),         POINTER :: grid                   !< horizontal grid
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: nsoil_w                !< number of soil layers (water)
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(jp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
     INTEGER                           :: id_elem, ix_elem       !< id and index of bgcm elements
     INTEGER                           :: ix_comp                !< currently id and index of bgcm compartments
     INTEGER                           :: nr_of_veg_bgcm_comp    !< number of compartments in veg bgcms
-    REAL(wp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
-    REAL(wp) :: hlp
+    REAL(jp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
+    REAL(jp) :: hlp
     INTEGER  :: lctlib_phenology_type
     LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
     LOGICAL  :: config_l_use_product_pools, is_active_SYL_or_ALCC, is_active_AGR_or_ALCC

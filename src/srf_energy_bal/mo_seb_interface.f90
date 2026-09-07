@@ -22,7 +22,7 @@ MODULE mo_seb_interface
 
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -502,13 +502,13 @@ CONTAINS
       & t_old,              &               !< Previous time steps temperature                         [K]
       & net_srf_rad_balance                 !< Net surface radiation balance                       [W m-2]
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & tile_fract(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & lw_srf_up,       &
       & sw_srf_up,       &
       & sw_srf_down,     &
@@ -519,7 +519,7 @@ CONTAINS
     INTEGER  :: n_cells, ie
     INTEGER  :: cell_idx(options%nc)
 
-    REAL(wp) :: dtime
+    REAL(jp) :: dtime
     LOGICAL  :: is_experiment_start
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
@@ -674,7 +674,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
 
     INTEGER                       :: iblk, ic
-    REAL(wp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
+    REAL(jp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
 
     dsl4jsb_Real2D_onDomain :: t
@@ -732,15 +732,15 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(jp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(jp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SEB_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
 
     dsl4jsb_Real2D_onDomain :: t
-    REAL(wp), POINTER       :: t_gmean(:)
+    REAL(jp), POINTER       :: t_gmean(:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_var2D_onDomain(SEB_,  t) ! in

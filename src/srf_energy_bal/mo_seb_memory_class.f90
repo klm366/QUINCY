@@ -15,7 +15,7 @@
 MODULE mo_seb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -475,7 +475,7 @@ CONTAINS
           & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=REAL(tmelt,KIND=wp) )
+          & initval_r=REAL(tmelt,KIND=jp) )
 
         CALL mem%Add_var( 's_lice', mem%s_lice,                                                  &
           & hgrid, surface,                                                                      &

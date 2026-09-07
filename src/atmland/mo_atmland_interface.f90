@@ -15,8 +15,8 @@ MODULE mo_atmland_interface
 #ifndef __NO_JSBACH__
 
   USE mo_exception,       ONLY: finish
-  USE mo_kind,            ONLY: wp, &   !< wp := working-precision of jsbach
-    &                           wp_icon => wp !< wp_icon := working-precision of ICON
+  USE mo_kind,            ONLY: jp, &   !< jp := working-precision of jsbach
+    &                           wp_icon => jp !< wp_icon := working-precision of ICON
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone, acc_stream
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
@@ -100,7 +100,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
-    ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
+    ! REAL(jp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp_icon), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,   &
@@ -112,15 +112,15 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     INTEGER  :: iblk, ics, ice, nc, i, ic
-    REAL(wp) :: dtime
+    REAL(jp) :: dtime
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
-    REAL(wp), POINTER :: lon(:)
+    REAL(jp), POINTER :: lon(:)
     INTEGER :: model_scheme
     LOGICAL :: tile_contains_lake
     TYPE(datetime),    POINTER :: mtime_current !< elapsed simulation time
     INTEGER  :: global_seconds_day, current_year
-    REAL(wp) :: co2_dC13_constant, co2_dC14_constant
+    REAL(jp) :: co2_dC13_constant, co2_dC14_constant
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
     dsl4jsb_Real2D_onChunk ::  &
@@ -615,7 +615,7 @@ CONTAINS
     LOGICAL  :: use_tmx, tile_is_carbon_active
     INTEGER  :: stream, original_stream
     INTEGER  :: model_scheme
-    REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
+    REAL(jp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 

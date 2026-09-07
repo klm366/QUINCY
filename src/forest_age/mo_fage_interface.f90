@@ -16,7 +16,7 @@ MODULE mo_fage_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_exception,          ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -123,11 +123,11 @@ CONTAINS
 
     INTEGER  :: i, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nacs, max_age
-    REAL(wp) :: dtime
-    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(jp) :: dtime
+    REAL(jp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
-    REAL(wp), ALLOCATABLE :: ac_ubound(:)
+    REAL(jp), DIMENSION(options%nc) :: current_fract
+    REAL(jp), ALLOCATABLE :: ac_ubound(:)
 
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(NLCC_)
@@ -340,7 +340,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)   :: tile           !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)      :: options        !< Additional run-time parameters
     INTEGER,  INTENT(in)                        ::  i_tile        !< index of the ac with disturbed area
-    REAL(wp), INTENT(in), DIMENSION(options%nc) :: disturbed_area !< area fraction disturbed for this ac
+    REAL(jp), INTENT(in), DIMENSION(options%nc) :: disturbed_area !< area fraction disturbed for this ac
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -397,7 +397,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)   :: tile           !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)      :: options        !< Additional run-time parameters
-    REAL(wp), INTENT(in), DIMENSION(:)          :: gain           !< change in cover fraction
+    REAL(jp), INTENT(in), DIMENSION(:)          :: gain           !< change in cover fraction
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -410,7 +410,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
+    REAL(jp), DIMENSION(options%nc) :: current_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':apply_fract_per_age_change_for_alcc_forest_gain'
     ! -------------------------------------------------------------------------------------------------- !
@@ -452,9 +452,9 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< Additional run-time parameters
-    REAL(wp), DIMENSION(:),     INTENT(in)    :: cf_loss      !< change in cover fraction
+    REAL(jp), DIMENSION(:),     INTENT(in)    :: cf_loss      !< change in cover fraction
     INTEGER,                    INTENT(in)    :: ind_first_ac !< index of first ac in lost_area vector
-    REAL(wp), DIMENSION(:,:),   INTENT(inout) :: lost_area    !< lost_area vector (dim2: nr of alcc tiles)
+    REAL(jp), DIMENSION(:,:),   INTENT(inout) :: lost_area    !< lost_area vector (dim2: nr of alcc tiles)
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -468,7 +468,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract, forest_pft_fract, this_cf_loss
+    REAL(jp), DIMENSION(options%nc) :: current_fract, forest_pft_fract, this_cf_loss
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':distribute_forest_loss_from_alcc'
     ! -------------------------------------------------------------------------------------------------- !

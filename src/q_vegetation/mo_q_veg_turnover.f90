@@ -20,7 +20,7 @@
 MODULE mo_q_veg_turnover
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_impl_constants,  ONLY: test_false_true
@@ -64,7 +64,7 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(jp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     LOGICAL                           :: config_active_q_agr
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_turnover'
@@ -240,23 +240,23 @@ CONTAINS
     USE mo_veg_constants,         ONLY: tau_nutrient_recycling, tau_labile
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                          INTENT(in)    :: nc                         !< dimensions
-    REAL(wp),                         INTENT(in)    :: dtime                      !< timestep length
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root        !< target C:N of fine_roots
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_fine_root        !< target N:P of fine_roots
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_cn_leaf             !< target C:N of leaves
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: target_np_leaf             !< target C:N of leaves
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season             !< whether the plant is in the growing season
-    REAL(wp),                         INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n           !< rate of leaf N recycling (mol/m2/timestep)
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n      !< rate of fine root N recycling (mol/m2/timestep)
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_p           !< rate of leaf P recycling (mol/m2/timestep)
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_p      !< rate of fine root P recycling (mol/m2/timestep)
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n15         !< rate of leaf 15N recycling (mol/m2/timestep)
-    REAL(wp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n15    !< rate of fine root 15N recycling (mol/m2/timestep)
+    REAL(jp),                         INTENT(in)    :: dtime                      !< timestep length
+    REAL(jp), DIMENSION(nc),          INTENT(in)    :: target_cn_fine_root        !< target C:N of fine_roots
+    REAL(jp), DIMENSION(nc),          INTENT(in)    :: target_np_fine_root        !< target N:P of fine_roots
+    REAL(jp), DIMENSION(nc),          INTENT(in)    :: target_cn_leaf             !< target C:N of leaves
+    REAL(jp), DIMENSION(nc),          INTENT(in)    :: target_np_leaf             !< target C:N of leaves
+    REAL(jp), DIMENSION(nc),          INTENT(in)    :: growing_season             !< whether the plant is in the growing season
+    REAL(jp),                         INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n           !< rate of leaf N recycling (mol/m2/timestep)
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n      !< rate of fine root N recycling (mol/m2/timestep)
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_p           !< rate of leaf P recycling (mol/m2/timestep)
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_p      !< rate of fine root P recycling (mol/m2/timestep)
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_leaf_n15         !< rate of leaf 15N recycling (mol/m2/timestep)
+    REAL(jp), DIMENSION(nc),          INTENT(inout) :: recycling_fine_root_n15    !< rate of fine root 15N recycling (mol/m2/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: hlp1, hlp2, hlp3         !< helper variable
-    REAL(wp)                    :: recycling_leaf           !< recycling flux from leaves
-    REAL(wp)                    :: recycling_fine_root      !< recycling flux from fine roots
+    REAL(jp)                    :: hlp1, hlp2, hlp3         !< helper variable
+    REAL(jp)                    :: recycling_leaf           !< recycling flux from leaves
+    REAL(jp)                    :: recycling_fine_root      !< recycling flux from fine roots
     INTEGER                     :: ic                       !< loop over chunk of points
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nutrient_recycling'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -387,49 +387,49 @@ CONTAINS
       &                                 ipheno_type_cold_deciduous, ipheno_type_drought_deciduous, ipheno_type_cbalance_deciduous
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
-    REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
+    REAL(jp),                 INTENT(in)    :: dtime                        !< timestep length
     LOGICAL,                  INTENT(in)    :: config_active_q_agr          !< if Q_AGR_ process is activated
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_phenology_type        !< lctlib parameter
     INTEGER,                  INTENT(in)    :: lctlib_growthform            !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_frac_sapwood_branch   !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_leaf              !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_coarse_root       !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_branch            !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_sap_wood          !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_fruit             !< lctlib parameter
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_litter       !< lctlib parameter
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< whether the plant is in the growing season
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: root_phenology_type          !< category for trigger of end of growing season in grasses
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai                          !< the plant's LAI
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: target_lai                   !< the plant's annual maximum LAI
-    REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)           !< bgcm veg_pool: current state of vegetation pools
-    REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm seed_bed_pool: current state of seed bed pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n             !< foliar N returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n15           !< foliar N15 returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_p             !< foliar P returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n       !< woody N returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n15     !< woody N15 returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_p       !< woody P returning to labile pool
-    REAL(wp), DIMENSION(nc),  INTENT(inout) :: maint_respiration_leaf       !< leaf maintenance respiration [mumol C / m2 / s]
-    REAL(wp),                 INTENT(inout) :: veg_growth_mt(:,:,:)         !< bgcm flux: current growth rate of vegetation pools
-    REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< bgcm flux: current litter fall from vegetation pools
-    REAL(wp),                 INTENT(inout) :: seed_bed_growth_mt(:,:)      !< bgcm flux: current growth rate of seed bed pool
-    REAL(wp),                 INTENT(inout) :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: current litter fall from seed bed pool
-    REAL(wp), DIMENSION(nc),  INTENT(out)   :: net_growth                   !< current net growth [mumol C / m2 / s]
+    REAL(jp),                 INTENT(in)    :: lctlib_frac_sapwood_branch   !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_leaf              !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_coarse_root       !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_branch            !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_sap_wood          !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_fruit             !< lctlib parameter
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_seed_litter       !< lctlib parameter
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< whether the plant is in the growing season
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: root_phenology_type          !< category for trigger of end of growing season in grasses
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: lai                          !< the plant's LAI
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: target_lai                   !< the plant's annual maximum LAI
+    REAL(jp),                 INTENT(in)    :: veg_pool_mt(:,:,:)           !< bgcm veg_pool: current state of vegetation pools
+    REAL(jp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm seed_bed_pool: current state of seed bed pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n             !< foliar N returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_n15           !< foliar N15 returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_leaf_p             !< foliar P returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n       !< woody N returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_n15     !< woody N15 returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: recycling_heart_wood_p       !< woody P returning to labile pool
+    REAL(jp), DIMENSION(nc),  INTENT(inout) :: maint_respiration_leaf       !< leaf maintenance respiration [mumol C / m2 / s]
+    REAL(jp),                 INTENT(inout) :: veg_growth_mt(:,:,:)         !< bgcm flux: current growth rate of vegetation pools
+    REAL(jp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< bgcm flux: current litter fall from vegetation pools
+    REAL(jp),                 INTENT(inout) :: seed_bed_growth_mt(:,:)      !< bgcm flux: current growth rate of seed bed pool
+    REAL(jp),                 INTENT(inout) :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: current litter fall from seed bed pool
+    REAL(jp), DIMENSION(nc),  INTENT(out)   :: net_growth                   !< current net growth [mumol C / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic                               !< loop over chunk
     INTEGER                     :: ielem                            !< loop over bgcm elements
     INTEGER                     :: ix_elem                          !< index of element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc)     :: fturn_leaf                       !< fraction of leaves turning over
-    REAL(wp), DIMENSION(nc)     :: fturn                            !< other tissue turnover fraction, helper variable
-    REAL(wp), DIMENSION(nc)     :: retranslocation                  !< retranslocation before shedding
-    REAL(wp), DIMENSION(nc)     :: nitrogen_recycling_fract         !< recycling fraction of N
-    REAL(wp), DIMENSION(nc)     :: phosphorus_recycling_fract       !< recycling fraction of P
-    REAL(wp), DIMENSION(nc)     :: excess_leaf_turnover             !< excess fraction of leaf turnover in case of leaf C deficit
-    REAL(wp)                    :: hlp1                             !< helper variable
+    REAL(jp), DIMENSION(nc)     :: fturn_leaf                       !< fraction of leaves turning over
+    REAL(jp), DIMENSION(nc)     :: fturn                            !< other tissue turnover fraction, helper variable
+    REAL(jp), DIMENSION(nc)     :: retranslocation                  !< retranslocation before shedding
+    REAL(jp), DIMENSION(nc)     :: nitrogen_recycling_fract         !< recycling fraction of N
+    REAL(jp), DIMENSION(nc)     :: phosphorus_recycling_fract       !< recycling fraction of P
+    REAL(jp), DIMENSION(nc)     :: excess_leaf_turnover             !< excess fraction of leaf turnover in case of leaf C deficit
+    REAL(jp)                    :: hlp1                             !< helper variable
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -664,7 +664,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(4), INTENT(in) :: char_bgcm_compartment
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: recycling_fract
+    REAL(jp)                    :: recycling_fract
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitrogen_recycling_fract'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -686,7 +686,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(4), INTENT(in) :: char_bgcm_compartment
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: recycling_fract
+    REAL(jp)                    :: recycling_fract
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phosphorus_recycling_fract'
     ! ----------------------------------------------------------------------------------------------------- !
 

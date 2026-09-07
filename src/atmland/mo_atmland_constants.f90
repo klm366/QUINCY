@@ -14,35 +14,35 @@
 MODULE mo_atmland_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
 
   IMPLICIT NONE
 
   ! solar constant
-  REAL(wp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
-  REAL(wp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
+  REAL(jp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
+  REAL(jp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
 
   ! wind speed
-  REAL(wp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
-  REAL(wp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
-  REAL(wp),SAVE :: def_wind                    !< wind (m/s)
+  REAL(jp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
+  REAL(jp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
+  REAL(jp),SAVE :: def_wind                    !< wind (m/s)
 
   ! conversion factors
-  REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
-  REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
+  REAL(jp),SAVE :: standard_press_srf          !< standard pressure in Pa
+  REAL(jp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
   ! default values of model forcing for model testing:
   !  @TODO some of the 'default values of model forcing' might not be used (and can be removed ?)
-  REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
-  REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
-  REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
-  REAL(wp),SAVE :: def_fdiffuse                !< diffuse fraction
-  REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
-  REAL(wp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
-  REAL(wp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
-  REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in 10^-12 ppm
-  REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
-  REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
+  REAL(jp),SAVE :: def_t_air                   !< temperature in deg K
+  REAL(jp),SAVE :: def_vpd                     !< vpd in Pa
+  REAL(jp),SAVE :: def_swdown                  !< PAR in W m-2
+  REAL(jp),SAVE :: def_fdiffuse                !< diffuse fraction
+  REAL(jp),SAVE :: def_cos_angle               !< cosine of zenith angle
+  REAL(jp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
+  REAL(jp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
+  REAL(jp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in 10^-12 ppm
+  REAL(jp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
+  REAL(jp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
 
   PUBLIC
 

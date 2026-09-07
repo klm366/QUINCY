@@ -18,7 +18,7 @@
 MODULE mo_q_veg_update_pools_on_harvest
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_time,            ONLY: is_newyear, is_newday
@@ -84,10 +84,10 @@ CONTAINS
     INTEGER                             :: nsoil_w                    !< number of soil layers (water)
     INTEGER                             :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                             :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
-    REAL(wp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
-    REAL(wp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
-    REAL(wp), DIMENSION(options%nc)     :: cover_fraction             !< current tile area
-    REAL(wp)                            :: dtime                      !< timestep length
+    REAL(jp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
+    REAL(jp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
+    REAL(jp), DIMENSION(options%nc)     :: cover_fraction             !< current tile area
+    REAL(jp)                            :: dtime                      !< timestep length
     INTEGER                             :: ix_ct                      !< index of crop type (if crop)
     INTEGER                             :: ic, iblk, ics, ice, nc     !< dimensions and loop counter
     INTEGER                             :: i_compartment, nr_of_veg_bgcm_comp !< loop counter and dim for veg compartments
@@ -358,9 +358,9 @@ CONTAINS
     INTEGER,      INTENT(in) :: nc                          !< block dimension
     LOGICAL,      INTENT(in) :: is_elem_used(:)             !< indicates which elements are in use
     INTEGER,      INTENT(in) :: elem_idx_map(:)             !< map bgcm element ID -> IX
-    REAL(wp),     INTENT(in) :: fract_wood_to_pp            !< wood fraction to go into this product pool
-    REAL(wp),     INTENT(in) :: veg_pp_flux_harvest_mt(:,:) !< harvest flux to product pools
-    REAL(wp),  INTENT(inout) :: veg_pp_mt(:,:)              !< this product pool
+    REAL(jp),     INTENT(in) :: fract_wood_to_pp            !< wood fraction to go into this product pool
+    REAL(jp),     INTENT(in) :: veg_pp_flux_harvest_mt(:,:) !< harvest flux to product pools
+    REAL(jp),  INTENT(inout) :: veg_pp_mt(:,:)              !< this product pool
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic, id_elem              !< loop counter
     INTEGER                     :: ix_elem                  !< element index
@@ -401,14 +401,14 @@ CONTAINS
     USE mo_q_agr_constants,         ONLY: crop_planting_mass, fstore_seed_min, fract_crop_to_slash
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                                !< dimensions
-    REAL(wp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
-    REAL(wp), INTENT(inout) :: veg_pool_mt(:,:,:)                !< bgcm vegetation pool
-    REAL(wp), INTENT(inout) :: seed_bed_pool_mt(:,:)             !< bgcm seed bed pool
-    REAL(wp), INTENT(inout) :: veg_pp_crop_mt(:,:)               !< bgcm crop products pool
-    REAL(wp), INTENT(inout) :: veg_pp_flux_harvest_mt(:,:)       !< bgcm harvest flux to products
+    REAL(jp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
+    REAL(jp), INTENT(inout) :: veg_pool_mt(:,:,:)                !< bgcm vegetation pool
+    REAL(jp), INTENT(inout) :: seed_bed_pool_mt(:,:)             !< bgcm seed bed pool
+    REAL(jp), INTENT(inout) :: veg_pp_crop_mt(:,:)               !< bgcm crop products pool
+    REAL(jp), INTENT(inout) :: veg_pp_flux_harvest_mt(:,:)       !< bgcm harvest flux to products
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: hlp1
+    REAL(jp)       :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_harvest_to_products_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 

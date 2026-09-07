@@ -25,7 +25,7 @@ MODULE mo_rad_interface
 
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, acc_stream
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, message_text, finish
 
   USE mo_jsb_control,         ONLY: jsbach_runs_standalone
@@ -248,7 +248,7 @@ CONTAINS
       & t_lwtr,               &
       & t_lice
 
-    REAL(wp) ::                  &
+    REAL(jp) ::                  &
       & lw_net_lwtr(options%nc), &
       & lw_net_lice(options%nc), &
       & sw_net_lwtr(options%nc), &
@@ -503,8 +503,8 @@ CONTAINS
     INTEGER                           :: icanopy                !< loop 1,ncanopy
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< looping
-    REAL(wp)                          :: dtime                  !< timestep
-    REAL(wp)                          :: fapar(options%nc)      !< fraction of absorbed photosynthetically active radiation
+    REAL(jp)                          :: dtime                  !< timestep
+    REAL(jp)                          :: fapar(options%nc)      !< fraction of absorbed photosynthetically active radiation
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_par_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -628,12 +628,12 @@ CONTAINS
     INTEGER                           :: icanopy
 
     INTEGER                           :: iblk , ics, ice, nc, ic
-    REAL(wp)                          :: dtime
+    REAL(jp)                          :: dtime
 
-    REAL(wp)                          :: canopy_bound_lai_tmp, canopy_bound_lai_delta
-    REAL(wp), POINTER :: canopy_bound_lai(:)
+    REAL(jp)                          :: canopy_bound_lai_tmp, canopy_bound_lai_delta
+    REAL(jp), POINTER :: canopy_bound_lai(:)
 
-    REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
+    REAL(jp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
                                                         !    and thus has to have the same dimensions as the other out arguments.
 
     ! Declare pointers for process configuration and memory
@@ -905,9 +905,9 @@ CONTAINS
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
-    REAL(wp)                        :: dtime                     !< timestep
-    REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
-    REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
+    REAL(jp)                        :: dtime                     !< timestep
+    REAL(jp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
+    REAL(jp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
@@ -928,7 +928,7 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
     INTEGER :: use_alb_soil_organic_int
 
-    REAL(wp) ::            &
+    REAL(jp) ::            &
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calculated by linearly weighting
                                 !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow
@@ -1001,7 +1001,7 @@ CONTAINS
       c_humus_1,               &
       c_humus_2
 
-    REAL(wp), ALLOCATABLE ::   &
+    REAL(jp), ALLOCATABLE ::   &
       & litter_carbon(:),      &  ! Amount of litter carbon [mol(C)/m2(canopy)], used with use_alb_soil_litter
       & soil_carbon(:)            ! Amount of soil carbon [mol(C)/m2(canopy)], used with use_alb_soil_organic_C
 
@@ -1020,7 +1020,7 @@ CONTAINS
       & lai_cl,                     &
       & cumm_lai_cl
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & specificLeafArea_C_param, &
       & AlbedoLitterVIS_param,    &
       & AlbedoLitterNIR_param,    &
@@ -1807,7 +1807,7 @@ CONTAINS
   !>
   SUBROUTINE update_time_average_radiation(tile, options)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: jp
     USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
@@ -1838,7 +1838,7 @@ CONTAINS
     INTEGER                                 :: icanopy                !< looping
     INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc !< dimensions, looping
-    REAL(wp)                                :: dtime                  !< timestep
+    REAL(jp)                                :: dtime                  !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt

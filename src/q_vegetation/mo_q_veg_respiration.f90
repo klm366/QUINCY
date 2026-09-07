@@ -40,19 +40,19 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: jp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: temp                      !< instantaneous temperature (K)
-    REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K)
-    REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10 degC)
+    REAL(jp), INTENT(in) :: temp                      !< instantaneous temperature (K)
+    REAL(jp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K)
+    REAL(jp)             :: temp_response             !< temperature response of respiration (1 at 10 degC)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)             :: hlp1
+    REAL(jp)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
@@ -89,22 +89,22 @@ CONTAINS
                                                         coarse_root_nitrogen)   &
                                                         RESULT(maint_respiration)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: jp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood, k_maint_resp_suppress
 
     IMPLICIT NONE
 
-    REAL(wp), INTENT(in) :: leaf_carbon              !< carbon content of leafs (veg_pool)
-    REAL(wp), INTENT(in) :: t_wood                   !< temperature of the stem (K)
-    REAL(wp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K)
-    REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
-    REAL(wp), INTENT(in) :: t_root_mavg              !< average temperature for acclimation (K)
-    REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
-    REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
-    REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
+    REAL(jp), INTENT(in) :: leaf_carbon              !< carbon content of leafs (veg_pool)
+    REAL(jp), INTENT(in) :: t_wood                   !< temperature of the stem (K)
+    REAL(jp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K)
+    REAL(jp), INTENT(in) :: t_root                   !< temperature of the roots (K)
+    REAL(jp), INTENT(in) :: t_root_mavg              !< average temperature for acclimation (K)
+    REAL(jp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
+    REAL(jp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
+    REAL(jp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; micro-mol C / m2 / s)
-    REAL(wp)             :: maint_respiration        !< maintenance respiration (micro-mol C / m2 / s)
+    REAL(jp)             :: maint_respiration        !< maintenance respiration (micro-mol C / m2 / s)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 

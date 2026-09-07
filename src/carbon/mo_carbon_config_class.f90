@@ -18,7 +18,7 @@ MODULE mo_carbon_config_class
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ MODULE mo_carbon_config_class
                             !            in the experiment jobs following the first one! Or re-set it manually!
     LOGICAL  :: diag_humus_fluxes ! Activate diagnostic carbon fluxes to and from the yasso humus pools
                                   ! required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
-    REAL(wp) :: fire_fract_wood_2_atmos
+    REAL(jp) :: fire_fract_wood_2_atmos
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -61,7 +61,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: with_nitrogen
     LOGICAL                     :: read_cpools, diag_humus_fluxes
-    REAL(wp)                    :: fire_fract_wood_2_atmos
+    REAL(jp)                    :: fire_fract_wood_2_atmos
     ! LOGICAL           :: lemissions
 
     NAMELIST /jsb_carbon_nml/      &

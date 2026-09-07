@@ -19,8 +19,8 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp, &   !< wp := working-precision of jsbach
-    &                               wp_icon => wp !< wp_icon := working-precision of ICON
+  USE mo_kind,                ONLY: jp, &   !< jp := working-precision of jsbach
+    &                               wp_icon => jp !< wp_icon := working-precision of ICON
   USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util,         ONLY: int2string
 
@@ -255,7 +255,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=REAL(dtime,KIND=wp), alpha=MERGE(1._wp, REAL(cvdifts,KIND=wp), jsbach_runs_standalone()) )
+      & dtime=REAL(dtime,KIND=jp), alpha=MERGE(1._wp, REAL(cvdifts,KIND=jp), jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -504,7 +504,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=REAL(dtime,KIND=wp), alpha=1._wp)
+      & dtime=REAL(dtime,KIND=jp), alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -586,7 +586,7 @@ CONTAINS
   !     & ics,               &
   !     & ice
   !
-  !   REAL(wp), INTENT(inout) :: &
+  !   REAL(jp), INTENT(inout) :: &
   !     & t_srf    (:), &
   !     & t_eff_srf(:), &
   !     & qsat_srf (:), &
@@ -615,7 +615,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: dtime
+    REAL(jp),                  INTENT(in) :: dtime
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),  POINTER :: model
     INTEGER                     :: no_omp_thread
@@ -739,7 +739,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: dtime
+    REAL(jp),                  INTENT(in) :: dtime
     LOGICAL, OPTIONAL,         INTENT(in) :: init
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
@@ -859,14 +859,14 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER      :: grid
 
     INTEGER                :: iproc, jc, blk
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
+    REAL(jp), POINTER      :: area(:,:)
+    REAL(jp), POINTER      :: notsea(:,:)
     LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
+    REAL(jp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
                                                 ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    REAL(wp), ALLOCATABLE  :: area_scaling(:,:)
-    REAL(wp), ALLOCATABLE  :: land_area_scaling(:,:)
-    REAL(wp)               :: global_land_area
+    REAL(jp), ALLOCATABLE  :: area_scaling(:,:)
+    REAL(jp), ALLOCATABLE  :: land_area_scaling(:,:)
+    REAL(jp)               :: global_land_area
     ! ----------------------------------------------------------------------------------------------------- !
     notsea => tile%fract(:,:)   ! fraction of the box tile: notsea
     model  => Get_model(tile%owner_model_id)
@@ -961,9 +961,9 @@ CONTAINS
                                               !< Name of tile from which variable is taken; box tile if not given
     INTEGER, OPTIONAL, INTENT(in)          :: ics, ice, iblk
                                               !< If given, chunk (ics:ice,iblk) is returned, otherwise whole domain
-    REAL(wp), OPTIONAL, INTENT(inout)      :: arr1d(:), arr2d(:,:), arr3d(:,:,:)
+    REAL(jp), OPTIONAL, INTENT(inout)      :: arr1d(:), arr2d(:,:), arr3d(:,:,:)
                                               !< Requested variable (section) is copied into these arrays
-    REAL(wp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
+    REAL(jp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
                                               !< Pointers to the requested variable (section); must not be associated
     LOGICAL, OPTIONAL, INTENT(in)          :: lacc
                                               !< Switch whether the variables should be copied to GPU

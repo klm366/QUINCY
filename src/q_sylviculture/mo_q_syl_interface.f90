@@ -18,7 +18,7 @@
 MODULE mo_q_syl_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish, message_text
@@ -116,14 +116,14 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, iblk, ics, ice, nc !< loop counter / dimensions
-    REAL(wp)                        :: dtime                  !< timestep length
+    REAL(jp)                        :: dtime                  !< timestep length
     INTEGER                         :: number_of_days         !< number of days in this year
     INTEGER                         :: current_year           !< the current year
-    REAL(wp)                        :: fract_sum              !< sum of allocation fractions to different pools
-    REAL(wp), DIMENSION(options%nc) :: cover_fraction         !< cover fraction of given tile
-    REAL(wp), DIMENSION(options%nc) :: fact_harvest_share     !< factor to determine the harvest share of this tile
+    REAL(jp)                        :: fract_sum              !< sum of allocation fractions to different pools
+    REAL(jp), DIMENSION(options%nc) :: cover_fraction         !< cover fraction of given tile
+    REAL(jp), DIMENSION(options%nc) :: fact_harvest_share     !< factor to determine the harvest share of this tile
                                                               !< depends on cover fraction and total area with PFTs with trees
-    REAL(wp), DIMENSION(options%nc) :: fract_harvest_box      !< total area relative to grid cell harvest from all forested PFTS
+    REAL(jp), DIMENSION(options%nc) :: fract_harvest_box      !< total area relative to grid cell harvest from all forested PFTS
     TYPE(t_jsb_model), POINTER      :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_sylviculture'
@@ -221,7 +221,7 @@ CONTAINS
         ! In case of daily harvest the harvest needs to be distributed over the number of days in this year
         current_year  = get_year(options%current_datetime)
         number_of_days = get_year_length(current_year)
-        fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, wp)
+        fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, jp)
       END IF
 
       ! Now the grid-cell harvest fraction for this tile can be determined

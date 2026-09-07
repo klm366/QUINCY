@@ -18,7 +18,7 @@
 MODULE mo_lnd_time_averages
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
 
 
   IMPLICIT NONE
@@ -31,25 +31,25 @@ MODULE mo_lnd_time_averages
   !!   but can also be 'week' or 'year'
   !!
   ! generic memory time-scales (in days):
-    REAL(wp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
-    REAL(wp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
+    REAL(jp),SAVE :: mavg_period_weekly            = 7.0_wp               !< 7 days; constant across the model
+    REAL(jp),SAVE :: mavg_period_monthly           = 30.0_wp              !< 30 days; constant across the model
+    REAL(jp),SAVE :: mavg_period_yearly            = 365.0_wp             !< 365 days
 
   ! specific memory time-scales (in days):
-    REAL(wp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
-    REAL(wp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF)
-    REAL(wp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
-    REAL(wp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
-    REAL(wp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
-    REAL(wp),SAVE :: mavg_period_tresidual         = 365.0_wp * 30.0_wp   !< memory time-scale for SOM spinup accelarator (SB_)
-    REAL(wp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
-    REAL(wp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
-    REAL(wp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
-    REAL(wp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
-    REAL(wp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
-    REAL(wp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
-    REAL(wp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes
-    REAL(wp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
+    REAL(jp),SAVE :: mavg_period_tsoa              = 2.0_wp               !< memory time_scale for state of acclimation
+    REAL(jp),SAVE :: mavg_period_tuptake           = 3.0_wp               !< nutrient uptake processes (demand, BNF)
+    REAL(jp),SAVE :: mavg_period_tlabile           = 7.0_wp               !< labile pool
+    REAL(jp),SAVE :: mavg_period_tphen             = 7.0_wp               !< phenological processes
+    REAL(jp),SAVE :: mavg_period_tenzyme           = 7.0_wp               !< memory time-scale for enzyme allocation (SB_)
+    REAL(jp),SAVE :: mavg_period_tresidual         = 365.0_wp * 30.0_wp   !< memory time-scale for SOM spinup accelarator (SB_)
+    REAL(jp),SAVE :: mavg_period_tfrac             = 10.0_wp              !< leaf N fractions
+    REAL(jp),SAVE :: mavg_period_tcnl              = 20.0_wp              !< leaf stoichiometry
+    REAL(jp),SAVE :: mavg_period_talloc            = 30.0_wp              !< biomass allocation
+    REAL(jp),SAVE :: mavg_period_tacclim           = 30.0_wp              !< respiration acclimation
+    REAL(jp),SAVE :: mavg_period_tmic              = 30.0_wp              !< microbial community acclimation
+    REAL(jp),SAVE :: mavg_period_tgrowth           = 365.0_wp             !< vegetation growth
+    REAL(jp),SAVE :: mavg_period_tvegdyn           = 365.0_wp             !< vegetation dynamics processes
+    REAL(jp),SAVE :: mavg_period_talloc_dynamic    = 365.0_wp * 30.0_wp   !< biomass allocation for empirical dynamic allocation (30 years)
   !!----------------------------------------------------------------------------------------------------
 
 
@@ -79,23 +79,23 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_kind,                ONLY: wp
+    USE mo_kind,                ONLY: jp
     USE mo_jsb_math_constants,  ONLY: one_day, one_year
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in)                      :: dtime              !< timestep length
-    REAL(wp), INTENT(in)                      :: current_avg        !< current average value
-    REAL(wp), INTENT(in)                      :: new_value          !< new value
-    REAL(wp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged
+    REAL(jp), INTENT(in)                      :: dtime              !< timestep length
+    REAL(jp), INTENT(in)                      :: current_avg        !< current average value
+    REAL(jp), INTENT(in)                      :: new_value          !< new value
+    REAL(jp), INTENT(in)                      :: avg_period_length  !< length of the period over which the variable is averaged
     LOGICAL,          OPTIONAL, INTENT(in)    :: do_calc            !< optional, do calculate new_avg from the new_value T/F
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: avg_period_unit    !< optional, for different units than 'day' for avg_period length
-    REAL(wp)                                  :: new_avg            !< function output: the new average
+    REAL(jp)                                  :: new_avg            !< function output: the new average
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                                  :: new_value_weight   ! weight of the new value
-    REAL(wp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
+    REAL(jp)                                  :: new_value_weight   ! weight of the new value
+    REAL(jp)                                  :: avg_period2seconds ! for converting the period length (day, week, year) into seconds
     LOGICAL                                   :: l_do_calc          ! True/ False of the Optional variable do_calc present
 
     CHARACTER(LEN=*), PARAMETER :: routine = modname//':calc_time_mavg'

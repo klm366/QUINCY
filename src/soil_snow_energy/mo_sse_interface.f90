@@ -18,7 +18,7 @@
 MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
@@ -179,7 +179,7 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & snow_depth,                    &
       & snow_fract,                    &
       & t_soil_top,                    &
@@ -189,14 +189,14 @@ CONTAINS
       & grnd_hflx_soil
     LOGICAL, DIMENSION(options%nc)  :: &
       & ldglac
-    REAL(wp), ALLOCATABLE :: ws_max_sl(:,:)
+    REAL(jp), ALLOCATABLE :: ws_max_sl(:,:)
 
     INTEGER, DIMENSION(options%nc) ::  &
       & itop, itop_old
 
     LOGICAL  :: lstart, l_uniform_snow
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(jp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
     INTEGER                    :: nsoil, is, nsnow, isnow
@@ -741,7 +741,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: &
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: &
       & vol_heat_cap_tmp,                    &
       & vol_heat_cap_org_tmp,                &
       & vol_porosity_org_tmp,                &
@@ -750,9 +750,9 @@ CONTAINS
       & hcond_dry_org_tmp
 
     INTEGER  :: iblk, ics, ice, nc, nsoil, ic, is
-    REAL(wp), POINTER :: soil_e_dz(:)
+    REAL(jp), POINTER :: soil_e_dz(:)
 
-    REAL(wp) :: hlp1
+    REAL(jp) :: hlp1
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_properties'
 

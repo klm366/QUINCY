@@ -17,7 +17,7 @@ MODULE mo_sse_process
   USE mo_jsb_control,            ONLY: acc_stream
   USE mo_jsb_physical_constants, ONLY: rhoh2o
   USE mo_exception, ONLY: message, finish
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
 
   IMPLICIT NONE
   PRIVATE
@@ -52,9 +52,9 @@ CONTAINS
 
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_air, vol_hcap_bedrock
 
-    REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, vol_heat_cap_soil_dry_organic, fract_organic, &
+    REAL(jp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, vol_heat_cap_soil_dry_organic, fract_organic, &
                          &  fract_water, fract_ice, layer_depth, dz
-    REAL(wp)             :: vol_heat_cap
+    REAL(jp)             :: vol_heat_cap
 
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
@@ -91,11 +91,11 @@ CONTAINS
     USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
 
-    REAL(wp), INTENT(in)  :: dz,          &   !< Layer thickness [m]
+    REAL(jp), INTENT(in)  :: dz,          &   !< Layer thickness [m]
       &                      wtr_pond,    &   !< Water content of surface reservoir [m]
       &                      ice_pond,    &   !< Ice content of surface reservoir [m]
       &                      vol_heat_cap     !< Volumetric heat capacity of top soil layer [J m-3 K-1]
-    REAL(wp)              :: vol_heat_cap_eff !< Effective volumetric heat capacity of top soil layer [J m-3 K-1]
+    REAL(jp)              :: vol_heat_cap_eff !< Effective volumetric heat capacity of top soil layer [J m-3 K-1]
 
     !> Since ponds do not have an actual energy content, their effect on surface and soil temperatures
     !> is not accounted for. We approximate the potential energy storage by calculating an effective heat
@@ -127,11 +127,11 @@ CONTAINS
     USE mo_sse_constants,          ONLY: hcond_water, hcond_ice, hcond_bedrock
 
 
-    REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, &
+    REAL(jp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, &
                           & fract_organic, vol_porosity_org, hcond_org, hcond_dry_org, layer_depth, dz
-    REAL(wp)             :: heat_cond
+    REAL(jp)             :: heat_cond
 
-    REAL(wp) ::           &
+    REAL(jp) ::           &
       & dens_bulk,        & !< Bulk density of dry soil (including pores)
       & porosity_mineral, & !< Volumentric porosity of mineral soil part
       & hcond_dry_min,    & !< Dry thermal conductivity soil (including mineral soil and pores)
@@ -238,18 +238,18 @@ CONTAINS
   !> Calculates the relative soil humidity in the range between maximum soil water capacity
   !> and residual water content
   !>
-  REAL(wp) FUNCTION relative_humidity_soil(ws, ws_min, ws_max)
+  REAL(jp) FUNCTION relative_humidity_soil(ws, ws_min, ws_max)
 
     !$ACC ROUTINE SEQ
 
   USE mo_jsb_math_constants, ONLY: pi
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & ws,                 & !< moisture content [m], e.g. of uppermost soil layer
       & ws_min,             & !< minimum moisture content [m], e.g. of uppermost soil layer
       & ws_max                !< maximum moisture content [m], e.g. of uppermost soil layer
 
-    REAL(wp) :: moisture
+    REAL(jp) :: moisture
 
     moisture = MIN(ws, ws_max)
     IF (moisture > 0._wp) THEN
@@ -281,21 +281,21 @@ CONTAINS
                                  & get_year_length, get_month_length, get_day_length, get_year_day
     USE mo_jsb_math_constants, ONLY: pi
 
-    REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
-    REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
-    REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
+    REAL(jp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
+    REAL(jp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
+    REAL(jp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
 
     INTEGER                   :: nsoil, ndim
-    REAL(wp)                  :: zkap, zsqrt
-    REAL(wp), ALLOCATABLE     :: zrange(:), zdmax(:)
+    REAL(jp)                  :: zkap, zsqrt
+    REAL(jp), ALLOCATABLE     :: zrange(:), zdmax(:)
     INTEGER,  ALLOCATABLE     :: jmax(:)
     TYPE(t_datetime), POINTER :: inidate
     INTEGER                   :: iniyear
     INTEGER                   :: im, i, ic
-    REAL(wp)                  :: year_len, day_in_year
-    REAL(wp)                  :: month_len(12), month_mid(12)
+    REAL(jp)                  :: year_len, day_in_year
+    REAL(jp)                  :: month_len(12), month_mid(12)
 
-    REAL(wp), PARAMETER :: cmid_offset = 0.07_wp
+    REAL(jp), PARAMETER :: cmid_offset = 0.07_wp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_temperature'
 
@@ -309,12 +309,12 @@ CONTAINS
     inidate => get_time_start()
     iniyear = get_year(inidate)
 
-    year_len    = REAL(get_year_length(iniyear), wp)
+    year_len    = REAL(get_year_length(iniyear), jp)
     day_in_year = INT(get_year_day(inidate))
     CALL deallocateDatetime(inidate)
 
     DO im=1,12
-      month_len(im) = REAL(get_month_length(iniyear, im), wp)
+      month_len(im) = REAL(get_month_length(iniyear, im), jp)
       month_mid(im) = month_len(im) * 0.5_wp
     END DO
 
@@ -378,47 +378,47 @@ CONTAINS
 
     INTEGER,  INTENT(in)    ::  nc                       !! length of the vector
     INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
-    REAL(wp), INTENT(in)    ::  delta_time               !! Time step
+    REAL(jp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
     INTEGER,  INTENT(IN)    ::  enforce_water_budget     !! Water balance check setting
-    REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
-    REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
-    REAL(wp), INTENT(in)    ::  bots(:)                  !! lower boundary of soil layers [m]
-    REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
-    REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
-    REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    REAL(jp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
+    REAL(jp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
+    REAL(jp), INTENT(in)    ::  bots(:)                  !! lower boundary of soil layers [m]
+    REAL(jp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
+    REAL(jp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
+    REAL(jp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
 
-    REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
-    REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
+    REAL(jp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(inout) ::  t_soil_bcoef(:,:)        !! soil B coefficient of Richtmyer and Morton scheme
 
-    REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
-    REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
-    REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  dsoil(:,:)        !! soil depth until bedrock [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
-    REAL(wp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
-    REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
-    REAL(wp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
-    REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
-    REAL(wp), INTENT(inout), OPTIONAL ::  le_pc_remain(:)   !! Energy available for or required from phase change
+    REAL(jp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
+    REAL(jp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
+    REAL(jp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(jp), INTENT(in), OPTIONAL    ::  dsoil(:,:)        !! soil depth until bedrock [m]
+    REAL(jp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
+    REAL(jp), INTENT(in), OPTIONAL    ::  matric_pot(:,:)   !! Soil matric potential
+    REAL(jp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
+    REAL(jp), INTENT(inout), OPTIONAL ::  wtr(:,:)          !! Water storage [m]
+    REAL(jp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
+    REAL(jp), INTENT(inout), OPTIONAL ::  le_pc_remain(:)   !! Energy available for or required from phase change
                                                             !! in top soil layer [J m-2]
-    REAL(wp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
-    REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
+    REAL(jp), INTENT(inout), OPTIONAL ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
+    REAL(jp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
+    REAL(jp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: ic, is
-    REAL(wp) :: le_phase(nc)
-    REAL(wp) :: z1(nc,nsoil)
-    REAL(wp) :: zd1(nsoil-1)
-    REAL(wp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
-    REAL(wp) :: heat_cap(nc,nsoil)
-    REAL(wp) :: wtr_old(nc,nsoil), ice_old(nc,nsoil)
-    REAL(wp) :: freeze_mass(nc,nsoil), melt_mass(nc,nsoil)
+    REAL(jp) :: le_phase(nc)
+    REAL(jp) :: z1(nc,nsoil)
+    REAL(jp) :: zd1(nsoil-1)
+    REAL(jp) :: zdz1(nc,nsoil-1), zdz2(nc,nsoil)
+    REAL(jp) :: heat_cap(nc,nsoil)
+    REAL(jp) :: wtr_old(nc,nsoil), ice_old(nc,nsoil)
+    REAL(jp) :: freeze_mass(nc,nsoil), melt_mass(nc,nsoil)
     CHARACTER(len=4096) :: message_text_long ! long string for debug output
 
     ! Temporary index lists for error detection
@@ -777,15 +777,15 @@ CONTAINS
     INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
     LOGICAL,  INTENT(in)    :: lstart                     !! if T, start of experiment
     INTEGER,  INTENT(in)    :: itop(:), itop_old(:)       !! Top snow layer for previous and new time step
-    REAL(wp), INTENT(in)    :: t_srf(:)                   !! Surface temperature at top of snow [K]
-    REAL(wp), INTENT(in)    :: t_soil_acoef(:)            !! Top layer soil A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(in)    :: t_soil_bcoef(:)            !! Top layer soil B coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(in)    :: t_srf(:)                   !! Surface temperature at top of snow [K]
+    REAL(jp), INTENT(in)    :: t_soil_acoef(:)            !! Top layer soil A coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(in)    :: t_soil_bcoef(:)            !! Top layer soil B coefficient of Richtmyer and Morton scheme
 
-    REAL(wp), INTENT(inout) :: t_snow(:,:)                !! Snow temperature [K]
-    REAL(wp), INTENT(inout) :: t_snow_acoef(:,:)          !! Snow A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(inout) :: t_snow_bcoef(:,:)          !! Snow B coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(inout) :: t_snow(:,:)                !! Snow temperature [K]
+    REAL(jp), INTENT(inout) :: t_snow_acoef(:,:)          !! Snow A coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(inout) :: t_snow_bcoef(:,:)          !! Snow B coefficient of Richtmyer and Morton scheme
 
-    REAL(wp), INTENT(out)   :: t_soil_top(:)              !! New temperature of top soil layer
+    REAL(jp), INTENT(out)   :: t_soil_top(:)              !! New temperature of top soil layer
 
     !------------------------------------------------------------------
     !  local Variables
@@ -882,32 +882,32 @@ CONTAINS
 
     INTEGER,  INTENT(in)    :: nc                         !! length of the vector
     INTEGER,  INTENT(in)    :: nsnow                      !! number of (fixed) snow layers
-    REAL(wp), INTENT(in)    :: delta_time                 !! Time step
-    REAL(wp), INTENT(in)    :: dz(:,:)                    !! (dynamic) snow layer thickness [m]
-    REAL(wp), INTENT(in)    :: dz_soil(2)                 !! Thickness of two uppermost soil layers [m]
+    REAL(jp), INTENT(in)    :: delta_time                 !! Time step
+    REAL(jp), INTENT(in)    :: dz(:,:)                    !! (dynamic) snow layer thickness [m]
+    REAL(jp), INTENT(in)    :: dz_soil(2)                 !! Thickness of two uppermost soil layers [m]
     INTEGER,  INTENT(in)    :: itop(:)                    !! Top snow layer for previous and new time step
-    REAL(wp), INTENT(in)    :: vol_heat_cap(:)            !! snow volumetric heat capacity [J/m^3K]
-    REAL(wp), INTENT(in)    :: heat_cond(:)               !! snow thermal conductivity [J/m/s/K]
-    REAL(wp), INTENT(in)    :: vol_heat_cap_soil(:)       !! top soil layer volumetric heat capacity
-    REAL(wp), INTENT(in)    :: heat_cond_soil(:)          !! top soil layer heat conductivity
-    REAL(wp), INTENT(in)    :: t_soil_sl(:,:)             !! Temperature of soil layers [K]
-    REAL(wp), INTENT(in)    :: t_soil_acoef(:,:)          !! top soil layer A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(in)    :: t_soil_bcoef(:,:)          !! top soil layer B coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(in)    :: t_snow(:,:)                !! snow temperature [K]
+    REAL(jp), INTENT(in)    :: vol_heat_cap(:)            !! snow volumetric heat capacity [J/m^3K]
+    REAL(jp), INTENT(in)    :: heat_cond(:)               !! snow thermal conductivity [J/m/s/K]
+    REAL(jp), INTENT(in)    :: vol_heat_cap_soil(:)       !! top soil layer volumetric heat capacity
+    REAL(jp), INTENT(in)    :: heat_cond_soil(:)          !! top soil layer heat conductivity
+    REAL(jp), INTENT(in)    :: t_soil_sl(:,:)             !! Temperature of soil layers [K]
+    REAL(jp), INTENT(in)    :: t_soil_acoef(:,:)          !! top soil layer A coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(in)    :: t_soil_bcoef(:,:)          !! top soil layer B coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(in)    :: t_snow(:,:)                !! snow temperature [K]
 
-    REAL(wp), INTENT(out)   :: t_snow_acoef(:,:)          !! snow A coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(out)   :: t_snow_bcoef(:,:)          !! snow B coefficient of Richtmyer and Morton scheme
-    REAL(wp), INTENT(out)   :: hcap_grnd(:)               !! heat capacity of the top snow layer [J m-2 K-1]
-    REAL(wp), INTENT(out)   :: grnd_hflx(:)               !! ground heat flux [J m-2 s-1]
+    REAL(jp), INTENT(out)   :: t_snow_acoef(:,:)          !! snow A coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(out)   :: t_snow_bcoef(:,:)          !! snow B coefficient of Richtmyer and Morton scheme
+    REAL(jp), INTENT(out)   :: hcap_grnd(:)               !! heat capacity of the top snow layer [J m-2 K-1]
+    REAL(jp), INTENT(out)   :: grnd_hflx(:)               !! ground heat flux [J m-2 s-1]
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: ic, is !, itop_prev
-    REAL(wp) :: zmid(nc,nsnow+2)
-    REAL(wp) :: z1
-    REAL(wp) :: zd1(nc,nsnow+1)
-    REAL(wp) :: zdz1(nc,nsnow+1), zdz2(nc,nsnow+1)
+    REAL(jp) :: zmid(nc,nsnow+2)
+    REAL(jp) :: z1
+    REAL(jp) :: zd1(nc,nsnow+1)
+    REAL(jp) :: zdz1(nc,nsnow+1), zdz2(nc,nsnow+1)
 
     !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2) ASYNC(acc_stream)
 
@@ -1049,9 +1049,9 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, grav
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & temp, w_max, matric_pot, bclapp
-    REAL(wp) :: liquid_max
+    REAL(jp) :: liquid_max
 
     IF (temp < tmelt - 1e-10_wp) THEN
       ! supercooled water equation (Niu&Yang,2006)

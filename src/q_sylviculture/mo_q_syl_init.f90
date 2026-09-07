@@ -18,7 +18,7 @@
 MODULE mo_q_syl_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
@@ -105,7 +105,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
 
@@ -159,7 +159,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: fract_forest_harvest_y_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(jp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_harvest_data

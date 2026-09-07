@@ -18,13 +18,13 @@
 MODULE mo_sb_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
 
   ! turnover times (mostly for simple_1d model)
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       tau_soluable_litter, &    !< turnover time of soluable litter [s]
       tau_metabolic_litter, &   !< turnover time of metabolic litter pool [s]
       tau_structural_litter, &  !< turnover time of structural litter pool [s]
@@ -34,7 +34,7 @@ MODULE mo_sb_constants
       tau_biomineralisation     !< turnover time of slow SOM pool for biomineralisation [s]
 
   ! temperature and moisture rate modifiers
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       temp_ref_tresponse, &   !< reference temperature for temperature response function [K]
       ea_depolymerisation, &  !< activation energy for depolymerisation [J mol-1]
       ea_mic_uptake, &        !< activation energy for microbial uptake [J mol-1]
@@ -58,12 +58,12 @@ MODULE mo_sb_constants
       min_rmm_gasdiffusion    !< minimum scaling factor on gas diffusion induced by soil moisture changes
 
     ! temperature response
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & temp_freeze_thres_bio, &      !< temperature threshold below which biological temperature response function is zero [K]
     & temp_freeze_window_bio        !< range around 0 degC at which temperature response function declines to zero, i.e., -2 degC to 2 degC [K]
 
   ! transport and sorption parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k_diff_org, &                 !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]
       rho_bulk_org, &               !< bulk density of organic material [kg m-3]
       carbon_per_dryweight_SOM, &   !< C per unit dryweight SOM [gC / gOM]
@@ -79,7 +79,7 @@ MODULE mo_sb_constants
       k_desorpt_f_po4               !< fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
 
   ! microbial parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       microbial_cn, &            !< molar ratio of C:N in microbes (testing only!)
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, &           !< microbial nitrogen use efficiency
@@ -89,7 +89,7 @@ MODULE mo_sb_constants
       microbial_cue_min          !< minimum microbial carbon-use efficiency
 
   ! fast and slow parameters for simple_1d SB model
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k_fast_som_cn_max, &       !< maximum microbial C:N [mol/mol]
       k_fast_som_cn_min, &       !< minimum microbial C:N [mol/mol]
       f_fast_som_cn, &           !< slope of microbial C:N to soil NH4 [kg/mol]
@@ -103,7 +103,7 @@ MODULE mo_sb_constants
       frac_slow2fast_som         !< fraction of slow SOM transformed into fast SOM
 
   ! other parameters for initialisation
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k_init_soluable_litter_cn, &    !< initial soluable litter C:N [mol/mol]
       k_init_polymeric_litter_cn, &   !< initial polymeric C:N [mol/mol]
       k_init_woody_litter_cn, &       !< initial woody litter C:N [mol/mol]
@@ -112,7 +112,7 @@ MODULE mo_sb_constants
       min_fraction_default_sb         !< minimum fraction for various cases in the SB_ process [--]
 
   ! additional microbial parameters for JSM implementation
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       fc_woody2polymeric, &             !< fraction of woody litter transformed into polymeric litter (JSM version)
       fc_soluable2dom, &                !< fraction of soluable litter transformed into dom pool (JSM version)
       k_mort_microbial, &               !< mortality rate of microbes [s-1]
@@ -132,7 +132,7 @@ MODULE mo_sb_constants
       k_n_recyc_corr                    !< correction coefficient for microbial P recycling exponential decline curve
 
   ! parameters controlling litter partitioning
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       f_soluable_residue, &      !< fraction of microbial residue entering the DOM pool
       f_soluable_leaf, &         !< fraction of leaf litter that becomes DOM
       f_soluable_fine_root, &    !< fraction of fine root litter that becomes DOM
@@ -151,7 +151,7 @@ MODULE mo_sb_constants
       lc_seed_bed                !< lignin content of seed bed [1/mol]
 
   ! mycorrhizal parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       mycorrhiza_cue, &          !< mycorrhizal carbon-use efficiency
       mycorrhiza_cn, &           !< molar ratio of C:N of mycorrhizal fungi
       mycorrhiza_np, &           !< molar ratio of N:P of mycorrhizal fungi
@@ -169,7 +169,7 @@ MODULE mo_sb_constants
       f_tau_myc                  !< increase of tau_slow in case of saprotrophic/priming macorrhizae to get similar tau_slow
 
   ! nutrient uptake kinetics & ECA approach: simple_1d model
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
       km1_up_po4, &             !< low-affinity parameter for plant and mycorrhizal uptake [mol/m3]
@@ -179,7 +179,7 @@ MODULE mo_sb_constants
       fract_vmax_low_affinity   !< fraction of vmax for nutrient uptake of low affinity transporter system []
 
   ! nutrient uptake kinetics & ECA approach: additional jsm parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       vmax_mic_uptake_nh4, &      !< maximum NH4 uptake capacity of microbes [mol N / mol biomass C / s]
       km_mic_uptake_nh4, &        !< half-saturation concentration [mol N / m3]
       vmax_mic_uptake_no3, &      !< maximum NO3 uptake capacity of microbes [mol N / mol biomass C / s]
@@ -233,7 +233,7 @@ MODULE mo_sb_constants
       fact_repartition_om_init_cond2     !< re-partition factor when OM got over-saturation in SB_ init, soil condition 2 (see docu in sb_init)
 
   ! nitrification, denitrification parameters (sb_nloss_scheme = dynamic)
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       ea_nitrification, &        !< activation energy for nitrification [J mol-1]
       ed_nitrification, &        !< deactivation energy for nitrification [J mol-1]
       t_opt_nitrification, &     !< optimum temperature for nitrification [K]
@@ -251,7 +251,7 @@ MODULE mo_sb_constants
       f_denit_n2o                !< fraction of denitrification lost as N2O [--]
 
   ! simple_1d model fixed loss and simple_1d leaching parameterisation
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       floss_nmin, &              !< fractional loss of N per unit N mineralisation
       fnit_nmin, &               !< fractional nitrification per unit N mineralisation
       fleach_nh4, &              !< fraction of NH4 amenable to leaching
@@ -260,7 +260,7 @@ MODULE mo_sb_constants
       vmax_asymb_bnf             !< maximum fraction of N deficit in N decomposition that is closed by BNF []
 
   ! Isoptope stuff
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       eta_mic_uptake_nh4, &      !< fractionation of N15 due to microbial NH4 assimilation [per mill]
       eta_mic_uptake_no3, &      !< fractionation of N15 due to microbial NO3 assimilation [per mill]
       eta_plant_uptake_nh4, &    !< fractionation of N15 due to plant NH4 assimilation [per mill]
@@ -272,7 +272,7 @@ MODULE mo_sb_constants
       eta_volatilisation_nh3     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
   ! soil P fluxes
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k_weath_mineral, &                !< Weathering coefficient of P in mineral soil (composed of a background rate (frac_background_weath_mineral) and pH/root biomass regulated rate) [s-1]
       frac_background_weath_mineral, &  !< Background (i.e., minimum) rate of weathering coefficient of P in mineral soil 'k_weath_mineral' expressed as fraction of 'k_weath_mineral' [-]
       eq_sorp_mineral_po4, &        !< Slow Pi sorption equilibrium content of mineral soil [mol P kg-1 mineral soil]
@@ -288,7 +288,7 @@ MODULE mo_sb_constants
       biomin_threshold_pc_ratio_min_assoc_om  !< Threshold P:C ratio for biomineralisation of mineral associated OM
 
   ! soil P pool
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     k1_p_pool_depth_corr, &               !< denominator coefficient for P pool depth correction  [unitless ?]
     k2_p_pool_depth_corr, &               !< numerical coefficient for P pool depth correction  [unitless ?]
     k3_p_pool_depth_corr, &               !< numerical coefficient for P pool depth correction  [unitless ?]
@@ -298,7 +298,7 @@ MODULE mo_sb_constants
     k_sb_pool_dom_assoc_c_corr            !< numerical coefficient for correction for sb_pool%dom_assoc%carbon init
 
   ! sb_pool default init values
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     def_sb_pool_metabol_litter       , &      ! metabolic litter
     def_sb_pool_simple_struct_litter , &      ! structural litter, simple_1d soil model
     def_sb_pool_jsm_struct_litter    , &      ! structural litter, JSM
@@ -311,7 +311,7 @@ MODULE mo_sb_constants
 
   ! constants used as factor for multiplication with namelist parameters when "parameter sensitivity" is enabled
   ! see sb_config & mo_qs_set_parameters:Modify_quincy_namelist_parameter
-  REAL(wp) :: &
+  REAL(jp) :: &
     f_psensi_soil_p_depth, &
     f_psensi_soil_p_labile, &
     f_psensi_soil_p_slow, &
@@ -320,14 +320,14 @@ MODULE mo_sb_constants
     f_psensi_qmax_org_fine_particle
 
   ! soil carbon init (SOM fast and slow pools)
-  REAL(wp):: &
+  REAL(jp):: &
     & reference_depth_som_init            , &   ! reference depth of initial SOM fast/slow values (lctlib parameter) [m]
     & k_som_init                          , &   ! Weilbull-shape parameter for SOM initialisation [unitless]
     & sb_pool_total_som_at_ref_depth_init , &   ! initial value of SOM at reference depth ('reference_depth_som_init') [g C m-2]
     & fract_som_fast                            ! mean of 400 sites in equilibrium with a C-dynamic QUINCY standalone simulation [unitless]
 
    !! only temporarily, mol / m2 !! @TODO
-   REAL(wp), SAVE :: &
+   REAL(jp), SAVE :: &
       nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_constants'

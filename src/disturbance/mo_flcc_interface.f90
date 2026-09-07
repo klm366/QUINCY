@@ -15,7 +15,7 @@ MODULE mo_flcc_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -108,11 +108,11 @@ CONTAINS
 
     INTEGER  :: i, j, i_tile, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nr_of_lcc_events, nr_of_combined_tiles
-    REAL(wp) :: dtime
-    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(jp) :: dtime
+    REAL(jp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
-    REAL(wp) :: fire_fract_wood_2_atmos, conversion_fact, transfer_fract
+    REAL(jp), DIMENSION(options%nc) :: current_fract
+    REAL(jp) :: fire_fract_wood_2_atmos, conversion_fact, transfer_fract
 
     LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
     INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)

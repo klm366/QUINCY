@@ -18,7 +18,7 @@
 MODULE mo_q_pheno_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -32,7 +32,7 @@ MODULE mo_q_pheno_config_class
   !> Q_PHENO_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_q_pheno_config
-    REAL(wp)            :: lai_max              !< site specific lai, used to init lai_max in Q_PHENO_
+    REAL(jp)            :: lai_max              !< site specific lai, used to init lai_max in Q_PHENO_
     CONTAINS
       PROCEDURE :: Init => Init_q_pheno_config
   END type t_q_pheno_config
@@ -53,7 +53,7 @@ CONTAINS
     LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    REAL(wp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
+    REAL(jp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
                                                    !! in case this value is less than zero, the lctlib value is used
     NAMELIST /lnd_q_pheno_nml/  &
       & active,               &

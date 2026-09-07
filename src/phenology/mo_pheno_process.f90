@@ -14,7 +14,7 @@
 MODULE mo_pheno_process
 #ifndef __NO_JSBACH__
 
-   USE mo_kind, ONLY: wp
+   USE mo_kind, ONLY: jp
 
    IMPLICIT NONE
    PRIVATE
@@ -107,14 +107,14 @@ MODULE mo_pheno_process
 
      LOGICAL,  intent(in)    :: is_newday
 
-     REAL(wp), intent(in)    :: timeStep_in_days
+     REAL(jp), intent(in)    :: timeStep_in_days
 
-     REAL(wp), intent(in)    :: lat,                &
+     REAL(jp), intent(in)    :: lat,                &
        &                        previous_day_temp_mean, &
        &                        LaiMax_corrected,   &
        &                        pseudo_soil_temp
 
-     REAL(wp), intent(inout) :: days_since_growth_begin_SG, &
+     REAL(jp), intent(inout) :: days_since_growth_begin_SG, &
        &                        chill_days_SG,      &
        &                        heat_sum_SG,        &
        &                        growth_phase_SG,    &
@@ -123,7 +123,7 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
-     REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
+     REAL(jp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
        &                  grRate     ! argument to calls of get_letItGrow
 
@@ -261,13 +261,13 @@ MODULE mo_pheno_process
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
-     REAL(wp), intent(in)    :: timeStep_in_days
-     REAL(wp), intent(in)    ::                     &
+     REAL(jp), intent(in)    :: timeStep_in_days
+     REAL(jp), intent(in)    ::                     &
                                 lat,                &
                                 LaiMax_corrected,   &
                                 pseudo_soil_temp
 
-     REAL(wp), intent(inout) ::                     &
+     REAL(jp), intent(inout) ::                     &
                                 days_since_growth_begin_EG, &
                                 chill_days_EG,      &
                                 heat_sum_EG,        &
@@ -276,7 +276,7 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
-     REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
+     REAL(jp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
                           grRate     ! argument to calls of get_letItGrow
 
@@ -401,11 +401,11 @@ MODULE mo_pheno_process
      INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
-     REAL(wp), intent(in)    :: timeStep_in_days ! express the time step as a fraction of a day. = dtime / 86400
+     REAL(jp), intent(in)    :: timeStep_in_days ! express the time step as a fraction of a day. = dtime / 86400
 
-     REAL(wp), intent(in)    :: lctlib_specificLeafArea_C
+     REAL(jp), intent(in)    :: lctlib_specificLeafArea_C
 
-     REAL(wp), intent(in)    ::                     &
+     REAL(jp), intent(in)    ::                     &
                                 NPP_pot_rate_ca,    &
                                 lat,                &
                                 LaiMax_corrected,   &
@@ -417,14 +417,14 @@ MODULE mo_pheno_process
                                 previous_day_temp_min, &
                                 previous_day_temp_max
 
-     REAL(wp), intent(inout) ::                   &
+     REAL(jp), intent(inout) ::                   &
                                 heat_sum_CRP,     &
                                 heat_sum_winter,  &
                                 growth_phase_CRP, &
                                 lai                 ! Total LAI.
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
-     REAL(wp)          :: xtmp,         &  ! argument to calls of get_letItDie
+     REAL(jp)          :: xtmp,         &  ! argument to calls of get_letItDie
                                            ! (necessary to allow for inlining of these functions)
                           grRate,       &  ! argument to calls of get_letItGrow
                           temp_min_max
@@ -669,18 +669,18 @@ MODULE mo_pheno_process
      !-----------------------------------------------------------------------
      !  ARGUMENTS
 
-     REAL(wp), intent(in)    :: timeStep_in_days
+     REAL(jp), intent(in)    :: timeStep_in_days
 
-     REAL(wp), intent(in)    ::                   &
+     REAL(jp), intent(in)    ::                   &
                                 w_soil_filling,   &
                                 LaiMax_corrected, &
                                 previous_day_NPP_pot_rate_ca
 
-     REAL(wp), intent(inout) :: lai  ! Total LAI.
+     REAL(jp), intent(inout) :: lai  ! Total LAI.
 
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
-     REAL(wp)          :: xtmp,   &       ! argument to calls of get_letItDie
+     REAL(jp)          :: xtmp,   &       ! argument to calls of get_letItDie
                                           ! (necessary to allow for inlining of these functions)
                           grRate, &       ! argument to calls of get_letItGrow
                           average_filling ! average filling of the soil buckets
@@ -694,7 +694,7 @@ MODULE mo_pheno_process
 
      ! R: Note, as in JSBACH3 all soil layers had the same water content we skiped the soil layers for w_soil_filling in JSBACH4
      !    (see update_phenology). Therefore, the following line is unnecessary.
-     !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil,wp)
+     !average_filling = SUM(w_soil_filling(j,1:nsoil,i)) / REAL(nsoil,jp)
      average_filling = w_soil_filling
 
      IF (average_filling > pheno_param_jsbach%all%wilt_point + 1E-3_wp) THEN  ! IF soil water is above wilt point
@@ -734,17 +734,17 @@ MODULE mo_pheno_process
      !-----------------------------------------------------------------------
      !  ARGUMENTS
 
-     REAL(wp), intent(in)    :: timeStep_in_days
-     REAL(wp), intent(in)    ::                   &
+     REAL(jp), intent(in)    :: timeStep_in_days
+     REAL(jp), intent(in)    ::                   &
                                 t_air_in_Celcius, &
                                 w_soil_filling,   &
                                 LaiMax_corrected, &
                                 previous_day_NPP_pot_rate_ca
 
-     REAL(wp), intent(inout) :: lai  ! Total LAI.
+     REAL(jp), intent(inout) :: lai  ! Total LAI.
      !-----------------------------------------------------------------------
      !  LOCAL VARIABLES
-     REAL(wp)          :: xtmp       ! argument to calls of get_letItDie
+     REAL(jp)          :: xtmp       ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
 
      !-----------------------------------------------------------------------
@@ -808,15 +808,15 @@ MODULE mo_pheno_process
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    REAL(wp), intent(in)    ::  lctlib_alpha_nr_ind,            &
+    REAL(jp), intent(in)    ::  lctlib_alpha_nr_ind,            &
                               & lctlib_beta_nr_ind,             &
                               & lctlib_alpha_leaf,              &
                               & lctlib_beta_leaf,               &
                               & lctlib_clumpinessFactor,        &
                               & lctlib_specificLeafArea_C
 
-    REAL(wp), intent(in)    ::  c_woods
-    REAL(wp), intent(inout) ::  current_max_green,              &
+    REAL(jp), intent(in)    ::  c_woods
+    REAL(jp), intent(inout) ::  current_max_green,              &
                               & veg_carbon_at_max_green,        &
                               & number_of_individuals,          &
                               & biomass_per_individual,         &
@@ -825,7 +825,7 @@ MODULE mo_pheno_process
 
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES     TODO_JN -> KN select those from above which are only required internally
-    REAL(wp) :: kgPerHa, &
+    REAL(jp) :: kgPerHa, &
           & leafC_per_individual,       & ! Leaf C per individual according to allometric relationships [kg/tree]
           & leafC                         ! Leaf C according to allometric relationships [mol(C) m-2(canopy)]
 
@@ -883,8 +883,8 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
-     REAL(wp), intent(in)    :: c_green, c_woods, c_reserve
-     REAL(wp), intent(inout) :: current_max_green, veg_carbon_at_max_green
+     REAL(jp), intent(in)    :: c_green, c_woods, c_reserve
+     REAL(jp), intent(inout) :: current_max_green, veg_carbon_at_max_green
 
      IF (current_max_green + EPSILON(1.0_wp) .LT. c_green) THEN
        current_max_green = c_green
@@ -900,9 +900,9 @@ MODULE mo_pheno_process
   ! This is the function get_letItGrow() for growth rate k=0, i.e. it describes only leaf shedding:
   !      x(t+tau) = x(t)*exp(-p*tau),
   ! where "tau" is the time step and "p" the leaf shedding rate. This function is introduced only to save computation time.
-  REAL(wp) FUNCTION get_letItDie(timeStep_in_days,x,p)  !! returns x(t+tau)
+  REAL(jp) FUNCTION get_letItDie(timeStep_in_days,x,p)  !! returns x(t+tau)
 
-    REAL(wp),INTENT(in) ::                  &
+    REAL(jp),INTENT(in) ::                  &
                           timeStep_in_days, & ! the time step expressed in days (set in "initPhenology")
                           x,                & ! lai at time t
                           p                   ! leaf shedding rate (units: 1/days)
@@ -929,16 +929,16 @@ MODULE mo_pheno_process
   ! (2)      x(t+tau) = (k-p) ----------------------------------------.
   !                            k*x(t) + exp(-(k-p)*tau)*(k-p-k*x(t))
   !
-  REAL(wp) FUNCTION get_letItGrow(timeStep_in_days,x,k,p,z)  !! returns result of integration x(t+tau)
+  REAL(jp) FUNCTION get_letItGrow(timeStep_in_days,x,k,p,z)  !! returns result of integration x(t+tau)
 
-    REAL(wp),INTENT(in) ::                   &
+    REAL(jp),INTENT(in) ::                   &
                            timeStep_in_days, & ! the time step length (delta t) expressed in days
                            x,                & ! LAI at time t
                            k,                & ! growth rate          (units: 1/days)
                            p,                & ! leaf shedding rate   (units: 1/days)
                            z                   ! maximum LAI
 
-    REAL(wp)            :: hlp1,hlp2,numerator,denominator
+    REAL(jp)            :: hlp1,hlp2,numerator,denominator
 
     !$ACC ROUTINE SEQ
 
@@ -963,13 +963,13 @@ MODULE mo_pheno_process
   ! aging. Below this critical value the shedding rate increases because the plants adapt to lower water availability. At the
   ! wilting point the shedding is so large, that it is larger than the assumed fixed growth rate.
   !
-  REAL(wp) FUNCTION get_shedRate_RG(bucket_filling)
+  REAL(jp) FUNCTION get_shedRate_RG(bucket_filling)
 
     USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
 
-    REAL(wp), INTENT(in) :: bucket_filling     ! average filling of the soil water buckets
+    REAL(jp), INTENT(in) :: bucket_filling     ! average filling of the soil water buckets
 
-    REAL(wp)             :: shedRate, slope
+    REAL(jp)             :: shedRate, slope
 
     !$ACC ROUTINE SEQ
 
@@ -982,9 +982,9 @@ MODULE mo_pheno_process
 
   END FUNCTION get_shedRate_RG
 
-  REAL(wp) FUNCTION get_foliage_projected_cover(fpc_max, lai, clumpiness)
+  REAL(jp) FUNCTION get_foliage_projected_cover(fpc_max, lai, clumpiness)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & fpc_max,            &
       & lai,                &
       & clumpiness

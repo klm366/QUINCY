@@ -14,14 +14,14 @@
 MODULE mo_rad_parameters
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
   PUBLIC
 
   ! Parameters required for albedo and fapar calculation
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & kbl0_vis = def_parameters, &               !< extinction coefficient over black leaves
     & kdf0_vis = def_parameters, &               !< extinction coefficient for diffuse PAR (Spitters eq. 7)
     & kbl0_nir = def_parameters, &               !< extinction coefficient over black leaves in NIR range
@@ -30,16 +30,16 @@ MODULE mo_rad_parameters
     & k_csf = def_parameters, &                  !< scaling factor in the crown-shape effect on clumping (Campbell & Norman, 1998, eq 15.35)
     & min_cos_zenith_angle_rad = def_parameters  !< minimum coszine zenith angle for radiation calculation
 
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & albedo_stem_vis    = def_parameters, &  !< Stem albedo (visible range)                                  [-]
     & albedo_stem_nir    = def_parameters, &  !< Stem albedo (nir range)                                      [-]
     & kbl_stem           = def_parameters     !< Stem absorption (1-transmissivity (vis,nir))                 [-]
 
   ! conversion factors
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & rad2ppfd = def_parameters             !< micro-mol /J
 
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & MinRadiation = def_parameters         !< Minimum amount of radiation for albedo calculations [W/m2]
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_rad_parameters'

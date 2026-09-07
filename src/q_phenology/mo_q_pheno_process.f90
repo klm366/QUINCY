@@ -18,7 +18,7 @@
 MODULE mo_q_pheno_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: jp
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
@@ -68,10 +68,10 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(jp)                          :: dtime                  !< timestep length
 
     INTEGER  :: lctlib_phenology_type
-    REAL(wp) :: lctlib_beta_soil_flush, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, lctlib_tau_leaf, &
+    REAL(jp) :: lctlib_beta_soil_flush, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, lctlib_tau_leaf, &
       &         lctlib_gdd_req_max, lctlib_k_gdd_dormance, lctlib_beta_soil_senescence, lctlib_t_air_senescence, &
       &         lctlib_min_leaf_age
 
@@ -279,33 +279,33 @@ CONTAINS
       &                                   ipheno_type_cbalance_deciduous
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),     INTENT(in)    :: dtime                            !< timestep length
+    REAL(jp),     INTENT(in)    :: dtime                            !< timestep length
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: np_leaf                          !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: gdd_req_max                      !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: k_gdd_dormance                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: beta_soil_senescence             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: t_air_senescence                 !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: min_leaf_age                     !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: t_air                            !< air temp
-    REAL(wp),     INTENT(in)    :: beta_soil_gs_tphen_mavg          !< soil ..
-    REAL(wp),     INTENT(in)    :: t_air_tphen_mavg                 !< moving average air temperature over phenology-relevant period
-    REAL(wp),     INTENT(in)    :: t_soil_srf_tphen_mavg            !< moving average soil surface temperature
-    REAL(wp),     INTENT(in)    :: t_air_week_mavg                  !< moving average air temperature over a week
-    REAL(wp),     INTENT(in)    :: t_air_month_mavg                 !< moving average air temperature over a month
-    REAL(wp),     INTENT(in)    :: mean_leaf_age                    !< mean leaf age
-    REAL(wp),     INTENT(in)    :: gpp_tlabile_mavg                 !< moving average gpp over tlabile
-    REAL(wp),     INTENT(in)    :: maint_respiration_tlabile_mavg   !< moving average maintenance respiration over tlabile
-    REAL(wp),     INTENT(inout) :: growing_season                   !< growing season Yes/No
-    REAL(wp),     INTENT(inout) :: growth_req_n_tlabile_mavg        !< moles N required for a unit of C growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
-    REAL(wp),     INTENT(inout) :: gdd                              !< growing degree days
-    REAL(wp),     INTENT(inout) :: root_phenology_type              !< category for trigger of end of growing season in grasses
+    REAL(jp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: np_leaf                          !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: gdd_req_max                      !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: k_gdd_dormance                   !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: beta_soil_senescence             !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: t_air_senescence                 !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: min_leaf_age                     !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: t_air                            !< air temp
+    REAL(jp),     INTENT(in)    :: beta_soil_gs_tphen_mavg          !< soil ..
+    REAL(jp),     INTENT(in)    :: t_air_tphen_mavg                 !< moving average air temperature over phenology-relevant period
+    REAL(jp),     INTENT(in)    :: t_soil_srf_tphen_mavg            !< moving average soil surface temperature
+    REAL(jp),     INTENT(in)    :: t_air_week_mavg                  !< moving average air temperature over a week
+    REAL(jp),     INTENT(in)    :: t_air_month_mavg                 !< moving average air temperature over a month
+    REAL(jp),     INTENT(in)    :: mean_leaf_age                    !< mean leaf age
+    REAL(jp),     INTENT(in)    :: gpp_tlabile_mavg                 !< moving average gpp over tlabile
+    REAL(jp),     INTENT(in)    :: maint_respiration_tlabile_mavg   !< moving average maintenance respiration over tlabile
+    REAL(jp),     INTENT(inout) :: growing_season                   !< growing season Yes/No
+    REAL(jp),     INTENT(inout) :: growth_req_n_tlabile_mavg        !< moles N required for a unit of C growth to determine labile pool size
+    REAL(jp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
+    REAL(jp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
+    REAL(jp),     INTENT(inout) :: gdd                              !< growing degree days
+    REAL(jp),     INTENT(inout) :: root_phenology_type              !< category for trigger of end of growing season in grasses
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: hlp1                             !< helper variable for tmp values
+    REAL(jp)                    :: hlp1                             !< helper variable for tmp values
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -441,22 +441,22 @@ CONTAINS
     USE mo_q_pheno_parameters,            ONLY: k_leafon_canopy
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,      INTENT(in)    :: nc                                !< dimensions
-    REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
+    REAL(jp),     INTENT(in)    :: dtime                             !< timestep length
     INTEGER,      INTENT(in)    :: lctlib_phenology_type             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_tau_leaf                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: growing_season(:)                 !< does the plant intend to grow?
-    REAL(wp),     INTENT(in)    :: lai(:)                            !< current LAI (m2/m2)
-    REAL(wp),     INTENT(in)    :: lai_max(:)                        !< maximum LAI (m2/m2)
-    REAL(wp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: lctlib_tau_leaf                   !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: growing_season(:)                 !< does the plant intend to grow?
+    REAL(jp),     INTENT(in)    :: lai(:)                            !< current LAI (m2/m2)
+    REAL(jp),     INTENT(in)    :: lai_max(:)                        !< maximum LAI (m2/m2)
+    REAL(jp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
     !------------------------------------------------------------------------------------------------------ !
     INTEGER                     :: ic                       !< loop over point of the chunk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_leaf_bgcm_change'

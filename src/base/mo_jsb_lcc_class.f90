@@ -17,7 +17,7 @@
 MODULE mo_jsb_lcc_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_util,                ONLY: one_of, int2string
   USE mo_exception,           ONLY: finish, message
   USE mo_jsb_control,         ONLY: debug_on
@@ -35,13 +35,13 @@ MODULE mo_jsb_lcc_class
     & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk,                             &
     & copy_from_active_to_passive_var_onChunk
 
-  REAL(wp), PARAMETER :: min_daily_cf_change = 1.0E-12_wp
+  REAL(jp), PARAMETER :: min_daily_cf_change = 1.0E-12_jp
     !< Min change in cover fractions for daily lcc, i.e. if the change is smaller than this threshold the lcc is not applied
-  REAL(wp), PARAMETER :: min_annual_cf_change = min_daily_cf_change * one_year
+  REAL(jp), PARAMETER :: min_annual_cf_change = min_daily_cf_change * one_year
     !< Min change in cover fractions for annual lcc, i.e. if the change is smaller than this threshold the lcc is not applied
-  REAL(wp), PARAMETER :: max_tolerated_cf_mismatch = 1.0E-08_wp
+  REAL(jp), PARAMETER :: max_tolerated_cf_mismatch = 1.0E-08_jp
     !< Max mismatch in cover fractions which is tolerated when comparing different cover fraction sums
-  REAL(wp), PARAMETER :: max_tolerated_fract_mismatch = 1.0E-14_wp
+  REAL(jp), PARAMETER :: max_tolerated_fract_mismatch = 1.0E-14_jp
     !< Maximum tolerated mismatch in forest age fraction sums (only used when running with FAGE)
 
   !> Type to collect variable pointers for one specific conserved quantity (CQ) on all tiles involved in
@@ -58,10 +58,10 @@ MODULE mo_jsb_lcc_class
 !    INTEGER :: type_id = -1     !< one of the CQ_TYPEs ( mo_jsb_cqt_class ) -- JN-TODO: required? -> also in encompassing type...
     TYPE(t_jsb_var_p), ALLOCATABLE :: var_on_tile(:)   !< Pointer to the variable in the memory on each tile
                                                        !< involved in the lcc process
-    REAL(wp), ALLOCATABLE :: relocate_this(:,:,:)      !< Collector for the amount of matter to be relocated
+    REAL(jp), ALLOCATABLE :: relocate_this(:,:,:)      !< Collector for the amount of matter to be relocated
                                                        !< for a REAL2D variable from each involved tile.
                                                        !< Dimensions: (nproma, nr_of_tiles, nblks)
-    REAL(wp), ALLOCATABLE :: relocate_this_3D(:,:,:,:) !< Collector for the amount of matter to be relocated
+    REAL(jp), ALLOCATABLE :: relocate_this_3D(:,:,:,:) !< Collector for the amount of matter to be relocated
                                                        !< for a REAL3D variable from each involved tile.
                                                        !< Dimensions: (nproma, extra_dim, nr_of_tiles, nblks)
   END TYPE t_jsb_lcc_var
@@ -96,9 +96,9 @@ MODULE mo_jsb_lcc_class
         !< Collection of lcc var types that are actively relocated for the encompassing lcc process (size: nr_of_active_vars)
     TYPE(t_jsb_lcc_var_p), ALLOCATABLE :: passive_vars(:)
         !< Collection of lcc var types that are passively relocated for the encompassing lcc process  (size: nr_of_passive_vars)
-    REAL(wp), ALLOCATABLE :: initial_area(:,:,:) !< Initial area before lcc event (nproma,nr_of_tiles,nblks)
-    REAL(wp), ALLOCATABLE :: gained_area(:,:,:)  !< Area gained during lcc event (nproma,nr_of_tiles,nblks)
-    REAL(wp), ALLOCATABLE :: lost_area(:,:,:)    !< Area lost during lcc event (nproma,nr_of_tiles,nblks)
+    REAL(jp), ALLOCATABLE :: initial_area(:,:,:) !< Initial area before lcc event (nproma,nr_of_tiles,nblks)
+    REAL(jp), ALLOCATABLE :: gained_area(:,:,:)  !< Area gained during lcc event (nproma,nr_of_tiles,nblks)
+    REAL(jp), ALLOCATABLE :: lost_area(:,:,:)    !< Area lost during lcc event (nproma,nr_of_tiles,nblks)
   END TYPE t_jsb_lcc_proc
 
   !> Helper type used to collect pointers to lcc structures on different lcc processes
@@ -133,16 +133,16 @@ CONTAINS
     INTEGER,              INTENT(in)    :: ice     !< Index of chunk end
     CHARACTER(len=*),     INTENT(in)    :: active_var_name  !< Active (source) variable name
     CHARACTER(len=*),     INTENT(in)    :: passive_var_name !< Passive (sink) variable name
-    REAL(wp),      INTENT(in), OPTIONAL :: transfer_fract   !< Fraction of matter transferred from the active
+    REAL(jp),      INTENT(in), OPTIONAL :: transfer_fract   !< Fraction of matter transferred from the active
                                                             !< variable to the passive variable.
                                                             !< If not passed, 1.0 is assumed
-    REAL(wp),      INTENT(in), OPTIONAL :: conversion_fact  !< Conversion fraction in case that the active
+    REAL(jp),      INTENT(in), OPTIONAL :: conversion_fact  !< Conversion fraction in case that the active
                                                             !< variable has a different unit then the passive
                                                             !< variable. If not passed, 1.0 is assumed
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':transfer_from_active_to_passive_var_onChunk'
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & this_transfer_fract, &  !< Fraction of matter transferred from the active variable
       & this_conversion_fact    !< Conversion factor in case active and passive variables have different units
     INTEGER  :: &
@@ -228,15 +228,15 @@ CONTAINS
     INTEGER,              INTENT(in)    :: ice     !< Index of chunk end
     CHARACTER(len=*), INTENT(in)    :: active_var_name  !< Active (source) variable
     CHARACTER(len=*), INTENT(in)    :: passive_var_name !< Passive (sink) variable
-    REAL(wp),  INTENT(in), OPTIONAL :: copy_fract       !< Fraction of matter copied from the active to the
+    REAL(jp),  INTENT(in), OPTIONAL :: copy_fract       !< Fraction of matter copied from the active to the
                                                         !< passive variable - If not passed, 1.0 is assumed
-    REAL(wp),  INTENT(in), OPTIONAL :: conversion_fact  !< Conversion factor in case that the if active
+    REAL(jp),  INTENT(in), OPTIONAL :: conversion_fact  !< Conversion factor in case that the if active
                                                         !< variable has a different unit then the passive
                                                         !< variable - If not passed, 1.0 is assumed
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':copy_from_active_to_passive_var_onChunk'
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & this_copy_fract, &      !< Fraction of the matter on the active variable which should be copied
       & this_conversion_fact    !< Conversion factor in case active and passive variables have different units
     INTEGER  :: &
@@ -302,7 +302,7 @@ CONTAINS
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),                   INTENT(INOUT) :: collected_matter(:) !< Array for the collected matter
+    REAL(jp),                   INTENT(INOUT) :: collected_matter(:) !< Array for the collected matter
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations !< Lcc structure of the lcc process
     INTEGER,                    INTENT(IN)    :: i_tile  !< Index of the tile in lcc structure
     INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
@@ -320,7 +320,7 @@ CONTAINS
       i_active = one_of( TRIM(active_var_names(i)) , lcc_relocations%active_vars_names)
       IF (i_active > 0) THEN
         collected_matter(:) = collected_matter(:) + lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk)
-        lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) = 0.0_wp
+        lcc_relocations%active_vars(i_active)%p%relocate_this(ics:ice,i_tile,iblk) = 0.0_jp
       END IF
     END DO
 

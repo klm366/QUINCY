@@ -14,7 +14,7 @@
 MODULE mo_fuel_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
 
   IMPLICIT NONE
   PRIVATE
@@ -39,17 +39,17 @@ CONTAINS
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in)  :: c_acid_ag1_ta(:)
-    REAL(wp), INTENT(in)  :: c_water_ag1_ta(:)
-    REAL(wp), INTENT(in)  :: c_ethanol_ag1_ta(:)
-    REAL(wp), INTENT(in)  :: c_nonsoluble_ag1_ta(:)
-    REAL(wp), INTENT(in)  :: c_acid_ag2_ta(:)
-    REAL(wp), INTENT(in)  :: c_water_ag2_ta(:)
-    REAL(wp), INTENT(in)  :: c_ethanol_ag2_ta(:)
-    REAL(wp), INTENT(in)  :: c_nonsoluble_ag2_ta(:)
+    REAL(jp), INTENT(in)  :: c_acid_ag1_ta(:)
+    REAL(jp), INTENT(in)  :: c_water_ag1_ta(:)
+    REAL(jp), INTENT(in)  :: c_ethanol_ag1_ta(:)
+    REAL(jp), INTENT(in)  :: c_nonsoluble_ag1_ta(:)
+    REAL(jp), INTENT(in)  :: c_acid_ag2_ta(:)
+    REAL(jp), INTENT(in)  :: c_water_ag2_ta(:)
+    REAL(jp), INTENT(in)  :: c_ethanol_ag2_ta(:)
+    REAL(jp), INTENT(in)  :: c_nonsoluble_ag2_ta(:)
 
     ! Output Arguments
-    REAL(wp), INTENT(OUT)   :: fuel(:)
+    REAL(jp), INTENT(OUT)   :: fuel(:)
 
     ! Local Variables
     INTEGER :: ic, nc

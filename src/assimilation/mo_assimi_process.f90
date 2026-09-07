@@ -15,7 +15,7 @@ MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,  ONLY: acc_stream
-  USE mo_kind,         ONLY: wp
+  USE mo_kind,         ONLY: jp
 
   IMPLICIT NONE
   PRIVATE
@@ -40,18 +40,18 @@ CONTAINS
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
-    REAL(wp), INTENT(inout) :: & ! inout needed for lumi GPU
+    REAL(jp), INTENT(inout) :: & ! inout needed for lumi GPU
       & declination,        & ! Solar Declination angle
       & canopy_bound_lai
-    REAL(wp), INTENT(in), DIMENSION(:) :: &
+    REAL(jp), INTENT(in), DIMENSION(:) :: &
       & lai,                & ! Leaf area index [-]
       & lat
 
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(jp), INTENT(out), DIMENSION(:) :: &
       & scaling_fact_cl
 
     ! Local variables
-    REAL(wp) ::         &
+    REAL(jp) ::         &
       & k12,            &
       & cos_zenith_noon
 
@@ -94,7 +94,7 @@ CONTAINS
 
 
   !> ! Computes canopy conductance per canopy layer for water-unlimited case
-  REAL(wp) FUNCTION calc_assimilation_waterunlimited( &
+  REAL(jp) FUNCTION calc_assimilation_waterunlimited( &
     & C4Flag,                                            & ! in
     & CarboxRate,                                        & ! in
     & ETransport,                                        & ! in
@@ -114,10 +114,10 @@ CONTAINS
 
     LOGICAL,  INTENT(in) ::   &
       & C4Flag
-    REAL(wp), INTENT(in) ::   &
+    REAL(jp), INTENT(in) ::   &
       & CarboxRate,           &
       & ETransport
-    REAL(wp), INTENT(in) ::   &
+    REAL(jp), INTENT(in) ::   &
       & t_air,                &  ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,            &  ! Surface pressure
       & par_down_mol,         &  ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -127,7 +127,7 @@ CONTAINS
 
     ! Local variables
 
-    REAL(wp) ::           &
+    REAL(jp) ::           &
       & CO2_conc_leaf_cl, &
       & T0,               & ! Temperature relative to 25 degree Celcius, i.e. T - 25
       & T1,               & ! 25 degress Celsius expressed in Kelvin
@@ -149,7 +149,7 @@ CONTAINS
                             ! (idea for improvement: darkinhib should be closer to 1 at very high latitudes)
                             ! The FUNCTION is an own creation.
 
-    REAL(wp) ::           & ! variables with canopy layer
+    REAL(jp) ::           & ! variables with canopy layer
       & VCMAX,            & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
       & JMAX,             & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
       & K,                & ! CO2 SPECIFICITY OF PECASE
@@ -416,11 +416,11 @@ CONTAINS
     !  ARGUMENTS
     LOGICAL,  INTENT(in) ::      &
       & C4Flag
-    REAL(wp), INTENT(in) ::      &
+    REAL(jp), INTENT(in) ::      &
       & CarboxRate,              &
       & ETransport
 
-    REAL(wp), INTENT(in), DIMENSION(:) ::      &
+    REAL(jp), INTENT(in), DIMENSION(:) ::      &
       & t_air,                   & ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,               & ! Surface pressure
       & par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -429,7 +429,7 @@ CONTAINS
       & N_scaling_factors,       & ! Enzymatic scaling with canopy height
       & canopy_cond_cl             ! Input only for the water limited case here
 
-    REAL(wp), INTENT(out), DIMENSION(:) ::     &
+    REAL(jp), INTENT(out), DIMENSION(:) ::     &
       & CO2_conc_leaf_cl,        & ! CO2 concentration inside leaf [mol(CO2)/mol(Air)] (identical for all layers):
                                    ! Output only for the water limited case here
       & gross_assimilation_cl,   & ! Gross assimilation of C per leaf area [ mol (CO2) / (m^2(leaf area) * s) ] and canopy layer
@@ -446,7 +446,7 @@ CONTAINS
 ! !     INTEGER                           :: icanopy
 ! !     INTEGER                           :: i
 
-    REAL(wp) ::    &
+    REAL(jp) ::    &
       & T0,        & ! Temperature relative to 25 degree Celcius, i.e. T - 25
       & T1,        & ! 25 degress Celsius expressed in Kelvin
       & KC,        & ! Michaelis-Menten constant for CO2
@@ -469,7 +469,7 @@ CONTAINS
       & K1,        & ! helper
       & K2           ! helper
 
-    REAL(wp) ::    & ! variables with canopy layer
+    REAL(jp) ::    & ! variables with canopy layer
       & VCMAX,     & ! MAXIMUM CARBOXYLATION RATE [MOL(CO2)/M^2 S]
       & JMAX,      & ! MAXIMUM RATE OF ELECTRON TRANSPORT [MOL(CO2)/M^2 S]
       & K,         & ! CO2 SPECIFICITY OF PECASE
@@ -740,20 +740,20 @@ CONTAINS
     USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
-    REAL(wp),  INTENT(in), DIMENSION(:) ::   &
+    REAL(jp),  INTENT(in), DIMENSION(:) ::   &
       & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
                                  ! .. been accounted for) [mol(CO2)/(m^2 (canopy ground) s)]
       & dark_respiration_ca      ! Dark respiration of leaves [mol(CO2)/(m^2 (canopy ground) s)]
 
-    REAL(wp),  INTENT(out), DIMENSION(:) :: &
+    REAL(jp),  INTENT(out), DIMENSION(:) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
-    REAL(wp)             :: maintenanceRespiration ! R_m
-    REAL(wp)             :: growthRespiration      ! R_g
+    REAL(jp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(jp)             :: maintenanceRespiration ! R_m
+    REAL(jp)             :: growthRespiration      ! R_g
     INTEGER :: nc, ic
 
     !-----------------------------------------------------------------------
@@ -788,14 +788,14 @@ CONTAINS
     LOGICAL,  INTENT(in)    :: lstart             ! first time step in a simulation
     LOGICAL,  INTENT(in)    :: init_running_means ! initialize the min/max temperature climatology
     LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
-    REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
-    REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
-    REAL(wp), INTENT(in)    :: seconds_year       ! number of seconds in previous year
-    REAL(wp), INTENT(inout) :: NPP_sum_year       !
-    REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
+    REAL(jp), INTENT(in)    :: delta_time         ! time step length [s]
+    REAL(jp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
+    REAL(jp), INTENT(in)    :: seconds_year       ! number of seconds in previous year
+    REAL(jp), INTENT(inout) :: NPP_sum_year       !
+    REAL(jp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
 !   local variables
-    REAL(wp) :: prev_year_mean_NPP ! NPP of previous year
+    REAL(jp) :: prev_year_mean_NPP ! NPP of previous year
 
    ! update NPP_sum_year and NPP_mean_5year
    IF (.NOT. new_year .OR. lstart) THEN

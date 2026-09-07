@@ -18,7 +18,7 @@
 MODULE mo_seb_lake
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
   USE mo_exception, ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -113,14 +113,14 @@ CONTAINS
       & q_bcoef_ice
 
     ! Local variables
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & hcap_wtr,           &
       & zero,               &
       & hflx_tmp,           &
       & pch_wtr,            &
       & ddrag_wtr
 
-    REAL(wp), ALLOCATABLE :: &
+    REAL(jp), ALLOCATABLE :: &
       hcap_ice(:)
 
     LOGICAL ::                       &
@@ -131,8 +131,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: model_scheme
-    REAL(wp) :: dtime
-    REAL(wp) ::         &
+    REAL(jp) :: dtime
+    REAL(jp) ::         &
       & cpd_or_cvd,     &
       & lhflx_tmp,      &
       & ml_depth,       & !< Depth of lake mixed layer
@@ -478,25 +478,25 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, clw, rhoi, alf
 
-    REAL(wp), INTENT(inout) :: t_lwtr            !< Surface temperature over open water
-    REAL(wp), INTENT(in)    :: hflx             !< Sum of all radiative and turbulent surface heat fluxes
-    REAL(wp), INTENT(inout) :: hflx_resid       !< Heat flux for ice formation or melting
+    REAL(jp), INTENT(inout) :: t_lwtr            !< Surface temperature over open water
+    REAL(jp), INTENT(in)    :: hflx             !< Sum of all radiative and turbulent surface heat fluxes
+    REAL(jp), INTENT(inout) :: hflx_resid       !< Heat flux for ice formation or melting
                                                 !! l_ice_melting = .TRUE.  : heat flux from complete ice melting (input)
                                                 !!                           zero on output
                                                 !!               = .FALSE. : heat flux from unrealized ice formation from
                                                 !!                           previous time step (input),
                                                 !!                           heat flux from realized or unrealized ice formation
                                                 !!                           in this time step (output)
-    REAL(wp), INTENT(inout) :: hcap             !< Heat capacity of lake over open water
+    REAL(jp), INTENT(inout) :: hcap             !< Heat capacity of lake over open water
     LOGICAL,  INTENT(inout) :: l_ice_formation  !< Indicator for ice formation
     LOGICAL,  INTENT(inout) :: l_ice_melting    !< Indicator for (complete) ice melting
     LOGICAL,  INTENT(in)    :: l_ice            !< Indicator for ice cover
 
-    REAL(wp), INTENT(in)    :: dtime            !< Time step
-    REAL(wp), INTENT(in)    :: ml_depth         !< Mixed-layer depth
-    REAL(wp), INTENT(in)    :: min_ice_depth    !< Mininum ice thickness
+    REAL(jp), INTENT(in)    :: dtime            !< Time step
+    REAL(jp), INTENT(in)    :: ml_depth         !< Mixed-layer depth
+    REAL(jp), INTENT(in)    :: min_ice_depth    !< Mininum ice thickness
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & t_star, &
       & t_freeze
 
@@ -547,25 +547,25 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, rhoi, rhoi, rhos, als, alf, ki, ks, ci, cs !, clw
 
-    REAL(wp), INTENT(inout) :: t_lice
-    REAL(wp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
-    REAL(wp), INTENT(out)   :: hflx_cond_ice
-    REAL(wp), INTENT(out)   :: hflx_melt_snow
-    REAL(wp), INTENT(inout) :: hflx_melt_lice  !< in:  Residual heat flux from unrealized ice melting
+    REAL(jp), INTENT(inout) :: t_lice
+    REAL(jp), INTENT(out)   :: hcap_ice       !< Heat capacity of thin ice surface layer
+    REAL(jp), INTENT(out)   :: hflx_cond_ice
+    REAL(jp), INTENT(out)   :: hflx_melt_snow
+    REAL(jp), INTENT(inout) :: hflx_melt_lice  !< in:  Residual heat flux from unrealized ice melting
                                               !! out: Heat flux from melting of ice
-    REAL(wp), INTENT(in)    :: hflx           !< Sum of all surface heat fluxes (net radiation + sensible + latent)
-    REAL(wp), INTENT(in)    :: lhflx          !< Latent surface heat flux for ice
-    REAL(wp), INTENT(in)    :: snowfall       !< Snow fall                [kg m-2 s-1]
-    REAL(wp), INTENT(in)    :: hi             !< Ice thickness [m]
-    REAL(wp), INTENT(inout) :: hs             !< Snow depth [m water equivalent]
-    REAL(wp), INTENT(in)    :: fs             !< Fraction of snow on ice
-    REAL(wp), INTENT(in)    :: hi_min
-    REAL(wp), INTENT(in)    :: dtime
+    REAL(jp), INTENT(in)    :: hflx           !< Sum of all surface heat fluxes (net radiation + sensible + latent)
+    REAL(jp), INTENT(in)    :: lhflx          !< Latent surface heat flux for ice
+    REAL(jp), INTENT(in)    :: snowfall       !< Snow fall                [kg m-2 s-1]
+    REAL(jp), INTENT(in)    :: hi             !< Ice thickness [m]
+    REAL(jp), INTENT(inout) :: hs             !< Snow depth [m water equivalent]
+    REAL(jp), INTENT(in)    :: fs             !< Fraction of snow on ice
+    REAL(jp), INTENT(in)    :: hi_min
+    REAL(jp), INTENT(in)    :: dtime
 
-    REAL(wp) :: hi_eff     !< Effective ice thickness including snow cover
-    REAL(wp) :: hflx_melt  !< Excess heat available for melting snow and ice
-    REAL(wp) :: delta_hs
-    REAL(wp) :: delta_t_lice
+    REAL(jp) :: hi_eff     !< Effective ice thickness including snow cover
+    REAL(jp) :: hflx_melt  !< Excess heat available for melting snow and ice
+    REAL(jp) :: delta_hs
+    REAL(jp) :: delta_t_lice
 
     hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
 
@@ -638,20 +638,20 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoi, alf, als
 
-    REAL(wp), INTENT(inout) :: hi              !< Ice thickness [m]
-    REAL(wp), INTENT(inout) :: fi              !< Ice fraction  []
-    REAL(wp), INTENT(inout) :: hflx_form_ice   !< Residual heat flux from ice formation (complete or unrealized) [W m-2 = J m-2 s-1]
-    REAL(wp), INTENT(in)    :: lhflx           !< Latent heat flux of ice  [W m-2 = J m-2 s-1]
-    REAL(wp), INTENT(in)    :: hflx_cond_ice   !< Conductive heat flux of ice [W m-2 = J m-2 s-1]
-    REAL(wp), INTENT(inout) :: hflx_melt_lice   !< Heat flux from melting of ice [W m-2 = J m-2 s-1]
+    REAL(jp), INTENT(inout) :: hi              !< Ice thickness [m]
+    REAL(jp), INTENT(inout) :: fi              !< Ice fraction  []
+    REAL(jp), INTENT(inout) :: hflx_form_ice   !< Residual heat flux from ice formation (complete or unrealized) [W m-2 = J m-2 s-1]
+    REAL(jp), INTENT(in)    :: lhflx           !< Latent heat flux of ice  [W m-2 = J m-2 s-1]
+    REAL(jp), INTENT(in)    :: hflx_cond_ice   !< Conductive heat flux of ice [W m-2 = J m-2 s-1]
+    REAL(jp), INTENT(inout) :: hflx_melt_lice   !< Heat flux from melting of ice [W m-2 = J m-2 s-1]
                                                !! in:  flux from unrealized ice melting from previous time step
                                                !! out: flux from unrealized or complete ice melting during this time step
     LOGICAL,  INTENT(in)    :: l_ice_formation !< Indicator for ice formation
     LOGICAL,  INTENT(inout) :: l_ice_melting   !< Indicator for complete ice melting
-    REAL(wp), INTENT(in)    :: fs              !< Fraction of snow on ice
+    REAL(jp), INTENT(in)    :: fs              !< Fraction of snow on ice
 
-    REAL(wp), INTENT(in)    :: hi_min          !< Minimum ice thickness [m]
-    REAL(wp), INTENT(in)    :: dtime
+    REAL(jp), INTENT(in)    :: hi_min          !< Minimum ice thickness [m]
+    REAL(jp), INTENT(in)    :: dtime
 
     IF (l_ice_formation) THEN                              ! Formation of a new slab of ice
 
@@ -722,12 +722,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: ch                 ! for new turb
 
-    REAL(wp) ::                  &
+    REAL(jp) ::                  &
       & s_air,     &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef    !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, alpha
+    REAL(jp) :: dtime, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model

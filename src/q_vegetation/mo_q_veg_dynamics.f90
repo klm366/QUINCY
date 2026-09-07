@@ -18,7 +18,7 @@
 MODULE mo_q_veg_dynamics
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: jp
   USE mo_jsb_impl_constants,   ONLY: true, false, test_false_true
   USE mo_jsb_control,          ONLY: debug_on
   USE mo_exception,            ONLY: message
@@ -69,10 +69,10 @@ CONTAINS
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
-    REAL(wp), DIMENSION(options%nc)   :: fpc                    !< current foliage projective cover
-    REAL(wp), DIMENSION(options%nc)   :: hlp1                   !< dummy variable
-    REAL(wp), DIMENSION(options%nc)   :: fract_herbivory        !< fraction of leaf and fruit (carbon) lost to herbivory
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(jp), DIMENSION(options%nc)   :: fpc                    !< current foliage projective cover
+    REAL(jp), DIMENSION(options%nc)   :: hlp1                   !< dummy variable
+    REAL(jp), DIMENSION(options%nc)   :: fract_herbivory        !< fraction of leaf and fruit (carbon) lost to herbivory
+    REAL(jp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< loop over chunk
     INTEGER                           :: ielem, ix_elem         !< id and index of elements
@@ -403,17 +403,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in) :: nc                          !< dimensions
     INTEGER,                  INTENT(in) :: lctlib_growthform           !< lctlib paramter
-    REAL(wp),                 INTENT(in) :: lctlib_wood_density         !< lctlib paramter
-    REAL(wp),                 INTENT(in) :: lctlib_k_latosa             !< lctlib paramter
-    REAL(wp), DIMENSION(nc),  INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
+    REAL(jp),                 INTENT(in) :: lctlib_wood_density         !< lctlib paramter
+    REAL(jp),                 INTENT(in) :: lctlib_k_latosa             !< lctlib paramter
+    REAL(jp), DIMENSION(nc),  INTENT(in) :: veg_pool_sap_wood_carbon, & !< sapwood mass (mol C / m2)
                                             lai                     , & !< lai (m2/m2)
                                             dens_ind                , & !< tree density (#/m2)
                                             height                  , & !< tree height (m)
                                             diameter                    !< tree diameter (m)
-    REAL(wp), DIMENSION(nc)              :: fpc                         !< foliage projective cover (fraction)
+    REAL(jp), DIMENSION(nc)              :: fpc                         !< foliage projective cover (fraction)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)                     :: crown_area_tile      ! crown area times individual density
-    REAL(wp), DIMENSION(nc)                     :: lai_ind              ! LAI of the individual
+    REAL(jp), DIMENSION(nc)                     :: crown_area_tile      ! crown area times individual density
+    REAL(jp), DIMENSION(nc)                     :: lai_ind              ! LAI of the individual
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -464,30 +464,30 @@ CONTAINS
       &                                 itree, igrass, background_mort_rate_tree, background_mort_rate_grass
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                         !< dimensions
-    REAL(wp),                 INTENT(in)    :: dtime                      !< timestep length
+    REAL(jp),                 INTENT(in)    :: dtime                      !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     INTEGER,                  INTENT(in)    :: lctlib_growthform          !< lctlib paramter
-    REAL(wp),                 INTENT(in)    :: lctlib_k1_mort_greff       !< lctlib paramter
+    REAL(jp),                 INTENT(in)    :: lctlib_k1_mort_greff       !< lctlib paramter
     CHARACTER(len=*),         INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: an_boc_tvegdyn_mavg        !< long-term net C balance at the bottom of the canopy (micro-mol / m2 / s)
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: net_growth_tvegdyn_mavg    !< long-term net growth of the plant (micro-mol / m2 / s)
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
-    REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
-    REAL(wp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
-    REAL(wp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: an_boc_tvegdyn_mavg        !< long-term net C balance at the bottom of the canopy (micro-mol / m2 / s)
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: net_growth_tvegdyn_mavg    !< long-term net growth of the plant (micro-mol / m2 / s)
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: lai_tvegdyn_mavg           !< long-term LAI of the plant
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: fpc                        !< foliage projective cover
+    REAL(jp),                 INTENT(in)    :: veg_pool_mt(:,:,:)         !< bgcm veg_pool
+    REAL(jp),                 INTENT(inout) :: veg_litterfall_mt(:,:,:)   !< bgcm flux: veg_litterfall
+    REAL(jp), DIMENSION(nc),  INTENT(out)   :: mortality_rate             !< current mortality rate (1/timestep)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: n_veg_bgcm_comp                !< number of vegetation bgcm compartments to loop over
     INTEGER                     :: ic                             !< loop over point of chunk
     INTEGER                     :: ielem                          !< loop over bgcm elements
     INTEGER                     :: ix_comp, ix_elem               !< index of compartment or element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc)     :: boc_cbalance                   !< C balance at bottom of canopy
-    REAL(wp), DIMENSION(nc)     :: greff                          !< long-term growth efficiency
-    REAL(wp), DIMENSION(nc)     :: greff_mortality_rate           !< rate of mortality due to low growth efficiency
-    REAL(wp), DIMENSION(nc)     :: self_thinning_mortality_rate   !< rate of mortality due to self-thinning
-    REAL(wp), DIMENSION(nc)     :: bg_mortality_rate              !< background rate of mortality
-    REAL(wp)                    :: hlp1                           !< potential biomass mortality (to be corrected for litterfall)
+    REAL(jp), DIMENSION(nc)     :: boc_cbalance                   !< C balance at bottom of canopy
+    REAL(jp), DIMENSION(nc)     :: greff                          !< long-term growth efficiency
+    REAL(jp), DIMENSION(nc)     :: greff_mortality_rate           !< rate of mortality due to low growth efficiency
+    REAL(jp), DIMENSION(nc)     :: self_thinning_mortality_rate   !< rate of mortality due to self-thinning
+    REAL(jp), DIMENSION(nc)     :: bg_mortality_rate              !< background rate of mortality
+    REAL(jp)                    :: hlp1                           !< potential biomass mortality (to be corrected for litterfall)
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -635,35 +635,35 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                           !< dimensions
-    REAL(wp), INTENT(in)    :: dtime                        !< timestep length
+    REAL(jp), INTENT(in)    :: dtime                        !< timestep length
     INTEGER,  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
     LOGICAL,  INTENT(in)    :: lctlib_GrassFlag             !< if tile is natural grassland (TRUE) or not
     LOGICAL,  INTENT(in)    :: lctlib_PastureFlag           !< if tile is pasture (TRUE) or not
-    REAL(wp), INTENT(in)    :: lctlib_cn_leaf_min           !< lctlib paramter (minimal leaf C:N ratio, molar units)
-    REAL(wp), INTENT(in)    :: lai(:)                       !< current LAI (m2/m2)
-    REAL(wp), INTENT(in)    :: net_growth_tvegdyn_mavg(:)   !< long-term average net growth (micro-mol / m2 / s)
-    REAL(wp), INTENT(in)    :: mortality_rate(:)            !< mortality rate
-    REAL(wp), INTENT(in)    :: veg_pool_mt(:,:,:)           !< vegetation pool
-    REAL(wp), INTENT(inout) :: herbivory_leaf_resp(:)       !< respiration due to herbivory on leaves (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: herbivory_leaf_resp_c13(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: herbivory_leaf_resp_c14(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: herbivory_fruit_resp(:)      !< respiration due to herbivory on fruits (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: herbivory_fruit_resp_c13(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: herbivory_fruit_resp_c14(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
-    REAL(wp), INTENT(inout) :: fract_herbivory(:)           !< fraction of leaf and fruit (carbon) lost to herbivory
-    REAL(wp), INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< vegetation litterfall
+    REAL(jp), INTENT(in)    :: lctlib_cn_leaf_min           !< lctlib paramter (minimal leaf C:N ratio, molar units)
+    REAL(jp), INTENT(in)    :: lai(:)                       !< current LAI (m2/m2)
+    REAL(jp), INTENT(in)    :: net_growth_tvegdyn_mavg(:)   !< long-term average net growth (micro-mol / m2 / s)
+    REAL(jp), INTENT(in)    :: mortality_rate(:)            !< mortality rate
+    REAL(jp), INTENT(in)    :: veg_pool_mt(:,:,:)           !< vegetation pool
+    REAL(jp), INTENT(inout) :: herbivory_leaf_resp(:)       !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: herbivory_leaf_resp_c13(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: herbivory_leaf_resp_c14(:)   !< respiration due to herbivory on leaves (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: herbivory_fruit_resp(:)      !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: herbivory_fruit_resp_c13(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: herbivory_fruit_resp_c14(:)  !< respiration due to herbivory on fruits (micro-mol / m2 / s)
+    REAL(jp), INTENT(inout) :: fract_herbivory(:)           !< fraction of leaf and fruit (carbon) lost to herbivory
+    REAL(jp), INTENT(inout) :: veg_litterfall_mt(:,:,:)     !< vegetation litterfall
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                 :: n_veg_bgcm_comp              !< number of vegetation bgcm compartments
     INTEGER                 :: ic                           !< loop over nc
     INTEGER                 :: ielem                        !< loop over bgcm elements
     INTEGER                 :: ix_comp, ix_elem             !< index of element and compartment in bgcm, used for looping
-    REAL(wp)                :: k_herbivory_act              !< asymptotic herbivory fraction of net growth
-    REAL(wp)                :: min_net_growth_herbivory_act !< minimal net growth above which herbivory occurs (mol/m2/yr)
-    REAL(wp)                :: eff_fract_herbivory          !< updated herbivory fraction
-    REAL(wp)                :: fact_lim_carbon              !< carbon limitation of herbivory (unitless)
-    REAL(wp)                :: fact_lim_nitrogen            !< nitrogen limitation of herbivory (unitless)
-    REAL(wp)                :: hlp1                         !< helper var
+    REAL(jp)                :: k_herbivory_act              !< asymptotic herbivory fraction of net growth
+    REAL(jp)                :: min_net_growth_herbivory_act !< minimal net growth above which herbivory occurs (mol/m2/yr)
+    REAL(jp)                :: eff_fract_herbivory          !< updated herbivory fraction
+    REAL(jp)                :: fact_lim_carbon              !< carbon limitation of herbivory (unitless)
+    REAL(jp)                :: fact_lim_nitrogen            !< nitrogen limitation of herbivory (unitless)
+    REAL(jp)                :: hlp1                         !< helper var
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_herbivory'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -793,26 +793,26 @@ CONTAINS
     USE mo_jsb_physical_constants,      ONLY: Tzero
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                  INTENT(in)    :: nc                           !< dimensions
-    REAL(wp),                 INTENT(in)    :: dtime                        !< timestep length
+    REAL(jp),                 INTENT(in)    :: dtime                        !< timestep length
     INTEGER,                  INTENT(in)    :: elements_index_map(:)        !< map bgcm element ID -> IDX
     LOGICAL,                  INTENT(in)    :: is_element_used(:)           !< is element in 'elements_index_map' used
-    REAL(wp),                 INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: wtr_plant_avail_rel          !< plant available water [fraction of maximum]
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< growing season
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: fpc                          !< folage projective cover
-    REAL(wp), DIMENSION(nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
-    REAL(wp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
-    REAL(wp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
+    REAL(jp),                 INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: wtr_plant_avail_rel          !< plant available water [fraction of maximum]
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: growing_season               !< growing season
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: fpc                          !< folage projective cover
+    REAL(jp), DIMENSION(nc),  INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
+    REAL(jp),                 INTENT(in)    :: seed_bed_pool_mt(:,:)        !< bgcm: seed_bed pool
+    REAL(jp),                 INTENT(inout) :: veg_establishment_mt(:,:)    !< bgcm flux: vegetation establishment
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem              !< loop over bgcm elements
     INTEGER                     :: ix_elem            !< index of element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc)     :: establishment_rate
-    REAL(wp), DIMENSION(nc)     :: tc
-    REAL(wp), DIMENSION(nc)     :: rfr_ratio
-    REAL(wp), DIMENSION(nc)     :: flim_light
-    REAL(wp), DIMENSION(nc)     :: flim_moist
-    REAL(wp), DIMENSION(nc)     :: flim_temp
+    REAL(jp), DIMENSION(nc)     :: establishment_rate
+    REAL(jp), DIMENSION(nc)     :: tc
+    REAL(jp), DIMENSION(nc)     :: rfr_ratio
+    REAL(jp), DIMENSION(nc)     :: flim_light
+    REAL(jp), DIMENSION(nc)     :: flim_moist
+    REAL(jp), DIMENSION(nc)     :: flim_temp
     INTEGER                     :: icanopy
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_establishment'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -866,11 +866,11 @@ CONTAINS
     & veg_establishment_carbon)  &
     & RESULT (delta_dens_ind)
 
-    REAL(wp), INTENT(in) :: lctlib_seed_size            !< seed size to convert C into individuals, lctlib parameter
-    REAL(wp), INTENT(in) :: dens_ind                    !< current individuum density (#/m2)
-    REAL(wp), INTENT(in) :: mortality_rate              !< mortality per timestep
-    REAL(wp), INTENT(in) :: veg_establishment_carbon    !< vegetation establishment measured in C
-    REAL(wp)             :: delta_dens_ind              !< change in individual density
+    REAL(jp), INTENT(in) :: lctlib_seed_size            !< seed size to convert C into individuals, lctlib parameter
+    REAL(jp), INTENT(in) :: dens_ind                    !< current individuum density (#/m2)
+    REAL(jp), INTENT(in) :: mortality_rate              !< mortality per timestep
+    REAL(jp), INTENT(in) :: veg_establishment_carbon    !< vegetation establishment measured in C
+    REAL(jp)             :: delta_dens_ind              !< change in individual density
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_density_individuals'
     ! ----------------------------------------------------------------------------------------------------- !

@@ -15,7 +15,7 @@
 MODULE mo_assimi_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: jp
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
@@ -72,7 +72,7 @@ MODULE mo_assimi_memory_class
 !                                                                           ! [MOL(CO2)/m^2 s] (mean value)
 
 !
-!      REAL(wp), POINTER, DIMENSION(:,:) ::                               &
+!      REAL(jp), POINTER, DIMENSION(:,:) ::                               &
 !                                         CO2_flux_net_acc,               & ! net CO2 flux to the atmosphere
 !                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
 !                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes

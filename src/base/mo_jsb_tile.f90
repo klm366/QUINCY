@@ -26,7 +26,7 @@
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
@@ -463,7 +463,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER                    :: table
     TYPE(t_input_file)         :: input_file
-    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
+    REAL(jp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
@@ -540,7 +540,7 @@ CONTAINS
         ! The tile fraction is set to the fraction of the parent tile divided by
         ! the number of children of the parent tile (i.e. number of sibling tiles + 1)
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
+        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), jp)
       ELSE ! tile is the box tile, fraction of the tile is set to 1
         tmp_fract(:,:) = 1._wp
       END IF
@@ -948,8 +948,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: current_child
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     INTEGER :: nproma, nblks, i_tile
-    REAL(wp),           POINTER :: tmp_fract(:,:)
-    REAL(wp),       ALLOCATABLE :: sum_fract(:,:)
+    REAL(jp),           POINTER :: tmp_fract(:,:)
+    REAL(jp),       ALLOCATABLE :: sum_fract(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Check_child_cover_fractions_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     ! Only relevant for tiles with children

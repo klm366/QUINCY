@@ -14,7 +14,7 @@
 MODULE mo_jsb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
@@ -130,11 +130,11 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    REAL(jp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
+    REAL(jp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(jp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
     CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
@@ -147,7 +147,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(jp)          :: missval_r_loc
     LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(1), gdims(1)
     INTEGER           :: pos_of_var
@@ -311,11 +311,11 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    REAL(jp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
+    REAL(jp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(jp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
     CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
@@ -327,7 +327,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(jp)          :: missval_r_loc
     LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: pos_of_var
@@ -495,11 +495,11 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    REAL(jp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
+    REAL(jp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(jp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of standard output groups this var belongs to
     CHARACTER(len=*),     INTENT(in), OPTIONAL :: output_groups(:)    ! vector of additional output groups this var belongs to
@@ -512,7 +512,7 @@ CONTAINS
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(jp)          :: missval_r_loc
     LOGICAL           :: lrestart_cont_loc
     INTEGER           :: ldims(3), gdims(3)
     INTEGER           :: pos_of_var
@@ -694,11 +694,11 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    REAL(jp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
+    REAL(jp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(jp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
     INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
@@ -711,7 +711,7 @@ CONTAINS
     TYPE(t_cf)        :: cf
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lrestart_loc
-    ! REAL(wp)          :: missval_r_loc
+    ! REAL(jp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     ! INTEGER           :: pos_of_var
     ! CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups(:)     ! groups to which this variable belongs to
@@ -830,7 +830,7 @@ CONTAINS
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real2d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
-    REAL(wp), POINTER                      :: var_collected(:,:)
+    REAL(jp), POINTER                      :: var_collected(:,:)
 
     INTEGER :: i
 
@@ -855,7 +855,7 @@ CONTAINS
     INTEGER,                INTENT(in)     :: ics, ice, iblk
     INTEGER,                INTENT(in)     :: no_children ! of the parent tile
     TYPE(t_jsb_var_real3d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
-    REAL(wp), POINTER                      :: var_collected(:,:,:)
+    REAL(jp), POINTER                      :: var_collected(:,:,:)
 
     INTEGER :: i !, iproc
 
@@ -882,7 +882,7 @@ CONTAINS
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var         ! of the parent tile only to find child memories
-    REAL(wp),            INTENT(in)     :: var_handdown(:,:) ! e.g. corresponds to (ics:ice,no_children)
+    REAL(jp),            INTENT(in)     :: var_handdown(:,:) ! e.g. corresponds to (ics:ice,no_children)
 
     INTEGER :: i !, iproc
 
@@ -905,12 +905,12 @@ CONTAINS
     INTEGER,             INTENT(in)     :: ics, ice, iblk
     INTEGER,             INTENT(in)     :: no_children   ! of the parent tile
     CLASS(t_jsb_var),    INTENT(in)     :: var           ! of the parent tile: tile%mem(iproc)%p%var
-    REAL(wp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
-    REAL(wp), allocatable               :: var_averaged(:)
+    REAL(jp),            INTENT(in)     :: fract_st(:,:) ! fract_st(:,:) =tile%aggregators(1)%p%fractions(ics:ice,iblk,:)
+    REAL(jp), allocatable               :: var_averaged(:)
 
     ! local variables
     INTEGER :: i
-    REAL(wp), allocatable               :: var_collected(:,:)
+    REAL(jp), allocatable               :: var_collected(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Average_over_children'
 
 #ifdef _OPENACC

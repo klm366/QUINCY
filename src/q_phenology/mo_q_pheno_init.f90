@@ -18,7 +18,7 @@
 MODULE mo_q_pheno_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
 
@@ -77,7 +77,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
     INTEGER                     :: nblks, ib, nproma, ic
-    REAL(wp)                    :: config_lai_max, lctlib_phenology_type, lctlib_lai_max
+    REAL(jp)                    :: config_lai_max, lctlib_phenology_type, lctlib_lai_max
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_pheno_init_bc'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -129,7 +129,7 @@ CONTAINS
           END IF
 
           ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
-          ! NOTE: false and true are of type REAL(wp)
+          ! NOTE: false and true are of type REAL(jp)
           IF (lctlib_phenology_type == ievergreen) THEN
             growing_season(ic,ib) = true
           ELSE

@@ -78,7 +78,7 @@
 MODULE mo_hydro_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
@@ -101,7 +101,7 @@ MODULE mo_hydro_constants
     & Semi_Distributed_ = 1,                & !< Identifier; compare [[t_hydro_config:hydro_scale]]
     & Uniform_          = 2                   !< Identifier; compare [[t_hydro_config:hydro_scale]]
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     ! Parameters used to calculate snow fraction from snow amount
     & wsn2fract_eps    = 1.E-12_wp,        & !< Used for numerical reasons (Roesch et al. 2001, Eq. 6)
     & wsn2fract_sigfac = 0.15_wp,          & !< Factor to approximate subgrid scale slopes (Roesch et al. 2001, Eq. 7)
@@ -179,16 +179,16 @@ MODULE mo_hydro_constants
     ! Parameter for bedrock
     & k_brock                 = 1.E-6_wp         !< Hydraulic conductivity of fractured bedrock [m/s] (Freeze & Cherry, 1979)
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & matric_pot_min          = -1000.0_wp       !< min value of matric potential ('mpot_act'), tuned [m]
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & wtr_density             = 998.0_wp, &      !< Density of water at 20 degrees C (e.g. Tanaka et al., 2001) [kg / m3]
     & ice_density             = 916.7_wp         !< Density of ice, textbook value [kg / m3]
 
 #ifdef __QUINCY_STANDALONE__
   ! quincy standalone
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & k_pwp_a         = 0.031_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
     & k_pwp_c         = 0.487_wp, &              !< Empirical constant in pedo-transfer function to get water content at PWP
     & k_pwp_s         = -0.024_wp, &             !< Empirical constant in pedo-transfer function to get water content at PWP
@@ -212,7 +212,7 @@ MODULE mo_hydro_constants
     & k_sat_dt        = 0.043_wp                 !< Empirical constant in pedo-transfer function to get water content at SAT
 #endif
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & frac_wtr_vertical_transport_up_max    = -0.75_wp, &   !< Maximum upward material transport across soil layers,
                                                             !< i.e., 'frac_wtr_transp_down_sl'; parameter value: pure assumption
     & frac_wtr_vertical_transport_down_max  = 0.75_wp, &    !< Maximum downward material transport across soil layers,

@@ -18,7 +18,7 @@ MODULE mo_disturb_config_class
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -32,12 +32,12 @@ MODULE mo_disturb_config_class
                                              ! 2 : Arora and Boer (2005) (not yet), 3 : Thonicke et al.(2001)
     INTEGER           :: windbreak_algorithm ! Select windbreak algorithm: 0 : none, 1 : jsbach (default)
     LOGICAL           :: lburn_pasture
-    REAL(wp)          :: wnd_threshold, &    ! factor by which the previous day maximum wind speed
+    REAL(jp)          :: wnd_threshold, &    ! factor by which the previous day maximum wind speed
                                              ! must be larger than the climatological daily maximum
                                              ! wind speed to allow any wind damage
                          wnd_damage_scale    ! scaling factor for wind damage
 
-   REAL(wp)           :: fire_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+   REAL(jp)           :: fire_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
                          fire_rel_hum_threshold, & ! maximal relative humidity for fire
                          fire_minimum_woody,     & ! minimal fraction of act_fpc of woody PFT to be burned each year
                          fire_minimum_grass,     & ! minimal fraction of act_fpc of grass PFT to be burned each year
@@ -69,14 +69,14 @@ CONTAINS
     INTEGER                     :: windbreak_algorithm
     LOGICAL                     :: lburn_pasture
     ! Fire namelist parameters:
-    REAL(wp)                    :: fire_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
+    REAL(jp)                    :: fire_litter_threshold,  & ! minimal amount of litter [mol(C)/m^2(grid box)] for fire
                                    fire_rel_hum_threshold, & ! maximal relative humidity for fire
                                    fire_minimum_woody,     & ! minimal fraction of act_fpc of woody PFT to be burned each year
                                    fire_minimum_grass,     & ! minimal fraction of act_fpc of grass PFT to be burned each year
                                    fire_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
                                    fire_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
     ! Wind break namelist parameters:
-    REAL(wp)                    :: wnd_threshold, & ! factor by which the previous day maximum wind speed
+    REAL(jp)                    :: wnd_threshold, & ! factor by which the previous day maximum wind speed
                                                     ! must be larger than the climatological daily maximum
                                                     ! wind speed to allow any wind damage
                                    wnd_damage_scale ! scaling factor for wind damage

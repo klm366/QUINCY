@@ -18,7 +18,7 @@
 MODULE mo_q_sb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: jp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model
@@ -600,23 +600,23 @@ CONTAINS
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(jp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: scaling(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: sb_pool_total_c_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: total_soil_inorg_n_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: het_respiration_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(jp) :: scaling(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(jp) :: sb_pool_total_c_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(jp) :: total_soil_inorg_n_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(jp) :: het_respiration_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    REAL(wp), POINTER      :: total_som_c_gsum(:)
-    REAL(wp), POINTER      :: total_inorg_n_gsum(:)
-    REAL(wp), POINTER      :: rh_gsum(:)
-    REAL(wp), POINTER      :: nbp_gsum(:)
-    REAL(wp), POINTER      :: fnloss_gsum(:)
-    REAL(wp), POINTER      :: fn2o_gsum(:)
+    REAL(jp), POINTER      :: total_som_c_gsum(:)
+    REAL(jp), POINTER      :: total_inorg_n_gsum(:)
+    REAL(jp), POINTER      :: rh_gsum(:)
+    REAL(jp), POINTER      :: nbp_gsum(:)
+    REAL(jp), POINTER      :: fnloss_gsum(:)
+    REAL(jp), POINTER      :: fn2o_gsum(:)
     INTEGER                :: nsoil, is
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_q_sb_diagnostics'

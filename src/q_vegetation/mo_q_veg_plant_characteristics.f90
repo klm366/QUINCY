@@ -37,7 +37,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_plant_characteristics(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: jp
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
@@ -71,20 +71,20 @@ CONTAINS
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
     INTEGER                           :: nsoil_w                !< number of soil layers as used/defined by the SB_ process
-    REAL(wp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_ubounds(:)!< canopy grid helper variable ubounds
-    REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(jp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
+    REAL(jp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
+    REAL(jp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
+    REAL(jp), ALLOCATABLE             :: vgrid_canopy_ubounds(:)!< canopy grid helper variable ubounds
+    REAL(jp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(jp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
     INTEGER                           :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
     LOGICAL                           :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation - q_assimi config
-    REAL(wp) :: config_blending_height
-    REAL(wp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
-    REAL(wp) :: lctlib_wood_density, lctlib_phi_leaf_min, lctlib_k_latosa, lctlib_k0_fn_struc, lctlib_fn_oth_min
-    REAL(wp) :: lctlib_gmin, lctlib_g0, lctlib_t_jmax_omega
+    REAL(jp) :: config_blending_height
+    REAL(jp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
+    REAL(jp) :: lctlib_wood_density, lctlib_phi_leaf_min, lctlib_k_latosa, lctlib_k0_fn_struc, lctlib_fn_oth_min
+    REAL(jp) :: lctlib_gmin, lctlib_g0, lctlib_t_jmax_omega
     INTEGER  :: lctlib_growthform, lctlib_ps_pathway
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_plant_characteristics'
     ! ----------------------------------------------------------------------------------------------------- !

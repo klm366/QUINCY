@@ -18,7 +18,7 @@ MODULE mo_fage_config_class
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_util,               ONLY: int2string
   USE mo_io_units,           ONLY: filename_max
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN, MEDIUM_NAME_LEN
 
@@ -85,8 +85,8 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
     INTEGER :: i
-    REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
-    REAL(wp), ALLOCATABLE :: age_class_max_age(:), age_class_mean_age(:)
+    REAL(jp), ALLOCATABLE :: fage_grid_levels(:)
+    REAL(jp), ALLOCATABLE :: age_class_max_age(:), age_class_mean_age(:)
     TYPE(t_jsb_vgrid), POINTER :: forest_age, age_classes_grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_config'
@@ -145,7 +145,7 @@ CONTAINS
     CALL register_vgrid(age_classes_grid)
 
     !> specifies vertical grid with tracked age dimension
-    fage_grid_levels(1:max_age) = (/ (REAL(i,kind=wp),i=1,max_age) /)
+    fage_grid_levels(1:max_age) = (/ (REAL(i,kind=jp),i=1,max_age) /)
     forest_age  => new_vgrid('forest_age', ZAXIS_GENERIC, max_age, &
       & levels  = fage_grid_levels (1:max_age) - 0.5_wp, &
       & lbounds = fage_grid_levels (1:max_age) - 1._wp,  &
@@ -172,11 +172,11 @@ CONTAINS
       !< the age class scheme to determine age class boundaries: currently either 'equal' or 'shorterYoung'
     INTEGER, INTENT(IN)          ::  max_age               !<
     INTEGER, INTENT(IN)          ::  nacs                  !<
-    REAL(wp), INTENT(INOUT)      ::  age_class_max_age(:)  !<
-    REAL(wp), INTENT(INOUT)      ::  age_class_mean_age(:) !<
+    REAL(jp), INTENT(INOUT)      ::  age_class_max_age(:)  !<
+    REAL(jp), INTENT(INOUT)      ::  age_class_mean_age(:) !<
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: i
-    REAL(wp):: age_interval
+    REAL(jp):: age_interval
     CHARACTER(len=*), PARAMETER :: routine = modname//':derive_age_class_boundaries'
     ! -------------------------------------------------------------------------------------------------- !
 

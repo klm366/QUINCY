@@ -18,7 +18,7 @@
 MODULE mo_q_veg_products_decay
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -60,7 +60,7 @@ CONTAINS
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store                 !< the bgcm store of this tile
     INTEGER                           :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                           :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
-    REAL(wp)                          :: dtime                      !< timestep length
+    REAL(jp)                          :: dtime                      !< timestep length
     INTEGER                           :: iblk, ics, ice, nc         !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':update_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -150,14 +150,14 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in) :: nc                    !< block dimension
-    REAL(wp),     INTENT(in) :: dtime                 !< timestep length
+    REAL(jp),     INTENT(in) :: dtime                 !< timestep length
     LOGICAL,      INTENT(in) :: l_element_used(:)     !< indicates which elements are in use
     INTEGER,      INTENT(in) :: elements_index_map(:) !< map bgcm element ID -> IX
-    REAL(wp),     INTENT(in) :: tau                   !< decay time of decaying product pool
-    REAL(wp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
-    REAL(wp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
+    REAL(jp),     INTENT(in) :: tau                   !< decay time of decaying product pool
+    REAL(jp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
+    REAL(jp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                          :: fract_turnover    !< turnover fraction
+    REAL(jp)                          :: fract_turnover    !< turnover fraction
     INTEGER                           :: ic, id_elem       !< loop counter
     INTEGER                           :: ix_elem           !< element index
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_products_decay'

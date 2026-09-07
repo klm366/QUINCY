@@ -19,7 +19,7 @@
 MODULE mo_seb_land
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
   USE mo_exception, ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -134,7 +134,7 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp), DIMENSION(options%nc)  :: &
+    REAL(jp), DIMENSION(options%nc)  :: &
      & s_old,                           &
      & t_srf_old,                       &
      & s_srf,                           &
@@ -151,7 +151,7 @@ CONTAINS
      & is_glacier,                    &
      & tile_fract_zero
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & qsat_old,                     &
       & t_air_in_Celcius,             &
       & cpd_or_cvd
@@ -159,7 +159,7 @@ CONTAINS
     LOGICAL  :: l_freeze_config, l_supercool_config, use_tmx, l_skin_temp
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, alpha
+    REAL(jp) :: dtime, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday, jsb_standalone
     INTEGER  :: ilct
@@ -568,51 +568,51 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
 
     INTEGER, PARAMETER :: NUM_ITERS = 10
-    REAL(wp), PARAMETER :: LIMIT_DELTAT = 10._wp
+    REAL(jp), PARAMETER :: LIMIT_DELTAT = 10._wp
 
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
 
-    REAL(wp), INTENT(IN) :: cpd_or_cvd
+    REAL(jp), INTENT(IN) :: cpd_or_cvd
     LOGICAL,  INTENT(IN) :: lstart
     LOGICAL,  INTENT(IN) :: tile_fract_zero(:)
 
-    REAL(wp), INTENT(IN) :: t_air(:)
-    REAL(wp), INTENT(IN) :: q_air(:)
-    REAL(wp), INTENT(IN) :: wind_air(:)
+    REAL(jp), INTENT(IN) :: t_air(:)
+    REAL(jp), INTENT(IN) :: q_air(:)
+    REAL(jp), INTENT(IN) :: wind_air(:)
 
-    REAL(wp), INTENT(IN) :: rad_srf_net(:)
-    REAL(wp), INTENT(IN) :: press_srf(:)
+    REAL(jp), INTENT(IN) :: rad_srf_net(:)
+    REAL(jp), INTENT(IN) :: press_srf(:)
 
-    REAL(wp), INTENT(IN) :: t2s_conv(:)
-    REAL(wp), INTENT(IN) :: t(:)
-    REAL(wp), INTENT(IN) :: t_unfilt(:)
-    REAL(wp), INTENT(IN) :: frozen_fract(:)
-    REAL(wp), INTENT(IN) :: fact_q_air(:)
-    REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(wp), INTENT(IN) :: forc_hflx(:)
-    REAL(wp), INTENT(IN) :: heat_cap(:)
-    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(wp), INTENT(IN) :: le_melt_pot(:)
-    REAL(wp), INTENT(IN) :: veg_height(:)
-    REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(jp), INTENT(IN) :: t2s_conv(:)
+    REAL(jp), INTENT(IN) :: t(:)
+    REAL(jp), INTENT(IN) :: t_unfilt(:)
+    REAL(jp), INTENT(IN) :: frozen_fract(:)
+    REAL(jp), INTENT(IN) :: fact_q_air(:)
+    REAL(jp), INTENT(IN) :: fact_qsat_srf(:)
+    REAL(jp), INTENT(IN) :: forc_hflx(:)
+    REAL(jp), INTENT(IN) :: heat_cap(:)
+    REAL(jp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(jp), INTENT(IN) :: le_melt_pot(:)
+    REAL(jp), INTENT(IN) :: veg_height(:)
+    REAL(jp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
 
-    REAL(wp), INTENT(OUT) :: t_acoef(:)
-    REAL(wp), INTENT(OUT) :: t_bcoef(:)
-    REAL(wp), INTENT(OUT) :: q_acoef(:)
-    REAL(wp), INTENT(OUT) :: q_bcoef(:)
+    REAL(jp), INTENT(OUT) :: t_acoef(:)
+    REAL(jp), INTENT(OUT) :: t_bcoef(:)
+    REAL(jp), INTENT(OUT) :: q_acoef(:)
+    REAL(jp), INTENT(OUT) :: q_bcoef(:)
 
-    REAL(wp), INTENT(OUT) :: pch(:)
-    REAL(wp), INTENT(OUT) :: drag_srf(:)
-    REAL(wp), INTENT(INOUT) :: richardson(:)
+    REAL(jp), INTENT(OUT) :: pch(:)
+    REAL(jp), INTENT(OUT) :: drag_srf(:)
+    REAL(jp), INTENT(INOUT) :: richardson(:)
 
-    REAL(wp), INTENT(OUT) :: s_star(:)
-    REAL(wp), INTENT(INOUT) :: s_srf(:)
-    REAL(wp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(wp), INTENT(OUT) :: qsat_star(:)
-    REAL(wp), INTENT(OUT) :: dQdT(:)
-    REAL(wp), INTENT(OUT) :: t_radref(:)
-    REAL(wp), INTENT(OUT) :: le_phase_change(:)
+    REAL(jp), INTENT(OUT) :: s_star(:)
+    REAL(jp), INTENT(INOUT) :: s_srf(:)
+    REAL(jp), INTENT(OUT) :: dt_sk_dt_srf(:)
+    REAL(jp), INTENT(OUT) :: qsat_star(:)
+    REAL(jp), INTENT(OUT) :: dQdT(:)
+    REAL(jp), INTENT(OUT) :: t_radref(:)
+    REAL(jp), INTENT(OUT) :: le_phase_change(:)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -624,12 +624,12 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic, iter
     INTEGER  :: model_scheme
-    REAL(wp) :: alpha, dtime
+    REAL(jp) :: alpha, dtime
 
     LOGICAL :: l_skin_temp
 
-    REAL(wp) :: ddrag_srf(options%nc), t_star(options%nc), s_srf_in(options%nc)
-    REAL(wp) :: s_ref, s_melt, heat_tcoef, dheat_tcoef, eps, rad_net_star
+    REAL(jp) :: ddrag_srf(options%nc), t_star(options%nc), s_srf_in(options%nc)
+    REAL(jp) :: s_ref, s_melt, heat_tcoef, dheat_tcoef, eps, rad_net_star
 
     model => Get_model(tile%owner_model_id)
 
@@ -797,7 +797,7 @@ CONTAINS
           le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
+          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
           CALL surface_temp_implicit(alpha, dtime,                & ! in
@@ -850,7 +850,7 @@ CONTAINS
           le_phase_change(ic) = 0._wp
         ELSE
           s_ref = t2s_conv(ic) * t(ic)
-          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
+          s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
             & q_effective(qsat_star(ic), q_air(ic),   &
             & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .TRUE.)
           CALL surface_temp_implicit(alpha, dtime,                & ! in
@@ -889,48 +889,48 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     INTEGER, INTENT(IN) :: nc
-    REAL(wp), INTENT(IN) :: alpha
-    REAL(wp), INTENT(IN) :: dtime
-    REAL(wp), INTENT(IN) :: cpd_or_cvd
+    REAL(jp), INTENT(IN) :: alpha
+    REAL(jp), INTENT(IN) :: dtime
+    REAL(jp), INTENT(IN) :: cpd_or_cvd
 
     LOGICAL, INTENT(IN) :: lstart
     LOGICAL, INTENT(IN) :: l_skin_temp
     LOGICAL, INTENT(IN) :: tile_fract_zero(:)
 
-    REAL(wp), INTENT(IN) :: t2s_conv(:)
-    REAL(wp), INTENT(IN) :: t(:)
-    REAL(wp), INTENT(IN) :: q_air(:)
-    REAL(wp), INTENT(IN) :: press_srf(:)
-    REAL(wp), INTENT(IN) :: rad_srf_net(:)
-    REAL(wp), INTENT(IN) :: frozen_fract(:)
-    REAL(wp), INTENT(IN) :: fact_q_air(:)
-    REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(wp), INTENT(IN) :: forc_hflx(:)
-    REAL(wp), INTENT(IN) :: heat_cap(:)
-    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(wp), INTENT(IN) :: le_melt_pot(:)
-    REAL(wp), INTENT(IN), OPTIONAL :: skin_conductivity(:)
+    REAL(jp), INTENT(IN) :: t2s_conv(:)
+    REAL(jp), INTENT(IN) :: t(:)
+    REAL(jp), INTENT(IN) :: q_air(:)
+    REAL(jp), INTENT(IN) :: press_srf(:)
+    REAL(jp), INTENT(IN) :: rad_srf_net(:)
+    REAL(jp), INTENT(IN) :: frozen_fract(:)
+    REAL(jp), INTENT(IN) :: fact_q_air(:)
+    REAL(jp), INTENT(IN) :: fact_qsat_srf(:)
+    REAL(jp), INTENT(IN) :: forc_hflx(:)
+    REAL(jp), INTENT(IN) :: heat_cap(:)
+    REAL(jp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(jp), INTENT(IN) :: le_melt_pot(:)
+    REAL(jp), INTENT(IN), OPTIONAL :: skin_conductivity(:)
 
-    REAL(wp), INTENT(IN) :: t_acoef(:)
-    REAL(wp), INTENT(IN) :: t_bcoef(:)
-    REAL(wp), INTENT(IN) :: q_acoef(:)
-    REAL(wp), INTENT(IN) :: q_bcoef(:)
+    REAL(jp), INTENT(IN) :: t_acoef(:)
+    REAL(jp), INTENT(IN) :: t_bcoef(:)
+    REAL(jp), INTENT(IN) :: q_acoef(:)
+    REAL(jp), INTENT(IN) :: q_bcoef(:)
 
-    REAL(wp), INTENT(IN) :: drag_srf(:)
+    REAL(jp), INTENT(IN) :: drag_srf(:)
 
-    REAL(wp), INTENT(OUT) :: s_star(:)
-    REAL(wp), INTENT(INOUT) :: s_srf(:)
-    REAL(wp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(wp), INTENT(OUT) :: qsat_star(:)
-    REAL(wp), INTENT(OUT) :: dQdT(:)
-    REAL(wp), INTENT(OUT) :: t_radref(:)
-    REAL(wp), INTENT(OUT) :: le_phase_change(:)
+    REAL(jp), INTENT(OUT) :: s_star(:)
+    REAL(jp), INTENT(INOUT) :: s_srf(:)
+    REAL(jp), INTENT(OUT) :: dt_sk_dt_srf(:)
+    REAL(jp), INTENT(OUT) :: qsat_star(:)
+    REAL(jp), INTENT(OUT) :: dQdT(:)
+    REAL(jp), INTENT(OUT) :: t_radref(:)
+    REAL(jp), INTENT(OUT) :: le_phase_change(:)
 
     INTEGER :: ic
 
-    REAL(wp) :: s_ref
-    REAL(wp) :: s_melt
-    REAL(wp) :: heat_tcoef
+    REAL(jp) :: s_ref
+    REAL(jp) :: s_melt
+    REAL(jp) :: heat_tcoef
 
     IF (lstart) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -982,7 +982,7 @@ CONTAINS
               & dt_sk_dt_srf(ic),                                   & ! out
               & le_phase_change(ic))                                  ! out
           ELSE
-            s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
+            s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
               & q_effective(qsat_star(ic), q_air(ic),   &
               & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
             CALL surface_temp_implicit(                             & ! in
@@ -1022,38 +1022,38 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options
 
-    REAL(wp), INTENT(IN) :: cpd_or_cvd
+    REAL(jp), INTENT(IN) :: cpd_or_cvd
 
     LOGICAL, INTENT(IN) :: lstart
     LOGICAL, INTENT(IN) :: tile_fract_zero(:)
     LOGICAL, INTENT(IN) :: is_glacier(:)
 
-    REAL(wp), INTENT(IN) :: t2s_conv(:)
-    REAL(wp), INTENT(IN) :: t(:)
-    REAL(wp), INTENT(IN) :: q_air(:)
-    REAL(wp), INTENT(IN) :: press_srf(:)
-    REAL(wp), INTENT(IN) :: rad_srf_net(:)
-    REAL(wp), INTENT(IN) :: frozen_fract(:)
-    REAL(wp), INTENT(IN) :: fact_q_air(:)
-    REAL(wp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(wp), INTENT(IN) :: forc_hflx(:)
-    REAL(wp), INTENT(IN) :: heat_cap(:)
-    REAL(wp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(wp), INTENT(IN) :: le_melt_pot(:)
-    REAL(wp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(jp), INTENT(IN) :: t2s_conv(:)
+    REAL(jp), INTENT(IN) :: t(:)
+    REAL(jp), INTENT(IN) :: q_air(:)
+    REAL(jp), INTENT(IN) :: press_srf(:)
+    REAL(jp), INTENT(IN) :: rad_srf_net(:)
+    REAL(jp), INTENT(IN) :: frozen_fract(:)
+    REAL(jp), INTENT(IN) :: fact_q_air(:)
+    REAL(jp), INTENT(IN) :: fact_qsat_srf(:)
+    REAL(jp), INTENT(IN) :: forc_hflx(:)
+    REAL(jp), INTENT(IN) :: heat_cap(:)
+    REAL(jp), INTENT(IN) :: le_freeze_pot(:)
+    REAL(jp), INTENT(IN) :: le_melt_pot(:)
+    REAL(jp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
 
-    REAL(wp), INTENT(IN) :: t_acoef(:)
-    REAL(wp), INTENT(IN) :: t_bcoef(:)
-    REAL(wp), INTENT(IN) :: q_acoef(:)
-    REAL(wp), INTENT(IN) :: q_bcoef(:)
+    REAL(jp), INTENT(IN) :: t_acoef(:)
+    REAL(jp), INTENT(IN) :: t_bcoef(:)
+    REAL(jp), INTENT(IN) :: q_acoef(:)
+    REAL(jp), INTENT(IN) :: q_bcoef(:)
 
-    REAL(wp), INTENT(OUT) :: s_star(:)
-    REAL(wp), INTENT(INOUT) :: s_srf(:)
-    REAL(wp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(wp), INTENT(OUT) :: qsat_star(:)
-    REAL(wp), INTENT(OUT) :: dQdT(:)
-    REAL(wp), INTENT(OUT) :: t_radref(:)
-    REAL(wp), INTENT(OUT) :: le_phase_change(:)
+    REAL(jp), INTENT(OUT) :: s_star(:)
+    REAL(jp), INTENT(INOUT) :: s_srf(:)
+    REAL(jp), INTENT(OUT) :: dt_sk_dt_srf(:)
+    REAL(jp), INTENT(OUT) :: qsat_star(:)
+    REAL(jp), INTENT(OUT) :: dQdT(:)
+    REAL(jp), INTENT(OUT) :: t_radref(:)
+    REAL(jp), INTENT(OUT) :: le_phase_change(:)
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1065,11 +1065,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_unfilt
 
     INTEGER :: iblk, ics, ice, nc, niter, ic, iter
-    REAL(wp) :: alpha, dtime
+    REAL(jp) :: alpha, dtime
 
     LOGICAL :: l_skin_temp
-    REAL(wp) :: s_ref, s_melt, rad_net_star
-    REAL(wp) :: s_srf_in(options%nc), t_star(options%nc)
+    REAL(jp) :: s_ref, s_melt, rad_net_star
+    REAL(jp) :: s_srf_in(options%nc), t_star(options%nc)
 
     model => Get_model(tile%owner_model_id)
     iblk = options%iblk
@@ -1171,7 +1171,7 @@ CONTAINS
                 & dt_sk_dt_srf(ic),                                   & ! out
                 & le_phase_change(ic))                                  ! out
             ELSE
-              s_melt = surface_dry_static_energy(REAL(tmelt,KIND=wp), &
+              s_melt = surface_dry_static_energy(REAL(tmelt,KIND=jp), &
                 & q_effective(qsat_star(ic), q_air(ic),   &
                 & fact_qsat_srf(ic), fact_q_air(ic)), cpd_or_cvd, .FALSE.)
               CALL surface_temp_implicit(                             & ! in
@@ -1222,21 +1222,21 @@ CONTAINS
     LOGICAL, INTENT(IN) :: l_freeze_config             !< Enable freezing and melting of soil water
     LOGICAL, INTENT(IN) :: l_supercool_config          !< Allow for supercooled soil water
 
-    REAL(wp), INTENT(OUT) :: le_freeze_pot(:)          !< Latent energy released if all surface water was freezing [J m-2]
-    REAL(wp), INTENT(OUT) :: le_melt_pot(:)            !< Latent energy needed if all surface ice was melting [J m-2]
+    REAL(jp), INTENT(OUT) :: le_freeze_pot(:)          !< Latent energy released if all surface water was freezing [J m-2]
+    REAL(jp), INTENT(OUT) :: le_melt_pot(:)            !< Latent energy needed if all surface ice was melting [J m-2]
 
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)           !< Amount of water in the top soil layer [m]
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:) !< Potential amount of supercooled water in top soil layer [m]
-    REAL(wp), INTENT(IN), OPTIONAL :: ice_soil_top(:)           !< Amount of ice in the top soil layer [m water equivalent]
-    REAL(wp), INTENT(IN), OPTIONAL :: wtr_pond(:)               !< Amount of water in surface depressions [m]
-    REAL(wp), INTENT(IN), OPTIONAL :: ice_pond(:)               !< Amount of ice in surface depressions [m water equivalent]
-    REAL(wp), INTENT(IN), OPTIONAL :: weq_snow_soil(:)          !< Amount of snow on the soil [m water equivalent]
+    REAL(jp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)           !< Amount of water in the top soil layer [m]
+    REAL(jp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:) !< Potential amount of supercooled water in top soil layer [m]
+    REAL(jp), INTENT(IN), OPTIONAL :: ice_soil_top(:)           !< Amount of ice in the top soil layer [m water equivalent]
+    REAL(jp), INTENT(IN), OPTIONAL :: wtr_pond(:)               !< Amount of water in surface depressions [m]
+    REAL(jp), INTENT(IN), OPTIONAL :: ice_pond(:)               !< Amount of ice in surface depressions [m water equivalent]
+    REAL(jp), INTENT(IN), OPTIONAL :: weq_snow_soil(:)          !< Amount of snow on the soil [m water equivalent]
 
     ! Locally defined variables
     INTEGER  :: nc                  !< Current vector length for grid cells
     INTEGER  :: ic                  !< Looping index
 
-    REAL(wp) :: hlp1, hlp2, hlp3    !< Temporary helpers
+    REAL(jp) :: hlp1, hlp2, hlp3    !< Temporary helpers
 
     nc = options%nc
 
@@ -1298,40 +1298,40 @@ CONTAINS
       & alv,        &  ! Latent heat of vaporization [J kg-1]
       & als            ! Latent heat of sublimation [J kg-1]
 
-    REAL(wp), INTENT(in)  :: alpha                !< Implicit scheme factor []
-    REAL(wp), INTENT(in)  :: dtime                !< Timestep length [s]
-    REAL(wp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
-    REAL(wp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
-    REAL(wp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
-    REAL(wp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
-    REAL(wp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
-    REAL(wp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
-    REAL(wp), INTENT(in)  :: s_melt               !< Surface dry static energy at freezing/melting point [J kg-1]
-    REAL(wp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
-    REAL(wp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
-    REAL(wp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
-    REAL(wp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
-    REAL(wp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
-    REAL(wp), INTENT(in)  :: snow_fraction        !< Snow cover fraction []
-    REAL(wp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1]
-    REAL(wp), INTENT(IN)  :: le_freeze_pot        !< Energy flux released if all available water freezes [J m-2]
-    REAL(wp), INTENT(IN)  :: le_melt_pot          !< Energy flux required if all available ice melts [J m-2]
-    REAL(wp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
-    REAL(wp), INTENT(out) :: le_phase_change      !< Latent energy flux used for phase change [J m-2]
+    REAL(jp), INTENT(in)  :: alpha                !< Implicit scheme factor []
+    REAL(jp), INTENT(in)  :: dtime                !< Timestep length [s]
+    REAL(jp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
+    REAL(jp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
+    REAL(jp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
+    REAL(jp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
+    REAL(jp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
+    REAL(jp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
+    REAL(jp), INTENT(in)  :: s_melt               !< Surface dry static energy at freezing/melting point [J kg-1]
+    REAL(jp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
+    REAL(jp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
+    REAL(jp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
+    REAL(jp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
+    REAL(jp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
+    REAL(jp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
+    REAL(jp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
+    REAL(jp), INTENT(in)  :: snow_fraction        !< Snow cover fraction []
+    REAL(jp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1]
+    REAL(jp), INTENT(IN)  :: le_freeze_pot        !< Energy flux released if all available water freezes [J m-2]
+    REAL(jp), INTENT(IN)  :: le_melt_pot          !< Energy flux required if all available ice melts [J m-2]
+    REAL(jp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
+    REAL(jp), INTENT(out) :: le_phase_change      !< Latent energy flux used for phase change [J m-2]
 
     ! Local variables
-    REAL(wp) :: dt                     !< Effective timestep = alpha * dtime
-    REAL(wp) :: cp_inv                 !< 1/cp for convenience
-    REAL(wp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
-    REAL(wp) :: latent_heat_air        !< Latent heat for air layer
-    REAL(wp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1]
-    REAL(wp) :: thermal_response_term  !< Radiation feedback term [J m-2 DSE-1]
-    REAL(wp) :: sensible_heat_term     !< Sensible heat flux contribution [J m-2 DSE-1]
-    REAL(wp) :: energy_flux_term       !< Total energy fluxes [J m-2]
-    REAL(wp) :: avail_phc_energy       !< Energy available for phase change [J m-2].
-    REAL(wp) :: s_melt_star            !< Mixed-time melting point DSE [J kg-1].
+    REAL(jp) :: dt                     !< Effective timestep = alpha * dtime
+    REAL(jp) :: cp_inv                 !< 1/cp for convenience
+    REAL(jp) :: latent_heat            !< Effective latent heat (snow-weighted vap/subl)
+    REAL(jp) :: latent_heat_air        !< Latent heat for air layer
+    REAL(jp) :: ground_hcap_s          !< Ground heat capacity in units of surface dry static energy [J m-2 DSE-1]
+    REAL(jp) :: thermal_response_term  !< Radiation feedback term [J m-2 DSE-1]
+    REAL(jp) :: sensible_heat_term     !< Sensible heat flux contribution [J m-2 DSE-1]
+    REAL(jp) :: energy_flux_term       !< Total energy fluxes [J m-2]
+    REAL(jp) :: avail_phc_energy       !< Energy available for phase change [J m-2].
+    REAL(jp) :: s_melt_star            !< Mixed-time melting point DSE [J kg-1].
 
     !> The surface energy balance equation in terms of dry static energy s = cp*T is
     !> ```
@@ -1429,54 +1429,54 @@ CONTAINS
       & tmelt, &
       & zemiss_def
 
-    REAL(wp), INTENT(IN) :: alpha
-    REAL(wp), INTENT(IN) :: dtime
-    REAL(wp), INTENT(IN) :: t2s_conv
-    REAL(wp), INTENT(IN) :: t_acoef
-    REAL(wp), INTENT(IN) :: t_bcoef
-    REAL(wp), INTENT(IN) :: q_acoef
-    REAL(wp), INTENT(IN) :: q_bcoef
-    REAL(wp), INTENT(IN) :: s_old
-    REAL(wp), INTENT(IN) :: qsat_srf_old
-    REAL(wp), INTENT(IN) :: dQdT
-    REAL(wp), INTENT(IN) :: rad_srf_net
-    REAL(wp), INTENT(IN) :: forc_hflx
-    REAL(wp), INTENT(IN) :: heat_tcoef
-    REAL(wp), INTENT(IN) :: dheat_tcoef
-    REAL(wp), INTENT(IN) :: fact_q_air
-    REAL(wp), INTENT(IN) :: fact_qsat_srf
-    REAL(wp), INTENT(IN) :: fract_snow
-    REAL(wp), INTENT(IN) :: heat_cap
-    REAL(wp), INTENT(IN) :: le_freeze_pot     !< Energy released if all available water freezes [J m-2]
-    REAL(wp), INTENT(IN) :: le_melt_pot       !< Energy required if all available ice melts [J m-2]
-    REAL(wp), INTENT(IN) :: lambda_sk
-    REAL(wp), INTENT(INOUT) :: s_srf
-    REAL(wp), INTENT(OUT) :: s_star
-    REAL(wp), INTENT(OUT) :: dT_sk_dT_srf
-    REAL(wp), INTENT(OUT) :: le_phase_change  !< Latent energy used for phase change [J m-2]
+    REAL(jp), INTENT(IN) :: alpha
+    REAL(jp), INTENT(IN) :: dtime
+    REAL(jp), INTENT(IN) :: t2s_conv
+    REAL(jp), INTENT(IN) :: t_acoef
+    REAL(jp), INTENT(IN) :: t_bcoef
+    REAL(jp), INTENT(IN) :: q_acoef
+    REAL(jp), INTENT(IN) :: q_bcoef
+    REAL(jp), INTENT(IN) :: s_old
+    REAL(jp), INTENT(IN) :: qsat_srf_old
+    REAL(jp), INTENT(IN) :: dQdT
+    REAL(jp), INTENT(IN) :: rad_srf_net
+    REAL(jp), INTENT(IN) :: forc_hflx
+    REAL(jp), INTENT(IN) :: heat_tcoef
+    REAL(jp), INTENT(IN) :: dheat_tcoef
+    REAL(jp), INTENT(IN) :: fact_q_air
+    REAL(jp), INTENT(IN) :: fact_qsat_srf
+    REAL(jp), INTENT(IN) :: fract_snow
+    REAL(jp), INTENT(IN) :: heat_cap
+    REAL(jp), INTENT(IN) :: le_freeze_pot     !< Energy released if all available water freezes [J m-2]
+    REAL(jp), INTENT(IN) :: le_melt_pot       !< Energy required if all available ice melts [J m-2]
+    REAL(jp), INTENT(IN) :: lambda_sk
+    REAL(jp), INTENT(INOUT) :: s_srf
+    REAL(jp), INTENT(OUT) :: s_star
+    REAL(jp), INTENT(OUT) :: dT_sk_dT_srf
+    REAL(jp), INTENT(OUT) :: le_phase_change  !< Latent energy used for phase change [J m-2]
 
-    REAL(wp), OPTIONAL, INTENT(IN) :: limit_dt
+    REAL(jp), OPTIONAL, INTENT(IN) :: limit_dt
 
-    REAL(wp) :: lambda_sk_eff !< Effective skin conductivity for partially snow-covered surfaces [W/(m^2 K)].
-    REAL(wp) :: tl_impedance !< Pseudo impedance of top layer [K/W].
-    REAL(wp) :: t_old !< Skin temperature at previous time step [K].
-    REAL(wp) :: t_tl_acoef !< Top-layer temperature A coefficient [1].
-    REAL(wp) :: t_tl_bcoef !< Top-layer temperature B coefficient [K].
-    REAL(wp) :: denom
-    REAL(wp) :: L_a
-    REAL(wp) :: L_s
-    REAL(wp) :: t_srf_old !< Initial surface temperature [K].
-    REAL(wp) :: t_star_melt !< Skin temperature for surface temperature @ 0C [K].
-    REAL(wp) :: tmelt_star !< Mixed-time surface temperature such that t_srf(t+1) = tmelt [K].
+    REAL(jp) :: lambda_sk_eff !< Effective skin conductivity for partially snow-covered surfaces [W/(m^2 K)].
+    REAL(jp) :: tl_impedance !< Pseudo impedance of top layer [K/W].
+    REAL(jp) :: t_old !< Skin temperature at previous time step [K].
+    REAL(jp) :: t_tl_acoef !< Top-layer temperature A coefficient [1].
+    REAL(jp) :: t_tl_bcoef !< Top-layer temperature B coefficient [K].
+    REAL(jp) :: denom
+    REAL(jp) :: L_a
+    REAL(jp) :: L_s
+    REAL(jp) :: t_srf_old !< Initial surface temperature [K].
+    REAL(jp) :: t_star_melt !< Skin temperature for surface temperature @ 0C [K].
+    REAL(jp) :: tmelt_star !< Mixed-time surface temperature such that t_srf(t+1) = tmelt [K].
 
 
-    REAL(wp) :: dcond_sen !< Differential sensible heat conductivity [W/(m^2 K)].
-    REAL(wp) :: dcond_lat !< Differential latent heat conductivity [W/(m^2 K)].
+    REAL(jp) :: dcond_sen !< Differential sensible heat conductivity [W/(m^2 K)].
+    REAL(jp) :: dcond_lat !< Differential latent heat conductivity [W/(m^2 K)].
 
-    REAL(wp) :: avail_phc_energy !< Energy flux available for phase change [W m-2]
+    REAL(jp) :: avail_phc_energy !< Energy flux available for phase change [W m-2]
 
     !> Skin conductivity for snow-covered surface [W/(m^2 K)].
-    REAL(wp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_wp
+    REAL(jp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_wp
 
 
     ! Set dT_sk = T_sk - T_old. Instead of solving for T_sk istelf, we solve for this difference.
@@ -1639,7 +1639,7 @@ CONTAINS
     ! Locally allocated variables
     !
     INTEGER :: iblk, ics, ice, nc, ic
-    REAL(wp) :: eps
+    REAL(jp) :: eps
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1723,13 +1723,13 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    REAL(wp), DIMENSION(options%nc) ::                      &
+    REAL(jp), DIMENSION(options%nc) ::                      &
       & s_air,       &  !< Dry static energy at lowest atmospheric level
       & heat_tcoef,  &  !< Heat transfer coefficient (rho*C_h*|v|)
       & frozen_fract
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime, alpha
+    REAL(jp) :: dtime, alpha
     LOGICAL  :: use_tmx
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1848,15 +1848,15 @@ CONTAINS
     LOGICAL,   intent(in)    :: is_newday
     LOGICAL,   intent(in)    :: l_start
 
-    REAL(wp),  intent(in)    :: t_air_in_Celcius ! air temperature at current time step in lowest atmospheric layer in Celcius
+    REAL(jp),  intent(in)    :: t_air_in_Celcius ! air temperature at current time step in lowest atmospheric layer in Celcius
 
     INTEGER,  intent(in)     :: time_steps_per_day
 
-    REAL(wp),  intent(inout) :: previous_day_temp_mean, & ! Intent(in) because if it is not calculated new, it should remain
+    REAL(jp),  intent(inout) :: previous_day_temp_mean, & ! Intent(in) because if it is not calculated new, it should remain
                                 previous_day_temp_min,  & ! as before. Without (in) it would be NaN in the output.
                                 previous_day_temp_max
 
-    REAL(wp),  intent(inout) :: day_temp_sum,           &
+    REAL(jp),  intent(inout) :: day_temp_sum,           &
                                 day_temp_min,           &
                                 day_temp_max
     !-----------------------------------------------------------------------
@@ -1921,12 +1921,12 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    REAL(wp), intent(in) :: &
+    REAL(jp), intent(in) :: &
      & t_air_in_Celcius,    &
      & N_pseudo_soil_temp,  &
      & F_pseudo_soil_temp
 
-    REAL(wp),  intent(inout) :: pseudo_soil_temp
+    REAL(jp),  intent(inout) :: pseudo_soil_temp
 
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 

@@ -18,7 +18,7 @@
 MODULE mo_q_sb_jsm_transport
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: one_day, eps8, eps4
   USE mo_lnd_bgcm_idx
@@ -76,65 +76,65 @@ CONTAINS
 
     INTEGER,                           INTENT(in)    :: nc                       !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                  !< number of soil layers
-    REAL(wp),                          INTENT(in)    :: dtime                    !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock     !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl            !< depth of each soil layer [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_gasdiffusion_act     !< temperature modifier for gas diffusion
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_gasdiffusion_act     !< moisture modifier for gas diffusion
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_wtr_transp_down_sl  !< fraction of pool transported up or down per second
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_w_lat_loss_sl       !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute               !< NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_solute               !< NO3 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_solute               !< PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_solute           !< N15H4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_n15_solute           !< N15O3 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: noy                      !< NOy concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: noy_n15                  !< 15NOy concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2o                      !< N2O concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2o_n15                  !< 15N2O concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2                       !< N2 concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2_n15                   !< 15N2 concentration [mol / m3]
-    REAL(wp),                           INTENT(in)    :: pool_mt_dom(:,:,:)       !< bgcm: dissolved organic matter (DOM) pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_solute     !< rate of NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_solute     !< rate of NO3 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_solute     !< rate of PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon      !< rate of DOM-C leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_nitrogen    !< rate of DOM-N leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_phosphorus  !< rate of DOM-P leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon13    !< rate of DOM-C13 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon14    !< rate of DOM-C14 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_nitrogen15  !< rate of DOM-N15 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_nh4_solute      !< rate of NH4 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_no3_solute      !< rate of NO3 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [mol/m2/timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [mol/m2/timestep]
-    REAL(wp),                          INTENT(inout) :: transport_mt_dom(:,:,:)  !< bgcm: rate of DOM transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon_sl     !< rate of DOM-C lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_nitrogen_sl   !< rate of DOM-N lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_phosphorus_sl !< rate of DOM-P lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon13_sl   !< rate of DOM-C13 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon14_sl   !< rate of DOM-C14 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_nitrogen15_sl !< rate of DOM-N15 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_nh4_solute_sl     !< rate of NH4 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_no3_solute_sl     !< rate of NO3 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_po4_solute_sl     !< rate of PO4 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_nh4_n15_solute_sl !< rate of 14NH4 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_no3_n15_solute_sl !< rate of 15NO3 lateral loss [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_noy                  !< vertical transport of NOy [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_noy_n15              !< vertical transport of 15NOy [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2o                  !< vertical transport of N2O [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2o_n15              !< vertical transport of 15N2O [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2                   !< vertical transport of N2 [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2_n15               !< vertical transport of 15N2 [micro-mol/m3/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_noy                   !< soil efflux of NOy [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_noy_n15               !< soil efflux of 15NOy [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_n2o                   !< soil efflux of N2O [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_n2o_n15               !< soil efflux of 15N2O [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_n2                    !< soil efflux of N2 [micro-mol/m2/s]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: emission_n2_n15                !< soil efflux of 15N2 [micro-mol/m2/s]
+    REAL(jp),                          INTENT(in)    :: dtime                    !< timestep length
+    REAL(jp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock     !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl            !< depth of each soil layer [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_gasdiffusion_act     !< temperature modifier for gas diffusion
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_gasdiffusion_act     !< moisture modifier for gas diffusion
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_wtr_transp_down_sl  !< fraction of pool transported up or down per second
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_w_lat_loss_sl       !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute               !< NH4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_solute               !< NO3 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_solute               !< PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_solute           !< N15H4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_n15_solute           !< N15O3 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: noy                      !< NOy concentration [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: noy_n15                  !< 15NOy concentration [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2o                      !< N2O concentration [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2o_n15                  !< 15N2O concentration [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2                       !< N2 concentration [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: n2_n15                   !< 15N2 concentration [mol / m3]
+    REAL(jp),                           INTENT(in)    :: pool_mt_dom(:,:,:)       !< bgcm: dissolved organic matter (DOM) pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_solute     !< rate of NH4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_solute     !< rate of NO3 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_solute     !< rate of PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon      !< rate of DOM-C leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_nitrogen    !< rate of DOM-N leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_phosphorus  !< rate of DOM-P leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon13    !< rate of DOM-C13 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_carbon14    !< rate of DOM-C14 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_dom_nitrogen15  !< rate of DOM-N15 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_nh4_solute      !< rate of NH4 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_no3_solute      !< rate of NO3 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [mol/m2/timestep]
+    REAL(jp), DIMENSION(nc),           INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [mol/m2/timestep]
+    REAL(jp),                          INTENT(inout) :: transport_mt_dom(:,:,:)  !< bgcm: rate of DOM transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon_sl     !< rate of DOM-C lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_nitrogen_sl   !< rate of DOM-N lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_phosphorus_sl !< rate of DOM-P lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon13_sl   !< rate of DOM-C13 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_carbon14_sl   !< rate of DOM-C14 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_dom_nitrogen15_sl !< rate of DOM-N15 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_nh4_solute_sl     !< rate of NH4 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_no3_solute_sl     !< rate of NO3 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_po4_solute_sl     !< rate of PO4 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_nh4_n15_solute_sl !< rate of 14NH4 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_no3_n15_solute_sl !< rate of 15NO3 lateral loss [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_noy                  !< vertical transport of NOy [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_noy_n15              !< vertical transport of 15NOy [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2o                  !< vertical transport of N2O [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2o_n15              !< vertical transport of 15N2O [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2                   !< vertical transport of N2 [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: transport_n2_n15               !< vertical transport of 15N2 [micro-mol/m3/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_noy                   !< soil efflux of NOy [micro-mol/m2/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_noy_n15               !< soil efflux of 15NOy [micro-mol/m2/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_n2o                   !< soil efflux of N2O [micro-mol/m2/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_n2o_n15               !< soil efflux of 15N2O [micro-mol/m2/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_n2                    !< soil efflux of N2 [micro-mol/m2/s]
+    REAL(jp), DIMENSION(nc),           INTENT(out)   :: emission_n2_n15                !< soil efflux of 15N2 [micro-mol/m2/s]
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -269,24 +269,24 @@ CONTAINS
 
     INTEGER,                            INTENT(in)    :: nc                         !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w                    !< number of soil layers
-    REAL(wp),                           INTENT(in)    :: dtime                      !< timestep length
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl              !< depth of each soil layer [m]
+    REAL(jp),                           INTENT(in)    :: dtime                      !< timestep length
+    REAL(jp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl              !< depth of each soil layer [m]
     INTEGER,                            INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb                  !< diffusion factor for bioturbation
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_assoc              !< N15H4 pool [mol/m3]
-    REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< bgcm sb_pool
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_assoc        !< rate of NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_fast   !< rate of fast associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_slow   !< rate of slow associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_occluded     !< rate of occluded PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
-    REAL(wp),                           INTENT(inout) :: sb_transport_mt(:,:,:,:)   !< bgcm flux: sb_transport flux
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb                  !< diffusion factor for bioturbation
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_assoc              !< N15H4 pool [mol/m3]
+    REAL(jp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< bgcm sb_pool
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_assoc        !< rate of NH4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_fast   !< rate of fast associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_slow   !< rate of slow associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_occluded     !< rate of occluded PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_assoc    !< rate of N15H4 transport [mol/m3/timestep]
+    REAL(jp),                           INTENT(inout) :: sb_transport_mt(:,:,:,:)   !< bgcm flux: sb_transport flux
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem             !< loop over bgcm elements
     INTEGER                     :: ix_elem           !< index of element in bgcm, used for looping
@@ -380,11 +380,11 @@ CONTAINS
     INTEGER,                                          INTENT(in) :: nc                        !< dimensions
     INTEGER,                                          INTENT(in) :: nsoil_w                   !< number of soil layers
     INTEGER,                                          INTENT(in) :: ixC                       !< index of C elem in elem map
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: soil_depth_sl             !< depth of soil layer [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: bulk_dens_corr_sl         !< bulk density of mineral+organic soil [kg/m3]
-    REAL(wp),                                         INTENT(in) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: formation of pools [mol/m3/timestep]
-    REAL(wp),                                         INTENT(in) :: sb_loss_mt(:,:,:,:)       !< bgcm flux: loss from pools [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w)                             :: particle_fluxrate         !< particile flux rate [m/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: soil_depth_sl             !< depth of soil layer [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in) :: bulk_dens_corr_sl         !< bulk density of mineral+organic soil [kg/m3]
+    REAL(jp),                                         INTENT(in) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: formation of pools [mol/m3/timestep]
+    REAL(jp),                                         INTENT(in) :: sb_loss_mt(:,:,:,:)       !< bgcm flux: loss from pools [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w)                             :: particle_fluxrate         !< particile flux rate [m/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: isoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_fluxrate'
@@ -473,40 +473,40 @@ CONTAINS
 
     INTEGER,                            INTENT(in)    :: nc                         !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w                    !< number of soil layers
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl              !< thickness of each soil layer [m]
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl              !< thickness of each soil layer [m]
+    REAL(jp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     INTEGER,                            INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep)
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute                 !< NH4 pool in soil solution [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_solute                 !< NO3 pool in soil solution [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_solute                 !< PO4 pool in soil solution [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_primary                !< occluded PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_solute             !< N15H4 pool in soil solution [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_assoc              !< minerally associated N15H4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_n15_solute             !< N15O3 pool in soil solution [mol/m3]
-    REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< bgcm sb_pool: organic pools [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_solute       !< rate of solute NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_assoc        !< rate of associated NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_solute       !< rate of solute NO3 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_solute       !< rate of solute PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_fast   !< rate of associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_slow   !< rate of associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_occluded     !< rate of associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_primary      !< rate of associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_solute   !< rate of solute N15H4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_n15_solute   !< rate of solute N15O3 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_assoc    !< rate of associated N15H4 transport [mol/m3/timestep]
-    REAL(wp),                           INTENT(inout) :: sb_transport_mt(:,:,:,:)   !< bgcm flux: rate of sb pool transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: particle_fluxrate          !< particle fluxrate (m/timestep)
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute                 !< NH4 pool in soil solution [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_solute                 !< NO3 pool in soil solution [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_solute                 !< PO4 pool in soil solution [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_occluded               !< occluded PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_primary                !< occluded PO4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_solute             !< N15H4 pool in soil solution [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_n15_assoc              !< minerally associated N15H4 pool [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: no3_n15_solute             !< N15O3 pool in soil solution [mol/m3]
+    REAL(jp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< bgcm sb_pool: organic pools [mol/m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_solute       !< rate of solute NH4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_assoc        !< rate of associated NH4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_solute       !< rate of solute NO3 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_solute       !< rate of solute PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_fast   !< rate of associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_assoc_slow   !< rate of associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_occluded     !< rate of associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_po4_primary      !< rate of associated PO4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_solute   !< rate of solute N15H4 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_no3_n15_solute   !< rate of solute N15O3 transport [mol/m3/timestep]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport_nh4_n15_assoc    !< rate of associated N15H4 transport [mol/m3/timestep]
+    REAL(jp),                           INTENT(inout) :: sb_transport_mt(:,:,:,:)   !< bgcm flux: rate of sb pool transport [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                           :: isoil                        !< loop over soil layers
     INTEGER                           :: ielem                        !< loop over bgcm elements
     INTEGER                           :: ix_elem                      !< index of element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: particle_fluxrate_woody_sl   !< particle fluxrate for woody litter
+    REAL(jp), DIMENSION(nc, nsoil_w)  :: particle_fluxrate_woody_sl   !< particle fluxrate for woody litter
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_particle_transport_wrapper'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -656,14 +656,14 @@ CONTAINS
 
     INTEGER,                                          INTENT(in)    :: nc                     !< dimensions
     INTEGER,                                          INTENT(in)    :: nsoil_w                !< number of soil layers
-    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: particle_fluxrate      !< fraction of pool transported up or down per timestep
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: pool                   !< current state of pool to be transported
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: transport              !< transport between layers per timestep
+    REAL(jp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: soil_depth_sl          !< depth of each soil layer [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: particle_fluxrate      !< fraction of pool transported up or down per timestep
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: pool                   !< current state of pool to be transported
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: transport              !< transport between layers per timestep
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)     :: hlp1
-    REAL(wp), DIMENSION(nc)     :: hlp2
+    REAL(jp), DIMENSION(nc)     :: hlp1
+    REAL(jp), DIMENSION(nc)     :: hlp2
     INTEGER                     :: ic, isoil, isoil_hlp, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_particle_transport'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -741,18 +741,18 @@ CONTAINS
 
     INTEGER,                            INTENT(in)    :: nc                             !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w                       !< number of soil layers
-    REAL(wp),                           INTENT(in)    :: dtime                          !< timestep length
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock           !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_wtr_transp_down_sl        !< fraction of material (bgcm) transported up or down (vertical) per second
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_w_lat_loss_sl             !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl                  !< depth of each soil layer [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: pool                           !< current state of material (bgcm) to be transported [mol m-3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport                      !< transport between layers per timestep [mol m-3 timestep-1]
-    REAL(wp), DIMENSION(nc),            INTENT(out)   :: leaching                       !< transport through the lower surface of the lowest ..  per timestep
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_material          !< lateral loss flux of material
+    REAL(jp),                           INTENT(in)    :: dtime                          !< timestep length
+    REAL(jp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock           !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_wtr_transp_down_sl        !< fraction of material (bgcm) transported up or down (vertical) per second
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: frac_w_lat_loss_sl             !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl                  !< depth of each soil layer [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: pool                           !< current state of material (bgcm) to be transported [mol m-3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport                      !< transport between layers per timestep [mol m-3 timestep-1]
+    REAL(jp), DIMENSION(nc),            INTENT(out)   :: leaching                       !< transport through the lower surface of the lowest ..  per timestep
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: lateral_loss_material          !< lateral loss flux of material
                                                                                         !! layer per timestep [mol m-3 timestep-1]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)         :: hlp1
+    REAL(jp), DIMENSION(nc)         :: hlp1
     INTEGER                         :: ic
     INTEGER                         :: is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport'
@@ -845,13 +845,13 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc                     !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w               !< number of soil layers
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl          !< thickness of soil layers [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: bulk_dens_corr_sl      !< OM corrected bulk density [kg m-3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: root_fraction_sl       !< root fraction in soil layer
-    REAL(wp), DIMENSION(nc, nsoil_w)                  :: k_bioturb              !< diffusion factor for bioturbation
+    REAL(jp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock   !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl          !< thickness of soil layers [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: bulk_dens_corr_sl      !< OM corrected bulk density [kg m-3]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: root_fraction_sl       !< root fraction in soil layer
+    REAL(jp), DIMENSION(nc, nsoil_w)                  :: k_bioturb              !< diffusion factor for bioturbation
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_w)                :: hlp1
+    REAL(jp), DIMENSION(nc, nsoil_w)                :: hlp1
     INTEGER                                         :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_rate'
 
@@ -908,15 +908,15 @@ CONTAINS
 
     INTEGER,                            INTENT(in)    :: nc                   !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w             !< number of soil layers
-    REAL(wp),                           INTENT(in)    :: dtime                !< timestep length
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb            !< diffusion factor for bioturbation [m2/s]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl        !< depth of each soil layer [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: pool                 !< bgcm pool: current state of pool to be transported
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport            !< bgcm flux: transport between layers per timestep [mol/m2/timestep]
+    REAL(jp),                           INTENT(in)    :: dtime                !< timestep length
+    REAL(jp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb            !< diffusion factor for bioturbation [m2/s]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl        !< depth of each soil layer [m]
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: pool                 !< bgcm pool: current state of pool to be transported
+    REAL(jp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport            !< bgcm flux: transport between layers per timestep [mol/m2/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc)     :: hlp1
-    REAL(wp), DIMENSION(nc)     :: hlp2
+    REAL(jp), DIMENSION(nc)     :: hlp1
+    REAL(jp), DIMENSION(nc)     :: hlp2
     INTEGER                     :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport'
     ! ----------------------------------------------------------------------------------------------------- !

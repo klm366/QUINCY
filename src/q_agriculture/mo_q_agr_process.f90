@@ -18,7 +18,7 @@
 MODULE mo_q_agr_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_math_constants,  ONLY: eps4, eps8
 
   IMPLICIT NONE
@@ -48,8 +48,8 @@ MODULE mo_q_agr_process
     ! ---------------------------
     ! 0.1 InOut
     INTEGER, INTENT(in)   :: ix_ct                 !< crop type of current tile/gridcell
-    REAL(wp), INTENT(in)  :: gdd_mavg              !< growing season average GDD (degree days)
-    REAL(wp)              :: gdd_mat
+    REAL(jp), INTENT(in)  :: gdd_mavg              !< growing season average GDD (degree days)
+    REAL(jp)              :: gdd_mat
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':get_gdd_mat'
@@ -113,38 +113,38 @@ MODULE mo_q_agr_process
       &                                   ix_planting, ix_harvest
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in)    :: nc                                  !< dimensions
-    REAL(wp),     INTENT(in)    :: dtime                               !< timestep length
+    REAL(jp),     INTENT(in)    :: dtime                               !< timestep length
     LOGICAL,      INTENT(in)    :: is_newyear                          !< logical indicating start of new year
-    REAL(wp),     INTENT(in)    :: beta_soil_flush                     !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: gdd_req_max                         !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: beta_soil_senescence                !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: t_air_senescence                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: cn_leaf                             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: np_leaf                             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: crop_type_index(:)                  !< crop_type_index
-    REAL(wp),     INTENT(in)    :: t_air(:)                            !< air temp
-    REAL(wp),     INTENT(in)    :: t_air_week_mavg(:)                  !< moving average air temperature over a week
-    REAL(wp),     INTENT(in)    :: t_air_month_mavg(:)                 !< moving average air temperature over a month
-    REAL(wp),     INTENT(in)    :: beta_soil_gs_tphen_mavg(:)          !< soil water stress indicator
-    REAL(wp),     INTENT(in)    :: t_air_tphen_mavg(:)                 !< moving average air temperature over phenology-relevant period
-    REAL(wp),     INTENT(in)    :: t_soil_srf_tphen_mavg(:)            !< moving average soil surface temperature
-    REAL(wp),     INTENT(in)    :: gpp_tlabile_mavg(:)                 !< moving average gpp over tlabile
-    REAL(wp),     INTENT(in)    :: maint_respiration_tlabile_mavg(:)   !< moving average maintenance respiration over tlabile
-    REAL(wp),     INTENT(in)    :: daylength_prev_day(:)               !< daylength of the previous day (seconds)
-    REAL(wp),     INTENT(inout) :: growing_season(:)                   !< growing season Yes/No
-    REAL(wp),     INTENT(inout) :: crop_season_per_year(:)             !< number of crop seasons this year
-    REAL(wp),     INTENT(inout) :: crop_season_per_year_mavg(:)        !< long-term average of crop seasons per year
-    REAL(wp),     INTENT(inout) :: growth_req_n_tlabile_mavg(:)        !< moles N required for a unit of C growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: growth_req_p_tlabile_mavg(:)        !< moles P required for a unit of N growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: gdd(:)                              !< growing degree days
-    REAL(wp),     INTENT(inout) :: gdd_mavg(:)                         !< long-term average growing degree days
-    REAL(wp),     INTENT(inout) :: crop_growth_phase(:)                !< category for growth phase of crops
-    REAL(wp),     INTENT(inout) :: nd_dormance(:)                      !< number of days of dormancy
+    REAL(jp),     INTENT(in)    :: beta_soil_flush                     !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: gdd_req_max                         !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: beta_soil_senescence                !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: t_air_senescence                    !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: cn_leaf                             !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: np_leaf                             !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: crop_type_index(:)                  !< crop_type_index
+    REAL(jp),     INTENT(in)    :: t_air(:)                            !< air temp
+    REAL(jp),     INTENT(in)    :: t_air_week_mavg(:)                  !< moving average air temperature over a week
+    REAL(jp),     INTENT(in)    :: t_air_month_mavg(:)                 !< moving average air temperature over a month
+    REAL(jp),     INTENT(in)    :: beta_soil_gs_tphen_mavg(:)          !< soil water stress indicator
+    REAL(jp),     INTENT(in)    :: t_air_tphen_mavg(:)                 !< moving average air temperature over phenology-relevant period
+    REAL(jp),     INTENT(in)    :: t_soil_srf_tphen_mavg(:)            !< moving average soil surface temperature
+    REAL(jp),     INTENT(in)    :: gpp_tlabile_mavg(:)                 !< moving average gpp over tlabile
+    REAL(jp),     INTENT(in)    :: maint_respiration_tlabile_mavg(:)   !< moving average maintenance respiration over tlabile
+    REAL(jp),     INTENT(in)    :: daylength_prev_day(:)               !< daylength of the previous day (seconds)
+    REAL(jp),     INTENT(inout) :: growing_season(:)                   !< growing season Yes/No
+    REAL(jp),     INTENT(inout) :: crop_season_per_year(:)             !< number of crop seasons this year
+    REAL(jp),     INTENT(inout) :: crop_season_per_year_mavg(:)        !< long-term average of crop seasons per year
+    REAL(jp),     INTENT(inout) :: growth_req_n_tlabile_mavg(:)        !< moles N required for a unit of C growth to determine labile pool size
+    REAL(jp),     INTENT(inout) :: growth_req_p_tlabile_mavg(:)        !< moles P required for a unit of N growth to determine labile pool size
+    REAL(jp),     INTENT(inout) :: gdd(:)                              !< growing degree days
+    REAL(jp),     INTENT(inout) :: gdd_mavg(:)                         !< long-term average growing degree days
+    REAL(jp),     INTENT(inout) :: crop_growth_phase(:)                !< category for growth phase of crops
+    REAL(jp),     INTENT(inout) :: nd_dormance(:)                      !< number of days of dormancy
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic                                  !< loop over grid cells
     INTEGER                     :: ix_ct                               !< index of crop type
-    REAL(wp)                    :: hlp1                                !< helper variable for tmp values
-    REAL(wp)                    :: growing_season_old                  !< growing season state of last time step
+    REAL(jp)                    :: hlp1                                !< helper variable for tmp values
+    REAL(jp)                    :: growing_season_old                  !< growing season state of last time step
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -253,12 +253,12 @@ MODULE mo_q_agr_process
     USE mo_q_agr_constants,         ONLY: crop_planting_mass, ix_planting
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                        !< dimensions
-    REAL(wp), INTENT(in)    :: crop_growth_phase(:)      !< growth phase (0 = planting)
-    REAL(wp), INTENT(in)    :: seed_bed_pool_mt(:,:)     !< bgcm seed-bed pool
-    REAL(wp), INTENT(inout) :: veg_establishment_mt(:,:) !< bgcm flux of establishment
+    REAL(jp), INTENT(in)    :: crop_growth_phase(:)      !< growth phase (0 = planting)
+    REAL(jp), INTENT(in)    :: seed_bed_pool_mt(:,:)     !< bgcm seed-bed pool
+    REAL(jp), INTENT(inout) :: veg_establishment_mt(:,:) !< bgcm flux of establishment
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: planting_rate
+    REAL(jp)       :: planting_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_planting_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -289,8 +289,8 @@ MODULE mo_q_agr_process
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: crop_type_index       !< crop type of current tile/gridcell
-    REAL(wp)             :: active_n_fixation
+    REAL(jp), INTENT(in) :: crop_type_index       !< crop type of current tile/gridcell
+    REAL(jp)             :: active_n_fixation
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':set_crop_n_fixation_status'
@@ -324,22 +324,22 @@ MODULE mo_q_agr_process
     USE mo_q_agr_constants
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                       !< dimensions
-    REAL(wp), INTENT(in)    :: dtime                    !< timestep length
-    REAL(wp), INTENT(in)    :: crop_type_index(:)       !< index of crop-type occupying this tile
-    REAL(wp), INTENT(in)    :: gdd(:)                   !< current growing degree days (degC day)
-    REAL(wp), INTENT(in)    :: gdd_mavg(:)              !< long-term average gdd (degC day)
-    REAL(wp), INTENT(in)    :: lai(:)                   !< current leaf area index
-    REAL(wp), INTENT(inout) :: nd_crop_season(:)        !< number of days in this growing season
-    REAL(wp), INTENT(inout) :: nd_crop_season_mavg(:)   !< long-term average length of growing season
-    REAL(wp), INTENT(inout) :: crop_growth_phase(:)     !< growth phase (0 = planting,
+    REAL(jp), INTENT(in)    :: dtime                    !< timestep length
+    REAL(jp), INTENT(in)    :: crop_type_index(:)       !< index of crop-type occupying this tile
+    REAL(jp), INTENT(in)    :: gdd(:)                   !< current growing degree days (degC day)
+    REAL(jp), INTENT(in)    :: gdd_mavg(:)              !< long-term average gdd (degC day)
+    REAL(jp), INTENT(in)    :: lai(:)                   !< current leaf area index
+    REAL(jp), INTENT(inout) :: nd_crop_season(:)        !< number of days in this growing season
+    REAL(jp), INTENT(inout) :: nd_crop_season_mavg(:)   !< long-term average length of growing season
+    REAL(jp), INTENT(inout) :: crop_growth_phase(:)     !< growth phase (0 = planting,
                                                         !<                1 = emergence,
                                                         !<                2 = grain fill,
                                                         !<                3 = harvest
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                     !< loop over grid cells
     INTEGER        :: ix_ct                  !< crop type index
-    REAL(wp)       :: hlp1
-    REAL(wp)       :: gdd_mat                !< GDD at maturity
+    REAL(jp)       :: hlp1
+    REAL(jp)       :: gdd_mat                !< GDD at maturity
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_crop_growth_phase'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -437,21 +437,21 @@ MODULE mo_q_agr_process
     USE mo_veg_constants,      ONLY: leaf2root_min_ratio
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                          !< dimensions
-    REAL(wp), INTENT(in)    :: crop_type_index(:)          !< index of crop-type occupying this tile
-    REAL(wp), INTENT(in)    :: crop_growth_phase(:)        !< growth phase (0 = planting, ..., 3 = harvest)
-    REAL(wp), INTENT(in)    :: gdd(:)                      !< current growing degree days (degC day)
-    REAL(wp), INTENT(in)    :: gdd_mavg(:)                 !< long-term average gdd (degC day)
-    REAL(wp), INTENT(in)    :: lai(:)                      !< current leaf area index
-    REAL(wp), INTENT(out)   :: leaf2sapwood_mass_ratio(:)  !< leaf to halm mass ratio (unitless)
-    REAL(wp), INTENT(out)   :: leaf2root_mass_ratio(:)     !< leaf to fine root mass ratio (unitless)
-    REAL(wp), INTENT(out)   :: falloc_fruit_crop(:)        !< fraction of allocation to fruits
+    REAL(jp), INTENT(in)    :: crop_type_index(:)          !< index of crop-type occupying this tile
+    REAL(jp), INTENT(in)    :: crop_growth_phase(:)        !< growth phase (0 = planting, ..., 3 = harvest)
+    REAL(jp), INTENT(in)    :: gdd(:)                      !< current growing degree days (degC day)
+    REAL(jp), INTENT(in)    :: gdd_mavg(:)                 !< long-term average gdd (degC day)
+    REAL(jp), INTENT(in)    :: lai(:)                      !< current leaf area index
+    REAL(jp), INTENT(out)   :: leaf2sapwood_mass_ratio(:)  !< leaf to halm mass ratio (unitless)
+    REAL(jp), INTENT(out)   :: leaf2root_mass_ratio(:)     !< leaf to fine root mass ratio (unitless)
+    REAL(jp), INTENT(out)   :: falloc_fruit_crop(:)        !< fraction of allocation to fruits
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                     !< loop over grid cells
     INTEGER        :: ix_ct                  !< crop type index
-    REAL(wp)       :: hlp1, hlp2
-    REAL(wp)       :: gdd_mat                !< GDD at maturity
-    REAL(wp)       :: heat_index             !< GDD based heat index
-    REAL(wp)       :: fheat_index            !< GDD based heat index
+    REAL(jp)       :: hlp1, hlp2
+    REAL(jp)       :: gdd_mat                !< GDD at maturity
+    REAL(jp)       :: heat_index             !< GDD based heat index
+    REAL(jp)       :: fheat_index            !< GDD based heat index
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_allocation_factors'
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -540,18 +540,18 @@ MODULE mo_q_agr_process
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                         !< dimensions
-    REAL(wp), INTENT(in)    :: nd_crop_season(:)          !< number of days this growing season has lasted
-    REAL(wp), INTENT(in)    :: nd_crop_season_mavg(:)     !< number of days this growing season has lasted
-    REAL(wp), INTENT(in)    :: crop_season_per_year_mavg(:) !< average number of growing season per year (#/yr)
-    REAL(wp), INTENT(in)    :: n_fertiliser(:)            !< annual N fertiliser rate (mol/m2/yr)
-    REAL(wp), INTENT(inout) :: fertiliser_nh4(:),       & !< NH4 fertiliser application [micro mol / m2 / s]
+    REAL(jp), INTENT(in)    :: nd_crop_season(:)          !< number of days this growing season has lasted
+    REAL(jp), INTENT(in)    :: nd_crop_season_mavg(:)     !< number of days this growing season has lasted
+    REAL(jp), INTENT(in)    :: crop_season_per_year_mavg(:) !< average number of growing season per year (#/yr)
+    REAL(jp), INTENT(in)    :: n_fertiliser(:)            !< annual N fertiliser rate (mol/m2/yr)
+    REAL(jp), INTENT(inout) :: fertiliser_nh4(:),       & !< NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_nh4_n15(:),   & !< 15NH4 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_no3(:),       & !< NO3 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_no3_n15(:),   & !< 15NO3 fertiliser application [micro mol / m2 / s]
       &                        fertiliser_po4(:)          !< PO4 fertiliser application [micro mol / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: hlp1
+    REAL(jp)       :: hlp1
     LOGICAL        :: is_fertiliser_day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_application'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -609,11 +609,11 @@ MODULE mo_q_agr_process
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: dtime                 !< time step length (s)
-    REAL(wp), INTENT(in) :: crop_type_index       !< crop type of current tile/gridcell
-    REAL(wp), INTENT(in) :: crop_growth_phase     !< crop growth phase
-    REAL(wp), INTENT(in) :: lai                   !< curent crop lai
-    REAL(wp)             :: fract_harvest_rel_to_tile
+    REAL(jp), INTENT(in) :: dtime                 !< time step length (s)
+    REAL(jp), INTENT(in) :: crop_type_index       !< crop type of current tile/gridcell
+    REAL(jp), INTENT(in) :: crop_growth_phase     !< crop growth phase
+    REAL(jp), INTENT(in) :: lai                   !< curent crop lai
+    REAL(jp)             :: fract_harvest_rel_to_tile
     ! ---------------------------
     ! 0.2 Local
     INTEGER              :: ix_ct
@@ -670,25 +670,25 @@ MODULE mo_q_agr_process
       &                                         ix_planting, ix_emergence, ix_grainfilling, ix_harvest
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,      INTENT(in)    :: nc                                !< dimensions
-    REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
-    REAL(wp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: crop_type_index(:)                !< index of crop-type occupying this tile
-    REAL(wp),     INTENT(in)    :: crop_growth_phase(:)              !< current crop growth phase
-    REAL(wp),     INTENT(in)    :: gdd(:)                            !< current GDD (degC days)
-    REAL(wp),     INTENT(in)    :: gdd_mavg(:)                       !< long-term average of GDD (degC days)
-    REAL(wp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(in)    :: dtime                             !< timestep length
+    REAL(jp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
+    REAL(jp),     INTENT(in)    :: crop_type_index(:)                !< index of crop-type occupying this tile
+    REAL(jp),     INTENT(in)    :: crop_growth_phase(:)              !< current crop growth phase
+    REAL(jp),     INTENT(in)    :: gdd(:)                            !< current GDD (degC days)
+    REAL(jp),     INTENT(in)    :: gdd_mavg(:)                       !< long-term average of GDD (degC days)
+    REAL(jp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
+    REAL(jp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
     !------------------------------------------------------------------------------------------------------ !
     INTEGER                     :: ic                                !< loop over point of the chunk
     INTEGER                     :: ix_ct                             !< crop type index
-    REAL(wp)                    :: heat_index,fheat_index,lai_max    !< helper variables
+    REAL(jp)                    :: heat_index,fheat_index,lai_max    !< helper variables
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_leaf_mass_change_canopy_mode'
     ! ----------------------------------------------------------------------------------------------------- !
 

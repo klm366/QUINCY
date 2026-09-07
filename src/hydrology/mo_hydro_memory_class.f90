@@ -32,7 +32,7 @@
 MODULE mo_hydro_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_control,      ONLY: jsbach_runs_standalone
@@ -305,7 +305,7 @@ CONTAINS
     INTEGER :: table                            !< Grib code table ID
     TYPE(t_grib2) :: grib2_desc                 !< Grib2 related metadata
 
-    REAL(wp) :: ini_snow_dens                   !< Initial value for snow density
+    REAL(jp) :: ini_snow_dens                   !< Initial value for snow density
     LOGICAL  :: l_ponds                         !< Abreviation: Local variable for [[t_hydro_config:l_ponds]]
     LOGICAL  :: l_uniform                       !< Abreviation: True if [[t_hydro_config:hydro_scale]]=Uniform
     LOGICAL  :: lrestart_local                  !< add var to restart file, model specific (quincy/jsbach)

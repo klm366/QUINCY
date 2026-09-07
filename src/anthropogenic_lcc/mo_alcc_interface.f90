@@ -20,7 +20,7 @@ MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,       ONLY: debug_on
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message, finish, message_text
   USE mo_util,              ONLY: one_of
 
@@ -145,9 +145,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile !< Pointer to the tile for which fraction changes are determined
     TYPE(t_jsb_model), POINTER          :: model        !< Current instance of the model
 
-    REAL(wp)              :: current_fract(options%nc)  !< Current cover fraction
-    REAL(wp)              :: cf_veg(options%nc)         !< Current veg tile fraction
-    REAL(wp), ALLOCATABLE :: cf_pft(:,:)                !< Current PFT tile cover fractions (used if NLCC_ is enabled)
+    REAL(jp)              :: current_fract(options%nc)  !< Current cover fraction
+    REAL(jp)              :: cf_veg(options%nc)         !< Current veg tile fraction
+    REAL(jp), ALLOCATABLE :: cf_pft(:,:)                !< Current PFT tile cover fractions (used if NLCC_ is enabled)
 
     INTEGER  :: &
       & iblk, &         !< Current block index
@@ -160,8 +160,8 @@ CONTAINS
       & current_year, & !< Current simulation year
       & number_of_days  !< Number of days in current year
 
-    REAL(wp) :: delta_threshold !< Threshold below which cover fraction changes are not conducted
-    REAL(wp) :: dtime   !< Time step length
+    REAL(jp) :: delta_threshold !< Threshold below which cover fraction changes are not conducted
+    REAL(jp) :: dtime   !< Time step length
 
     LOGICAL :: nlcc_tile(options%npft)  !< Is the tile's area fraction affected by natural land cover change (NLCC)?
 
@@ -284,10 +284,10 @@ CONTAINS
           END IF
 
           IF (dsl4jsb_Config(ALCC_)%l_daily_alcc .AND. &
-              & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, wp) * EPSILON(1._wp)) THEN
+              & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, jp) * EPSILON(1._wp)) THEN
             ! In case that area changes are daily the difference has to be distributed over the year
             ! such that the target is reached at the end of the year
-            cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, wp)
+            cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, jp)
           ELSE
             cf_delta(ic, i_cf_tile) = 0._wp
           END IF
@@ -359,12 +359,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
 
-    REAL(wp), POINTER ::   &
+    REAL(jp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & cf_diff,      & !< Change in cover fractions
       & current_fract   !< Current cover fraction
 
@@ -378,7 +378,7 @@ CONTAINS
       & i_ac_index, & !< Index used for forest age classes
       & i_cf_tile, &  !< Index of a PFT tile in the array with cover fractions changes
       & nr_of_tiles   !< Number of tiles participating in the ALCC process
-    REAL(wp) :: dtime !< Time step length
+    REAL(jp) :: dtime !< Time step length
 
     LOGICAL :: nlcc_tile !< Boolean indicating if a tile is a dynamic NLCC tile (only if NLCC is active)
 
@@ -623,7 +623,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
 
-    REAL(wp), POINTER ::   &
+    REAL(jp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
@@ -633,7 +633,7 @@ CONTAINS
       & ics, &        !< Index of first cell of block
       & ice, &        !< Index of last cell of block
       & i_tile        !< Index of a tile in the lcc_relocations
-    REAL(wp) :: dtime !< Time step length
+    REAL(jp) :: dtime !< Time step length
 
     LOGICAL  :: is_age_class !< Boolean indicating if a tile is a forest age class
 
@@ -795,15 +795,15 @@ CONTAINS
     TYPE(t_lctlib_element),     POINTER :: lctlib          !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_w    !< Vertical grid
 
-    REAL(wp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
+    REAL(jp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
 
-    REAL(wp), POINTER ::   &
+    REAL(jp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
 
-    REAL(wp) :: scaling !< scaling of new to old cover fraction required to calculate the density change in extending forest tiles
-    REAL(wp) :: dtime   !< Time step length
+    REAL(jp) :: scaling !< scaling of new to old cover fraction required to calculate the density change in extending forest tiles
+    REAL(jp) :: dtime   !< Time step length
 
     INTEGER  :: &
       & iblk, &       !< Current block index
@@ -1031,16 +1031,16 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< Forest pft for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options       !< Additional run-time parameters
-    REAL(wp),                   INTENT(in)    :: cf_diff(:)    !< To be distributed changes of cover fractions
+    REAL(jp),                   INTENT(in)    :: cf_diff(:)    !< To be distributed changes of cover fractions
     INTEGER,                    INTENT(in)    :: i_first_child
        !< Index of first child tile in gained and lost area matrices
-    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained area matrix for lcc calculations
-    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost area matrix for lcc calculations
+    REAL(jp),                   INTENT(inout) :: gained_area(:,:) !< Gained area matrix for lcc calculations
+    REAL(jp),                   INTENT(inout) :: lost_area(:,:)   !< Lost area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':redistribute_cover_fraction_changes_of_forest_pft'
 
-    REAL(wp), DIMENSION(options%nc) :: this_loss !< Area loss of forest PFT to be distributed to its children (age classes)
-    REAL(wp), DIMENSION(options%nc) :: this_gain !< Area gains of forest PFT to be distributed to its children (age classes)
+    REAL(jp), DIMENSION(options%nc) :: this_loss !< Area loss of forest PFT to be distributed to its children (age classes)
+    REAL(jp), DIMENSION(options%nc) :: this_gain !< Area gains of forest PFT to be distributed to its children (age classes)
     ! -------------------------------------------------------------------------------------------------- !
     this_loss(:) = -1._wp * MIN(cf_diff(:), 0._wp)
     this_gain(:) = MAX(cf_diff(:), 0._wp)
@@ -1071,9 +1071,9 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile              !< Parent tile for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Additional run-time parameters
-    REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Initial area matrix for lcc calculations
-    REAL(wp),         INTENT(inout), OPTIONAL :: gained_area(:,:)  !< Gained area matrix for lcc calculations
-    REAL(wp),         INTENT(inout), OPTIONAL :: lost_area(:,:)    !< Lost area matrix for lcc calculations
+    REAL(jp),                   INTENT(inout) :: initial_area(:,:) !< Initial area matrix for lcc calculations
+    REAL(jp),         INTENT(inout), OPTIONAL :: gained_area(:,:)  !< Gained area matrix for lcc calculations
+    REAL(jp),         INTENT(inout), OPTIONAL :: lost_area(:,:)    !< Lost area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: i_tile, iblk                                 !< Looping indices
     INTEGER  :: ics, ice                                     !< First and last grid cell in current vector
@@ -1082,12 +1082,12 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile      !< Tile currently investigated
 
-    REAL(wp) :: current_fract(options%nc,options%npft)       !< Current tile fraction
-    REAL(wp) :: veg_tile_fract(options%nc)                   !< Fraction of the vegetation tile
-    REAL(wp) :: pft_fractions(options%nc,options%npft)       !< Relative PFT fractions, after anthropogenic
+    REAL(jp) :: current_fract(options%nc,options%npft)       !< Current tile fraction
+    REAL(jp) :: veg_tile_fract(options%nc)                   !< Fraction of the vegetation tile
+    REAL(jp) :: pft_fractions(options%nc,options%npft)       !< Relative PFT fractions, after anthropogenic
                                                              !< fractions have been updated
-    REAL(wp) :: gained_area_loc(options%nc,options%npft)     !< Local array for gained_area
-    REAL(wp) :: lost_area_loc(options%nc,options%npft)       !< Local array for lost_area
+    REAL(jp) :: gained_area_loc(options%nc,options%npft)     !< Local array for gained_area
+    REAL(jp) :: lost_area_loc(options%nc,options%npft)       !< Local array for lost_area
 
     LOGICAL :: is_woody(options%nc,options%npft)     ! PFTs that build wood
     LOGICAL :: is_dynamic(options%nc,options%npft)   ! PFTs taking part in competition (NLCC)
@@ -1220,21 +1220,21 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< Parent tile for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options          !< Additional run-time parameters
     INTEGER,                    INTENT(in)    :: nr_of_tiles      !< Number of tiles involved in the lcc calculation
-    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained_area matrix for lcc calculations
-    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost_area matrix for lcc calculations
+    REAL(jp),                   INTENT(inout) :: gained_area(:,:) !< Gained_area matrix for lcc calculations
+    REAL(jp),                   INTENT(inout) :: lost_area(:,:)   !< Lost_area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                     :: model         !< Current instance of the model
     INTEGER  :: ic, i_tile, i_sort  !< Looping indices
-    REAL(wp) :: remaining_diff      !< Remaining difference between area losses and gains
+    REAL(jp) :: remaining_diff      !< Remaining difference between area losses and gains
     CLASS(t_jsb_tile_abstract), POINTER            :: current_tile  !< Pointer on currently investigated tile
-    REAL(wp), DIMENSION(options%nc)                :: current_fract !< Cover fraction if current tile
-    REAL(wp), DIMENSION(options%nc)                :: cf_diff       !< Difference between gained and lost areas
+    REAL(jp), DIMENSION(options%nc)                :: current_fract !< Cover fraction if current tile
+    REAL(jp), DIMENSION(options%nc)                :: cf_diff       !< Difference between gained and lost areas
     LOGICAL,  DIMENSION(nr_of_tiles)               :: tiles_mask    !< Mask of tiles considered for correction
-    REAL(wp), DIMENSION(nr_of_tiles)               :: area_change   !< Area change to sort for (either losses or gains)
-    REAL(wp), DIMENSION(options%nc)                :: veg_fraction  !< Area fraction of the vegetation tile
-    REAL(wp), DIMENSION(options%nc)                :: sum_pft_fract !< Sum of the PFT tile area fractions
-    REAL(wp), DIMENSION(options%nc, nr_of_tiles)   :: child_fractions !< Area change to sort for (either losses or gains)
-    REAL(wp), DIMENSION(options%nc, nr_of_tiles) :: cf_correction   !< Cover fraction correction
+    REAL(jp), DIMENSION(nr_of_tiles)               :: area_change   !< Area change to sort for (either losses or gains)
+    REAL(jp), DIMENSION(options%nc)                :: veg_fraction  !< Area fraction of the vegetation tile
+    REAL(jp), DIMENSION(options%nc)                :: sum_pft_fract !< Sum of the PFT tile area fractions
+    REAL(jp), DIMENSION(options%nc, nr_of_tiles)   :: child_fractions !< Area change to sort for (either losses or gains)
+    REAL(jp), DIMENSION(options%nc, nr_of_tiles) :: cf_correction   !< Cover fraction correction
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_and_correct_cf_mismatches'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)

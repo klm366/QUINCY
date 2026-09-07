@@ -14,12 +14,12 @@
 MODULE mo_rad_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER ::                   &
+  REAL(jp), PARAMETER ::                   &
    & Epar                   = 2.2E5_wp,    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
    & SoilReflectivityParMin = 0.0_wp,      & ! Minimum soil reflectivity in PAR region.  R: for update_par
   !  & LaiMax = 8._wp,                       & ! Maximum LAI (used for nitrogen scaling)

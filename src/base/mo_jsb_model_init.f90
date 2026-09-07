@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
 
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: jp
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
@@ -188,7 +188,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
     INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
+    REAL(jp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract

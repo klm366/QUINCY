@@ -14,7 +14,7 @@
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -40,24 +40,24 @@ MODULE mo_sse_init
 
   PUBLIC :: sse_init, init_soil_properties
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), &
     & fao_vol_hcap    (0:6) = (/2.25e+6_wp,1.93e+6_wp,2.10e+6_wp,2.25e+6_wp,2.36e+6_wp,2.48e+6_wp,-1._wp/)
 
   ! heat capacity [J/Km^3] (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
+  REAL(jp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp
+  REAL(jp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp
+  REAL(jp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp
+  REAL(jp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
 
   ! heat conductivity (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp
-  REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp
-  REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp
-  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp ! see hcond_org in mo_sse_constants.f90
+  REAL(jp), PARAMETER ::  heat_cond_sand = 1.6791_wp
+  REAL(jp), PARAMETER ::  heat_cond_silt = 1.665_wp
+  REAL(jp), PARAMETER ::  heat_cond_clay = 1.6616_wp
+  REAL(jp), PARAMETER ::  heat_cond_oc = 0.25_wp ! see hcond_org in mo_sse_constants.f90
 
   TYPE t_sse_init_vars
-    REAL(wp), POINTER ::     &
+    REAL(jp), POINTER ::     &
       & fao         (:,:  ) => NULL(), &
       & vol_heat_cap(:,:  ) => NULL(), &
       & heat_cond   (:,:  ) => NULL(), &
@@ -137,7 +137,7 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
+    REAL(jp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
     TYPE(t_input_file) :: input_file
 
@@ -258,8 +258,8 @@ CONTAINS
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! FAO
         CALL read_bc_data(input_file, 'fao', tile%name, sse_init_vars%fao, default=0._wp)
-        sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
-                                     MIN(REAL(UBOUND(fao_thermal_diff,1),wp), sse_init_vars%fao(:,:)))
+        sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),jp), &
+                                     MIN(REAL(UBOUND(fao_thermal_diff,1),jp), sse_init_vars%fao(:,:)))
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
@@ -622,8 +622,8 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     INTEGER  :: nsoil, nproma, nblks, ic, is, ib
-    REAL(wp), POINTER :: soil_e_dz(:)
-    REAL(wp) ::heat_cap_sl, ws_max_sl
+    REAL(jp), POINTER :: soil_e_dz(:)
+    REAL(jp) ::heat_cap_sl, ws_max_sl
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 

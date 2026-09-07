@@ -14,7 +14,7 @@
 MODULE mo_pheno_parameters
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
@@ -49,7 +49,7 @@ MODULE mo_pheno_parameters
   !> Collects parameters that apply to all phenology types
   !>
   TYPE t_GeneralParams
-    REAL(wp) :: &
+    REAL(jp) :: &
       & LAI_negligible = def_parameters,   & ! [-] Below this value an LAI is considered to be zero.
       & laiSeed = def_parameters,          & ! [-] Seed value used for the LAI to have a non-zero starting value
                                              ! whenever the vegetation starts growing.
@@ -60,7 +60,7 @@ MODULE mo_pheno_parameters
   !> Parameters that are common to the evergreen and raingreen phenology type
   !>
   TYPE t_EG_SG_common_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & tau_pseudo_soil = def_parameters,   & ! [days] Characteristic time for the memory loss for computing the pseudo
                                               ! soil temperature from air temperature [days] (see subroutine
                                               ! "update_pseudo_soil_temp")
@@ -74,7 +74,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the evergreen phenology type only
   !>
   TYPE t_evergreen_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & alternation_temp = def_parameters,    & ! [Celsius] Critical temperature of the alternating model, above
                                                 ! which temperature contributes to the heat sum, and below which
                                                 ! days are considered as chilling days (see subroutine
@@ -93,7 +93,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the summergreen phenology type only
   !>
   TYPE t_summergreen_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & alternation_temp = def_parameters,    & ! [Celsius] Critical temperature of the alternating model, above which
                                                 ! temperature contributes to the heat sum, and below which days are
                                                 ! considered as chilling days (see subroutine "update_growth_phase")
@@ -122,7 +122,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the raingreen phenology type only
   !>
   TYPE t_raingreen_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & shedRate_drySeason = def_parameters,  & ! [1/days] Leaf shedding rate (fast) in dry season
       & shedRate_aging = def_parameters,      & ! [1/days] Minimal leaf shedding rate by leaf aging (inverse leaf
                                                 ! longevity)
@@ -139,7 +139,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the grass phenology type only
   !>
   TYPE t_grass_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       &  crit_temp = def_parameters,         & ! [Celsius] Critical temperature for growth of grasses: Below this
                                                ! temperature growth of grasses stops.
       &  shedRate_growth = def_parameters,   & ! [1/days] Leaf shedding rate in the growth phase when growth
@@ -151,7 +151,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the crop phenology only
   !>
   TYPE t_crop_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & crit_temp = def_parameters,         & ! [Celsius] Critical temperature for growth of crops: Below this
                                               ! temperature growth of crops stops.
       & gdd_temp = def_parameters,          & ! [Celsius] Critical (base) temperature for counting growing degree days
@@ -167,7 +167,7 @@ MODULE mo_pheno_parameters
   !> Parameters only required in case of l_forestRegrowth = true
   !>
   TYPE t_forestRegrowth_param
-    REAL(wp) :: &
+    REAL(jp) :: &
       & m2toha = def_parameters,           & ! JN-TODO: this is a more general constant -> move to somewhere else?
       & kgCtokg = def_parameters,          & ! JN-TODO: same
       & min_c   = def_parameters,          & ! JN: minimum C in wood and veg biomass for the maxLAI calculation

@@ -16,7 +16,7 @@
 MODULE mo_jsb_physical_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   ! Most constants are used from host model (ICON) via the adapter file mo_physical_constants_iface in mo_util_jsbach.f90:
   !   src/shared/mo_util_jsbach.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
@@ -25,22 +25,22 @@ MODULE mo_jsb_physical_constants
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & dens_soil          = 2700._wp,   & !< Density of soil particulate (Hillel 1980, Johansen 1977) [kg/m3]
     & dens_org           = 1300._wp,   & !< Density of organic part of soil                          [kg/m3]
     & dens_ice           = rhoi,       & !< Density of frozen water in soil (ice)                    [kg/m3]
     & dens_snow          = rhos,       & !< Density of snow                                          [kg/m3] (300.0_wp)
     & dens_snow_min      = 50._wp        !< Minimum density of snow (for fresh snow)                 [kg/m3]
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     molarMassDryAir = amd   * 1.e-3_wp, & !< Mass [kg] per amount of substance [mol] of dry air (28.970e-3_wp)
     molarMassCO2    = amco2 * 1.e-3_wp    !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_wp)
   !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2)
 
-  REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
+  REAL(jp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
 
   !! quincy - physical constants
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & r_gas        = argas            ,  &      !< Universal gas constant (J / mol / K)
     & r_gas_dryair = rd               ,  &      !< Specific gas constant for dry air (J / kg / K)
     & r_gas_vapour = rv               ,  &      !< Specific gas constant for water vapour (J / kg / K)
@@ -50,11 +50,11 @@ MODULE mo_jsb_physical_constants
                                                 !<   but in reality tmelt is not always at Tzero [K]
     & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< Threshold below which rain falls as snow - source: OCN-weather generator
 
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
   ! molar masses
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & molar_mass_C    = 12.0112_wp    ,  &      !< g C / mol C
     & molar_mass_C12  = 12.0_wp       ,  &      !< g C / mol C
     & molar_mass_C13  = 13.0_wp       ,  &      !< g C / mol C
@@ -64,7 +64,7 @@ MODULE mo_jsb_physical_constants
     & molar_mass_N15  = 15.0_wp       ,  &      !< g N / mol N
     & molar_mass_P    = 30.997_wp               !< g P / mol P
   ! isotope standards
-  REAL(wp), PARAMETER :: &
+  REAL(jp), PARAMETER :: &
     & PDB_STANDARD_C13           = 0.0112372_wp                    , &  !< 13C/12C PDB standard
     & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95*0.238 Bq/gC is the absolute specific activity of
                                                                         !<   the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)

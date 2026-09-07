@@ -14,12 +14,12 @@
 MODULE mo_assimi_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER ::                                    &
+  REAL(jp), PARAMETER ::                                    &
          ! C3 PLANTS: FARQHUAR, G.D., S. VON CAEMMERER AND J.A. BERRY, 1980.
          !            A BIOCHEMICAL MODEL OF PHOTOYNTHESIS IN LEAVES OF C3 SPECIES.
          !            PLANTA 149, 78-90.

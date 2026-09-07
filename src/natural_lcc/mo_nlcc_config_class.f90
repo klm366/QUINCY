@@ -18,7 +18,7 @@ MODULE mo_nlcc_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ MODULE mo_nlcc_config_class
     LOGICAL             :: &
       & init_running_means, &
       & init_nlcc
-    REAL(wp)            :: &
+    REAL(jp)            :: &
       & accelerate_nlcc
 
    CONTAINS
@@ -59,7 +59,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     LOGICAL                     :: init_nlcc
-    REAL(wp)                    :: accelerate_nlcc
+    REAL(jp)                    :: accelerate_nlcc
 
     NAMELIST /jsb_nlcc_nml/  &
       &  active,             &

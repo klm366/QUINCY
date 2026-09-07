@@ -22,7 +22,7 @@ MODULE mo_jsb_config_class
   !> @TODO `filename_max` and explicit string length definitions should not be needed with
   !>       `CHARACTER(len=:), ALLOCATABLE :: ` syntax.
   !>
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish, message_text
@@ -120,7 +120,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: is_single_site        !< Single site model
     CHARACTER(len=:), ALLOCATABLE  :: single_site_name      !< Single site name
     CHARACTER(len=:), ALLOCATABLE  :: single_site_shortname !< Single site short name
-    REAL(wp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
+    REAL(jp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
 
   END TYPE t_jsb_model_config
 
@@ -232,7 +232,7 @@ CONTAINS
     LOGICAL                       :: is_single_site
     CHARACTER(len=filename_max)   :: single_site_name
     CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
-    REAL(wp)                      :: single_site_lonlat(2)
+    REAL(jp)                      :: single_site_lonlat(2)
 
     ! Definition of the namelist
     NAMELIST /jsb_model_nml/  &

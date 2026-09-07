@@ -18,7 +18,7 @@
 MODULE mo_q_agr_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
@@ -62,7 +62,7 @@ MODULE mo_q_agr_constants
   INTEGER, PARAMETER :: ix_harvest      = AGR_HARVEST_IDX
 
   ! generic parameters for agriculture model
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & qs_def_n_fertiliser             = def_parameters, &  !< QS-only default rate of fertiliser application for crops per year (mol / m2 / year)
     & iq_background_n_fertiliser_rate = def_parameters, &  !< IQ-only minimum entry from natural fertilisation sources (manure etc.)
                                                            !< in extensive agriculture lacking mineral N input (mol / m2 / year)
@@ -81,12 +81,12 @@ MODULE mo_q_agr_constants
     & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
   ! phenology parameters for all crop types
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & mavg_period_cropseason            = def_parameters, &      !< averaging period for long-term cropseason length (years)
     & gdd_t_thres_dormseason            = def_parameters         !< GDD temperature threshold for C3/C4 crops in dormant season (degC days)
 
   !< phenology parameters for crop types
-  REAL(wp), DIMENSION(ncroptype), SAVE :: &
+  REAL(jp), DIMENSION(ncroptype), SAVE :: &
     & cttab_t_thres_planting, &                                  !< weekly air temperature threshold for planting (K)
     & cttab_t_thres_gdd_gs, &                                    !< reference temperature for GDD calculation during growing season (K)
     & cttab_fgdd_mat, &                                          !< fraction of GDD_X needed to reach maturity (unitless)
@@ -100,12 +100,12 @@ MODULE mo_q_agr_constants
     & cttab_crop_season_max                                      !< maximum permitted number of crop seasons per year (# yr-1)
 
   ! allometry parameters for all crop types
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & k_heatindex, &                                             !< factor in the sensitivity of allometry to GDD (unitless)
     & leaf2sapwood_min_ratio                                     !< minimum leaf to stem mass ration (unitless)
 
   !< allometry and allocation parameters for crop types
-  REAL(wp), DIMENSION(ncroptype), SAVE :: &
+  REAL(jp), DIMENSION(ncroptype), SAVE :: &
     & cttab_k_hi_leaf, &                                         !< shape parameter for leaf allocation response to heat index (unitless)
     & cttab_k_hi_stem, &                                         !< shape parameter for stem allocation response to heat index (unitless)
     & cttab_leaf2root_mass_init, &                               !< initial ratio of leaf to fine root mass at planting (unitless)

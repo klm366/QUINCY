@@ -16,7 +16,7 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish
   USE mo_util_string,     ONLY: toupper, tolower, int2string, real2string, logical2string, separator, one_of_str => one_of
   USE mo_math_utilities,  ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
@@ -48,11 +48,11 @@ CONTAINS
   !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
-    REAL(wp), INTENT(in) :: depth(:,:)             !< The bedrock depth
-    REAL(wp), INTENT(in) :: dz(:)                  !< Vertical dimension
-    REAL(wp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2)) !< Actual soil layer depth
+    REAL(jp), INTENT(in) :: depth(:,:)             !< The bedrock depth
+    REAL(jp), INTENT(in) :: dz(:)                  !< Vertical dimension
+    REAL(jp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2)) !< Actual soil layer depth
 
-    REAL(wp) :: bottom, bottom_m1  !< Helper variables
+    REAL(jp) :: bottom, bottom_m1  !< Helper variables
     INTEGER  :: nsoil, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
@@ -80,18 +80,18 @@ CONTAINS
   !>
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & ifs_3d (:,:,:),     &
       & ifs_depth(:),       &           !< Depth in ifs model
       & soil_depth(:)                   !< soil depth in ICON-Land
-    REAL(wp), OPTIONAL, INTENT(in) :: &
+    REAL(jp), OPTIONAL, INTENT(in) :: &
       & ifs_sfc(:,:)
 
-    REAL(wp), INTENT(out) :: &
+    REAL(jp), INTENT(out) :: &
       & soil_3d(:,:,:)
 
-    REAL(wp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
-    REAL(wp) :: zwt, zwt_sum
+    REAL(jp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
+    REAL(jp) :: zwt, zwt_sum
     INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out, ik1
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':ifs2soil'
@@ -164,11 +164,11 @@ CONTAINS
     & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
     & parameter_from_texture)
 
-    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
-    REAL(wp), INTENT(in)  ::                                      &
+    REAL(jp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(jp), INTENT(in)  ::                                      &
       fraction_sand, fraction_silt, fraction_clay,                &
       fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
-    REAL(wp), INTENT(out)  ::  parameter_from_texture
+    REAL(jp), INTENT(out)  ::  parameter_from_texture
 
     ! Compute texture based soil parameter
     parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
@@ -200,17 +200,17 @@ CONTAINS
     TYPE(t_input_file)           :: input_file     !< File containing input data to be read
     CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
     CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
-    REAL(wp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
+    REAL(jp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
 
     LOGICAL,  INTENT(IN), OPTIONAL :: l_organic    !< T: read the '_mineral' version of the variable
-    REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
-    REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
-    REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
-    REAL(wp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if a variable is not found
+    REAL(jp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
+    REAL(jp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
+    REAL(jp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
+    REAL(jp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if a variable is not found
     INTEGER,  INTENT(IN), OPTIONAL :: ilay         !< Layer index for multi-layer variables
     CHARACTER(len=*), INTENT(IN), OPTIONAL :: layer_name !< Name of the vertical layer
 
-    REAL(wp), POINTER            :: &
+    REAL(jp), POINTER            :: &
       & ptr_2D(:,:),                &              !< Pointer to 2d variable
       & ptr_3D(:,:,:)                              !< Pointer to 3d variable
     LOGICAL :: read_from_file                      !< T: read data from file, F: use fallback value or fail
@@ -364,13 +364,13 @@ CONTAINS
 
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
-    REAL(wp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
-    REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
-    REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
+    REAL(jp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
+    REAL(jp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
+    REAL(jp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
+    REAL(jp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
     INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic dependencies
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
+    REAL(jp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
     INTEGER  :: blk, jc, nblks, nproma
     ! ----------------------------------------------------------------------------------------------------- !
     nblks  = SIZE(scaling_2D,2)
@@ -402,10 +402,10 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_input_file),      INTENT(INOUT) :: input_file !< File to read passed var from
-    REAL(wp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< Var pointer
+    REAL(jp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< Var pointer
     CHARACTER(*),            INTENT(IN)    :: var_name   !< Name of the variable in the file
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), POINTER :: return_2D(:,:)   !< Temporary pointer used to "call" the netcdf reading routine
+    REAL(jp), POINTER :: return_2D(:,:)   !< Temporary pointer used to "call" the netcdf reading routine
     ! ----------------------------------------------------------------------------------------------------- !
 
     return_2D => input_file%Read_2d(variable_name = var_name)
@@ -422,13 +422,13 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_input_file),      INTENT(INOUT) :: input_file   !< File to read passed var from
-    REAL(wp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< Var pointer
+    REAL(jp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< Var pointer
     CHARACTER(*),            INTENT(IN)    :: var_name     !< Name of the variable in the file
     CHARACTER(*),            INTENT(IN)    :: name_extdim  !< Name of the variable in the file
     INTEGER,                 INTENT(IN)    :: size_extdim  !< Size of additional dim
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER           :: i_dim3            !< Third dim index
-    REAL(wp), POINTER :: return_3D(:,:, :) !< Temporary pointer used to "call" the netcdf reading routine
+    REAL(jp), POINTER :: return_3D(:,:, :) !< Temporary pointer used to "call" the netcdf reading routine
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO i_dim3 = 1,size_extdim

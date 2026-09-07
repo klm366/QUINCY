@@ -20,7 +20,7 @@ MODULE mo_sb_config_class
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 
@@ -77,30 +77,30 @@ MODULE mo_sb_config_class
     !!
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
-    REAL(wp)              :: soil_p_depth
-    REAL(wp)              :: soil_p_labile
-    REAL(wp)              :: soil_p_slow
-    REAL(wp)              :: soil_p_occluded
-    REAL(wp)              :: soil_p_primary
-    REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(jp)              :: soil_ph                  !< soil pH - site specific from forcing info file
+    REAL(jp)              :: soil_p_depth
+    REAL(jp)              :: soil_p_labile
+    REAL(jp)              :: soil_p_slow
+    REAL(jp)              :: soil_p_occluded
+    REAL(jp)              :: soil_p_primary
+    REAL(jp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
-    REAL(wp)         :: nml_temp_freeze_thres_bio
-    REAL(wp)         :: nml_temp_freeze_window_bio
-    REAL(wp)         :: nml_frac_woody2dec_litter
-    REAL(wp)         :: nml_frac_litter2fast_som
-    REAL(wp)         :: nml_f_nit_noy
-    REAL(wp)         :: nml_f_nit_n2o
-    REAL(wp)         :: nml_vmax_nitrification
-    REAL(wp)         :: nml_vmax_denitrification
-    REAL(wp)         :: nml_t_ref_decomposition
-    REAL(wp)         :: nml_ea_decomposition
-    REAL(wp)         :: nml_ed_decomposition
+    REAL(jp)         :: nml_temp_freeze_thres_bio
+    REAL(jp)         :: nml_temp_freeze_window_bio
+    REAL(jp)         :: nml_frac_woody2dec_litter
+    REAL(jp)         :: nml_frac_litter2fast_som
+    REAL(jp)         :: nml_f_nit_noy
+    REAL(jp)         :: nml_f_nit_n2o
+    REAL(jp)         :: nml_vmax_nitrification
+    REAL(jp)         :: nml_vmax_denitrification
+    REAL(jp)         :: nml_t_ref_decomposition
+    REAL(jp)         :: nml_ea_decomposition
+    REAL(jp)         :: nml_ed_decomposition
 
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -179,25 +179,25 @@ CONTAINS
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
-    REAL(wp)                    :: soil_ph
-    REAL(wp)                    :: soil_p_depth,        &
+    REAL(jp)                    :: soil_ph
+    REAL(jp)                    :: soil_p_depth,        &
                                    soil_p_labile,       &
                                    soil_p_slow,         &
                                    soil_p_occluded,     &
                                    soil_p_primary
-    REAL(wp)                    :: qmax_org_fine_particle
+    REAL(jp)                    :: qmax_org_fine_particle
     LOGICAL                     :: flag_apply_nml_parameters
-    REAL(wp)                    :: nml_temp_freeze_thres_bio
-    REAL(wp)                    :: nml_temp_freeze_window_bio
-    REAL(wp)                    :: nml_frac_woody2dec_litter
-    REAL(wp)                    :: nml_frac_litter2fast_som
-    REAL(wp)                    :: nml_f_nit_noy
-    REAL(wp)                    :: nml_f_nit_n2o
-    REAL(wp)                    :: nml_vmax_nitrification
-    REAL(wp)                    :: nml_vmax_denitrification
-    REAL(wp)                    :: nml_t_ref_decomposition
-    REAL(wp)                    :: nml_ea_decomposition
-    REAL(wp)                    :: nml_ed_decomposition
+    REAL(jp)                    :: nml_temp_freeze_thres_bio
+    REAL(jp)                    :: nml_temp_freeze_window_bio
+    REAL(jp)                    :: nml_frac_woody2dec_litter
+    REAL(jp)                    :: nml_frac_litter2fast_som
+    REAL(jp)                    :: nml_f_nit_noy
+    REAL(jp)                    :: nml_f_nit_n2o
+    REAL(jp)                    :: nml_vmax_nitrification
+    REAL(jp)                    :: nml_vmax_denitrification
+    REAL(jp)                    :: nml_t_ref_decomposition
+    REAL(jp)                    :: nml_ea_decomposition
+    REAL(jp)                    :: nml_ed_decomposition
 
     NAMELIST /lnd_sb_nml/                     &
                       active                    , &
@@ -381,7 +381,7 @@ CONTAINS
     ! Create vertical axis
     ! - this grid might be useful in other contexts, too?
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
-      & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
+      & levels=(/ (REAL(i_month, kind=jp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
 
   END SUBROUTINE Init_sb_config

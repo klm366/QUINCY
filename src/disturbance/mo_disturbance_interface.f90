@@ -22,7 +22,7 @@ MODULE mo_disturb_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -176,7 +176,7 @@ CONTAINS
     ! Locally allocated vectors
     !
 
-    REAL(wp) :: fire_minimum, fire_tau
+    REAL(jp) :: fire_minimum, fire_tau
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -374,8 +374,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum_ta, cflux
-    REAL(wp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
+    REAL(jp), DIMENSION(options%nc)           :: old_c_state_sum_ta, cflux
+    REAL(jp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
 
     INTEGER :: iblk, ics, ice, ic, nc
 

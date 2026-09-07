@@ -16,7 +16,7 @@
 MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -92,13 +92,13 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_target_year
-    REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
-    REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
+    REAL(jp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(jp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
-    REAL(wp), ALLOCATABLE   :: target_cf(:)
+    REAL(jp), ALLOCATABLE   :: target_cf(:)
     LOGICAL, ALLOCATABLE    :: nlcc_tile(:)
     INTEGER                 :: i_max_area
-    REAL(wp)                :: cf_sum, diff
+    REAL(jp)                :: cf_sum, diff
 
     INTEGER :: target_year, iblk, ic
     INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks

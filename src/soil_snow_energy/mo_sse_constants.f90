@@ -14,13 +14,13 @@
 MODULE mo_sse_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
   USE mo_jsb_physical_constants,  ONLY: ks, ki, clw, cs, ci, rhoh2o, dens_snow, dens_ice
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), PARAMETER ::                    &
+  REAL(jp), PARAMETER ::                    &
     ! Parameters for solid soil particulate
     & hcond_dry_soil     = 0.05_wp,         & !< Dry soil heat conductivity (O'Donnel et al 2009)             [W/m/K]
     ! Parameters for liquid water

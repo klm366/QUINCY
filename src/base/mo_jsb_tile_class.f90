@@ -28,7 +28,7 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on, acc_stream, acc_async_sync
-  USE mo_kind,                ONLY: wp, dp
+  USE mo_kind,                ONLY: jp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
@@ -77,10 +77,10 @@ MODULE mo_jsb_tile_class
   ! Declarations for tiles
   !
   TYPE :: real_2d_p
-    REAL(wp), POINTER :: p(:,:) => NULL()
+    REAL(jp), POINTER :: p(:,:) => NULL()
   END TYPE
   TYPE :: real_3d_p
-    REAL(wp), POINTER :: p(:,:,:) => NULL()
+    REAL(jp), POINTER :: p(:,:,:) => NULL()
   END TYPE
   !
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
@@ -101,8 +101,8 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.       !< Whether any lct of tile is one that has soil
     !
     INTEGER,                  ALLOCATABLE :: process_action(:)        !< List of `action` for all processes
-    REAL(wp),                     POINTER :: fract     (:,:)          !< Fraction of this tile (relative to grid box)
-    REAL(wp),                     POINTER :: fract_old (:,:)          !< Old fractions of this tile (relative to grid box)
+    REAL(jp),                     POINTER :: fract     (:,:)          !< Fraction of this tile (relative to grid box)
+    REAL(jp),                     POINTER :: fract_old (:,:)          !< Old fractions of this tile (relative to grid box)
     CHARACTER(LEN=filename_max)           :: fract_filename           !< Name of file to read tile fractions from. The variable
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
@@ -265,9 +265,9 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     !> Variables needed to calculate aggregation weights
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    REAL(wp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
-    REAL(wp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
+    REAL(jp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(jp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
+    REAL(jp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
 
     INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
@@ -445,7 +445,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
-    REAL(wp), OPTIONAL,         INTENT(in)    :: &
+    REAL(jp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
       & fract_old(:)
 
@@ -497,7 +497,7 @@ CONTAINS
   SUBROUTINE Set_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), OPTIONAL,         INTENT(in)    :: &
+    REAL(jp), OPTIONAL,         INTENT(in)    :: &
       & fract(:,:),        &
       & fract_old(:,:)
 
@@ -556,7 +556,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
-    REAL(wp), OPTIONAL,         INTENT(inout) :: &
+    REAL(jp), OPTIONAL,         INTENT(inout) :: &
       & fract(:),        &
       & fract_old(:)
 
@@ -577,7 +577,7 @@ CONTAINS
   SUBROUTINE Get_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
-    REAL(wp), OPTIONAL,         INTENT(inout) :: &
+    REAL(jp), OPTIONAL,         INTENT(inout) :: &
       & fract(:,:),        &
       & fract_old(:,:)
 
@@ -606,7 +606,7 @@ CONTAINS
   SUBROUTINE Set_fract_ptr(this, ptr)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
+    REAL(jp), POINTER                         :: ptr(:,:)
     ! -------------------------------------------------------------------------------------------------- !
     this%fract => ptr
     __acc_attach(this%fract)
@@ -616,7 +616,7 @@ CONTAINS
   SUBROUTINE Set_fract_old_ptr(this, ptr)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
+    REAL(jp), POINTER                         :: ptr(:,:)
 
     this%fract_old => ptr
     __acc_attach(this%fract_old)
@@ -789,7 +789,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+    ! REAL(jp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_1d'
 
@@ -838,7 +838,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+    ! REAL(jp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_2d'
 
@@ -884,10 +884,10 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< Chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< Calling aggregation routine
 
-    REAL(wp), POINTER :: ptr(:,:)
+    REAL(jp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
-    REAL(wp), POINTER :: fract_sum(:,:)
-    REAL(wp), POINTER :: data_sum(:,:)
+    REAL(jp), POINTER :: fract_sum(:,:)
+    REAL(jp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -1055,8 +1055,8 @@ CONTAINS
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
-    REAL(wp), POINTER :: fract_sum(:,:)
-    REAL(wp), POINTER :: data_sum(:,:)
+    REAL(jp), POINTER :: fract_sum(:,:)
+    REAL(jp), POINTER :: data_sum(:,:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all

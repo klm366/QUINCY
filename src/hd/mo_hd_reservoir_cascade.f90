@@ -15,7 +15,7 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
   USE mo_jsb_time,    ONLY: get_day_length
   USE mo_jsb_control, ONLY: acc_stream
 
@@ -36,18 +36,18 @@ CONTAINS
   !   linear reservoir approach: The outflow from a reservoir is proportional to its content.
   !------------------------------------------------------------------------------------------------
 
-    REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
-    REAL(wp),  INTENT(in)    :: dtime          !< time step [s]
+    REAL(jp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
+    REAL(jp),  INTENT(in)    :: dtime          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
-    REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
-    REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
-    REAL(wp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade [m3]
-    REAL(wp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade [m3/s]
+    REAL(jp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
+    REAL(jp),  INTENT(in)    :: nres(:)          !< number of reservoirs
+    REAL(jp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade [m3]
+    REAL(jp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade [m3/s]
 
     ! local variables
     ! ---------------
 
-    REAL(wp) :: &
+    REAL(jp) :: &
       & day_length,        &
       & amod,              &
       & akdiv(nc),         &

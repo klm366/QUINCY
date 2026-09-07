@@ -15,7 +15,7 @@ MODULE mo_hydro_util
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: acc_stream
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
   USE mo_exception,   ONLY: finish
 
   IMPLICIT NONE
@@ -34,13 +34,13 @@ CONTAINS
 
   SUBROUTINE get_amount_in_rootzone_1d(ws, dz, dz_root, ws_root)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & ws     (:),       &        !< Water content of soil layers
       & dz     (:),       &        !< Thicknesses of soil layers
       & dz_root(:)                 !< Thicknesses of root layers
-    REAL(wp) :: ws_root            !< Water content in root zone
+    REAL(jp) :: ws_root            !< Water content in root zone
 
-    REAL(wp) ::                       &
+    REAL(jp) ::                       &
       & bottom    , &   !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  , &  !< Cumulative depth of soil down to previous layer
       & root_depth      !< Total depth of root zone
@@ -81,14 +81,14 @@ CONTAINS
 
   SUBROUTINE get_amount_in_rootzone_2d(ws, dz, dz_root, ws_root)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & ws     (:,:),       &        !< Water content of soil layers
       & dz     (:,:),       &        !< Thicknesses of soil layers
       & dz_root(:,:)                 !< Thicknesses of root layers
 
-    REAL(wp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
+    REAL(jp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
 
-    REAL(wp) ::                       &
+    REAL(jp) ::                       &
       & bottom     (SIZE(ws     ,1)), & !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
       & root_depth (SIZE(ws,1))         !< Total depth of root zone

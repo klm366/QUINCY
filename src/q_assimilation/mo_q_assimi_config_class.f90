@@ -20,7 +20,7 @@ MODULE mo_q_assimi_config_class
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_jsb_math_constants,ONLY: eps4
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -77,9 +77,9 @@ CONTAINS
     LOGICAL                     :: flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
     CHARACTER(15)               :: canopy_conductance_scheme_string
-    REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer
-    REAL(wp)                    :: dAPAR
-    REAL(wp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
+    REAL(jp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer
+    REAL(jp)                    :: dAPAR
+    REAL(jp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy_q_assimi
 
@@ -161,7 +161,7 @@ CONTAINS
     CASE ("fapar")
       ! alternative canopy layer depth calculation, approximately proportional to FAPAR
       ! to reduce impact of actual canopy layering on PS calculation
-      dAPAR = 1.0_wp / REAL(config%ncanopy, KIND = wp)
+      dAPAR = 1.0_wp / REAL(config%ncanopy, KIND = jp)
       DO icanopy = 1,config%ncanopy
         canopy_layer_thickness_profile(icanopy) = -1.0_wp / k_canopy_layer * LOG(1._wp - (dAPAR * icanopy) + eps4)
       END DO

@@ -21,7 +21,7 @@
 MODULE mo_veg_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish, message_text
   USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
@@ -364,15 +364,15 @@ CONTAINS
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
     LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
     LOGICAL                                 :: l_hlp                  !< helper
-    REAl(wp)                                :: hlp_r                  !< helper
-    REAl(wp)                                :: mavg_period_hlp        !< helper
+    REAl(jp)                                :: hlp_r                  !< helper
+    REAl(jp)                                :: mavg_period_hlp        !< helper
     INTEGER                                 :: ic                     !< looping over chunk
     INTEGER                                 :: icanopy                !< looping
     INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc     !< dimensions
-    REAL(wp)                                :: dtime                  !< timestep
-    REAL(wp)                                :: lctlib_tau_mycorrhiza  !< lctlib parameter (tau of mycorrhiza)
-    REAL(wp)                                :: lctlib_tau_fine_root   !< lctlib parameter (tau of fine roots)
+    REAL(jp)                                :: dtime                  !< timestep
+    REAL(jp)                                :: lctlib_tau_mycorrhiza  !< lctlib parameter (tau of mycorrhiza)
+    REAL(jp)                                :: lctlib_tau_fine_root   !< lctlib parameter (tau of fine roots)
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -1121,14 +1121,14 @@ CONTAINS
     dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
-    REAL(wp),                   INTENT(in)    :: dtime          !< timestep length
+    REAL(jp),                   INTENT(in)    :: dtime          !< timestep length
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_jsb_grid),         POINTER :: grid
     INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
-    REAL(wp),             ALLOCATABLE :: q_total_c_new(:)       !< helper variable
-    REAL(wp),                 POINTER :: lat(:,:)               !< Grid cell center latitude [deg.]
-    REAL(wp),                 POINTER :: lon(:,:)               !< Grid cell center longitude [deg.]
+    REAL(jp),             ALLOCATABLE :: q_total_c_new(:)       !< helper variable
+    REAL(jp),                 POINTER :: lat(:,:)               !< Grid cell center latitude [deg.]
+    REAL(jp),                 POINTER :: lon(:,:)               !< Grid cell center longitude [deg.]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !

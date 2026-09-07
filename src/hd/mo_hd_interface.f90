@@ -18,7 +18,7 @@ MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: jp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
   USE mo_fortran_tools,    ONLY: assert_acc_device_only
@@ -122,11 +122,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: local_budget
     dsl4jsb_Real2D_onChunk :: local_wbal_error
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & area(:), &
       & tile_fract(:)
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & inflow,           &
       & local_budget_old
 
@@ -137,7 +137,7 @@ CONTAINS
     CHARACTER(len=32) :: routing_scheme
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: dtime
+    REAL(jp) :: dtime
     LOGICAL  :: is_experiment_start
 
     iblk    = options%iblk
@@ -339,7 +339,7 @@ CONTAINS
       & nidx_upstream,         &
       & bidx_upstream
 
-    REAL(wp) ::                 &
+    REAL(jp) ::                 &
       & global_discharge,       &  ! global sum of discharge to the ocean
       & global_outflow,         &
       & global_internal_drain,  &
@@ -360,15 +360,15 @@ CONTAINS
     CHARACTER(len=32) :: &
       & routing_scheme        ! river routing scheme
 
-    REAL(wp), ALLOCATABLE  :: &
+    REAL(jp), ALLOCATABLE  :: &
       & ztemp(:,:),           &
       & in_domain(:,:)          ! 1._wp: cell in domain, 0._wp: halo cell (in_domain)
                                 ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    REAL(wp) :: &
+    REAL(jp) :: &
       & factor, &
       & cos_lat                 ! Cosines of latitudes of cell centers
 
-    REAL(wp) :: global_resid
+    REAL(jp) :: global_resid
 
     LOGICAL  :: debug_hd, use_bifurcated_rivers
 
@@ -780,7 +780,7 @@ CONTAINS
     INTEGER :: nres_o_max, nres_b_max, nres_r_max
     INTEGER :: nproma, nblks, jc, blk
 
-    REAL(wp), POINTER ::       &
+    REAL(jp), POINTER ::       &
       & area            (:,:)
 
     ! Pointers to variables in memory
@@ -800,22 +800,22 @@ CONTAINS
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
 
-    REAL(wp), ALLOCATABLE  ::    &
+    REAL(jp), ALLOCATABLE  ::    &
       & ztemp            (:,:),  &
       & in_domain        (:,:),  &  ! 1: cell in domain, 0: halo cell
       & water_budget_old (:,:),  &  ! water budget of previous time step
       & water_flux       (:,:)      ! water fluxes within the time step
 
-    REAL(wp), POINTER  :: &
+    REAL(jp), POINTER  :: &
       & tile_fract(:,:)
 
-    REAL(wp) ::                   &
+    REAL(jp) ::                   &
       & dtime,                    &
       & global_water_budget,      &  ! water budget of current step
       & global_water_budget_old,  &  ! water budget of previous step
       & global_water_error           ! water budget change within the time step
 
-    REAL(wp), POINTER :: water_error_gsum(:)
+    REAL(jp), POINTER :: water_error_gsum(:)
 
     LOGICAL :: debug_hd, diag_water_budget
 

@@ -18,14 +18,14 @@
 MODULE mo_veg_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
 
   IMPLICIT NONE
   PUBLIC
 
 
   ! Respiration parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       ! growth respiration per unit new biomass
       fresp_growth          , &   !< growth respiration per unit new biomass
       ! N-specific foliar maintenance respiration rate (micro-mol CO2 / mol N / s)
@@ -46,7 +46,7 @@ MODULE mo_veg_constants
       k_maint_resp_suppress       !< factor reduce maintentance respiration [unitless]
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k0_fn_pepc_C3     , &  !< fraction of N in PEP and PPDK (C3 plants)
       k0_fn_pepc_C4     , &  !< fraction of N in PEP and PPDK (C4 plants) (Makino et al. 2003 / Tazoe et al. PCE 2006, 29, 691-700)
       ! in static leaf N mode: prescribed ratio of Jmax25/Vcmax25
@@ -54,7 +54,7 @@ MODULE mo_veg_constants
       jmax2vcmax_C4          !< calibrated to have Jmax=vcmax at 25 deg; ratio of Jmax25/Vcmax25 for prescribed leaf N (C4 plants)
 
   ! Labile pool parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       ! default turnover time of the labile carbo-hydrates (in days)
       tau_labile,           & !< default turnover time of the labile carbo-hydrates (in days)
       ! ratio between the pull of carbon from the reserve pool
@@ -92,7 +92,7 @@ MODULE mo_veg_constants
       k_phi_interact          !< value of reserve pull phi_X, at which the inverse reserve pull phi_Y is reduced
 
   ! Resorption parameters
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       resorp_fract_leaf,    & !< default fraction of nutrient resporption before leaf shedding
       resorp_fract_wood,    & !< default fraction of nutrient resporption before wood death
       root2leaf_cn,         & !< relative C:N of fine roots compared to leaves (mol C / mol N)
@@ -102,7 +102,7 @@ MODULE mo_veg_constants
       tau_nutrient_recycling  !< time scale of enzyme, RNA etc. turnover (as in return to labile pool!, days)
 
   ! Parameters concerning N uptake calculations
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       kappa_f_demand_nc    , & !< fraction of maximum labile nitrogen concentration at which uptake is reduced to 50%
       kappa_f_demand_pn    , & !< fraction of maximum labile phosphorus  concentration at which uptake is reduced to 50%
       k_f_demand           , & !< k in nutrient uptake response funktion to labile nutrient concentration
@@ -130,7 +130,7 @@ MODULE mo_veg_constants
       f_mycorrhization_max     !< maximum root mycorrhization
 
   ! parameters to describe the varying fraction of N in chlorophyll through the canopy
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       k0_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       k0_fn_chl_C4  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
       k1_fn_chl_C3  ,   &  !< parameter to describe the varying fraction of N in chlorophyll through the canopy
@@ -138,13 +138,13 @@ MODULE mo_veg_constants
       kfn_chl              !< parameter to describe the varying fraction of N in chlorophyll through the canopy
 
   ! parameters used for phenology calculations
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       min_lai                , & !< minimum LAI beyond which all leaves are shed
       target_lai_max         , & !< maximum LAI target for reserve use calculations
       max_leaf_shedding_rate     !< maximum rate of leaf shedding (1/days)
 
   ! vegetation dynamics
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       background_mort_rate_tree   , & !< background mortality rate for trees in static mortality case (1/year)
       background_mort_rate_grass  , & !< background mortality rate for grass in static mortality case (1/year)
       lambda_mort_light           , & !< parameter in the Weibull function controlling self-thinning mortality
@@ -164,7 +164,7 @@ MODULE mo_veg_constants
       fpc_max                         !< maximum foliage projective cover
 
   ! other
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       ! carbon content of leaves per dry matter
       carbon_per_dryweight_leaf   , & !< carbon mass per unit dry weight of leaves (gC / g DW)
       ! minimum permissable height of an individual
@@ -184,14 +184,14 @@ MODULE mo_veg_constants
       leaf2root_max_ratio             !< maximum leaf to root ratio for dynamic allocation
 
   ! parameters for changes in canopy N fractions
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       ! maximum change in photosynthetic N fractions
       delta_n_fraction    , & !< maximum fractional change for optimal adjustment of photosynthetic N fraction
       ! maximum change in CN ratio of canopy
       delta_n_leaf            !< maximum fractional change for optimal adjustment of canopy N allocation
 
   ! parameters used for product pool decay
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
       tau_pp_crop,       & !< exponential time constants for the decay of the crop harvest product pool
       tau_pp_fuelwood,   & !< exponential time constants for the decay of the fuel product pool
       tau_pp_paper,      & !< exponential time constants for the decay of the paper product pool
@@ -201,7 +201,7 @@ MODULE mo_veg_constants
       tau_pp_sawnwood      !< exponential time constants for the decay of the sawnwood product pool
 
   ! parameters used for herbivory
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & ftroph_loss_herbivory, &            !< carbon respiration associated with herbivory (unitless)
     & k_herbivory_grass,     &            !< asymptotic daily rate of herbivory in natural grasslands (1/day)
     & k_herbivory_pasture,   &            !< asymptotic daily rate of herbivory in pasture (1/day)
@@ -210,7 +210,7 @@ MODULE mo_veg_constants
     & min_lai_herbivory                   !< minimum LAI beyond which herbivory can occur
 
   ! red to far red ratio calculations
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & rfr_ratio_toc, &     !< top of the canopy red:farred ratio  (Kull & Kruij 1998)
     & k_r2fr_chl           !< extinction of red:farred ratio on leaf chlorophyll (1/mmol N);
                            !! (Kull & Krujit 1998 for the far red value, tuned to get a R:FR ratio

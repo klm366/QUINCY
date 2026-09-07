@@ -18,14 +18,14 @@
 MODULE mo_q_assimi_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
   USE mo_jsb_physical_constants,  ONLY: Dwv, &            !< diffusion coefficient for water vapour in air
                                         Dco2              !< diffusion coefficient for CO2 in air
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     ! Minimum value of aerodynamic conductance
     min_aerodyn_cond = 0.001_wp, &
     ! ratio of the molecular diffusion constants of water and CO2 in air (Nobel, Plant Phys. 2005, p 380)

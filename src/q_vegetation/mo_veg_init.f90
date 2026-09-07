@@ -18,7 +18,7 @@
 MODULE mo_veg_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
   USE mo_exception,               ONLY: message, finish, message_text
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_jsb_math_constants,      ONLY: eps8
@@ -83,15 +83,15 @@ CONTAINS
     TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
     TYPE(t_jsb_vgrid),              POINTER :: vgrid_soil_w         !< Vertical grid
     TYPE(t_lctlib_element),         POINTER :: lctlib               !< land-cover-type library - parameter across pft's
-    REAL(wp)                                :: hlp1                 !< helper variable
-    REAL(wp)                                :: ref_lai              !< LAI                                 | for canopy model init
-    REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
+    REAL(jp)                                :: hlp1                 !< helper variable
+    REAL(jp)                                :: ref_lai              !< LAI                                 | for canopy model init
+    REAL(jp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
     INTEGER                                 :: iblk, ic, is         !< loop dimensions
     INTEGER                                 :: nproma, nblks        !< dimensions
     INTEGER                                 :: nsoil_w              !< number of soil layers (water)
     INTEGER                                 :: bgcm_idx             !< index of the veg/seed bed pool within the bgcm store
-    REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
-    REAL(wp), POINTER           :: seed_bed_pool_mt_domain(:,:,:)   !< dim: elements, nc, nblks -- on domain!
+    REAL(jp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
+    REAL(jp), POINTER           :: seed_bed_pool_mt_domain(:,:,:)   !< dim: elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
@@ -711,7 +711,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w     !< vertical grid for sl variables
     INTEGER                         :: isoil            !< soillayer index
     INTEGER                         :: nsoil_w          !< number of soil layers (water)
-    REAL(wp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
+    REAL(jp),               POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':veg_read_states'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_SYL_)

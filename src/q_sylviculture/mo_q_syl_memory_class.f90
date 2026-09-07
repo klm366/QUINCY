@@ -18,7 +18,7 @@
 MODULE mo_q_syl_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: jp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory

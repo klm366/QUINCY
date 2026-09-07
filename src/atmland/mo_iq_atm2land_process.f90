@@ -16,7 +16,7 @@
 MODULE mo_iq_atm2land_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8
 
   IMPLICIT NONE
@@ -39,12 +39,12 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER ,  INTENT(in)        :: global_seconds_day     !< seconds passed on this day (global time)
-    REAL(wp),  INTENT(in)        :: dtime                  !< timestep
-    REAL(wp),  INTENT(in)        :: lon                    !< longitude
-    REAL(wp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
-    REAL(wp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
-    REAL(wp),  INTENT(inout)     :: daylength_prev_day     !< time of previous day with light available
-    REAL(wp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
+    REAL(jp),  INTENT(in)        :: dtime                  !< timestep
+    REAL(jp),  INTENT(in)        :: lon                    !< longitude
+    REAL(jp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
+    REAL(jp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
+    REAL(jp),  INTENT(inout)     :: daylength_prev_day     !< time of previous day with light available
+    REAL(jp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER  :: time_shift_in_hours
 
@@ -66,7 +66,7 @@ CONTAINS
     time_shift_in_hours = NINT(MODULO(lon,360._wp)/15._wp)
     ! convert the time shift from whole hours to whole seconds and calculate the seconds passed on this day in local time
     ! (MODULO 86400 is applied to detemine the seconds of the local day, as this can be the day before or after the global day)
-    local_time_day_seconds  = REAL(MODULO(global_seconds_day + (time_shift_in_hours * 3600), 86400),wp)
+    local_time_day_seconds  = REAL(MODULO(global_seconds_day + (time_shift_in_hours * 3600), 86400),jp)
 
   END SUBROUTINE update_local_time_and_daytime_counter
 

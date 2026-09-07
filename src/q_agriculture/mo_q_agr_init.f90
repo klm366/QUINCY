@@ -18,7 +18,7 @@
 MODULE mo_q_agr_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
@@ -41,7 +41,7 @@ MODULE mo_q_agr_init
   !
   !> Type to hold variables read from input files
   TYPE t_q_agr_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & c3_crop_type(:,:), &    !< major c3 crop
       & c4_crop_type(:,:)       !< major c4 crop
   END TYPE t_q_agr_init_vars
@@ -184,7 +184,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: n_fertiliser_c4
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(jp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_fertiliser_data
@@ -264,7 +264,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER  :: ptr_2D(:,:)
+    REAL(jp), POINTER  :: ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
     INTEGER            :: nproma, nblks
 

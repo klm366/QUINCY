@@ -18,7 +18,7 @@
 MODULE mo_lnd_bgcm_store_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
@@ -79,8 +79,8 @@ MODULE mo_lnd_bgcm_store_class
     INTEGER                                :: nr_of_elems   !< number of elements (array size)
     CHARACTER(SHORT_NAME_LEN), ALLOCATABLE :: element_shortname(:)   !< shortname of the elements
     TYPE(t_jsb_var_p),         ALLOCATABLE :: collection_1l_p(:)     !< pointer array for access to the vars
-    REAL(wp),                      POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
-    REAL(wp),                      POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
+    REAL(jp),                      POINTER :: mt_1l_2d_bgcm(:,:,:)   !< if 2d var (elements, nc, nblks)
+    REAL(jp),                      POINTER :: mt_1l_3d_bgcm(:,:,:,:) !< if 3d var (elements, nc, nsoil, nblks)
   END TYPE t_lnd_1l_bgc_material_collection
 
   ! ======================================================================================================= !
@@ -93,8 +93,8 @@ MODULE mo_lnd_bgcm_store_class
     CHARACTER(SHORT_NAME_LEN),  ALLOCATABLE :: element_shortname(:)     !< shortname of the elements
     CHARACTER(MEDIUM_NAME_LEN), ALLOCATABLE :: compartment_shortname(:) !< shortname of the compartments
     TYPE(t_jsb_var_p),          ALLOCATABLE :: collection_2l_p(:,:)     !< pointer array for access to the vars
-    REAL(wp),                       POINTER :: mt_2l_2d_bgcm(:,:,:,:)   !< if 2d var (compartments, elements, nc, nblks)
-    REAL(wp),                       POINTER :: mt_2l_3d_bgcm(:,:,:,:,:) !< if 3d var (compartments, elements, nc, extra_dim, nblks)
+    REAL(jp),                       POINTER :: mt_2l_2d_bgcm(:,:,:,:)   !< if 2d var (compartments, elements, nc, nblks)
+    REAL(jp),                       POINTER :: mt_2l_3d_bgcm(:,:,:,:,:) !< if 3d var (compartments, elements, nc, extra_dim, nblks)
   END TYPE t_lnd_2l_bgc_material_collection
 
   ! ======================================================================================================= !

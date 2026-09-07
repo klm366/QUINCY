@@ -18,7 +18,7 @@
 MODULE mo_q_assimi_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
@@ -258,7 +258,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model
     CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
-    REAL(wp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
+    REAL(jp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
     INTEGER                           :: iblk, nc, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -328,8 +328,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model
     CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
-    REAL(wp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
-    REAL(wp)                          :: ftranspiration_sum_mult(options%nc)      !< SUM(ftranspiration_sl) across soil layers
+    REAL(jp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
+    REAL(jp)                          :: ftranspiration_sum_mult(options%nc)      !< SUM(ftranspiration_sl) across soil layers
                                                                                   !! multiplied by 1.E6_wp to avoide precision issues at some grid cells
     INTEGER                           :: iblk, ics, ice
     INTEGER                           :: nc, ic, is

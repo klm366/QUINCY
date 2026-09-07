@@ -15,7 +15,7 @@ MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -55,7 +55,7 @@ CONTAINS
     INTEGER, POINTER ::         &
       & hd_mask_ptr(:,:),       &
       & cell_sea_land_mask(:,:)
-    REAL(wp), POINTER ::         &
+    REAL(jp), POINTER ::         &
       & return_pointer   (:,:),  &   !< temporary pointer
       & cells_up_ptr (:,:,:)     !< temporary pointer
 
@@ -105,7 +105,7 @@ CONTAINS
       hd_mask_ptr => input_file%Read_2d_int(        &
         & variable_name='MASK')
       IF (ASSOCIATED(hd_mask_ptr)) THEN
-        dsl4jsb_var_ptr(HD_,hd_mask)(:,:) = REAL(hd_mask_ptr(:,:), wp)
+        dsl4jsb_var_ptr(HD_,hd_mask)(:,:) = REAL(hd_mask_ptr(:,:), jp)
         DEALLOCATE(hd_mask_ptr)
       END IF
 
@@ -265,7 +265,7 @@ CONTAINS
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & tile_fract(:,:), &
       & ptr(:,:,:)            !< temporary pointer
 

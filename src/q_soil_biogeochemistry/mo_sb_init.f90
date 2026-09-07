@@ -18,7 +18,7 @@
 MODULE mo_sb_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: jp
   USE mo_exception,             ONLY: finish, message
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_jsb_math_constants,    ONLY: eps4, eps8, one_day
@@ -50,7 +50,7 @@ MODULE mo_sb_init
 #endif
 
   TYPE t_sb_init_vars
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & usda_taxonomy_class     (:,:) => NULL(), &
       & nwrb_taxonomy_class     (:,:) => NULL(), &
       & qmax_org_fine_particle  (:,:) => NULL(), &
@@ -135,14 +135,14 @@ CONTAINS
     TYPE(t_jsb_grid),       POINTER :: hgrid                 !< Horizontal grid
     TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_w          !< Vertical grid
     INTEGER                         :: nsoil_w               !< number of soil layers as used/defined by the SB_ process
-    REAL(wp)                        :: hlp1                  !< helper var
-    REAL(wp)                        :: hlp_frac_c13          !< helper var
-    REAL(wp)                        :: hlp_frac_c14          !< helper var
+    REAL(jp)                        :: hlp1                  !< helper var
+    REAL(jp)                        :: hlp_frac_c13          !< helper var
+    REAL(jp)                        :: hlp_frac_c14          !< helper var
     INTEGER                         :: iblk, ic, is          !< loop over dimensions
     INTEGER                         :: nblks                 !< number of blocks
     INTEGER                         :: nproma                !< number of grid points per iblk
     INTEGER                         :: sb_pool_idx           !< index of the sb pool within the bgcm store
-    REAL(wp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
+    REAL(jp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_ic_bc'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
@@ -708,7 +708,7 @@ CONTAINS
 
     dsl4jsb_Def_config(SB_)
 
-    REAL(wp), POINTER           :: ptr_2D(:, :)
+    REAL(jp), POINTER           :: ptr_2D(:, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
@@ -904,71 +904,71 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: nproma
     INTEGER,                    INTENT(in)    :: nsoil_w
     INTEGER,                    INTENT(in)    :: nblks
-    REAL(wp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
+    REAL(jp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
     INTEGER,                    INTENT(in)    :: lctlib_growthform
-    REAL(wp),                   INTENT(in)    :: lctlib_k_som_fast_init
-    REAL(wp),                   INTENT(in)    :: lctlib_k_som_slow_init
+    REAL(jp),                   INTENT(in)    :: lctlib_k_som_fast_init
+    REAL(jp),                   INTENT(in)    :: lctlib_k_som_slow_init
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
-    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_depth_center_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: hlp_frac_c13
-    REAL(wp),                   INTENT(in)    :: hlp_frac_c14
-    REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_solute(:,:,:)
-    REAL(wp),                   INTENT(inout) :: volume_min_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_fast_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_slow_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_fast_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_slow_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_adsorpt_po4_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_assoc_fast(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_assoc_slow(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_occluded(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_primary(:,:,:)
-    REAL(wp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
-    REAL(wp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
-    REAL(wp),                   INTENT(out)   :: nh4_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: no3_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_n15_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: no3_n15_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: bulk_dens_corr_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_org(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_org_min_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_nh4(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_nh4_min_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: km_adsorpt_nh4_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_assoc(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_n15_assoc(:,:,:)
+    REAL(jp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
+    REAL(jp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_depth_center_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: hlp_frac_c13
+    REAL(jp),                   INTENT(in)    :: hlp_frac_c14
+    REAL(jp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: clay_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: silt_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: ph_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_solute(:,:,:)
+    REAL(jp),                   INTENT(inout) :: volume_min_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_fast_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_slow_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_fast_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_slow_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_adsorpt_po4_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_assoc_fast(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_assoc_slow(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_occluded(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_primary(:,:,:)
+    REAL(jp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
+    REAL(jp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
+    REAL(jp),                   INTENT(out)   :: nh4_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: no3_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_n15_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: no3_n15_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: bulk_dens_corr_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_org(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_org_min_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_nh4(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_nh4_min_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: km_adsorpt_nh4_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_assoc(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_n15_assoc(:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), ALLOCATABLE       :: hlp1(:,:)
-    REAL(wp), ALLOCATABLE       :: hlp2(:,:)
-    REAL(wp), ALLOCATABLE       :: weight_fast_sl(:,:,:)
-    REAL(wp), ALLOCATABLE       :: weight_slow_sl(:,:,:)
-    REAL(wp), ALLOCATABLE       :: init_soluable_litter(:,:)
-    REAL(wp), ALLOCATABLE       :: init_polymeric_litter(:,:)
-    REAL(wp), ALLOCATABLE       :: init_fast(:,:)
-    REAL(wp), ALLOCATABLE       :: init_slow(:,:)
-    REAL(wp), ALLOCATABLE       :: p_labile(:,:,:)
-    REAL(wp), ALLOCATABLE       :: p_labile_slow_site(:,:,:)
+    REAL(jp), ALLOCATABLE       :: hlp1(:,:)
+    REAL(jp), ALLOCATABLE       :: hlp2(:,:)
+    REAL(jp), ALLOCATABLE       :: weight_fast_sl(:,:,:)
+    REAL(jp), ALLOCATABLE       :: weight_slow_sl(:,:,:)
+    REAL(jp), ALLOCATABLE       :: init_soluable_litter(:,:)
+    REAL(jp), ALLOCATABLE       :: init_polymeric_litter(:,:)
+    REAL(jp), ALLOCATABLE       :: init_fast(:,:)
+    REAL(jp), ALLOCATABLE       :: init_slow(:,:)
+    REAL(jp), ALLOCATABLE       :: p_labile(:,:,:)
+    REAL(jp), ALLOCATABLE       :: p_labile_slow_site(:,:,:)
     INTEGER                     :: iblk, is, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_simple_sm'
     IF (debug_on()) CALL message(TRIM(routine), 'Starting ...')
@@ -1343,72 +1343,72 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: nproma
     INTEGER,                    INTENT(in)    :: nsoil_w
     INTEGER,                    INTENT(in)    :: nblks
-    REAL(wp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
+    REAL(jp),                   INTENT(in)    :: num_sl_above_bedrock(:,:)
     INTEGER,                    INTENT(in)    :: lctlib_growthform
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
-    REAL(wp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
-    REAL(wp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
-    REAL(wp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: soil_lay_depth_center_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: hlp_frac_c13
-    REAL(wp),                   INTENT(in)    :: hlp_frac_c14
-    REAL(wp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: clay_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: silt_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
-    REAL(wp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: ph_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: volume_min_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_solute(:,:,:)
-    REAL(wp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_nh4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_fast_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: qmax_slow_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_fast_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_slow_po4(:,:,:)
-    REAL(wp),                   INTENT(inout) :: km_adsorpt_po4_sl(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_assoc_fast(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_assoc_slow(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_occluded(:,:,:)
-    REAL(wp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
-    REAL(wp),                   INTENT(inout) :: po4_primary(:,:,:)
-    REAL(wp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
-    REAL(wp),                   INTENT(out)   :: qmax_org_min_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_nh4_min_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_assoc(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: no3_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_n15_assoc(:,:,:)
-    REAL(wp),                   INTENT(out)   :: nh4_n15_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: no3_n15_solute(:,:,:)
-    REAL(wp),                   INTENT(out)   :: bulk_dens_corr_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: qmax_org(:,:,:)
-    REAL(wp),                   INTENT(out)   :: km_adsorpt_nh4_sl(:,:,:)
-    REAL(wp),                   INTENT(out)   :: k_bioturb(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_poly(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_residue(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_poly_c(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_poly_n(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_poly_p(:,:,:)
-    REAL(wp),                   INTENT(out)   :: enzyme_frac_AP(:,:,:)
+    REAL(jp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
+    REAL(jp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
+    REAL(jp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: soil_lay_depth_center_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: hlp_frac_c13
+    REAL(jp),                   INTENT(in)    :: hlp_frac_c14
+    REAL(jp),                   INTENT(in)    :: root_fraction_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: clay_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: silt_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
+    REAL(jp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: ph_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: volume_min_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_solute(:,:,:)
+    REAL(jp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_nh4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_fast_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: qmax_slow_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_fast_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_slow_po4(:,:,:)
+    REAL(jp),                   INTENT(inout) :: km_adsorpt_po4_sl(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_assoc_fast(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_assoc_slow(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_occluded(:,:,:)
+    REAL(jp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
+    REAL(jp),                   INTENT(inout) :: po4_primary(:,:,:)
+    REAL(jp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
+    REAL(jp),                   INTENT(out)   :: qmax_org_min_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_nh4_min_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_assoc(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: no3_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_n15_assoc(:,:,:)
+    REAL(jp),                   INTENT(out)   :: nh4_n15_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: no3_n15_solute(:,:,:)
+    REAL(jp),                   INTENT(out)   :: bulk_dens_corr_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: qmax_org(:,:,:)
+    REAL(jp),                   INTENT(out)   :: km_adsorpt_nh4_sl(:,:,:)
+    REAL(jp),                   INTENT(out)   :: k_bioturb(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_poly(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_residue(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_poly_c(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_poly_n(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_poly_p(:,:,:)
+    REAL(jp),                   INTENT(out)   :: enzyme_frac_AP(:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), ALLOCATABLE       :: p_labile(:,:,:)
-    REAL(wp), ALLOCATABLE       :: p_labile_slow_site(:,:,:)
-    REAL(wp), ALLOCATABLE       :: arr_hlp7(:,:,:)
-    REAL(wp), ALLOCATABLE       :: arr_hlp8(:,:,:)
-    REAL(wp), ALLOCATABLE       :: arr_hlp9(:,:,:)
-    REAL(wp)                    :: frac_mineral_assoc_soil_c  !< fraction of mineral-associated C in the soil
+    REAL(jp), ALLOCATABLE       :: p_labile(:,:,:)
+    REAL(jp), ALLOCATABLE       :: p_labile_slow_site(:,:,:)
+    REAL(jp), ALLOCATABLE       :: arr_hlp7(:,:,:)
+    REAL(jp), ALLOCATABLE       :: arr_hlp8(:,:,:)
+    REAL(jp), ALLOCATABLE       :: arr_hlp9(:,:,:)
+    REAL(jp)                    :: frac_mineral_assoc_soil_c  !< fraction of mineral-associated C in the soil
     INTEGER                     :: iblk, is, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_jsm'
     IF (debug_on()) CALL message(TRIM(routine), 'Starting ...')
@@ -1881,19 +1881,19 @@ CONTAINS
 
     INTEGER,                          INTENT(in)     :: nc                        !< dimensions
     INTEGER                         , INTENT(in)     :: nsoil_w                   !< number of soil layers (water)
-    REAL(wp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
-    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_lay_depth_center_sl  !< depth at the center of each soil layer
+    REAL(jp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
+    REAL(jp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_lay_depth_center_sl  !< depth at the center of each soil layer
     LOGICAL                         , INTENT(in)     :: flag_sb_double_langmuir   !< T: double Langmuir; F: traditional Langmuir
-    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl, &      !< soil depth per soil layer, [m]
+    REAL(jp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl, &      !< soil depth per soil layer, [m]
                                                         root_fraction_sl, &   !<
                                                         bulk_dens_sl, &       !< corrected soil bulk density per soil layer, [kg m-3]
                                                         p_labile_slow_ratio   !< ratio between labile and labile+slow P pools
-    REAL(wp)                        , INTENT(in)     :: soil_p_depth          !< soil depth of the soil P maps
-    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
+    REAL(jp)                        , INTENT(in)     :: soil_p_depth          !< soil depth of the soil P maps
+    REAL(jp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &      !< total labile P pool (solute + assoc_fast) of the soil P maps, [g m-2]
                                                         soil_p_slow, &        !< total slow P pool (secondary P) of the soil P maps, [g m-2]
                                                         soil_p_occluded, &    !< total occluded P pool of the soil P maps, [g m-2]
                                                         soil_p_primary        !< total primary P pool of the soil P maps, [g m-2]
-    REAL(wp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &         !< soluble Pi pool per soil layer, [mol m-3]
+    REAL(jp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &         !< soluble Pi pool per soil layer, [mol m-3]
                                                         po4_assoc_fast, &     !< fast minerally associated PO4 pool per soil layer, [mol m-3]
                                                         po4_assoc_slow, &     !< slow minerally associated PO4 pool per soil layer, [mol m-3]
                                                         po4_occluded, &       !< occluded PO4 pool per soil layer, [mol m-3]
@@ -1905,13 +1905,13 @@ CONTAINS
                                                         qmax_slow_po4, &      !< maximum PO4 sorption capacity for po4_assoc_slow, [mol m-3]
                                                         km_slow_po4           !< half-saturation PO4 concentration for po4_assoc_slow, [mol m-3]
     INTEGER                                          :: ic, is
-    REAL(wp), DIMENSION(nc)                          :: rhlp1
-    REAL(wp), DIMENSION(nc)                          :: soil_p_weight         !< total soil weight up to the soil_p_depth [kg]
-    REAL(wp), DIMENSION(nc)                          :: soil_p_layer          !< up to soil_p_layer keep the P init map info
-    REAL(wp), DIMENSION(nc)                          :: hlp1, hlp2
-    REAL(wp), DIMENSION(nc)                          :: hlp3, hlp4
+    REAL(jp), DIMENSION(nc)                          :: rhlp1
+    REAL(jp), DIMENSION(nc)                          :: soil_p_weight         !< total soil weight up to the soil_p_depth [kg]
+    REAL(jp), DIMENSION(nc)                          :: soil_p_layer          !< up to soil_p_layer keep the P init map info
+    REAL(jp), DIMENSION(nc)                          :: hlp1, hlp2
+    REAL(jp), DIMENSION(nc)                          :: hlp3, hlp4
     LOGICAL,  DIMENSION(nc)                          :: aflag
-    REAL(wp), DIMENSION(nc,nsoil_w)                  :: soil_weight_sl, &                 !< soil weight per soil layer
+    REAL(jp), DIMENSION(nc,nsoil_w)                  :: soil_weight_sl, &                 !< soil weight per soil layer
                                                         arr_hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools'
 
@@ -2109,7 +2109,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: dtime
+    REAL(jp),                  INTENT(in) :: dtime
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),           POINTER :: model
     TYPE(t_jsb_grid),            POINTER :: hgrid
@@ -2129,7 +2129,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: noy_deposition_monthly
     dsl4jsb_Real3D_onDomain :: p_deposition_monthly
 
-    REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
+    REAL(jp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
 
     INTEGER :: current_year, current_month, no_omp_thread, nproma, nblks, i_month
     LOGICAL :: is_experiment_start, read_deposition_data

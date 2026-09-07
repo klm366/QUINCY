@@ -38,7 +38,7 @@ PROGRAM Calculate_relative_transitions_remap_and_flipLats
    !                   exponent  = 37   exponent  =  307
    INTEGER, PARAMETER :: sp = SELECTED_REAL_KIND(6,37)
    INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(12,307)
-   INTEGER, PARAMETER :: wp = dp   ! working precision
+   INTEGER, PARAMETER :: jp = dp   ! working precision
    INTEGER, PARAMETER :: i4 = SELECTED_INT_KIND(9)
    INTEGER, PARAMETER :: i8 = SELECTED_INT_KIND(14)
 ! parameters

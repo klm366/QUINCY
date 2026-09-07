@@ -15,7 +15,7 @@
 MODULE mo_fage_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: jp
   USE mo_exception, ONLY: finish
 
   IMPLICIT NONE
@@ -40,12 +40,12 @@ CONTAINS
   !
   FUNCTION get_mean_age_1d(fract_per_age) RESULT(mean_age)
     !-----------------------------------------------------------------------
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & fract_per_age (:)     !< fraction for each age (nidx,z)
-    REAL(wp) :: mean_age      !< mean age
+    REAL(jp) :: mean_age      !< mean age
     !-----------------------------------------------------------------------
     INTEGER  :: i, n
-    REAL(wp) :: fract_sum
+    REAL(jp) :: fract_sum
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_mean_age_1d'
     !-----------------------------------------------------------------------
 
@@ -66,12 +66,12 @@ CONTAINS
   !
   FUNCTION get_mean_age_2d(fract_per_age) RESULT(mean_age)
     !-----------------------------------------------------------------------
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & fract_per_age (:,:)     !< fraction for each age (nidx,z)
-    REAL(wp) :: mean_age(SIZE(fract_per_age,1))  !< mean age
+    REAL(jp) :: mean_age(SIZE(fract_per_age,1))  !< mean age
     !-----------------------------------------------------------------------
     INTEGER  :: i, n
-    REAL(wp) :: fract_sum(SIZE(fract_per_age,1))
+    REAL(jp) :: fract_sum(SIZE(fract_per_age,1))
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_mean_age_2d'
     !-----------------------------------------------------------------------
 
@@ -97,12 +97,12 @@ CONTAINS
   !
   FUNCTION get_mean_age_3d(fract_per_age) RESULT(mean_age)
     !-----------------------------------------------------------------------
-    REAL(wp), INTENT(in) :: &
+    REAL(jp), INTENT(in) :: &
       & fract_per_age (:,:,:)     !< fraction for each age (nidx,z,nbkls)
-    REAL(wp) :: mean_age(SIZE(fract_per_age,1),SIZE(fract_per_age,3))  !< mean age
+    REAL(jp) :: mean_age(SIZE(fract_per_age,1),SIZE(fract_per_age,3))  !< mean age
     !-----------------------------------------------------------------------
     INTEGER :: i,n
-    REAL(wp) :: fract_sum(SIZE(fract_per_age,1),SIZE(fract_per_age,3))
+    REAL(jp) :: fract_sum(SIZE(fract_per_age,1),SIZE(fract_per_age,3))
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_mean_age_2d'
     !-----------------------------------------------------------------------
 

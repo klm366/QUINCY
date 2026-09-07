@@ -14,7 +14,7 @@
 MODULE mo_jsb_time
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,           ONLY: wp
+  USE mo_kind,           ONLY: jp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_control,    ONLY: jsbach_runs_standalone
   USE mo_jsb_time_iface, ONLY: & ! Uses the mtime library
@@ -84,7 +84,7 @@ CONTAINS
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname   !< Jsbach model
     LOGICAL, OPTIONAL, INTENT(IN) :: restart_jsbach             !< Restart state
 
-    REAL(wp) :: eps
+    REAL(jp) :: eps
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 
@@ -142,7 +142,7 @@ CONTAINS
   LOGICAL FUNCTION is_newday(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(jp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -165,7 +165,7 @@ CONTAINS
   LOGICAL FUNCTION is_newmonth(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(jp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -188,7 +188,7 @@ CONTAINS
   LOGICAL FUNCTION is_newyear(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(jp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -253,7 +253,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Returns the number of seconds elapsed between start of a day and the provided datetime variable
-  REAL(wp) FUNCTION get_secs_of_day(this_datetime)
+  REAL(jp) FUNCTION get_secs_of_day(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
 
@@ -261,7 +261,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, hour=hour, minute=minute, second=second, ms=ms)
 
-    get_secs_of_day = 3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp) + REAL(ms)/1000._wp
+    get_secs_of_day = 3600._wp * REAL(hour,jp) + 60._wp * REAL(minute,jp) + REAL(second,jp) + REAL(ms)/1000._wp
 
   END FUNCTION get_secs_of_day
 
@@ -277,10 +277,10 @@ CONTAINS
 
     CALL get_date_components(this_datetime, month=month, year=year)
     IF (month == 1) THEN
-      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),wp))
+      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),jp))
     ELSE
       prev_month = month-1
-      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),wp) * REAL(get_day_length(),wp))
+      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),jp) * REAL(get_day_length(),jp))
     END IF
 
   END FUNCTION get_previous_month_length
@@ -297,7 +297,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, year=year)
     prev_year = year - 1
-    get_previous_year_length = NINT(REAL(get_year_length(prev_year),wp) * REAL(get_day_length(),wp))
+    get_previous_year_length = NINT(REAL(get_year_length(prev_year),jp) * REAL(get_day_length(),jp))
 
   END FUNCTION get_previous_year_length
 
@@ -339,12 +339,12 @@ CONTAINS
   !>
   !> Returns the time step in days (as fraction of day)
   !> e.g. two and a half days would yield 2.5
-  REAL(wp) FUNCTION timestep_in_days(dt, model_id)
+  REAL(jp) FUNCTION timestep_in_days(dt, model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
+    REAL(jp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: dt_loc
+    REAL(jp) :: dt_loc
     CHARACTER(len=*), PARAMETER :: routine = modname//':timestep_in_days'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN
@@ -364,10 +364,10 @@ CONTAINS
   !> Returns the number of time steps per day
   INTEGER FUNCTION timesteps_per_day(dt, model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
+    REAL(jp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: dt_loc
+    REAL(jp) :: dt_loc
     CHARACTER(len=*), PARAMETER :: routine = modname//':timesteps_per_day'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN

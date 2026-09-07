@@ -18,14 +18,14 @@
 MODULE mo_q_syl_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
   PUBLIC
 
   ! for now generic parameters for sylviculture model - these might get spatially and temporally varrying values later
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & fract_wood_to_pp_fuel       = def_parameters, &  !< Fraction of harvested wood allocated to the fuel product pool (unitless)
     & fract_wood_to_pp_paper      = def_parameters, &  !< Fraction of harvested wood allocated to the paper product pool (unitless)
     & fract_wood_to_pp_fiberboard = def_parameters, &  !< Fraction of harvested wood allocated to the fiberboard product pool (unitless)

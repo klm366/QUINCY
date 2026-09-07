@@ -18,7 +18,7 @@
 MODULE mo_q_sb_update_pools
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: jp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
   USE mo_jsb_math_constants,      ONLY: eps8, one_day, one_year
@@ -92,11 +92,11 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER       :: vgrid_soil_w         !< Vertical grid
     INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over soil layers
-    REAL(wp), ALLOCATABLE, DIMENSION(:)   :: root_depth_avg       !< dim: nc
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: p_deposition_sl      !< ..
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: f_myc_sl             !< ..
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: hlp1, hlp2, hlp3     !< ..
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km_adsorpt_po4_act, qmax_po4_mineral_act, &
+    REAL(jp), ALLOCATABLE, DIMENSION(:)   :: root_depth_avg       !< dim: nc
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: p_deposition_sl      !< ..
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: f_myc_sl             !< ..
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: hlp1, hlp2, hlp3     !< ..
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:) :: km_adsorpt_po4_act, qmax_po4_mineral_act, &
                                              km_fast_po4_act, qmax_fast_po4_act, &
                                              km_slow_po4_act, qmax_slow_po4_act, &
                                              km_adsorpt_nh4_act, qmax_nh4_mineral_act, &
@@ -104,13 +104,13 @@ CONTAINS
                                              rtm_sorption_act, rmm_sorption_act, &
                                              rtm_desorption_act, rmm_desorption_act, &
                                              partition_coef
-    REAL(wp)                              :: dtime                          !< timestep length
+    REAL(jp)                              :: dtime                          !< timestep length
     INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
+    REAL(jp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
+    REAL(jp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
@@ -1315,12 +1315,12 @@ CONTAINS
 
     INTEGER,                                          INTENT(in)    :: nc, &                         !< dimensions
                                                                        nsoil_w
-    REAL(wp),                                         INTENT(in)    :: dtime                         !< timestep length
-    REAL(wp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp),                                         INTENT(in)    :: dtime                         !< timestep length
+    REAL(jp), DIMENSION(nc),                          INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                                 INTENT(in)    :: sb_model_scheme               !< from sb config
     CHARACTER(len=*),                                 INTENT(in)    :: sb_adsorp_scheme              !< eca_full or eca_none
     LOGICAL ,                                         INTENT(in)    :: flag_sb_double_langmuir       !< T: double Langmuir; F: traditional Langmuir
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(in)    :: qmax_po4_mineral_act, &       !< maximum sorption capacity of po4, [mol P/ m3]
                                                                        km_adsorpt_po4_act, &         !< half saturation of po4 sorption capacity, [mol P/ m3]
                                                                        qmax_fast_po4_act, &          !< maximum sorption capacity of fast_assoc_po4, [mol P/ m3]
                                                                        km_fast_po4_act, &            !< half saturation of po4 sorption in fast_assoc_po4, [mol P/ m3]
@@ -1340,14 +1340,14 @@ CONTAINS
                                                                        microbial_uptake_po4_sl, &    !< microbial PO4 uptake [micro-mol P / m3 / s]
                                                                        gross_mineralisation_po4, &   !< gross mineralisation of PO4 [micro-mol P / m3 / s]
                                                                        net_mineralisation_po4        !< net mineralisation of PO4 [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
                                                                        occlusion_po4, &              !< phosphorus occlusion rate [micro-mol P / m3 / s]
                                                                        slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
+    REAL(jp), DIMENSION(nc, nsoil_w),                 INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
 
-    REAL(wp), DIMENSION(nc, nsoil_w)            :: hlp1, hlp2, hlp3, hlp4, &
+    REAL(jp), DIMENSION(nc, nsoil_w)            :: hlp1, hlp2, hlp3, hlp4, &
                                                    partition_coef, & !< partition coefficient to soluble po4
                                                    partition_coef_1  !< partition coefficient to absorbed po4
     INTEGER                                     :: ic, is            !< loop over num_sl_above_bedrock and nc
@@ -1460,22 +1460,22 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 inout
-    REAL(wp)          , INTENT(in)    :: dtime                  !< timestep length
-    REAL(wp)          , INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
-    REAL(wp)          , INTENT(in)    :: solute                 !< solute pool (mol/m3)
-    REAL(wp)          , INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
-    REAL(wp)          , INTENT(in)    :: km                     !< half-saturation concentration of Langmuir isotherm (mol/m3)
-    REAL(wp)          , INTENT(in)    :: qmax                   !< maximum sorption capacity of adsorbed pool (mol/m3)
-    REAL(wp)          , INTENT(inout) :: solute_partition_coef  !< partition coefficient to soluble pool
-    REAL(wp), OPTIONAL, INTENT(in)    :: assoc_slow             !< absorbed (slow) pool (mol/m3)
-    REAL(wp), OPTIONAL, INTENT(in)    :: km_fast                !< half-saturation concentration of Langmuir isotherm (mol/m3)
-    REAL(wp), OPTIONAL, INTENT(in)    :: qmax_fast              !< maximum sorption capacity of adsorbed pool (mol/m3)
-    REAL(wp), OPTIONAL, INTENT(in)    :: km_slow                !< half-saturation concentration of Langmuir isotherm (mol/m3)
-    REAL(wp), OPTIONAL, INTENT(in)    :: qmax_slow              !< maximum sorption capacity of adsorbed pool (mol/m3)
-    REAL(wp), OPTIONAL, INTENT(inout) :: slow_partition_coef    !< partition coefficient to absorbed pool (po4 only)
-    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [micro-mol P / m3 / s], double Langmuir only
+    REAL(jp)          , INTENT(in)    :: dtime                  !< timestep length
+    REAL(jp)          , INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
+    REAL(jp)          , INTENT(in)    :: solute                 !< solute pool (mol/m3)
+    REAL(jp)          , INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
+    REAL(jp)          , INTENT(in)    :: km                     !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(jp)          , INTENT(in)    :: qmax                   !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(jp)          , INTENT(inout) :: solute_partition_coef  !< partition coefficient to soluble pool
+    REAL(jp), OPTIONAL, INTENT(in)    :: assoc_slow             !< absorbed (slow) pool (mol/m3)
+    REAL(jp), OPTIONAL, INTENT(in)    :: km_fast                !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(jp), OPTIONAL, INTENT(in)    :: qmax_fast              !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(jp), OPTIONAL, INTENT(in)    :: km_slow                !< half-saturation concentration of Langmuir isotherm (mol/m3)
+    REAL(jp), OPTIONAL, INTENT(in)    :: qmax_slow              !< maximum sorption capacity of adsorbed pool (mol/m3)
+    REAL(jp), OPTIONAL, INTENT(inout) :: slow_partition_coef    !< partition coefficient to absorbed pool (po4 only)
+    REAL(jp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [micro-mol P / m3 / s], double Langmuir only
 
-    REAL(wp)                          :: hlp1, hlp2, hlp3, hlp4
+    REAL(jp)                          :: hlp1, hlp2, hlp3, hlp4
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_langmuir_kinetics'
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -1584,10 +1584,10 @@ CONTAINS
 
     IMPLICIT NONE
     ! 0.1 inout
-    REAL(wp), INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
-    REAL(wp), INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
-    REAL(wp), INTENT(in)    :: limit                  !< minimum or maximum size of the adsorbed (fast) pool (mol/m3)
-    REAL(wp)                :: solute_partition_coef  !< partition coefficient to soluble pool
+    REAL(jp), INTENT(in)    :: solute_flux            !< total solute flux (mol/m3/dtime)
+    REAL(jp), INTENT(in)    :: assoc_fast             !< adsorbed (fast) pool (mol/m3)
+    REAL(jp), INTENT(in)    :: limit                  !< minimum or maximum size of the adsorbed (fast) pool (mol/m3)
+    REAL(jp)                :: solute_partition_coef  !< partition coefficient to soluble pool
 
     IF (ABS(solute_flux) >= eps8) THEN
       solute_partition_coef = MIN(MAX( (assoc_fast + solute_flux - limit) / solute_flux, 0.0_wp), 1.0_wp)
@@ -1618,20 +1618,20 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.1 inout
     INTEGER,  INTENT(in)    :: nsoil_w                   !< number of soil layers (water)
-    REAL(wp), INTENT(in)    :: dtime                     !< timestep length [s]
-    REAL(wp), INTENT(in)    :: soil_depth_sl(:)          !< soil depth at each layer[m]
+    REAL(jp), INTENT(in)    :: dtime                     !< timestep length [s]
+    REAL(jp), INTENT(in)    :: soil_depth_sl(:)          !< soil depth at each layer[m]
     INTEGER,  INTENT(in)    :: spinup_accelerator_length !< loop times of acceleration, read from namelist
-    REAL(wp), INTENT(in)    :: formation_c_mavg_sl(:)    !< averaged slow soil C pool formation rate [mol m-3 timestep-1]
-    REAL(wp), INTENT(in)    :: formation_c14_mavg_sl(:)  !< averaged slow soil C14 pool formation rate [mol m-3 timestep-1]
-    REAL(wp), INTENT(in)    :: loss_c_mavg_sl(:)         !< averaged slow soil C pool loss rate [mol m-3timestep-1]
-    REAL(wp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
+    REAL(jp), INTENT(in)    :: formation_c_mavg_sl(:)    !< averaged slow soil C pool formation rate [mol m-3 timestep-1]
+    REAL(jp), INTENT(in)    :: formation_c14_mavg_sl(:)  !< averaged slow soil C14 pool formation rate [mol m-3 timestep-1]
+    REAL(jp), INTENT(in)    :: loss_c_mavg_sl(:)         !< averaged slow soil C pool loss rate [mol m-3timestep-1]
+    REAL(jp), INTENT(inout) :: pool_slow_sl(:,:)         !< slow soil pool with all elements [mol m-3]
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
-    REAL(wp), DIMENSION(nsoil_w)  :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stoichiometry factors [mol / mol]
-    REAL(wp), DIMENSION(nsoil_w)  :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
-    REAL(wp)                      :: tau_slow !< slow soil pool turnover rate [timestep]
-    REAL(wp)                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
-    REAL(wp)                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
+    REAL(jp), DIMENSION(nsoil_w)  :: c13c_slow_sl, nc_slow_sl, n15n_slow_sl,pn_slow_sl !< stoichiometry factors [mol / mol]
+    REAL(jp), DIMENSION(nsoil_w)  :: ratio_sl, ratio_c14_sl !< slow soil pool distributions across all soil layers[unitless]
+    REAL(jp)                      :: tau_slow !< slow soil pool turnover rate [timestep]
+    REAL(jp)                      :: pool_c_slow, pool_c14_slow !< the total slow soil pool [mol m-2]
+    REAL(jp)                      :: formation_c_mavg, formation_c14_mavg, loss_c_mavg ! formation and loss rates of the total slow soil pool [mol m-2 timestep-1]
     INTEGER                       :: ilength, i_soil !counter for loops
     ! ------------------------------------------------------------------------------------------------------------
     !> accelerating the spin-up of slow pool
@@ -1700,10 +1700,10 @@ CONTAINS
   !>
   SUBROUTINE calculate_sb_pool_bg_soil_for_element(sb_pool_mt, nsoil_w, ix_elem, sb_pool_total_bg_soil_elem)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the total BG soil is to be calculated
+    REAL(jp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the total BG soil is to be calculated
     INTEGER,  INTENT(IN)    :: nsoil_w                         !< number of soil layers (water)
     INTEGER,  INTENT(IN)    :: ix_elem                         !< index of the queried element in the sb pool
-    REAL(wp), INTENT(INOUT) :: sb_pool_total_bg_soil_elem(:,:) !< total sb pool SOM + BG litter for given element
+    REAL(jp), INTENT(INOUT) :: sb_pool_total_bg_soil_elem(:,:) !< total sb pool SOM + BG litter for given element
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER :: isoil
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1728,10 +1728,10 @@ CONTAINS
   !>
   SUBROUTINE calculate_sb_pool_ag_litter_for_element(sb_pool_mt, soil_depth_sl, ix_elem, sb_pool_total_ag_litter_elem)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the above ground litter is to be calculated
-    REAL(wp), INTENT(IN)    :: soil_depth_sl(:,:)              !< soil depth at each layer[m]
+    REAL(jp), INTENT(IN)    :: sb_pool_mt(:,:,:,:)             !< sb pool for which the above ground litter is to be calculated
+    REAL(jp), INTENT(IN)    :: soil_depth_sl(:,:)              !< soil depth at each layer[m]
     INTEGER,  INTENT(IN)    :: ix_elem                         !< index of the queried element in the sb pool
-    REAL(wp), INTENT(INOUT) :: sb_pool_total_ag_litter_elem(:) !< total above ground litter for given element [mol m-2]
+    REAL(jp), INTENT(INOUT) :: sb_pool_total_ag_litter_elem(:) !< total above ground litter for given element [mol m-2]
     ! ----------------------------------------------------------------------------------------------------- !
     sb_pool_total_ag_litter_elem(:) = (sb_pool_mt(ix_soluable_litter, ix_elem, :, 1)    &
       &                               + sb_pool_mt(ix_polymeric_litter, ix_elem, :, 1) &

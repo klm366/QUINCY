@@ -18,7 +18,7 @@
 MODULE mo_q_sb_litter_processes
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
@@ -58,37 +58,37 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                        !< dimension
     INTEGER,                           INTENT(in)    :: nsoil_w                   !< nr soil layer
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp),                          INTENT(in)    :: lctlib_sla                !< lctlib parameter
+    REAL(jp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(jp),                          INTENT(in)    :: lctlib_sla                !< lctlib parameter
     INTEGER,                           INTENT(in)    :: lctlib_growthform         !< lctlib parameter
     CHARACTER(len=*),                  INTENT(in)    :: sb_model_scheme           !< config option: soil model
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
-    REAL(wp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
-    REAL(wp),                          INTENT(in)    :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: litterfall from seed bed turnover
-    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
+    REAL(jp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
+    REAL(jp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
+    REAL(jp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
+    REAL(jp),                          INTENT(in)    :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: litterfall from seed bed turnover
+    REAL(jp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
-    REAL(wp), DIMENSION(nc) :: fc_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fc_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fc_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fc_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fc_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fc_soluable_reserve
-    REAL(wp), DIMENSION(nc) :: fn_soluable_leaf           !< fn: ...
-    REAL(wp), DIMENSION(nc) :: fn_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fn_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fn_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fn_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fn_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fn_soluable_reserve
-    REAL(wp), DIMENSION(nc) :: fp_soluable_leaf           !< fp: ...
-    REAL(wp), DIMENSION(nc) :: fp_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fp_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fp_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fp_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fp_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fp_soluable_reserve
+    REAL(jp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
+    REAL(jp), DIMENSION(nc) :: fc_soluable_fine_root
+    REAL(jp), DIMENSION(nc) :: fc_soluable_coarse_root
+    REAL(jp), DIMENSION(nc) :: fc_soluable_fruit
+    REAL(jp), DIMENSION(nc) :: fc_soluable_seed_bed
+    REAL(jp), DIMENSION(nc) :: fc_soluable_labile
+    REAL(jp), DIMENSION(nc) :: fc_soluable_reserve
+    REAL(jp), DIMENSION(nc) :: fn_soluable_leaf           !< fn: ...
+    REAL(jp), DIMENSION(nc) :: fn_soluable_fine_root
+    REAL(jp), DIMENSION(nc) :: fn_soluable_coarse_root
+    REAL(jp), DIMENSION(nc) :: fn_soluable_fruit
+    REAL(jp), DIMENSION(nc) :: fn_soluable_seed_bed
+    REAL(jp), DIMENSION(nc) :: fn_soluable_labile
+    REAL(jp), DIMENSION(nc) :: fn_soluable_reserve
+    REAL(jp), DIMENSION(nc) :: fp_soluable_leaf           !< fp: ...
+    REAL(jp), DIMENSION(nc) :: fp_soluable_fine_root
+    REAL(jp), DIMENSION(nc) :: fp_soluable_coarse_root
+    REAL(jp), DIMENSION(nc) :: fp_soluable_fruit
+    REAL(jp), DIMENSION(nc) :: fp_soluable_seed_bed
+    REAL(jp), DIMENSION(nc) :: fp_soluable_labile
+    REAL(jp), DIMENSION(nc) :: fp_soluable_reserve
     INTEGER                 :: ic, is                     !< loop over dimensions
     INTEGER                 :: isoil                      !< loop over soil layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'

@@ -27,7 +27,7 @@
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: jp
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop    ! Functions from timer infrastructure
 
@@ -44,8 +44,8 @@ MODULE mo_jsb_task_class
 
   TYPE t_jsb_task_options
     ! Set of parameters that are needed by tasks during their execution
-    REAL(wp)                  :: dtime   = -1._wp !< Time step length [s]
-    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
+    REAL(jp)                  :: dtime   = -1._wp !< Time step length [s]
+    REAL(jp)                  :: alpha   = -1._wp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime !< Date and time of current time step
     INTEGER                   :: iblk    = -1     !< Number of current block (chunk)
     INTEGER                   :: ics     = -1     !< Index of chunk start

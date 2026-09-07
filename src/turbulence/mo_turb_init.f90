@@ -19,7 +19,7 @@ MODULE mo_turb_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
@@ -35,7 +35,7 @@ MODULE mo_turb_init
   PUBLIC :: turb_init
 
   TYPE t_turb_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(jp), POINTER ::  &
       & rough_m(:,:)
   END TYPE t_turb_init_vars
 
@@ -88,7 +88,7 @@ CONTAINS
 
     dsl4jsb_Def_config(TURB_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:)       !< temporary pointer
+    REAL(jp), POINTER :: ptr_2D(:,:)       !< temporary pointer
     TYPE(t_input_file) :: input_file
 
     INTEGER :: nproma, nblks

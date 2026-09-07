@@ -14,7 +14,7 @@
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: jp
   USE mo_exception,         ONLY: message, finish
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_class,         ONLY: get_model
@@ -35,7 +35,7 @@ MODULE mo_seb_init
   PUBLIC :: seb_init
 
   TYPE t_seb_init_vars
-    REAL(wp), ALLOCATABLE :: skin_conductivity(:,:)
+    REAL(jp), ALLOCATABLE :: skin_conductivity(:,:)
   END TYPE
 
   TYPE(t_seb_init_vars) :: seb_init_vars
@@ -115,7 +115,7 @@ CONTAINS
     TYPE(t_input_file) :: input_file
     INTEGER :: nproma, nblks
 
-    REAL(wp), POINTER :: ptr(:,:)
+    REAL(jp), POINTER :: ptr(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_read_init_vars'
 
@@ -216,7 +216,7 @@ CONTAINS
     ! dsl4jsb_Def_config(SEB_)
     !dsl4jsb_Def_memory(SEB_)
 
-    !REAL(wp), POINTER :: &
+    !REAL(jp), POINTER :: &
     !  & ptr_2D(:,  :)       !< temporary pointer
 
     !TYPE(t_input_file) :: input_file

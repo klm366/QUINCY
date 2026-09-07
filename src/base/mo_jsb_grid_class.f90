@@ -14,7 +14,7 @@
 MODULE mo_jsb_grid_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_jsb_domain_iface,   ONLY: t_patch, get_host_patch_id,                    &
@@ -43,15 +43,15 @@ MODULE mo_jsb_grid_class
     CHARACTER(LEN=filename_max)   :: filename = ''          !< Filename containing grid information (currently not used)
     INTEGER                       :: ntotal = 0             !< Number of cells on this process
     INTEGER                       :: nland = 0              !< Number of land grid cells (currently not used)
-    REAL(wp), POINTER             :: lon(:,:) => NULL()     !< Longitudes of the grid cells in degrees
-    REAL(wp), POINTER             :: lat(:,:) => NULL()     !< Latitudes of the grid cells in degrees
-    REAL(wp), POINTER             :: coslat(:,:) => NULL()  !< Cosine of the latitudes
-    REAL(wp), POINTER             :: sinlat(:,:) => NULL()  !< Sine of latitudes
-    REAL(wp), POINTER             :: coslon(:,:) => NULL()  !TODO: remove, not used
-    REAL(wp), POINTER             :: sinlon(:,:) => NULL()  !TODO: remove, not used
-    REAL(wp), POINTER             :: area(:,:) => NULL()    !< Grid cell areas
+    REAL(jp), POINTER             :: lon(:,:) => NULL()     !< Longitudes of the grid cells in degrees
+    REAL(jp), POINTER             :: lat(:,:) => NULL()     !< Latitudes of the grid cells in degrees
+    REAL(jp), POINTER             :: coslat(:,:) => NULL()  !< Cosine of the latitudes
+    REAL(jp), POINTER             :: sinlat(:,:) => NULL()  !< Sine of latitudes
+    REAL(jp), POINTER             :: coslon(:,:) => NULL()  !TODO: remove, not used
+    REAL(jp), POINTER             :: sinlon(:,:) => NULL()  !TODO: remove, not used
+    REAL(jp), POINTER             :: area(:,:) => NULL()    !< Grid cell areas
     LOGICAL,  ALLOCATABLE         :: lsm(:,:)               !< Logical land sea mask: .true. = land
-    REAL(wp), ALLOCATABLE         :: lsf(:,:)               !< Fractional land sea mask: 1. = complete land
+    REAL(jp), ALLOCATABLE         :: lsf(:,:)               !< Fractional land sea mask: 1. = complete land
     INTEGER                       :: nblks = 1              !< Number of blocks within the domain
     INTEGER                       :: nproma = 0             !< Block length (vector length)
     INTEGER                       :: npromz = 0             !< Last cell of the block (needed if last block has less
@@ -86,10 +86,10 @@ MODULE mo_jsb_grid_class
     CHARACTER(len=50) :: longname     = ''   !< Grid longname: short description
     CHARACTER(len=10) :: units        = ''   !< Unit of the vertical axis
     INTEGER :: n_levels               = 0    !< Number of vertical levels
-    REAL(wp), ALLOCATABLE :: levels(:)       !< Grid vertical levels (center value of layer)
-    REAL(wp), ALLOCATABLE :: lbounds(:)      !< Lower bounds of the levels (numerically smaller bound)
-    REAL(wp), ALLOCATABLE :: ubounds(:)      !< Upper bounds of the levels (numerically higher bound)
-    REAL(wp), ALLOCATABLE :: dz(:)           !< Level thickness
+    REAL(jp), ALLOCATABLE :: levels(:)       !< Grid vertical levels (center value of layer)
+    REAL(jp), ALLOCATABLE :: lbounds(:)      !< Lower bounds of the levels (numerically smaller bound)
+    REAL(jp), ALLOCATABLE :: ubounds(:)      !< Upper bounds of the levels (numerically higher bound)
+    REAL(jp), ALLOCATABLE :: dz(:)           !< Level thickness
     INTEGER :: cdi_axis_type          = 0
     INTEGER :: ZaxisID                = 0   !< ICON: zaxis type (ZA_*), ECHAM: cdi zaxis id
     INTEGER :: echamZaxisIdx          = 0   !< ICON: N/A, ECHAM: levelindx for dimension
@@ -219,8 +219,8 @@ CONTAINS
   ! Not implemented, yet!
   ! FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
 
-  !   REAL(wp)                        :: lon
-  !   REAL(wp)                        :: lat
+  !   REAL(jp)                        :: lon
+  !   REAL(jp)                        :: lat
   !   TYPE(t_jsb_grid), POINTER       :: grid
 
   !   TYPE(t_jsb_grid), POINTER       :: new
@@ -412,10 +412,10 @@ CONTAINS
     INTEGER,                    INTENT(in) :: length          !< Number of vertical grid levels
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname        !< Long name of grid variable
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: units           !< Unit of vertical axis
-    REAL(wp),         OPTIONAL, INTENT(in) :: levels(length)  !< Grid vertical levels (center value of layer)
-    REAL(wp),         OPTIONAL, INTENT(in) :: lbounds(length) !< Lower bounds of the levels (numerically smaller bound)
-    REAL(wp),         OPTIONAL, INTENT(in) :: ubounds(length) !< Upper bounds of the levels (numerically higher bound)
-    REAL(wp),         OPTIONAL, INTENT(in) :: dz(length)      !< Level thickness
+    REAL(jp),         OPTIONAL, INTENT(in) :: levels(length)  !< Grid vertical levels (center value of layer)
+    REAL(jp),         OPTIONAL, INTENT(in) :: lbounds(length) !< Lower bounds of the levels (numerically smaller bound)
+    REAL(jp),         OPTIONAL, INTENT(in) :: ubounds(length) !< Upper bounds of the levels (numerically higher bound)
+    REAL(jp),         OPTIONAL, INTENT(in) :: dz(length)      !< Level thickness
 
     TYPE(t_jsb_vgrid), POINTER :: new                         !< New vertical grid object
 
@@ -522,9 +522,9 @@ CONTAINS
           ! ToDo: this is inconsistent with the former definition, lbounds and ubounds should be at
           ! half indice steps instead of the index values
           DO i=1,length
-            new%levels(i) = REAL(i,wp)
-            new%lbounds(i) = REAL(i,wp)
-            new%ubounds(i) = REAL(i+1,wp)
+            new%levels(i) = REAL(i,jp)
+            new%lbounds(i) = REAL(i,jp)
+            new%ubounds(i) = REAL(i+1,jp)
             new%dz(i) = 1._wp
           END DO
         ELSE ! Single level axis (level not specified)

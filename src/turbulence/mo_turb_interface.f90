@@ -24,7 +24,7 @@ MODULE mo_turb_interface
 
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, jsbach_runs_standalone, acc_stream
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish
 
@@ -267,9 +267,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & pot_temperature_srf, pot_temperature_air, qsat_srf
-    REAL(wp) :: qsat_lice
+    REAL(jp) :: qsat_lice
     LOGICAL :: use_tmx
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_exchange_coefficients'
@@ -390,7 +390,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_m_star
     dsl4jsb_Real2D_onChunk :: rough_h_star
 
-    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
+    REAL(jp) :: config_blending_height, config_roughness_momentum_to_heat
 
     TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -577,9 +577,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: model_scheme
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(jp), DIMENSION(options%nc) :: &
       & rough_veg_star_local, rough_bare_star, rough_snow_star, fract_fol_proj_cov
-    REAL(wp) :: &
+    REAL(jp) :: &
       & config_rough_bare, config_rough_snow, config_rough_water, config_blending_height, config_roughness_lai_saturation, &
       & config_roughness_momentum_to_heat, lctlib_MinVegRoughness, lctlib_MaxVegRoughness, lctlib_VegRoughness
     LOGICAL :: lctlib_ForestFlag
@@ -847,7 +847,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rough_m_star
     dsl4jsb_Real2D_onChunk :: rough_h_star
 
-    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
+    REAL(jp) :: config_blending_height, config_roughness_momentum_to_heat
 
     TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -956,7 +956,7 @@ CONTAINS
       & vol_wres_sl
 
     ! Local variables
-    REAL(wp) ::                    &
+    REAL(jp) ::                    &
       fact_qsat_veg(options%nc),   &
       fact_qsat_trans(options%nc), &
       fact_qsat_soil(options%nc),  &
@@ -964,15 +964,15 @@ CONTAINS
       fact_qair_soil(options%nc),  &
       zfract_fpc(options%nc),      &
       w_soil_wilt_fract_config
-    REAL(wp) ::                    &
+    REAL(jp) ::                    &
       rel_hum,                     &
       weq_wsat_sl1,                &
       weq_wres_sl1
-    REAL(wp) ::                    &
+    REAL(jp) ::                    &
       ch_tmp(options%nc)                      !< local variable for pch / kh from jsbach, quincy, A2L_, TURB_
     LOGICAL :: &
       mask(options%nc)
-    REAL(wp), ALLOCATABLE      :: canopy_conductance(:)       !< use for jsbach & quincy, as helper variable
+    REAL(jp), ALLOCATABLE      :: canopy_conductance(:)       !< use for jsbach & quincy, as helper variable
     LOGICAL                    :: jsb_standalone              !< model runs standalone?
 
     INTEGER :: iblk, ics, ice, nc, ic

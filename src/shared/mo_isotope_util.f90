@@ -16,7 +16,7 @@
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: jp
   USE mo_jsb_math_constants,   ONLY: eps8
 
   IMPLICIT NONE
@@ -46,9 +46,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element
-    REAL(wp)             :: delta               !< isotope ratio against standard (per mill)
+    REAL(jp), INTENT(in) :: element             !< base element (including the isotope)
+    REAL(jp), INTENT(in) :: isotope             !< isotope of element
+    REAL(jp)             :: delta               !< isotope ratio against standard (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
@@ -79,8 +79,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
+    REAL(jp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
+    REAL(jp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C13C12'
@@ -109,10 +109,10 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope) (mol)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element (micro-mol)
-    REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
-    REAL(wp)             :: Delta               !< C14 isotope ratio against standard, corrected for delta C13 (per mill)
+    REAL(jp), INTENT(in) :: element             !< base element (including the isotope) (mol)
+    REAL(jp), INTENT(in) :: isotope             !< isotope of element (micro-mol)
+    REAL(jp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
+    REAL(jp)             :: Delta               !< C14 isotope ratio against standard, corrected for delta C13 (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
@@ -146,9 +146,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
-    REAL(wp), INTENT(in) :: Delta_C14           !< Delta C14 of the pool/flux
-    REAL(wp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C
+    REAL(jp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
+    REAL(jp), INTENT(in) :: Delta_C14           !< Delta C14 of the pool/flux
+    REAL(jp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C14C'
@@ -178,9 +178,9 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element
-    REAL(wp)             :: delta               !< isotope ratio against standard (per mill)
+    REAL(jp), INTENT(in) :: element             !< base element (including the isotope)
+    REAL(jp), INTENT(in) :: isotope             !< isotope of element
+    REAL(jp)             :: delta               !< isotope ratio against standard (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
@@ -211,8 +211,8 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
+    REAL(jp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
+    REAL(jp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_N15N14'
@@ -238,14 +238,14 @@ CONTAINS
      IMPLICIT NONE
      ! ---------------------------
      ! 0.1 InOut
-     REAL(wp), INTENT(in)           :: source_element     !< mol of element (sum of all isotopes) in source material
-     REAL(wp), INTENT(in)           :: source_isotope     !< mol of the discriminated isotope in source material
-     REAL(wp), INTENT(in)           :: discrimination     !< discrimination of transfer process (per mill)
-     REAL(wp), INTENT(in), OPTIONAL :: source_isotope2    !< mol of the co-occurring discriminated isotope in source material (13C)
-     REAL(wp)                       :: fractionation      !< fraction of the total flux that is isotope
+     REAL(jp), INTENT(in)           :: source_element     !< mol of element (sum of all isotopes) in source material
+     REAL(jp), INTENT(in)           :: source_isotope     !< mol of the discriminated isotope in source material
+     REAL(jp), INTENT(in)           :: discrimination     !< discrimination of transfer process (per mill)
+     REAL(jp), INTENT(in), OPTIONAL :: source_isotope2    !< mol of the co-occurring discriminated isotope in source material (13C)
+     REAL(jp)                       :: fractionation      !< fraction of the total flux that is isotope
      ! ---------------------------
      ! 0.2 Local
-     REAL(wp)                    :: Rsource,Rsink,hlp1,hlp2
+     REAL(jp)                    :: Rsource,Rsink,hlp1,hlp2
      CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fractionation'
 
 

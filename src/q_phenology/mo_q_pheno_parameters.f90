@@ -18,13 +18,13 @@
 MODULE mo_q_pheno_parameters
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), SAVE :: &
+  REAL(jp), SAVE :: &
     & gdd_t_air_threshold = def_parameters, &   !< temperature threshold for the accumulation of growing degree days [deg K]
     & k_leafon_canopy = def_parameters          !< scaling coefficient for leaf development rate in CANOPY-only model
 

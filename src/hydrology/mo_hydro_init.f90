@@ -29,7 +29,7 @@
 MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: jp
   USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
@@ -68,62 +68,62 @@ MODULE mo_hydro_init
   ! land model in ICON (see src/lnd_phy_schemes/sfc_terra_data.f90 in ICON)
 
   ! Pore volume (called cporv in TERRA)
-  REAL(wp), PARAMETER ::  porosity_sand = 0.364_wp      !< pore volume of sand [vol. fraction]
-  REAL(wp), PARAMETER ::  porosity_silt = 0.455_wp      !< pore volume of loam [vol. fraction]
-  REAL(wp), PARAMETER ::  porosity_clay = 0.507_wp      !< pore volume of clay [vol. fraction]
-  REAL(wp), PARAMETER ::  porosity_oc   = 0.863_wp      !< pore volume of peat [vol. fraction]
+  REAL(jp), PARAMETER ::  porosity_sand = 0.364_wp      !< pore volume of sand [vol. fraction]
+  REAL(jp), PARAMETER ::  porosity_silt = 0.455_wp      !< pore volume of loam [vol. fraction]
+  REAL(jp), PARAMETER ::  porosity_clay = 0.507_wp      !< pore volume of clay [vol. fraction]
+  REAL(jp), PARAMETER ::  porosity_oc   = 0.863_wp      !< pore volume of peat [vol. fraction]
 
   ! Field capacity (called cfcap in TERRA)
-  REAL(wp), PARAMETER ::  field_cap_sand = 0.196_wp     !< field capacity of sand [vol. fraction]
-  REAL(wp), PARAMETER ::  field_cap_silt = 0.340_wp     !< field capacity of loam [vol. fraction]
-  REAL(wp), PARAMETER ::  field_cap_clay = 0.463_wp     !< field capacity of clay [vol. fraction]
-  REAL(wp), PARAMETER ::  field_cap_oc   = 0.763_wp     !< field capacity of peat [vol. fraction]
+  REAL(jp), PARAMETER ::  field_cap_sand = 0.196_wp     !< field capacity of sand [vol. fraction]
+  REAL(jp), PARAMETER ::  field_cap_silt = 0.340_wp     !< field capacity of loam [vol. fraction]
+  REAL(jp), PARAMETER ::  field_cap_clay = 0.463_wp     !< field capacity of clay [vol. fraction]
+  REAL(jp), PARAMETER ::  field_cap_oc   = 0.763_wp     !< field capacity of peat [vol. fraction]
 
   ! Hydraulic conductivity at saturation (called ckw0 in TERRA)
-  REAL(wp), PARAMETER ::  hyd_cond_sand = 4.79e-5_wp    !< hydraulic conductivity at saturation of sand [m/s]
-  REAL(wp), PARAMETER ::  hyd_cond_silt = 5.31e-6_wp    !< hydraulic conductivity at saturation of loam [m/s]
-  REAL(wp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp    !< hydraulic conductivity at saturation of clay [m/s]
-  REAL(wp), PARAMETER ::  hyd_cond_oc   = 5.80e-8_wp    !< hydraulic conductivity at saturation of peat [m/s]
+  REAL(jp), PARAMETER ::  hyd_cond_sand = 4.79e-5_wp    !< hydraulic conductivity at saturation of sand [m/s]
+  REAL(jp), PARAMETER ::  hyd_cond_silt = 5.31e-6_wp    !< hydraulic conductivity at saturation of loam [m/s]
+  REAL(jp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp    !< hydraulic conductivity at saturation of clay [m/s]
+  REAL(jp), PARAMETER ::  hyd_cond_oc   = 5.80e-8_wp    !< hydraulic conductivity at saturation of peat [m/s]
 
   ! Wilting point (called cpwp in TERRA)
-  REAL(wp), PARAMETER ::  wilt_sand = 0.042_wp          !< wilting point of sand [vol. fraction]
-  REAL(wp), PARAMETER ::  wilt_silt = 0.11_wp           !< wilting point of loam [vol. fraction]
-  REAL(wp), PARAMETER ::  wilt_clay = 0.257_wp          !< wilting point of clay [vol. fraction]
-  REAL(wp), PARAMETER ::  wilt_oc   = 0.265_wp          !< wilting point of peat [vol. fraction]
+  REAL(jp), PARAMETER ::  wilt_sand = 0.042_wp          !< wilting point of sand [vol. fraction]
+  REAL(jp), PARAMETER ::  wilt_silt = 0.11_wp           !< wilting point of loam [vol. fraction]
+  REAL(jp), PARAMETER ::  wilt_clay = 0.257_wp          !< wilting point of clay [vol. fraction]
+  REAL(jp), PARAMETER ::  wilt_oc   = 0.265_wp          !< wilting point of peat [vol. fraction]
 
   ! Pore size index
-  REAL(wp), PARAMETER :: pore_size_index_sand = 0.35_wp !< pore size index of sand []
-  REAL(wp), PARAMETER :: pore_size_index_silt = 0.2_wp  !< pore size index of loam []
-  REAL(wp), PARAMETER :: pore_size_index_clay = 0.13_wp !< pore size index of clay []
-  REAL(wp), PARAMETER :: pore_size_index_oc   = 0.65_wp !< pore size index of loam []
+  REAL(jp), PARAMETER :: pore_size_index_sand = 0.35_wp !< pore size index of sand []
+  REAL(jp), PARAMETER :: pore_size_index_silt = 0.2_wp  !< pore size index of loam []
+  REAL(jp), PARAMETER :: pore_size_index_clay = 0.13_wp !< pore size index of clay []
+  REAL(jp), PARAMETER :: pore_size_index_oc   = 0.65_wp !< pore size index of loam []
 
   ! Clapp & Hornberger exponent b (see Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  bclapp_sand = 3.39_wp   !< Clapp & Hornberger exponent b for sand (type 1 in Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  bclapp_silt = 4.98_wp   !< Clapp & Hornberger exponent b for loam (type 5 in Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  bclapp_clay = 10.38_wp  !< Clapp & Hornberger exponent b for clay (type 10 in Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  bclapp_oc   = 4._wp     !< Clapp & Hornberger exponent b for peat (type 12 in Beringer et al. 2001)
+  REAL(jp), PARAMETER ::  bclapp_sand = 3.39_wp   !< Clapp & Hornberger exponent b for sand (type 1 in Beringer et al. 2001)
+  REAL(jp), PARAMETER ::  bclapp_silt = 4.98_wp   !< Clapp & Hornberger exponent b for loam (type 5 in Beringer et al. 2001)
+  REAL(jp), PARAMETER ::  bclapp_clay = 10.38_wp  !< Clapp & Hornberger exponent b for clay (type 10 in Beringer et al. 2001)
+  REAL(jp), PARAMETER ::  bclapp_oc   = 4._wp     !< Clapp & Hornberger exponent b for peat (type 12 in Beringer et al. 2001)
 
   ! Soil matric potential (see Beringer et al. 2001)
-  REAL(wp), PARAMETER ::  matric_pot_sand = -0.04729_wp !< soil matric potential of sand [m] (type 1 in Beringer at al. 2001)
-  REAL(wp), PARAMETER ::  matric_pot_silt = -0.45425_wp !< soil matric potential of loam [m] (type 5 in Beringer at al. 2001)
-  REAL(wp), PARAMETER ::  matric_pot_clay = -0.633_wp   !< soil matric potential of clay [m] (type 10 in Beringer at al. 2001)
-  REAL(wp), PARAMETER ::  matric_pot_oc = -0.12_wp      !< soil matric potential of peat [m] (type 12 in Beringer at al. 2001)
+  REAL(jp), PARAMETER ::  matric_pot_sand = -0.04729_wp !< soil matric potential of sand [m] (type 1 in Beringer at al. 2001)
+  REAL(jp), PARAMETER ::  matric_pot_silt = -0.45425_wp !< soil matric potential of loam [m] (type 5 in Beringer at al. 2001)
+  REAL(jp), PARAMETER ::  matric_pot_clay = -0.633_wp   !< soil matric potential of clay [m] (type 10 in Beringer at al. 2001)
+  REAL(jp), PARAMETER ::  matric_pot_oc = -0.12_wp      !< soil matric potential of peat [m] (type 12 in Beringer at al. 2001)
 
-  REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
+  REAL(jp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
                           !< factor to compensate profile of hyd_cond_sat with depth in TERRA
 
   !> Residual soil moisture (fraction of volume; Maidment, Handbook of Hydrology, 1993)
-  REAL(wp), PARAMETER ::  wres_sand = 0.020_wp          !< residual soil moisture (type sand) [vol. fraction]
-  REAL(wp), PARAMETER ::  wres_silt = 0.015_wp          !< residual soil moisture (type silt loam) [vol. fraction]
-  REAL(wp), PARAMETER ::  wres_clay = 0.090_wp          !< residual soil moisture (type clay) [vol. fraction]
-  REAL(wp), PARAMETER ::  wres_oc   = 0.150_wp          !< residual soil moisture [vol. fraction] (Letts et al., 2000)
+  REAL(jp), PARAMETER ::  wres_sand = 0.020_wp          !< residual soil moisture (type sand) [vol. fraction]
+  REAL(jp), PARAMETER ::  wres_silt = 0.015_wp          !< residual soil moisture (type silt loam) [vol. fraction]
+  REAL(jp), PARAMETER ::  wres_clay = 0.090_wp          !< residual soil moisture (type clay) [vol. fraction]
+  REAL(jp), PARAMETER ::  wres_oc   = 0.150_wp          !< residual soil moisture [vol. fraction] (Letts et al., 2000)
 
   !
   ! -------------------------------------------------------------------------------------------------- !
   !
   !> Type to hold variables read from input files
   TYPE t_hydro_init_vars
-    REAL(wp), POINTER ::                  &
+    REAL(jp), POINTER ::                  &
       & elevation        (:,:) => NULL(), & !< geometric height of surface above sea level [m]
       & oro_stddev       (:,:) => NULL(), & !< standard deviation of subgrid-scale orography [m]
       & soil_depth       (:,:) => NULL(), & !< soil depth until bedrock [m]
@@ -415,12 +415,12 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER              :: soil_w
     INTEGER                                 :: nsoil, nblks, nproma
     INTEGER                                 :: ic, iblk, is
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: soil_awc
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_pwp_sl
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_fc_sl
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_sat_sl
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:)   :: soil_awc
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:)   :: hlp2
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp1
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_pwp_sl
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_fc_sl
+    REAL(jp), ALLOCATABLE, DIMENSION(:,:,:) :: theta_sat_sl
     CHARACTER(len=*), PARAMETER :: routine = modname//':qs_hydro_init_ic_bc'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(HYDRO_)
@@ -545,7 +545,7 @@ CONTAINS
       DO ic = 1,nproma
         DO is = 1,nsoil
           IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
-            num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
+            num_sl_above_bedrock(ic, iblk) = REAL(is, jp)
           ELSE
             EXIT  ! stop looping over further soil layers with thickness < eps8
           END IF
@@ -874,7 +874,7 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
 
-    REAL(wp), POINTER :: &
+    REAL(jp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
       & ptr_2D(:,  :),   &                      !< Pointer to 2d variable
       & ptr_3D(:,:,:)                           !< Pointer to 3d variable
@@ -1427,7 +1427,7 @@ CONTAINS
           DO ic = 1,nproma
             DO is = 1,nsoil
               IF (soil_lay_width_sl(ic, is, iblk) > eps8) THEN
-                num_sl_above_bedrock(ic, iblk) = REAL(is, wp)
+                num_sl_above_bedrock(ic, iblk) = REAL(is, jp)
               ELSE
                 EXIT  ! stop looping over further soil layers with thickness < eps8
               END IF
@@ -1916,7 +1916,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model    !< This instence of ICON-Land
     TYPE(t_jsb_vgrid), POINTER :: soil_w   !< Vertical grid for the hydrology
 
-    REAL(wp) ::                &
+    REAL(jp) ::                &
       & hyd_cond_sat_org,      & !< Hydraulic conductivity of organic matter [m s-1]
       & vol_porosity_org,      & !< Volumetric soil porosity of organic matter []
       & bclapp_org,            & !< Clapp and Hornberger exponent b for organic matter []
@@ -2051,10 +2051,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_sanitize_state'
 
-    REAL(wp), PARAMETER :: warn_level_wpi_soil_excess = 1.05_wp
+    REAL(jp), PARAMETER :: warn_level_wpi_soil_excess = 1.05_wp
                            !< If water content exceeds saturation by more than this factor prior
                            !< to sanitization, a warning is issued.
-    REAL(wp), PARAMETER :: zfcmin = 1.e-10_wp   !TODO: Remove
+    REAL(jp), PARAMETER :: zfcmin = 1.e-10_wp   !TODO: Remove
 
     INTEGER :: maxloc_wpi_soil_excess(3)  !< Location of the maximum excess soil water
     TYPE(t_jsb_vgrid), POINTER :: soil_w  !< Vertical grid of the hydrology

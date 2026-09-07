@@ -15,7 +15,7 @@
 MODULE mo_fage_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: jp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
 
@@ -69,7 +69,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER :: tile_fract(:,:)
+    REAL(jp), POINTER :: tile_fract(:,:)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: forest_age

@@ -20,7 +20,7 @@ MODULE mo_nlcc_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: jp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -125,29 +125,29 @@ CONTAINS
     LOGICAL  :: lstart, init_running_means
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
-    REAL(wp) :: accelerate_nlcc
-    REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
+    REAL(jp) :: accelerate_nlcc
+    REAL(jp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
-    REAL(wp), POINTER  ::  var_collect(:,:)
+    REAL(jp), POINTER  ::  var_collect(:,:)
     LOGICAL, ALLOCATABLE  :: is_woody(:,:)
     LOGICAL, ALLOCATABLE  :: is_grass(:,:)
     LOGICAL, ALLOCATABLE  :: is_pasture(:,:)
     LOGICAL, ALLOCATABLE  :: is_crop(:,:)
     LOGICAL, ALLOCATABLE  :: is_dynamic(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_temprange(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_gdd(:,:)
-    REAL(wp), POINTER  ::  tau_c_woods(:,:)
-    REAL(wp), POINTER  ::  NPP_mean_5year(:,:)
-    REAL(wp), POINTER  ::  burned_fract(:,:)
-    REAL(wp), POINTER  ::  damaged_fract(:,:)
-    REAL(wp), POINTER  ::  max_green_bio(:,:)
-    REAL(wp), POINTER  ::  sla(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_sum(:)
-    REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
+    REAL(jp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
+    REAL(jp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
+    REAL(jp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
+    REAL(jp), POINTER  ::  bclimit_min_temprange(:,:)
+    REAL(jp), POINTER  ::  bclimit_min_gdd(:,:)
+    REAL(jp), POINTER  ::  tau_c_woods(:,:)
+    REAL(jp), POINTER  ::  NPP_mean_5year(:,:)
+    REAL(jp), POINTER  ::  burned_fract(:,:)
+    REAL(jp), POINTER  ::  damaged_fract(:,:)
+    REAL(jp), POINTER  ::  max_green_bio(:,:)
+    REAL(jp), POINTER  ::  sla(:,:)
+    REAL(jp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
+    REAL(jp), ALLOCATABLE  ::  cover_fract_sum(:)
+    REAL(jp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
