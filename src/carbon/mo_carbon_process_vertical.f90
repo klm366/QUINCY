@@ -34,7 +34,6 @@ CONTAINS
       ! Input coefficients (fixed)
       LeafLit_coefV, WoodLit_coefV,           &
       MiscPar,                                &
-      resp_rate_modifier,                     &
       ! Climate inputs
       temp,                                   &
       precip,                                 &
@@ -105,8 +104,6 @@ CONTAINS
     REAL(wp),                   INTENT(in)    :: WoodLit_coefV(:)
     !   Other constants
     REAL(wp),                   INTENT(in)    :: MiscPar(:)
-
-    REAL(wp),                   INTENT(in)    :: resp_rate_modifier
 
     ! Carbon inputs [mol m-2 s-1]:
     REAL(wp),                   INTENT(in)    :: leafLitter
@@ -267,8 +264,8 @@ CONTAINS
 
     DO is = 1, nsoil
       ! rate modifiers YASSO call for oxic
-      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_oxic * resp_rate_modifier
-      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
+      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_oxic
+      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),  &
@@ -285,8 +282,8 @@ CONTAINS
 
       ! call YASSO for inundated / anoxic
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
-        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_anox * resp_rate_modifier
-        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
+        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_leaf * d_anox
+        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
         CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -341,8 +338,8 @@ CONTAINS
     ! YASSO bg call: All layers
     DO is = 1, nsoil
       ! rate modifiers, YASSO call for oxic
-      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_oxic * resp_rate_modifier
-      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic * resp_rate_modifier
+      Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_oxic
+      Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_oxic
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
@@ -359,8 +356,8 @@ CONTAINS
 
       IF (frac_inun_loc > EPSILON(1._wp)) THEN
         ! call YASSO for inundated / anoxic
-        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_anox * resp_rate_modifier
-        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox * resp_rate_modifier
+        Y_in_mod(M_LITTER) = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_size_wood * d_anox
+        Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
         CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
@@ -1429,7 +1426,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_humus_2_sl(:,:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
 
     ! Local variables
-    REAL(wp)  :: non_woody_litter, fraction, bfe ! Helper
+    REAL(wp)  :: non_woody_litter, fraction ! Helper
     INTEGER   :: ic, nc, is, nsoil
 
     nc = SIZE(burned_fract)
@@ -1439,14 +1436,13 @@ CONTAINS
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
       non_woody_litter = c_green(ic) + c_reserve(ic)
-      bfe = burned_fract(ic) * MIN(0.945_wp,1._wp-fuel_moisture(ic))
 
       ! Amount of carbon released from the green and reserve pools entering the green litter pools
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
-        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * bfe / sec_per_day
+        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
       ! Amount of carbon released from the wood pool entering the woody litter pools
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
-        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * bfe / sec_per_day
+        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
 
       ! Determine the amount of carbon released from the wood pool, the living tissue pools, and the
       ! litter pools going to the atmosphere
@@ -1461,10 +1457,10 @@ CONTAINS
           ! add the fire affected fraction of the above ground wood pools
         & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-        & ) * burned_fract(ic) * bfe * molarMassCO2_kg / sec_per_day
+        & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
-      fraction = 1._wp - bfe
+      fraction = 1._wp - burned_fract(ic)
       c_acid_ag1      (ic) = fraction * c_acid_ag1       (ic)
       c_water_ag1     (ic) = fraction * c_water_ag1      (ic)
       c_ethanol_ag1   (ic) = fraction * c_ethanol_ag1    (ic)
@@ -1476,13 +1472,13 @@ CONTAINS
       c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2 (ic)
 
       ! Add below ground fraction of the burned vegetation to the below ground green litter pools
-      fraction = (1._wp-fract_green_aboveGround) * bfe
+      fraction = (1._wp-fract_green_aboveGround) * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg1_sl(ic,1), c_water_bg1_sl(ic,1), c_ethanol_bg1_sl(ic,1), c_nonsoluble_bg1_sl(ic,1), c_humus_1_sl(ic,1), &
         &                          non_woody_litter, fraction, LeafLit_coef)
 
       ! Distribute the remaings of burned wood to the yasso litter pools
       !  Above ground
-      fraction = (1._wp-fire_fract_wood_2_atmos) * fract_wood_aboveGround * bfe
+      fraction = (1._wp-fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
         &                          c_woods(ic), fraction, WoodLit_coef)
       !  Below ground
@@ -1491,7 +1487,7 @@ CONTAINS
         &                          c_woods(ic), fraction, WoodLit_coef)
 
       ! Reduce the living plant carbon pools accordingly
-      fraction = 1._wp - bfe
+      fraction = 1._wp - burned_fract(ic)
       c_green(ic)   = c_green(ic)   * fraction
       c_woods(ic)   = c_woods(ic)   * fraction
       c_reserve(ic) = c_reserve(ic) * fraction

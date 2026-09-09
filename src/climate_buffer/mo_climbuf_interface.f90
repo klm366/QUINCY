@@ -35,10 +35,11 @@ MODULE mo_climbuf_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, SEB_, SSE_, HYDRO_, CLIMBUF_
+  dsl4jsb_Use_processes A2L_, SEB_, SSE_, HYDRO_, CLIMBUF_, CARBON_
 
   ! Use of process configurations
   dsl4jsb_Use_config(CLIMBUF_)
+  dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -150,6 +151,7 @@ CONTAINS
 
     ! Declare process memories
     dsl4jsb_Def_config(CLIMBUF_)   !< Configuration of the climate buffer process
+    dsl4jsb_Def_config(CARBON_)    !< Configuration of the carbon process
     dsl4jsb_Def_memory(CLIMBUF_)   !< Memory of the climate buffer process
     dsl4jsb_Def_memory(A2L_)       !< Memory for atmospheric variables for the land
     dsl4jsb_Def_memory(SEB_)       !< Memory of surface energy balance process
@@ -209,6 +211,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(CLIMBUF_)
+    dsl4jsb_Get_config(CARBON_)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(CLIMBUF_)) RETURN
@@ -257,12 +260,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_4yr)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d_yDay)     ! inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d)          ! inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)     ! inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)    ! inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d_yDay)!inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,max_t_soil_sl_year)     ! inout
-    dsl4jsb_Get_var3D_onChunk(CLIMBUF_,permafrost_period_sl)   !inout
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d)            ! inout
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)       ! inout
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)      ! inout
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d_yDay) ! inout
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,max_t_soil_sl_year)       ! inout
+      dsl4jsb_Get_var3D_onChunk(CLIMBUF_,permafrost_period_sl)     ! inout
+    END IF
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
@@ -307,9 +312,12 @@ CONTAINS
       &                  max_snow_of_yr, max_snow_prev_year, max_thaw_of_yr, max_thaw_prev_year, &
       &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &                  q_rel_air_14d, q_rel_air_14d_yDay)
-    CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
-      &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
-      &                  max_t_soil_sl_year, permafrost_period_sl)
+
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
+        &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
+        &                  max_t_soil_sl_year, permafrost_period_sl)
+    END IF
 
     !$ACC END DATA
     DEALLOCATE (snow_depth, q_rel_air)

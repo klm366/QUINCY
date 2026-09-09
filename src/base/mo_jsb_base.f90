@@ -43,6 +43,7 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
+    USE mo_hydro_constants,     ONLY: Uniform_
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
@@ -393,6 +394,10 @@ CONTAINS
         IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
           dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_ .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since hydro_scale is set to Uniform')
         END IF
 
         IF (model%Is_process_enabled(FAGE_) &

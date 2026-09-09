@@ -1601,15 +1601,13 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (model%processes(CLIMBUF_)%p%config%active) THEN
+    IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
       dsl4jsb_Get_memory(CLIMBUF_)
       dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_of_yr)     ! in
       dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
-
       ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
       ! depth. In shallow soils, bottom layer drainage is also affected if the whole soil column is in the
       ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
-      ! Note: this is only considered for hydro_scale == Uniform_
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_wp)
@@ -1617,10 +1615,9 @@ CONTAINS
           &                max_thaw_of_yr(ic)     < depth_thrsh(ic))
       END DO
       !$ACC END PARALLEL LOOP
-    ELSE IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
-      CALL finish(TRIM(routine), 'Uniform soil hydrology requires CLIMBUF_ to be active')
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      ! The permafrost soil flag is not used if hydro_scale is set to "Distributed_"
       DO ic = 1, nc
         l_pf_soil(ic)   = .FALSE.
       END DO

@@ -451,14 +451,17 @@ CONTAINS
     END IF
 
     ! Set process variables
-    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)    ! in
-    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)  ! in
-    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_prev_year, climbuf)  ! in
-    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
-    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
-    dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, permafrost_period_sl, climbuf)  ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)      ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)    ! in
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_prev_year, climbuf) ! in
 
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)            ! inout
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
+      dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
+      dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, permafrost_period_sl, climbuf)      ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)                                   ! inout
+    END IF
+
 
     !
     ! This is on canopy area:
@@ -907,7 +910,6 @@ CONTAINS
           CALL calc_vertical_soil_c(sec_per_day,                                        &
             &  nsoil, layer_depth, layer_thick,                                         & ! in
             &  LeafLit_coefV, WoodLit_coefV, MiscPar,                                   & ! in
-            &  dsl4jsb_Config(CARBON_)%resp_rate_modifier,                              & ! in
                !
             &  temp                         = temp_15d_yDay_climbuf(ic),                & ! in
             &  precip                       = precip_15d_yDay_climbuf(ic),              & ! in

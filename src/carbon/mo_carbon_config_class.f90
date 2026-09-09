@@ -53,7 +53,6 @@ MODULE mo_carbon_config_class
                                    !< required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
     LOGICAL  :: vertical_yasso     !< T: Below ground carbon calculated on vertical grid (soil layers)
     LOGICAL  :: remove_permafrost_carbon !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
-    REAL(wp) :: resp_rate_modifier !< Modifies the respiration rate for litter and humus pools
     REAL(wp) :: fire_fract_wood_2_atmos !< Fraction of wood carbon emitted to the atm by fire.
 
    CONTAINS
@@ -105,7 +104,6 @@ CONTAINS
       & vertical_yasso,            & !< T: Below ground carbon calculated on vertical grid (soil layers)
       & remove_permafrost_carbon     !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
     REAL(wp) ::                    &
-      & resp_rate_modifier,        & !< Modifies the respiration rate for litter and humus pools
       & fire_fract_wood_2_atmos      !< Fraction of wood carbon emitted to the atm by fire.
 
     NAMELIST /jsb_carbon_nml/      &
@@ -117,8 +115,7 @@ CONTAINS
          read_cpools,              &
          diag_humus_fluxes,        &
          vertical_yasso,           &
-         remove_permafrost_carbon, &
-         resp_rate_modifier
+         remove_permafrost_carbon
 
     INTEGER ::                     &
       & nml_handler,               &   !< Handle to deal with namelist file
@@ -148,7 +145,6 @@ CONTAINS
     diag_humus_fluxes        = .FALSE.
     vertical_yasso           = .FALSE.
     remove_permafrost_carbon = .FALSE.
-    resp_rate_modifier       = 1._wp
     fire_fract_wood_2_atmos  = FireFracWood2Atmos
 
     ! Open the file containing the carbon namelist
@@ -174,7 +170,6 @@ CONTAINS
     config%diag_humus_fluxes        = diag_humus_fluxes
     config%vertical_yasso           = vertical_yasso
     config%remove_permafrost_carbon = remove_permafrost_carbon
-    config%resp_rate_modifier       = resp_rate_modifier
     config%fire_fract_wood_2_atmos  = fire_fract_wood_2_atmos
 
     IF (vertical_yasso) THEN
