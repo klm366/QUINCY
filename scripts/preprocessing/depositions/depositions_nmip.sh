@@ -38,8 +38,8 @@ scriptName="depositions_nmip.sh"
 # path and name of the target output folder
 outdir=./YOUROUTPUTFOLDER
 input_data_freq="monthly" # monthly/yearly
-
-# path to the files
+grid="r2b5" # r2b5 or r2b4
+# paths to the files
 quincy_pool="/work/mj0143/icon_land_data_pool"
 if [[ "$input_data_freq" == "monthly" ]]; then
   input_data_n="${quincy_pool}/trendy/2026/raw_data_20260804/"
@@ -53,9 +53,13 @@ fraction_files="${quincy_pool}/trendy/2026/preprocessesed-01/fraction_files/R2B5
 states="${quincy_pool}/trendy/2026/raw-data-20260702/luh2/states_LUH2_GCB2026.nc"
 
 # grid
-target_grid="/pool/data/ICON/grids/public/edzw/icon_grid_0030_R02B05_G.nc"
-#target_grid=/pool/data/ICON/grids/public/mpim/0049/icon_grid_0049_R02B04_G.nc
-
+if [[ "$grid" == "r2b5" ]]; then
+  target_grid="/pool/data/ICON/grids/public/edzw/icon_grid_0030_R02B05_G.nc"
+elif [[ "$grid" == "r2b4" ]]; then
+  target_grid="/pool/data/ICON/grids/public/mpim/0049/icon_grid_0049_R02B04_G.nc"
+else
+  echo "You have chosen grid does is not yet covered in the script"
+fi
 #----------------------------------------------------------------------
 
 temp_path="${outdir}"/temp
@@ -81,31 +85,31 @@ title="N input data for NMIP3"
 # create files with land from fraction files
 if [[ "$mask" == "frac" ]]; then
   # derive land from fraction files
-  for year in $(seq 1850 2025); do
+  for year in $(seq ${start_year} ${n_dep_end_year}); do
     ${cdo} -expr,'land= notsea*fract_land' "${fraction_files}"/"bc_land_frac_iq_13pfts_${year}.nc" "${temp_path}/land_frac_file.nc"
     ${cdo} -selvar,land "${temp_path}/land_frac_file.nc" "${temp_path}"/"tmp_land_bc_land_frac_iq_13pfts_${year}.nc"
   done
   # merge land variable from fraction files
-  ${cdo} -mergetime "${temp_path}"/tmp_land_bc_land_frac_iq_13pfts_*.nc "${temp_path}/land_frac_1850-2025_r2b5.nc"
+  ${cdo} -mergetime "${temp_path}"/tmp_land_bc_land_frac_iq_13pfts_*.nc "${temp_path}/land_frac_${start_year}-${n_dep_end_year}_${grid}.nc"
   rm "${outdir}/tmp_land_bc_land_frac_iq_13pfts_*.nc"
   # remap to n depositions grid
-  ${cdo} -remapcon,${nhx_in} "${temp_path}/land_frac_1850-2025_r2b5.nc" "${outdir}/land_frac_1850-2025.nc" 
+  ${cdo} -remapcon,${nhx_in} "${temp_path}/land_frac_${start_year}-${n_dep_end_year}_${grid}.nc" "${outdir}/land_frac_${start_year}-${n_dep_end_year}.nc" 
   # weight grid-cell deposition by the effective land fraction
   # to retain only the deposition contribution over land 
-  ${cdo} -mul ${nhx_in} "${outdir}/land_frac_1850-2025.nc" "${outdir}/nhx_land.nc"
-  ${cdo} -mul ${noy_in} "${outdir}/land_frac_1850-2025.nc" "${outdir}/noy_land.nc"
+  ${cdo} -mul ${nhx_in} "${outdir}/land_frac_${start_year}-${n_dep_end_year}.nc" "${outdir}/nhx_land.nc"
+  ${cdo} -mul ${noy_in} "${outdir}/land_frac_${start_year}-${n_dep_end_year}.nc" "${outdir}/noy_land.nc"
 else 
   # derive land from states file (luh data)
-  ${cdo} -selyear,1850/2024 ${states} "${outdir}"/"states_1850_2025.nc"
+  ${cdo} -selyear,1850/2024 ${states} "${outdir}"/"states_${start_year}-${n_dep_end_year}.nc"
   ${cdo} -expr,'land= primf + primn + secdf + secdn + urban + c3ann + c4ann + c3per + c4per + c3nfx + pastr + range' \
-   "${outdir}"/"states_1850_2025.nc" "${outdir}"/"land_states_1850_2025_grid.nc"   
+   "${outdir}"/"states_${start_year}-${n_dep_end_year}.nc" "${outdir}"/"land_states_${start_year}-${n_dep_end_year}_grid.nc"   
   # remap to n depositions grid
-  ${cdo} -remapcon,"${noy_in}" "${outdir}"/"land_states_1850_2025_grid.nc" \
-  "${outdir}"/"land_states_1850-2025.nc" 
+  ${cdo} -remapcon,"${noy_in}" "${outdir}"/"land_states_${start_year}-${n_dep_end_year}_grid.nc" \
+  "${outdir}"/"land_states_${start_year}-${n_dep_end_year}.nc" 
   # weight grid-cell deposition by the effective land fraction
   # to retain only the deposition contribution over land 
-  ${cdo} -mul ${nhx_in} "${outdir}"/"land_states_1850-2025.nc" "${outdir}/nhx_land.nc"
-  ${cdo} -mul ${noy_in} "${outdir}"/"land_states_1850-2025.nc" "${outdir}/noy_land.nc"
+  ${cdo} -mul ${nhx_in} "${outdir}"/"land_states_${start_year}-${n_dep_end_year}.nc" "${outdir}/nhx_land.nc"
+  ${cdo} -mul ${noy_in} "${outdir}"/"land_states_${start_year}-${n_dep_end_year}.nc" "${outdir}/noy_land.nc"
 fi
 
 # convert units:
