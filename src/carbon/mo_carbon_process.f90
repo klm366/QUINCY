@@ -17,7 +17,7 @@ MODULE mo_carbon_process
   USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
-                               & days_per_year, sec_per_year, sec_per_day,        &
+                               & sec_per_day,                                     &
                                & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
                                & LCT_NONSOLUBLE, LCT_HUMUS,                       &
                                & molarMassCO2_kg
@@ -166,7 +166,7 @@ CONTAINS
     !REAL(wp) :: N2O_emissions_litter_pot
 
     !REAL(wp) :: minN_plant_demand,minN_soil_demand,total_minN_demand
-    REAL(wp) :: NPP_2_green_via_mobileN, NPP_2_wood_via_mobileN
+    !REAL(wp) :: NPP_2_green_via_mobileN, NPP_2_wood_via_mobileN
     !REAL(wp) :: Nmobile_2_green, Nmobile_2_wood, Nmobile_2_green_pot, Nmobile_2_wood_pot
     !REAL(wp) :: redFact_Nmobile
     REAL(wp) :: redFact_Nlimitation

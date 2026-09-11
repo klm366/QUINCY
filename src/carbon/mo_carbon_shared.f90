@@ -65,7 +65,7 @@ CONTAINS
     & )
     !$ACC ROUTINE SEQ
 
-    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround !, days_per_year
+    USE mo_carbon_constants, ONLY: fract_green_aboveGround
     !
 
     !! Names of carbon variables and arguments are:
@@ -174,16 +174,16 @@ CONTAINS
 !!$       END IF
 !!$ tr
 
-    leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI)  !! Leaf shedding is assured at a minimum constant rate
-                                                                     !! which maybe exceeded by the decrease in LAI.
-    c_2_litter_greenPool =  &                                        !! Maximally the whole carbon from the green pool is transferred
-       MIN(greenC2leafC * leaf_shedding / specific_leaf_area_c, &    !!    by leaf and root shedding to the green litter pool
+    leaf_shedding = MAX(LAI * LAI_shed_constant,LAI_previous - LAI) !! Leaf shedding is assured at a minimum constant rate
+                                                                    !! which maybe exceeded by the decrease in LAI.
+    c_2_litter_greenPool =  &                                       !! At most the whole carbon from the green pool is transferred
+       MIN(greenC2leafC * leaf_shedding / specific_leaf_area_c, &   !!    by leaf and root shedding to the green litter pool
            c_green)
-    c_green = c_green - c_2_litter_greenPool                         !! This removes carbon from the green pool
-    c_excess = MAX(0.0_wp,c_green - c_green_max)                     !! If by the reduction of LAI the maximum value of the green
-                                                                     !!    pool is still smaller than the current value, there is
-    c_2_litter_greenPool = c_2_litter_greenPool + c_excess           !!    excess C that has also to be shedded to the green litter
-    c_green              = c_green              - c_excess           !!    pool and also subtracted from the green pool
+    c_green = c_green - c_2_litter_greenPool                        !! This removes carbon from the green pool
+    c_excess = MAX(0.0_wp,c_green - c_green_max)                    !! If by the reduction of LAI the maximum value of the green
+                                                                    !!    pool is still smaller than the current value, there is
+    c_2_litter_greenPool = c_2_litter_greenPool + c_excess          !!    excess C that has also to be shedded to the green litter
+    c_green              = c_green              - c_excess          !!    pool and also subtracted from the green pool
 
     IF (is_crop) THEN
       !!  Move shedded Carbon pro rata to crop harvest flux
@@ -204,7 +204,8 @@ CONTAINS
     !! ---------------------------------------------------------------------------------
     !! 2. Wood shedding: Transfer of C from wood pool to wood litter pools
     !!
-                                                            !! Assuming that forests continuously die at the inverse lifetime of trees
+                                                            !! Assuming that forests continuously die at the inverse lifetime of
+                                                            !! trees
     c_2_litter_woodPool = c_woods / tau_c_woods             ! The bigger tau gets, the weaker the C pools will be depreciated:
                                                             ! tau_c_woods: [days] -> [timestep]
                                                             !! .. the shedded wood (MAX FUNCTION FOR NONWOODY PFTS)
@@ -429,7 +430,7 @@ CONTAINS
     !! implementation: Tea Thum (FMI), Petri Raeisaenen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
-    USE mo_carbon_constants, ONLY: days_per_year, sec_per_year, LCT_HUMUS, &
+    USE mo_carbon_constants, ONLY: sec_per_year, LCT_HUMUS,                &
                    & POOL_ACID_AG, POOL_WATER_AG, POOL_ETHANOL_AG,         &
                    & POOL_NONSOLUBLE_AG,                                   &
                    & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG,         &
@@ -507,8 +508,6 @@ CONTAINS
     REAL(wp)   :: N_2_A
     REAL(wp)   :: N_2_W
     REAL(wp)   :: N_2_E
-    ! fraction of decomposition fluxes of AWEN pools which enters the humus pool [ ]
-    REAL(wp)   :: AWEN_2_H
     ! Alternative pathway for N pool which enters the humus pool [ ]
     REAL(wp)   :: N_2_H
     REAL(wp)   :: AWE_2_H

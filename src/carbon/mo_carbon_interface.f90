@@ -202,7 +202,6 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE  :: soil_depth_thaw(:)        !< Minimum of either soil or thaw depth [m]
     REAL(wp), ALLOCATABLE  :: thaw_depth(:)             !< Maximum thaw depth / active layer depth [m]
-    REAL(wp), ALLOCATABLE  :: thaw_depth_sl(:,:)        !< Maximum thaw depth on soil layers [m]
 
     REAL(wp), DIMENSION(options%nc) :: frac_inun_loc    !< Surface inundation fraction [m]
 
@@ -359,27 +358,27 @@ CONTAINS
     ! Variables needed with forest regrowth
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
 
-    dsl4jsb_Real3D_onChunk :: c_acid_bg1_sl       !< Yasso below ground litter-pool for acid soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_water_bg1_sl      !< Yasso below ground litter-pool for water soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_ethanol_bg1_sl    !< Yasso below ground litter-pool for ethanol soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg1_sl !< Yasso below ground litter-pool for non-soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_humus_1_sl        !< Yasso below ground litter-pool for slow C compartment on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_acid_bg1_sl       !< Yasso below ground litter-pool for acid soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_water_bg1_sl      !< Yasso below ground litter-pool for water soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg1_sl    !< Yasso below ground litter-pool for ethanol soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg1_sl !< Yasso below ground litter-pool for non-soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_humus_1_sl        !< Yasso below ground litter-pool for slow C compartment
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
     !SIZE CLASS 2
-    dsl4jsb_Real3D_onChunk :: c_acid_bg2_sl       !< Yasso below ground litter-pool for acid soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_water_bg2_sl      !< Yasso below ground litter-pool for water soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_ethanol_bg2_sl    !< Yasso below ground litter-pool for ethanol soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg2_sl !< Yasso below ground litter-pool for non-soluble litter on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
-    dsl4jsb_Real3D_onChunk :: c_humus_2_sl        !< Yasso below ground litter-pool for slow C compartment on soil layers
-                                                  !< [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_acid_bg2_sl       !< Yasso below ground litter-pool for acid soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_water_bg2_sl      !< Yasso below ground litter-pool for water soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_ethanol_bg2_sl    !< Yasso below ground litter-pool for ethanol soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_nonsoluble_bg2_sl !< Yasso below ground litter-pool for non-soluble litter
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
+    dsl4jsb_Real3D_onChunk :: c_humus_2_sl        !< Yasso below ground litter-pool for slow C compartment
+                                                  !< on soil layers [mol(C)/m^2(canopy)]
     !
     dsl4jsb_Real3D_onChunk :: soil_respiration_oxic_sl !< Mean daily rate of heterotrophic (soil) respiration
                                                        !< for oxic soils in methane process only. [mol m-2(ground) d-1].
@@ -447,7 +446,6 @@ CONTAINS
 
       ALLOCATE(soil_depth_thaw(nc))
       ALLOCATE(thaw_depth(nc))
-      ALLOCATE(thaw_depth_sl(nc,nsoil))
     END IF
 
     ! Set process variables
@@ -649,7 +647,6 @@ CONTAINS
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
       max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
-      thaw_depth_sl = depth_to_layers(thaw_depth, layer_thick);
     END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output
@@ -924,7 +921,6 @@ CONTAINS
             &  max_depth                    = soil_depth_thaw(ic),                      & ! in
             &  max_depth_sl                 = max_layer_sl(ic,:),                       & ! in
             &  thaw_depth                   = thaw_depth(ic),                           & ! in
-            &  thaw_depth_sl                = thaw_depth_sl(ic,:),                      & ! in
             &  root_dist_sl                 = root_dist_sl(ic,:),                       & ! inout
             &  permafrost_layer             = permafrost_period_sl_climbuf(ic,:),       & ! in
                !

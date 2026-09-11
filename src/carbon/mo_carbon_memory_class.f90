@@ -960,8 +960,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
       & prefix, suffix,                                                                           &
       & output_level=BASIC,                                                                                &
-      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
-                                                  ! in a zero divide in the first time step of an initialized run.
+      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+      ! initval taken from JSBACH3. Initializing to zero would result
+      ! in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('npp_act_ydaymean_ta', mem%NPP_act_yDayMean_ta,                                &
       & hgrid, surface,                                                                             &
@@ -969,8 +970,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
       & output_level=BASIC,                                                                         &
-      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
-                                                  ! in a zero divide in the first time step of an initialized run.
+      & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+      ! initval taken from JSBACH3. Initializing to zero would result
+      ! in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                             &
       & hgrid, surface,                                                                  &
