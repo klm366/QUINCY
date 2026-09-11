@@ -1603,7 +1603,7 @@ CONTAINS
 
     ! Local variables
     REAL(wp)  :: non_woody_litter, fraction  ! Helper
-    INTEGER   :: ic, nc 
+    INTEGER   :: ic, nc
 
     ! Initializations
     nc = SIZE(damaged_fract)
