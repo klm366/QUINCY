@@ -31,8 +31,8 @@
 # - Negative transitions rates are set to zero. They seem to occur occationally for transition rates to/from c3nfx.
 
 
-start_year=1979
-end_year=1982
+start_year=1983
+end_year=1989
 pft_tag="12pfts"  # options: 12pfts, 11pfts; recommended: 12pfts
                   # Note that "11pfts" is also possible for transitions, but consistent cover fractions
                   # (i.e. based on LUH3 states) are not available for 11 PFTs at the moment.
@@ -54,10 +54,11 @@ targetGrid="global_0.25"
 
 tag="CMIP7_forcings"
 version="3-1-1"
+scenario="DECK"
 
-mainTransFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-transitions_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2023.nc
-mainStatesFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-states_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2024.nc
-fixedInputFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/v${version}/multiple-static_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn.nc
+mainTransFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${scenario}/v${version}/multiple-transitions_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2023.nc
+mainStatesFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${scenario}/v${version}/multiple-states_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn_0850-2024.nc
+fixedInputFile=/work/bb1469/b383102/${tag}/RAW_DATA/land/${scenario}/v${version}/multiple-static_input4MIPs_landState_CMIP_UofMD-landState-${version}_gn.nc
 
 #outfolder=./YOUROUTPUTFOLDER
 outfolder=/work/bm0891/m300218/LUH3/prepare_transitions
@@ -66,18 +67,18 @@ outfolder=/work/bm0891/m300218/LUH3/prepare_transitions
 echo "--> ${scriptName}"
 
 # Some global attributes to be set
-luh3_preprocessing="Aggregated LUH transitions (using ${scriptName}) and ${tag} LUH data version ${version}"
+luh3_preprocessing="Aggregated LUH transitions (using ${scriptName}) and ${tag} ${scenario} LUH data version ${version}"
 luh3_preprocessing="${luh3_preprocessing}; contact: a.naumann@lmu.de"
-luh3_comment="Urban is treated as pasture."
-luh3_comment="${luh3_comment} Rangelands on potential forests are treated as pasture (LUH static data: fstnf = 1), else: natural vegetation"
+luh3_comment="Transitions to/from urban are treated as transitions to/from natural."
+luh3_comment="${luh3_comment} Transitions to/from rangelands on potential forests are treated as transitions to/from pasture (LUH static data: fstnf = 1), else: natural vegetation"
 
 # mapping of original to aggregated states
 # NOTE: Range is listed twice. Rangelands are aggregated to pasture or natural vegetation depending on the fstnf value
 org_states=( primf primn urban secdf secdn pastr range range c3ann c3per c4ann c4per c3nfx )
 if [ "$pft_tag" = "11pfts" ]; then
-  aggregated_states=( natural natural pasture natural natural pasture natural pasture crop crop crop crop crop )
+  aggregated_states=( natural natural natural natural natural pasture natural pasture crop crop crop crop crop )
 elif [ "$pft_tag" = "12pfts" ]; then
-  aggregated_states=( natural natural pasture natural natural pasture natural pasture c3crop c3crop c4crop c4crop c3crop )
+  aggregated_states=( natural natural natural natural natural pasture natural pasture c3crop c3crop c4crop c4crop c3crop )
 else
   echo "unknown pft_tag: ${pft_tag}"
   exit 1
