@@ -558,7 +558,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in
       correction_factor(:) = fract_fpc_max(:)
     ELSE
-      correction_factor(:) = 1.0_wp ! Note: In quincy all state variables are defined for 100% of the cover fraction
+      correction_factor(:) = 1.0_wp ! Note: In QUINCY all state variables are defined for 100% of the cover fraction
     END IF
 
     dsl4jsb_Get_var2D_onChunk(PPLCC_, tree_fract)           ! out
@@ -640,19 +640,25 @@ CONTAINS
         C3pft_fract(:) = C3pft_fract(:) + pft_fract(:) * correction_factor(:)
       END IF
 
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%BareSoilFlag) THEN
+          baresoil_fract(:) = baresoil_fract(:) + pft_fract(:) * correction_factor(:)
+        END IF
+      END IF
+
     END DO ! ipft
 
     ! Fraction of the veg tile
     CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=veg_fract(:))
 
-    ! Bare land tile
-    ! Note: In the current usecase the land tile does not have a bare soil child, thus
-    !       bare_fract is set to zero.
-    bare_fract(:)=0._wp
-
-    ! Baresoil fraction
-    baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-correction_factor(:))
-
+    ! Bare land tile in JSBACH
+    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+      ! Note: In the current usecase the land tile in JSBACH does not have a bare soil child, thus
+      !       bare_fract is set to zero.
+      bare_fract(:)=0._wp
+      ! Baresoil fraction
+      baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-correction_factor(:))
+    END IF
 
   END SUBROUTINE pplcc_fraction_diagnostics
 
