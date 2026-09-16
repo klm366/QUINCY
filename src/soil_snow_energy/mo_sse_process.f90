@@ -24,7 +24,8 @@ MODULE mo_sse_process
 
   PUBLIC :: relative_humidity_soil, init_soil_temperature,                       &
     & calc_vol_heat_capacity, calc_thermal_conductivity, add_heat_capacity_pond, &
-    & calc_snow_abcoeff, calc_soil_temperature, calc_snow_temperature, Get_liquid_max, check_freezethaw
+    & calc_snow_abcoeff, calc_soil_temperature, calc_snow_temperature, Get_liquid_max, &
+    & get_num_thaw_cycles
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_process'
 
@@ -1067,14 +1068,19 @@ CONTAINS
 
   ! --------------------------------------------------------------------------------------------------------- !
   !>
-  !! Check soil temperature maximum / minimum / freeze
-  !!
-  SUBROUTINE check_freezethaw(            &
+  !> Get information on freeze/thaw cycles and soil temperature extremes
+  !>
+  !> The routine tracks daily maximum and minimum soil temperatures to derive
+  !> the number of freeze-thaw cycles within the soil column. A freeze-thaw cycle is
+  !> counted when the daily maximum temperature exceeds the melting point and the
+  !> daily minimum temperature is below the melting point.
+  !>
+  SUBROUTINE get_num_thaw_cycles(         &
     & nc, nsoil, lstart,                  &
     & new_year, new_day,                  &
     & t_soil_sl,                          &
     & t_soil_sl_max, t_soil_sl_min,       &
-    & thaw_cycle, thaw_cycle_prev)
+    & n_thaw_cycle, n_thaw_cycle_prev)
 
     USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -1082,17 +1088,17 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  arguments
 
-    INTEGER,  INTENT(in)    ::  nc                       !! length of the vector
-    INTEGER,  INTENT(in)    ::  nsoil                    !! number of soil layers
-    LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
-    LOGICAL,  INTENT(in)    ::  new_year                 !! start of new year
-    LOGICAL,  INTENT(in)    ::  new_day                  !! start of new day
-    REAL(wp), INTENT(in)    ::  t_soil_sl(:,:)           !! soil temperature [K]
+    INTEGER,  INTENT(in)    ::  nc                       !< length of the vector
+    INTEGER,  INTENT(in)    ::  nsoil                    !< number of soil layers
+    LOGICAL,  INTENT(in)    ::  lstart                   !< if T, start of experiment
+    LOGICAL,  INTENT(in)    ::  new_year                 !< start of new year
+    LOGICAL,  INTENT(in)    ::  new_day                  !< start of new day
+    REAL(wp), INTENT(in)    ::  t_soil_sl(:,:)           !< soil temperature [K]
 
-    REAL(wp), INTENT(inout) ::  t_soil_sl_max(:,:)       !! soil temperature daily maximum [K]
-    REAL(wp), INTENT(inout) ::  t_soil_sl_min(:,:)       !! soil temperature daily minimum [K]
-    REAL(wp), INTENT(inout) ::  thaw_cycle(:)            !! freeze-thaw cycle number
-    REAL(wp), INTENT(inout) ::  thaw_cycle_prev(:)       !! freeze-thaw cycle number previous year
+    REAL(wp), INTENT(inout) ::  t_soil_sl_max(:,:)       !< soil temperature daily maximum [K]
+    REAL(wp), INTENT(inout) ::  t_soil_sl_min(:,:)       !< soil temperature daily minimum [K]
+    REAL(wp), INTENT(inout) ::  n_thaw_cycle(:)          !< number of freeze-thaw cycles
+    REAL(wp), INTENT(inout) ::  n_thaw_cycle_prev(:)     !< number of freeze-thaw cycles in previous year
 
     !------------------------------------------------------------------
     !  local Variables
@@ -1101,29 +1107,28 @@ CONTAINS
     REAL(wp) :: tmin, tmax
 
     IF (new_year) THEN
-      IF (.NOT. lstart) thaw_cycle_prev(:) = thaw_cycle(:)
-      thaw_cycle(:) = 0._wp
+      IF (.NOT. lstart) n_thaw_cycle_prev(:) = n_thaw_cycle(:)
+      n_thaw_cycle(:) = 0._wp
     END IF
 
     IF (new_day) THEN
-      ! Check for zero curtain within soil column during last day
+      ! Check for zero curtain within soil column during the previous day
       DO ic = 1,nc
         tmax = MAXVAL(t_soil_sl_max(ic,:))
         tmin = MINVAL(t_soil_sl_min(ic,:))
-        IF (( (tmax > (tmelt + 0.01_wp)) .AND. (tmin <= tmelt) ) .OR. &
-            ( (tmax >= tmelt) .AND. (tmin < (tmelt - 0.01_wp)) )) THEN
-          thaw_cycle(ic) = thaw_cycle(ic) + 1._wp
+        IF ((tmax >= tmelt) .AND. (tmin <= tmelt) .AND. (tmax-tmin > 0.01_wp)) THEN
+          n_thaw_cycle(ic) = n_thaw_cycle(ic) + 1._wp
         END IF
       END DO
       ! Reset temperatures for actual day
       t_soil_sl_max(:,:) = t_soil_sl(:,:)
       t_soil_sl_min(:,:) = t_soil_sl(:,:)
     ELSE
-      ! Store maximum temperature difference within soil column
-      t_soil_sl_max(:,:) = MAX(t_soil_sl_max(:,:),t_soil_sl(:,:))
-      t_soil_sl_min(:,:) = MIN(t_soil_sl_min(:,:),t_soil_sl(:,:))
+      ! Update maximum temperature difference within soil column
+      t_soil_sl_max(:,:) = MAX(t_soil_sl_max(:,:), t_soil_sl(:,:))
+      t_soil_sl_min(:,:) = MIN(t_soil_sl_min(:,:), t_soil_sl(:,:))
     END IF
-  END SUBROUTINE check_freezethaw
+  END SUBROUTINE get_num_thaw_cycles
 
 #endif
 END MODULE mo_sse_process

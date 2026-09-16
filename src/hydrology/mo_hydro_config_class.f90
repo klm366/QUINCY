@@ -394,8 +394,6 @@ CONTAINS
     config%l_socmap = l_socmap
     IF (l_socmap .AND. l_organic) THEN
       CALL message(TRIM(routine), 'Read map with soil organic carbon fractions from bc file.')
-    ELSE IF (.NOT. l_socmap .AND. l_organic) THEN
-      CALL message(TRIM(routine), 'Calculate soil organic carbon fractions from forest fractions.')
     ELSE IF (l_socmap .AND. .NOT. l_organic) THEN
       CALL message(TRIM(routine), 'Setting l_socmap=false since l_organic=false and organic matter fractions are not used.')
       config%l_socmap = .FALSE.

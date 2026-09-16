@@ -43,6 +43,7 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
+    USE mo_hydro_constants,     ONLY: Uniform_
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
@@ -290,27 +291,6 @@ CONTAINS
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(CH4_)
 
-        ! Make number of vertical layers available from the options type
-        IF (model%Is_process_enabled(HYDRO_)) THEN
-          soil_w => Get_vgrid('soil_depth_water')
-          nsoil_w = soil_w%n_levels
-        END IF
-        IF (model%Is_process_enabled(SSE_)) THEN
-          soil_e => Get_vgrid('soil_depth_energy')
-          nsoil_e = soil_e%n_levels
-          snow_e => Get_vgrid('snow_depth_energy')
-          nsnow_e = snow_e%n_levels
-        END IF
-        CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
-
-        ! Crosscheck process configs
-        IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
-          & .AND. (nsoil_e /= nsoil_w)) THEN
-          CALL finish(routine, &
-            & 'The number of soil layers used for water and energy currently need to be identical:'  &
-            & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
-        END IF
-
       END SELECT
 
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
@@ -418,6 +398,10 @@ CONTAINS
         IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
           dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_ .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since hydro_scale is set to Uniform')
         END IF
 
         IF (model%Is_process_enabled(FAGE_) &

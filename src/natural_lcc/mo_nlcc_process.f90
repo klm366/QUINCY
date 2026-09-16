@@ -43,7 +43,7 @@ CONTAINS
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
   ELEMENTAL PURE SUBROUTINE bioclim_limits (is_dynamic, lct_tcmin, lct_tcmax, lct_twmax, lct_min_temprange, lct_gddmin, &
-                                            lct_snowmin, min_mmtemp_20yr, max_mmtemp20, max_snow_prev_year, gdd_prev_year, bio_exist)
+                                            lct_snowmin, min_mmtemp_20yr, max_mmtemp_20yr, max_snow_prev_year, gdd_prev_year, bio_exist)
 
 !
 ! calculation of bioclimatic limits for each PFT based on modified
@@ -58,9 +58,9 @@ CONTAINS
     REAL(wp), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
                                                ! minus coldest month temperature [C]
     REAL(wp), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
-    REAL(wp), INTENT(in)  :: lct_snowmin       ! PFT-specific minimum snow depth limit
-    REAL(wp), INTENT(in)  :: min_mmtemp_20yr      ! Minimum monthly mean temp. (20yr climatology) [K]
-    REAL(wp), INTENT(in)  :: max_mmtemp20      ! Maximum monthly mean temp. (20yr climatology) [K]
+    REAL(wp), INTENT(in)  :: lct_snowmin       ! PFT-specific minimum required snow depth [m]
+    REAL(wp), INTENT(in)  :: min_mmtemp_20yr   ! Minimum monthly mean temp. (20yr climatology) [K]
+    REAL(wp), INTENT(in)  :: max_mmtemp_20yr   ! Maximum monthly mean temp. (20yr climatology) [K]
     REAL(wp), INTENT(in)  :: max_snow_prev_year  ! previous year maximum snow depth [m]
     REAL(wp), INTENT(in)  :: gdd_prev_year     ! GDD of previous year
 
@@ -72,8 +72,8 @@ CONTAINS
     bio_exist = 1._wp
 
     IF (is_dynamic .AND. (((min_mmtemp_20yr - tmelt) < lct_tcmin) .OR. ((min_mmtemp_20yr - tmelt) > lct_tcmax)  &
-       .OR. (gdd_prev_year < lct_gddmin) .OR. ((max_mmtemp20 - tmelt) > lct_twmax)                        &
-       .OR. ((max_mmtemp20 - min_mmtemp_20yr) < lct_min_temprange)                                           &
+       .OR. (gdd_prev_year < lct_gddmin) .OR. ((max_mmtemp_20yr - tmelt) > lct_twmax)                        &
+       .OR. ((max_mmtemp_20yr - min_mmtemp_20yr) < lct_min_temprange)                                           &
        .OR. (max_snow_prev_year < lct_snowmin))) bio_exist = 0._wp
 
   END SUBROUTINE bioclim_limits

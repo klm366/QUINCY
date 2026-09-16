@@ -55,8 +55,8 @@ path_restart_out=/work/mh1496/m220053/equilibrateC/${exp}  # directory for the n
 year_start=2896      # first year of period to determine average fluxes
 year_end=2920        # last year of that period
 nyear_restart=1      # number of years within one restart cycle
-with_NLCC=false            # T: Simulation uses natural land cover change
-use_vertical_carbon=false  # T: Simulation done with carbon on soil layers
+with_NLCC=false      # T: Simulation uses natural land cover change
+vertical_yasso=false # T: Simulation done with carbon on soil layers
 pfts=( 01 02 03 04 05 06 07 08 09 10 11 12 )
 
 clean_up=true        # remove ${work} if script ran successfully
@@ -150,7 +150,7 @@ for ipft in ${pfts[@]}; do
   fi
 
   # Calculate equilibrium humus pools for the current pft
-  if [[ ${use_vertical_carbon} == true ]]; then
+  if [[ ${vertical_yasso} == true ]]; then
     ${cdo} -mul -selvar,carbon_c_humus_1_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_1.nc \
             ${work}/c_H1_eq_pft${ipft}_sl.nc
     ${cdo} -mul -selvar,carbon_c_humus_2_sl_pft${ipft} ${path_restart}/${restartToModify} ${work}/factor_humus_2.nc \

@@ -158,14 +158,14 @@ CONTAINS
     INTEGER            :: is, nsoil
     TYPE(t_jsb_vgrid), POINTER   :: soil_c
 
-    CHARACTER(len=20), PARAMETER :: Cpool_name_flat(npools) = [character(len=20) ::      &
+    CHARACTER(len=20), PARAMETER :: Cpool_name_2d(npools) = [character(len=20) ::        &
       & 'c_green',  'c_woods',  'c_reserve',                                             &
       & 'c_acid_ag1',  'c_water_ag1', 'c_ethanol_ag1', 'c_nonsoluble_ag1',               &
       & 'c_acid_bg1',  'c_water_bg1', 'c_ethanol_bg1', 'c_nonsoluble_bg1', 'c_humus_1',  &
       & 'c_acid_ag2',  'c_water_ag2', 'c_ethanol_ag2', 'c_nonsoluble_ag2',               &
       & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
 
-    CHARACTER(len=20), PARAMETER :: Cpool_name_deep(npools) = [character(len=20) ::                   &
+    CHARACTER(len=20), PARAMETER :: Cpool_name_3d(npools) = [character(len=20) ::                   &
       & 'c_green',  'c_woods',  'c_reserve',                                                          &
       & 'c_acid_ag1',    'c_water_ag1',    'c_ethanol_ag1',    'c_nonsoluble_ag1',                    &
       & 'c_acid_bg1_sl', 'c_water_bg1_sl', 'c_ethanol_bg1_sl', 'c_nonsoluble_bg1_sl', 'c_humus_1_sl', &
@@ -185,7 +185,7 @@ CONTAINS
     ! Initialize the C Pools
     invar_3D = .false.
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
       nsoil = soil_c%n_levels
     END IF
@@ -195,12 +195,12 @@ CONTAINS
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
-    IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       CALL message(TRIM(routine), 'Reading 1D carbon pools for total soil column.')
       DO i=1,npools
-        invar_name = 'carbon_'//TRIM(Cpool_name_flat(i))//'_'//TRIM(tile%name)
+        invar_name = 'carbon_'//TRIM(Cpool_name_2d(i))//'_'//TRIM(tile%name)
 
-        SELECT CASE(Cpool_name_flat(i))
+        SELECT CASE(Cpool_name_2d(i))
         CASE ("c_green")
           memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
         CASE ("c_woods")
@@ -257,10 +257,10 @@ CONTAINS
     ELSE
       CALL message(TRIM(routine), 'Reading depth-resolved carbon pools for soil layers.')
       DO i=1,npools
-        invar_name = 'carbon_'//TRIM(Cpool_name_deep(i))//'_'//TRIM(tile%name)
+        invar_name = 'carbon_'//TRIM(Cpool_name_3d(i))//'_'//TRIM(tile%name)
         invar_3D = .false.
 
-        SELECT CASE(Cpool_name_deep(i))
+        SELECT CASE(Cpool_name_3d(i))
         CASE ("c_green")
           memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
         CASE ("c_woods")

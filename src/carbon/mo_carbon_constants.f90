@@ -23,36 +23,36 @@ MODULE mo_carbon_constants
 
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
   ENUM, BIND(C)
-    ENUMERATOR :: i_lctlib_acid=1, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus
+    ENUMERATOR :: LCT_ACID=1, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS
   END ENUM
 
   ! Indices of the yasso(_out) transfer array
   ENUM, BIND(C)
-    ENUMERATOR :: i_pool_acid_ag=1, i_pool_water_ag, i_pool_ethanol_ag, i_pool_nonsoluble_ag,             &
-                & i_pool_acid_bg, i_pool_water_bg, i_pool_ethanol_bg, i_pool_nonsoluble_bg, i_pool_humus, &
-                & i_flux_resp_total, i_flux_2_humus_ag, i_flux_2_humus_bg, i_flux_from_humus_diag,        &
-                & i_flux_resp_litter_ag, i_flux_resp_litter_bg, i_rel_flux_AWEN, i_flux_from_humus,       &
-                & i_flux_litter_2_humus
+    ENUMERATOR :: POOL_ACID_AG=1, POOL_WATER_AG, POOL_ETHANOL_AG, POOL_NONSOLUBLE_AG,       &
+          & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG, POOL_NONSOLUBLE_BG, POOL_HUMUS,   &
+          & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG, FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,        &
+          & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG, REL_FLUX_AWEN, FLUX_FROM_HUMUS,       &
+          & FLUX_LITTER_2_HUMUS
   END ENUM
 
   ! Yasso pool indicators for c pool in/out, rate constant in
   ENUM, BIND(C)
-    ENUMERATOR :: i_y_acid=1, i_y_water, i_y_ethanol, i_y_nonsoluble, i_y_humus
+    ENUMERATOR :: Y_ACID=1, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
   END ENUM
 
   ! Yasso flux indicators for flux out
   ENUM, BIND(C)
-    ENUMERATOR :: i_f_resp=1, i_f_2_humus, i_f_f_humus, i_f_litresp
+    ENUMERATOR :: F_RESP=1, F_2_HUMUS, F_F_HUMUS, F_LITRESP
   END ENUM
 
   ! Yasso rate modifiers for litter/humus
   ENUM, BIND(C)
-    ENUMERATOR :: i_m_litter=1, i_m_humus
+    ENUMERATOR :: M_LITTER=1, M_HUMUS
   END ENUM
 
   ! Misc parameters in interface
   ENUM, BIND(C)
-    ENUMERATOR :: i_WoodLitSize=1, i_RootDistBeta, i_FracInunMin
+    ENUMERATOR :: WOODLITSIZE=1, ROOT_DIST_BETA, FRAC_INUN_MIN
   END ENUM
 
 
@@ -78,7 +78,7 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
 
-  !   parameters for Yasso peat
+  ! Parameters for Yasso peat
   REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp !< Bulk density of acrotelm peat: 0.035 g/cm3, based on
                                                              !< Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
                                                              !<  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
@@ -106,13 +106,13 @@ MODULE mo_carbon_constants
 
   !> helper for automatization (order needs to match var name list in carbon_required_passive_vars)
   INTEGER :: coefficient_ind_of_passive_vars(nr_of_yasso_pools) = (/ &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,                 &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus, &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,                 &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus  /)
+    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,              &
+    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS,   &
+    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,              &
+    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS  /)
 
   ! ------------------------------------------------------------------------------------------
-  ! parameters for vertical YASSO
+  ! Parameters for vertical YASSO
   !
 
   ! decomposition modifier parameters for temperature and depth modifier
@@ -124,18 +124,18 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: d_oxic = 1.0_wp            !< decomposition modifier for oxic decomposition
 
   ! Yasso parameters (Tuomi '11)
-  ! parameters for temperature dependence
+  ! Parameters for temperature dependence
   REAL(wp), PARAMETER   :: temp_p1     = 0.095_wp   !< first  order temperature dependence [1/C]
   REAL(wp), PARAMETER   :: temp_p2     = -0.0014_wp !< second order temperature dependence [1/C]
-  ! parameter for precipitation dependence
+  ! Parameter for precipitation dependence
   REAL(wp), PARAMETER   :: precip_p1   = -1.21_wp   !< first  order precipitation dependence [a/m]
-  ! parameters for size dependence
+  ! Parameters for size dependence
   REAL(wp), PARAMETER   :: size_p1     = -1.71_wp   !< first  order size dependence [1/cm]
   REAL(wp), PARAMETER   :: size_p2     = 0.86_wp    !< second order size dependence [1/cm]
   REAL(wp), PARAMETER   :: size_p3     = -0.306_wp  !< size dependence power [ ]
   REAL(wp), PARAMETER   :: d_size_leaf = 1.0_wp     !< leaf litter is not size dependent
 
-  ! parameters for moisture dependence, DAYCENT formulation
+  ! Parameters for moisture dependence, DAYCENT formulation
   REAL(wp), PARAMETER   :: moist_p_a = 0.575_wp
   REAL(wp), PARAMETER   :: moist_p_b = 1.5_wp
   REAL(wp), PARAMETER   :: moist_p_d = 3.0_wp

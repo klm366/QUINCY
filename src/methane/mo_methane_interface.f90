@@ -416,7 +416,7 @@ CONTAINS
 
 !     dsl4jsb_Def_config(CARBON_)
 !     dsl4jsb_Get_config(CARBON_)
-!       IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+!       IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
 
 
     ! Atmospheric trace gase concentration needs to be updated here, since restarts doesn't start at a methane time step
@@ -508,7 +508,7 @@ CONTAINS
     ALLOCATE(CO2_act               (nsoil))
     ALLOCATE( O2_act               (nsoil))
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ALLOCATE(OxicDecompCarbon_sl   (nc, nsoil))
       ALLOCATE(AnoxDecompCarbon_sl   (nc, nsoil))
     END IF
@@ -540,7 +540,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_fire_all_2_atm_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, co2flux_herb_2_atm_ta)
     dsl4jsb_Get_var2D_onChunk(CARBON_, GPP_prev_year_ta)
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       dsl4jsb_Get_var3D_onChunk(CARBON_, soil_respiration_oxic_sl_ta)
       dsl4jsb_Get_var3D_onChunk(CARBON_, soil_respiration_anox_sl_ta)
     END IF
@@ -693,7 +693,7 @@ CONTAINS
 
     ! determine carbon input during time step for oxic and anoxic conditions
     ! convert respiration flux, respiration is defined NEGATIVE
-    IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       OxicDecompCarbon = -soil_respiration_oxic_ta * dt
       AnoxDecompCarbon = -soil_respiration_anox_ta * dt
     ELSE
@@ -856,7 +856,7 @@ CONTAINS
                                  D_CH4, D_CO2, D_O2, D_CH4_surface, D_CO2_surface, D_O2_surface)
 
             ! CH4 / CO2 production
-            IF (.NOT. dsl4jsb_Config(CARBON_)%on_soillev) THEN
+            IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
               CALL production(is_peat, is_Wet, nly, mxlay_above_wt,       &
                               dsl4jsb_Config(CH4_)%frac_CH4_anox_mineral, &
                               dsl4jsb_Config(CH4_)%frac_CH4_anox_organic, &
@@ -1104,7 +1104,7 @@ CONTAINS
     DEALLOCATE(CO2_act)
     DEALLOCATE( O2_act)
 
-    IF (dsl4jsb_Config(CARBON_)%on_soillev) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       DEALLOCATE(OxicDecompCarbon_sl)
       DEALLOCATE(AnoxDecompCarbon_sl)
     END IF

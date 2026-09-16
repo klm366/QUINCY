@@ -51,10 +51,8 @@ MODULE mo_carbon_config_class
                             !<            in the experiment jobs following the first one! Or re-set it manually!
     LOGICAL  :: diag_humus_fluxes  !< Activate diagnostic carbon fluxes to and from the yasso humus pools
                                    !< required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
-    LOGICAL  :: on_soillev         !< T: Below ground carbon calculated on vertical grid (soil layers)
-    LOGICAL  :: update_soil_props  !< T: Update soil thermal and hydrological properties based on carbon content
-    LOGICAL  :: clear_frozen       !< T: Remove carbon from frozen soils at simulation (re)start
-    REAL(wp) :: resp_rate_modifier !< Modifies the respiration rate for litter and humus pools
+    LOGICAL  :: vertical_yasso     !< T: Below ground carbon calculated on vertical grid (soil layers)
+    LOGICAL  :: remove_permafrost_carbon !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
     REAL(wp) :: fire_fract_wood_2_atmos !< Fraction of wood carbon emitted to the atm by fire.
 
    CONTAINS
@@ -103,11 +101,9 @@ CONTAINS
                                      !<            in the experiment jobs following the first one! Or re-set it manually!
       & diag_humus_fluxes,         & !< Activate diagnostic carbon fluxes to and from the yasso humus pools
                                      !< required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
-      & on_soillev,                & !< T: Below ground carbon calculated on vertical grid (soil layers)
-      & update_soil_props,         & !< T: Update soil thermal and hydrological properties based on carbon content
-      & clear_frozen                 !< T: Remove carbon from frozen soils at simulation (re)start
+      & vertical_yasso,            & !< T: Below ground carbon calculated on vertical grid (soil layers)
+      & remove_permafrost_carbon     !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
     REAL(wp) ::                    &
-      & resp_rate_modifier,        & !< Modifies the respiration rate for litter and humus pools
       & fire_fract_wood_2_atmos      !< Fraction of wood carbon emitted to the atm by fire.
 
     NAMELIST /jsb_carbon_nml/      &
@@ -118,10 +114,8 @@ CONTAINS
          with_nitrogen,            &
          read_cpools,              &
          diag_humus_fluxes,        &
-         on_soillev,               &
-         update_soil_props,        &
-         clear_frozen,             &
-         resp_rate_modifier
+         vertical_yasso,           &
+         remove_permafrost_carbon
 
     INTEGER ::                     &
       & nml_handler,               &   !< Handle to deal with namelist file
@@ -142,18 +136,16 @@ CONTAINS
     !>
     !> Default values are defined for all namelist parameters.
     !
-    active                 = .FALSE.
-    lrestart_cont          = .FALSE.       ! TRUE: Continue although CARBON variables are missing in restart file
-    bc_filename            = 'bc_land_carbon.nc'
-    ic_filename            = 'ic_land_carbon.nc'
-    with_nitrogen          = .FALSE.
-    read_cpools            = .FALSE.
-    diag_humus_fluxes      = .FALSE.
-    on_soillev             = .FALSE.
-    update_soil_props      = .FALSE.
-    clear_frozen           = .FALSE.
-    resp_rate_modifier      = 1._wp
-    fire_fract_wood_2_atmos = FireFracWood2Atmos
+    active                   = .FALSE.
+    lrestart_cont            = .FALSE.       ! TRUE: Continue although CARBON variables are missing in restart file
+    bc_filename              = 'bc_land_carbon.nc'
+    ic_filename              = 'ic_land_carbon.nc'
+    with_nitrogen            = .FALSE.
+    read_cpools              = .FALSE.
+    diag_humus_fluxes        = .FALSE.
+    vertical_yasso           = .FALSE.
+    remove_permafrost_carbon = .FALSE.
+    fire_fract_wood_2_atmos  = FireFracWood2Atmos
 
     ! Open the file containing the carbon namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -169,28 +161,18 @@ CONTAINS
     !> and values set in the namelist - are stored in the configuration data structure 'config' to
     !> make them easily accessible in all ICON-Land process modules ("dsl4jsb_Use_config(CARBON_)").
 
-    config%active                 = active
-    config%lrestart_cont          = lrestart_cont
-    config%ic_filename            = ic_filename
-    config%bc_filename            = bc_filename
-    config%with_nitrogen          = with_nitrogen
-    config%read_cpools            = read_cpools
-    config%diag_humus_fluxes      = diag_humus_fluxes
-    config%on_soillev             = on_soillev
-    config%update_soil_props      = update_soil_props
-    config%clear_frozen           = clear_frozen
-    config%resp_rate_modifier     = resp_rate_modifier
-    config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
+    config%active                   = active
+    config%lrestart_cont            = lrestart_cont
+    config%ic_filename              = ic_filename
+    config%bc_filename              = bc_filename
+    config%with_nitrogen            = with_nitrogen
+    config%read_cpools              = read_cpools
+    config%diag_humus_fluxes        = diag_humus_fluxes
+    config%vertical_yasso           = vertical_yasso
+    config%remove_permafrost_carbon = remove_permafrost_carbon
+    config%fire_fract_wood_2_atmos  = fire_fract_wood_2_atmos
 
-    ! Consistency check
-    IF (update_soil_props .AND. .NOT. on_soillev) THEN
-      WRITE(message_text, *) 'Updating soil properties with interactive carbon only possible if ', &
-        & 'on_soillev = True'
-      CALL message(TRIM(routine), message_text)
-      config%update_soil_props = .FALSE.
-    END IF
-
-    IF (on_soillev) THEN
+    IF (vertical_yasso) THEN
       input_file = jsb_netcdf_open_input(ic_filename)
 
       ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom

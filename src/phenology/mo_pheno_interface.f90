@@ -252,7 +252,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: GDD_prev_year
-    dsl4jsb_Real2D_onChunk :: GDD_sum    
+    dsl4jsb_Real2D_onChunk :: GDD_sum
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
