@@ -181,6 +181,8 @@ CONTAINS
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
     USE mo_util,                ONLY: one_of
 
+    USE mo_jsb_time,            ONLY: t_datetime, deallocateDateTime, get_time_start, cache_time_interpolation_weights
+
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
@@ -192,6 +194,7 @@ CONTAINS
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
+    TYPE(t_datetime), POINTER           :: current_datetime
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
@@ -578,6 +581,11 @@ CONTAINS
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
 
       ! TBD: Loop over processes instead of explicit
+
+      ! Cache time interpolation weights to be used in init routines using the the start_date of the current run
+      current_datetime => get_time_start()
+      CALL cache_time_interpolation_weights(current_datetime)
+      CALL deallocateDateTime(current_datetime)
 
       IF (tile%Is_process_active(RAD_)) THEN
           CALL rad_init(tile)

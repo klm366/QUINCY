@@ -25,6 +25,8 @@ MODULE mo_pheno_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
+  USE mo_jsb_extvar_reader,   ONLY: t_extvar_monthly_ctx,           &
+    &                               extvar_monthly_open, extvar_monthly_update, extvar_monthly_close
 
   dsl4jsb_Use_processes PHENO_, HYDRO_, RAD_
   dsl4jsb_Use_config(PHENO_)
@@ -35,7 +37,7 @@ MODULE mo_pheno_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: pheno_init
+  PUBLIC :: pheno_init, read_extlai_data
 
   TYPE t_pheno_init_vars
     REAL(wp), POINTER ::  &
@@ -295,7 +297,6 @@ CONTAINS
     !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2)
 
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
-    CALL cache_time_interpolation_weights()
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, wgt2, nmw1, nmw2) GANG VECTOR ASYNC(1) COLLAPSE(2)
     DO ib=1,nblks
@@ -348,6 +349,88 @@ CONTAINS
     !$ACC END DATA
 
   END SUBROUTINE pheno_init_ic
+
+  ! ======================================================================================================= !
+  !> Read external time-varying PFT LAI for the 'external_lai' phenology scheme
+  !>
+  !> Called at experiment start and once per new year from jsbach_start_timestep.
+  !>
+  SUBROUTINE read_extlai_data(model_id, current_datetime)
+
+    USE mo_jsb_time_iface,  ONLY: t_datetime
+    USE mo_jsb_varlist,     ONLY: VARNAME_LEN
+    USE mo_jsb_parallel,    ONLY: Get_omp_thread
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+    TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),          POINTER :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: tile, current_tile
+
+    dsl4jsb_Def_memory_tile(PHENO_, current_tile)
+
+    INTEGER                     :: no_omp_thread
+    TYPE(t_extvar_monthly_ctx)  :: ctx
+    CHARACTER(len=VARNAME_LEN)  :: varname
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_extlai_data'
+    ! -------------------------------------------------------------------------------------------------- !
+    model         => Get_model(model_id)
+    no_omp_thread =  Get_omp_thread()
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    ! Walk the tile tree to the veg tile (source of PHENO config and parent of PFT tiles)
+    CALL model%Get_top_tile(tile)
+    DO WHILE (ASSOCIATED(tile))
+      IF (tile%visited(no_omp_thread)) THEN
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+      IF (tile%name .EQ. 'veg') EXIT
+      CALL model%Goto_next_tile(tile)
+    END DO
+
+    IF (.NOT. ASSOCIATED(tile)) THEN
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: veg tile required but not found in tile tree.')
+    END IF
+
+    dsl4jsb_Get_config(PHENO_)
+
+    ! Early return when not using the external_lai scheme
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'external_lai') RETURN
+
+    IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly') THEN
+
+      CALL extvar_monthly_open(ctx, current_datetime, &
+        & dsl4jsb_Config(PHENO_)%extlai_filename_prefix, model%grid_id)
+
+      current_tile => tile%Get_first_child_tile()
+      DO WHILE (ASSOCIATED(current_tile))
+
+        dsl4jsb_Get_memory_tile(PHENO_, current_tile)
+
+        WRITE(varname, '(a,a)') 'pheno_lai_', TRIM(current_tile%name)
+
+        CALL extvar_monthly_update(ctx, TRIM(varname),           &
+          & pheno__mem__current_tile%lai_mon,                    &
+          & val_min=0._wp, val_max=dsl4jsb_Config(PHENO_)%extlai_lai_max)
+
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
+
+      !$ACC WAIT(1)
+
+      CALL extvar_monthly_close(ctx)
+
+    ELSE
+      CALL finish(TRIM(routine), &
+        & 'Unsupported extlai_mode: '''//TRIM(dsl4jsb_Config(PHENO_)%extlai_mode)//'''.')
+    END IF
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
+
+  END SUBROUTINE read_extlai_data
 
 #endif
 END MODULE mo_pheno_init

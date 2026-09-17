@@ -160,11 +160,73 @@ CONTAINS
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
         CALL update_phenology_climatology(tile, options)
+      CASE ('external_lai')
+        CALL update_phenology_external_lai(tile, options)
       CASE DEFAULT
-        CALL finish('Invalid scheme for phenology')
+        CALL finish(TRIM(routine), 'Invalid phenology scheme specified: ' &
+          & // TRIM(dsl4jsb_Config(PHENO_)%scheme))
       END SELECT
     END IF
   END SUBROUTINE update_phenology_jsbach
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of 'EXTERNAL_LAI' phenology scheme
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_phenology_external_lai(tile, options)
+
+    USE mo_jsb_extvar_reader, ONLY: extvar_interpolate_monthly
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER  :: iblk, ics, ice, nc
+
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_memory(PHENO_)
+
+    dsl4jsb_Real2D_onChunk :: lai
+    REAL(wp), POINTER      :: lai_mon(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_external_lai'
+
+    ! Get local variables from options argument
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+    nc    = options%nc
+
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(PHENO_)
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)   ! inout
+
+    IF (TRIM(dsl4jsb_Config(PHENO_)%extlai_mode) == 'monthly') THEN
+
+      ! Monthly mode: interpolate between the two bracketing monthly means
+      lai_mon(1:,0:) => dsl4jsb_memory(PHENO_)%lai_mon(ics:ice, iblk, :)  ! in
+
+      CALL extvar_interpolate_monthly(lai_mon, lai, acc_stream)
+
+    ELSE
+      CALL finish(TRIM(routine), &
+        & 'Unsupported extlai_mode: '''//TRIM(dsl4jsb_Config(PHENO_)%extlai_mode)//'''.')
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE update_phenology_external_lai
 
   ! ======================================================================================================= !
   !>

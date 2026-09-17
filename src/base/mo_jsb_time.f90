@@ -25,14 +25,18 @@ MODULE mo_jsb_time
     & get_time_next,           & ! Returns an object of t_datetime containing the next timestep - jsb util routine (not mtime)
     & get_time_previous,       & ! Returns an object of t_datetime containing the previous timestep - jsb util routine
     & get_date_components,     & ! jsb util routine: returns present components of this datetime object
-    & get_time_start,          &
+    & get_time_start,          & ! jsb util routine: returns the time at the start of the current run (restart or not)
+    & get_time_stop,           & ! jsb util routine: returns the time at the end of the current run (restart or not)
     & get_time_dt,             &
     & is_time_experiment_start,  & ! jsb util routine: test if this is first timestep (i.e. start) of experiment
-    & get_time_experiment_start, &
+    & get_time_experiment_start, & ! jsb util routine: returns the time at the start of the experiment
+    & get_time_experiment_stop,  & ! jsb util routine: returns the time at the end of the experiment
     & is_time_restart,           & ! jsb util routine: test if this is first timestep after restart
     & get_year_length, get_month_length, get_day_length, get_year_day, &
     & is_time_ltrig_rad_m1,      &      ! jsb util routine: check if this is the timestep before radiation calculation
-    & get_time_interpolation_weights, & ! jsb util routine: provides month index and weights for interpolation monthly values
+    & get_time_interpolation_weights,       & ! jsb util routine: provides month index and weights for interpolation monthly values
+    & t_time_interpolation_weights,         & ! type holding month indices and interpolation weights
+    & calculate_time_interpolation_weights, & ! compute interpolation weights for an explicit datetime
     & get_asselin_coef, &
     & cache_time_interpolation_weights
 
@@ -45,7 +49,7 @@ MODULE mo_jsb_time
     & t_datetime, &         ! Basic mtime type provided for further use in ICON-Land
     & deallocateDatetime, & ! mtime routine
     & get_time_next         ! jsb util routine provided for further use in ICON-Land
-  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, &
+  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, get_time_experiment_stop, &
     & get_time_dt,              & ! jsb util routine
     & is_time_experiment_start, & ! jsb util routine
     & is_time_restart,          & ! jsb util routine
@@ -54,7 +58,8 @@ MODULE mo_jsb_time
   PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
             get_year, get_month, get_day, get_secs_of_day, get_previous_month_length, get_previous_year_length
   PUBLIC :: cache_time_interpolation_weights
-  PUBLIC :: get_time_interpolation_weights ! jsb util routine
+  PUBLIC :: get_time_interpolation_weights   ! jsb util routine
+  PUBLIC :: t_time_interpolation_weights, calculate_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
   PUBLIC :: execute_quincy_sb_accelerator_this_timestep
