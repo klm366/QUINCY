@@ -15,8 +15,8 @@
 #!/usr/bin/env bash
 #--------------------------------------------------------------------
 ### Batch Queuing System is SLURM
-#SBATCH --output=nfertil.o%j
-#SBATCH --error=nfertil.o%j
+#SBATCH --output=nfertil_nman.o%j
+#SBATCH --error=nfertil_nman.o%j
 #SBATCH --account=mj0143
 #SBATCH --partition=interactive
 #SBATCH --mem-per-cpu=3000
