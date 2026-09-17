@@ -197,7 +197,7 @@ for year in $(seq 1850 2024); do
   "${OUT_DIR}/manure_pasture_${year}.nc" \
   "${OUT_DIR}/fert_man_icon_scaled_${year}.nc"
 
-  ${cdo} -O expr,'fertl_crops_nh4=max(fertl_crops_nh4,0);fertl_crops_no3=max(fertl_crops_no3,0);fertl_pasture_nh4=max(fertl_pasture_nh4,0);fertl_pasture_no3=max(fertl_pasture_no3,0)' \
+  ${cdo} -O expr,'fertl_crops_nh4=max(fertl_crops_nh4,0);fertl_crops_no3=max(fertl_crops_no3,0);fertl_pasture_nh4=max(fertl_pasture_nh4,0);fertl_pasture_no3=max(fertl_pasture_no3,0);manure_crops=max(manure_crops,0);manure_pasture=max(manure_pasture,0)' \
   "${OUT_DIR}/fert_man_icon_scaled_${year}.nc" \
   "${OUT_DIR}/fert_man_icon_scaled_clean_${year}.nc"
 
@@ -255,7 +255,7 @@ done
 # -----------------------------------------------------------
 # Extract only harvest_fract for years 1700–1850
 # ------------------------------------------------------------------
-for year in $(seq 1700 1850); do
+for year in $(seq 1700 1849); do
   HARV_SRC="${LUH_LAND_USE_DIR}/bc_land_use_quincy_${year}.nc"
   TMP_FILE="${TMP}/tmp_bc_land_use_quincy_NMIP_${year}.nc"
   OUT_NMIP="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
@@ -269,10 +269,8 @@ for year in $(seq 1700 1850); do
   "${TMP_FILE}" "${OUT_NMIP}"
 done
 
-${cdo} selvar,harvest_fract "${LUH_LAND_USE_DIR}/bc_land_use_quincy_2025.nc" "${TMP}"/harv_fract_2025.nc
-${cdo} merge "${TMP}"/fertl_crops_nh4_2024.nc "${TMP}"/fertl_crops_no3_2024.nc "${TMP}"/fertl_pasture_nh4_2024.nc \
-"${TMP}"/fertl_pasture_no3_2024.nc \ 
-"${TMP}"/harv_fract_2025.nc "${FINAL_DIR}/bc_land_use_quincy_NMIP_2025.nc"
+${cdo} selvar,harvest_fract "${LUH_LAND_USE_DIR}/bc_land_use_quincy_2025.nc" "${TMP}/harv_fract_2025.nc"
+${cdo} merge "${TMP}/fertl_crops_nh4_2024.nc" "${TMP}/fertl_crops_no3_2024.nc" "${TMP}/fertl_pasture_nh4_2024.nc" "${TMP}/fertl_pasture_no3_2024.nc" "${TMP}/harv_fract_2025.nc" "${TMP}/manure_crops_2024.nc" "${TMP}/manure_pasture_2024.nc" "${FINAL_DIR}/bc_land_use_quincy_NMIP_2025.nc"
 
 # An option to remove temporary directory
 if [[ "$REMOVE_TMP" == "yes" ]]; then
