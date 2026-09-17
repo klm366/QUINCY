@@ -184,10 +184,10 @@ for year in $(seq 1850 2024); do
   ${cdo} -O expr,'fertl_pasture_no3=Nfer_Pas_NO3/frac_pas' "${TMP}/tmp4.nc" "${OUT_DIR}/fertl_pasture_no3_${year}.nc"
 
   ${cdo} -O merge "${TMP}/manure_crops_${year}.nc" "${FRAC_CROP}" "${TMP}/tmp5.nc"
-  ${cdo} -O expr,'manure_crops=manure_crops/frac_crop' "${TMP}/tmp5.nc" "${OUT_DIR}/manure_crops_${year}.nc"
+  ${cdo} -O expr,'manure_crops=Nmanure_Crop_App/frac_crop' "${TMP}/tmp5.nc" "${OUT_DIR}/manure_crops_${year}.nc"
 
   ${cdo} -O merge "${TMP}/manure_pasture_${year}.nc" "${FRAC_PAS}" "${TMP}/tmp6.nc"
-  ${cdo} -O expr,'manure_pasture=manure_pasture/frac_pas' "${TMP}/tmp6.nc" "${OUT_DIR}/manure_pasture_${year}.nc"
+  ${cdo} -O expr,'manure_pasture=Nmanure_Pas_App/frac_pas' "${TMP}/tmp6.nc" "${OUT_DIR}/manure_pasture_${year}.nc"
 
   ${cdo} -merge "${OUT_DIR}/fertl_crops_nh4_${year}.nc" \
   "${OUT_DIR}/fertl_crops_no3_${year}.nc" \
