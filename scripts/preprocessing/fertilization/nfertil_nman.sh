@@ -68,31 +68,38 @@ ${cdo} -O -selyear,1850/2024 ${STATES} ${TMP}/states_1850_2024.nc
 ${cdo} -O -expr,'crop=c3ann+c4ann+c3per+c4per+c3nfx' \
   "${TMP}/states_1850_2024.nc" "${TMP}/crop.nc"
 ${cdo} -O -selname,pastr "${TMP}/states_1850_2024.nc" "${TMP}/pasture.nc"
+${cdo} -O -selname,range "${TMP}/states_1850_2024.nc" "${TMP}/range.nc"
 
 ${cdo} -O setmisstoc,0 "${TMP}/crop.nc" "${TMP}/crop0.nc"
 ${cdo} -O setmisstoc,0 "${TMP}/pasture.nc" "${TMP}/pasture0.nc"
+${cdo} -O setmisstoc,0 "${TMP}/range.nc" "${TMP}/range0.nc"
 
 ${cdo} -O remapcon,"${FERT_DIR}/Nfer_Crop_NH4.nc" "${TMP}/crop0.nc" "${TMP}/frac_crop.nc"
 ${cdo} -O remapcon,"${FERT_DIR}/Nfer_Crop_NH4.nc" "${TMP}/pasture0.nc" "${TMP}/frac_pas.nc"
+${cdo} -O remapcon,"${FERT_DIR}/Nfer_Crop_NH4.nc" "${TMP}/range0.nc" "${TMP}/frac_range.nc"
 
 ncrename -O -h -v crop,frac_crop "${TMP}/frac_crop.nc"
 ncrename -O -h -v pastr,frac_pas "${TMP}/frac_pas.nc"
+ncrename -O -h -v range,frac_range "${TMP}/frac_range.nc"
 
 ${ncatted} -O -a units,frac_crop,o,c,"1" "${TMP}/frac_crop.nc"
 ${ncatted} -O -a units,frac_pas,o,c,"1" "${TMP}/frac_pas.nc"
-
+${ncatted} -O -h -a units,frac_range,o,c,"1" "${TMP}/frac_range.nc"
 ###########################################################################
 
 # scale manure by crop and pasture fractions (frac_crop, frac_pas)
 ${cdo} -mul "${MANURE_DIR}/Nmanure_Crop_App.nc" "${TMP}/frac_crop.nc" "${TMP}/manure_crops_raw.nc"
-${cdo} -mul "${MANURE_DIR}/Nmanure_Pas_App.nc" "${TMP}/frac_pas.nc" "${TMP}/manure_pasture_raw.nc"
-
+${cdo} -mul "${MANURE_DIR}/Nmanure_Pas_App.nc" "${TMP}/frac_pas.nc" "${TMP}/manure_pasture_app_raw.nc"
+${cdo} -mul "${MANURE_DIR}/Nmanure_Range_dep.nc" "${TMP}/frac_range.nc" "${TMP}/manure_range_dep_raw.nc"
+${cdo} -mul "${MANURE_DIR}/Nmanure_Pas_dep.nc" "${TMP}/frac_pas.nc" "${TMP}/manure_pasture_dep_raw.nc"
 # get fertilization on the crop and pasture
 ${cdo} -mul "${FERT_DIR}/Nfer_Crop_NH4.nc" "${TMP}/frac_crop.nc" "${TMP}/Nfer_Crop_NH4.nc"
 ${cdo} -mul "${FERT_DIR}/Nfer_Crop_NO3.nc" "${TMP}/frac_crop.nc" "${TMP}/Nfer_Crop_NO3.nc"
 ${cdo} -mul "${FERT_DIR}/Nfer_Pas_NH4.nc" "${TMP}/frac_pas.nc" "${TMP}/Nfer_Pas_NH4.nc"
 ${cdo} -mul "${FERT_DIR}/Nfer_Pas_NO3.nc" "${TMP}/frac_pas.nc" "${TMP}/Nfer_Pas_NO3.nc"
 
+${cdo} -O -add "${TMP}/manure_pasture_dep_raw.nc" "${TMP}/manure_pasture_app_raw.nc" "${TMP}/manure_pasture_pas_raw.nc"
+${cdo} -O -add "${TMP}/manure_pasture_pas_raw.nc" "${TMP}/manure_range_dep_raw.nc" "${TMP}/manure_pasture_raw.nc"
 # conversion from g N m-2 → kg N ha-1: *1e-3*1e4 = *10
 # 
 ${cdo} -O -setmissval,nan "${TMP}/Nfer_Crop_NH4.nc" "${TMP}/Nfer_Crop_NH4_mvn.nc"
