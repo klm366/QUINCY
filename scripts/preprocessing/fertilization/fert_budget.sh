@@ -1,6 +1,8 @@
 #!/bin/bash 
 
-
+module load nco
+module unload cdo
+module load cdo/2.5.0-gcc-11.2.0
 # set ncatted command to create no history
 ncatted="ncatted -h"
 # set cdo command to be silent, create no history and use double precision
@@ -17,7 +19,7 @@ else
   echo "You have chosen grid does is not yet covered in the script"
 fi
 
-FINAL_DIR="." # directory where n depositions files are
+FINAL_DIR="/work/mj0143/b301072/jsbach_repo/trendy/jsbach/scripts/preprocessing/fertilization/fert-man/" # directory where n depositions files are
 outdir="./YOUROUTPUTFOLDER"
 temp_path="${outdir}"/temp
 FRAC_DIR="/work/mj0143/icon_land_data_pool/trendy/2026/preprocessesed-01/fraction_files/R2B5/0030/"
@@ -27,7 +29,7 @@ mkdir -p "${temp_path}"
 results_csv="${outdir}/fert_global_Tg.csv"
 echo "year,var,value" > "${results_csv}"
 
-for year in $(seq 1850 2024); do
+for year in $(seq 1700 2024); do
 	OUT_NMIP="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
 	FRAC_IQ="${FRAC_DIR}/bc_land_frac_iq_13pfts_${year}.nc"
 	OUT_NMIP_kg="${temp_path}/bc_land_use_quincy_NMIP_${year}_kg.nc"
@@ -43,10 +45,12 @@ for year in $(seq 1850 2024); do
   ${cdo} -O expr,'fert_crop_nh4_kg=(fertl_crops_nh4/10.0)*iq_fract_crop*cell_area;
 	fert_crop_no3_kg=(fertl_crops_no3/10.0)*iq_fract_crop*cell_area;
 	fert_past_nh4_kg=(fertl_pasture_nh4/10.0)*iq_fract_past*cell_area;
-	fert_past_no3_kg=(fertl_pasture_no3/10.0)*iq_fract_past*cell_area' \
+	fert_past_no3_kg=(fertl_pasture_no3/10.0)*iq_fract_past*cell_area;
+	manure_crops_kg=(manure_crops/10.0)*iq_fract_crop*cell_area;
+    manure_past_kg=(manure_pasture/10.0)*iq_fract_past*cell_area' \
   ${temp_path}/fert_new_merge.nc "${OUT_NMIP_kg}"
 	# Global sum for each var
-	${cdo} -O fldsum -selname,fert_crop_nh4_kg,fert_crop_no3_kg,fert_past_nh4_kg,fert_past_no3_kg \
+	${cdo} -O fldsum -selname,fert_crop_nh4_kg,fert_crop_no3_kg,fert_past_nh4_kg,fert_past_no3_kg,manure_crops_kg,manure_past_kg \
 	"${OUT_NMIP_kg}" ${temp_path}/fertil_kg_global_${year}.nc
 	# kg->Tg
 	${cdo} -O mulc,1e-12 ${temp_path}/fertil_kg_global_${year}.nc ${temp_path}/fertil_Tg_global_${year}.nc
