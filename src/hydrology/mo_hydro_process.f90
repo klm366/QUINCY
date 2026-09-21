@@ -25,7 +25,8 @@ MODULE mo_hydro_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology,             &
+  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_surface_hydrology_lice,   &
+    &         calc_soil_hydrology,             &
     & get_soilhyd_properties, calc_wskin_fractions_lice, calc_wet_fractions_veg, calc_wet_fractions_bare, &
     & get_canopy_conductance, get_water_stress_factor, calc_orographic_features
 
@@ -694,6 +695,77 @@ CONTAINS
     pme_glacier = pme_glacier_in_m * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_glacier
+
+  ! ====================================================================================================== !
+  !>
+  !> Surface hydrology of the land ice tile coupled to an external land ice model (EBFM)
+  !>
+  !> The surface melt follows from the latent energy of phase change of the surface energy balance,
+  !> as on the glacier tile ([[calc_surface_hydrology_glacier]]); it is the melt ICON-Land sends to the
+  !> external model. The runoff is the firn runoff received from the external model (percolation,
+  !> refreezing and retention included) instead of the instantaneous precipitation minus sublimation of
+  !> the glacier tile. The difference between the ICON-Land fluxes (P + E - runoff) and that runoff is
+  !> water stored in (or released from) the firn; it is accumulated in weq_firn so that the water
+  !> balance of the tile and of its parent tiles remains exact. The glacier depth weq_glac is not
+  !> touched: the mass balance of this tile is the one of the external model (smb and snowmass in the
+  !> lice memory). Where no data has been received from the external model, the runoff is P - E as on
+  !> the glacier tile and the firn storage does not change.
+  !>
+  SUBROUTINE calc_surface_hydrology_lice ( &
+    & lstart, dtime,                       &
+    & has_ext_data, runoff_ext,            &
+    & evapotrans, rain, snow,              &
+    & le_pc_remain, q_snocpymlt,           &
+    & snowmelt, runoff_glac, runoff,       &
+    & weq_firn)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, alf
+
+    LOGICAL,  INTENT(in) :: &
+      & lstart, &              !< True: beginning of the experiment
+      & has_ext_data           !< True: data has been received from the external land ice model
+    REAL(lp), INTENT(in) :: &
+      & dtime, &               !< Time step length [s]
+      & runoff_ext, &          !< Firn runoff received from the external land ice model [kg m-2 s-1]
+      & evapotrans, &          !< Evapotranspiration incl. sublimation [kg m-2 s-1]
+      & rain, &                !< Liquid precipitation [kg m-2 s-1]
+      & snow                   !< Solid precipitation [kg m-2 s-1]
+    REAL(lp), INTENT(inout) :: &
+      & le_pc_remain, &        !< Latent energy available for snow melt [J m-2]
+      & weq_firn               !< Water stored in the firn of the external land ice model [m water equivalent]
+    REAL(lp), INTENT(out) :: &
+      & q_snocpymlt, &         !< Heating due to snow melt on canopy [W m-2]
+      & snowmelt, &            !< Snow/ice melt [kg m-2 s-1]
+      & runoff_glac, &         !< Glacier runoff, here the runoff of the external land ice model [kg m-2 s-1]
+      & runoff                 !< Runoff handed to the HD model [kg m-2 s-1]
+
+    REAL(lp) :: snowmelt_in_m  !< Snow/ice melt [m water equivalent /(time step)]
+
+    !  Surface melt from the latent energy of phase change (unlimited amount of snow and ice)
+    !------------------------------------------------------------------------------------------
+    snowmelt_in_m = 0._lp
+    IF (.NOT. lstart) THEN      ! as in calc_surface_hydrology_glacier
+      IF (le_pc_remain > 0._lp) THEN
+        snowmelt_in_m = le_pc_remain / (rhoh2o * alf)
+      END IF
+    END IF
+    le_pc_remain = 0._lp   ! All latent energy used for snow melt, no remaining residual.
+    q_snocpymlt = 0._lp    ! No canopy and thus no snow melt on canopy.
+    snowmelt = snowmelt_in_m * rhoh2o / dtime
+
+    !  Runoff and firn storage
+    !--------------------------
+    IF (has_ext_data) THEN
+      runoff   = runoff_ext
+      weq_firn = weq_firn + (rain + snow + evapotrans - runoff) * dtime / rhoh2o
+    ELSE
+      runoff   = rain + snow + evapotrans   ! P - E as on the glacier tile (evapotrans < 0 upward)
+    END IF
+    runoff_glac = runoff
+
+  END SUBROUTINE calc_surface_hydrology_lice
 
   ! ===============================================================================================================================
   !>

@@ -288,6 +288,12 @@ CONTAINS
 
       ! ------------------------ tasks that do not change area
       !
+      IF (model%processes(LICE_)%p%config%active) THEN
+        ! Diagnostics of the fields received from the external land ice model (EBFM) on the lice
+        ! tile, first of all: the validity flag and the sanitised state are used by the processes
+        ! of this time step (radiation, energy balance, hydrology)
+        CALL model%Queue_task(LICE_, "lice_diag")
+      END IF
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and
@@ -321,10 +327,6 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
-      IF (model%processes(LICE_)%p%config%active) THEN
-        ! Diagnostics of fields received from external land ice model (EBFM) on glacier tile
-        CALL model%Queue_task(LICE_, "lice_diag")
-      END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")
