@@ -19,7 +19,7 @@ EBFM time step = coupling period 3 h (270 ICON steps).
 | model | YAC component | runs on | time step |
 |---|---|---|---|
 | ICON-A | `atm` | atmosphere MPI ranks | 40 s |
-| ICON-Land (JSBACH) | `icon-land` (registered together with `atm` in one `yac_fdef_comps` call, same grid and cell points) | atmosphere MPI ranks, called from the ICON-A physics every step | 40 s |
+| ICON-Land (JSBACH) | `icon-land` (predefined with YAC by `jsb_construct_coupling` in `mo_jsb_coupling` before ICON-A defines its own components in `cpl_def_main`, which completes the definition; same grid and cell points as `atm`) | atmosphere MPI ranks, called from the ICON-A physics every step | 40 s |
 | EBFM | `ebfm` (one component for all its partners, internal "components" `icon_atmo`, `icon_land`, `elmer_ice`) | own rank(s), Elmer mesh | 3 h |
 
 Division of labour on ice-covered cells (decided 2026-08-22):

@@ -13,11 +13,12 @@
 !>
 !>#### YAC coupling of ICON-Land to the EBFM firn model
 !>
-!> ICON-Land is registered as its own YAC component (see `land_comp_name` in ICON's
-!> mo_coupling_config), living on the atmosphere processes and using the cell points
-!> of the atmosphere grid. The fields are defined from ICON's construct_atmo_coupling
-!> (before the YAC definitions are synchronized), the data exchange is done from
-!> jsbach_start_timestep, i.e. outside of the block loop.
+!> ICON-Land is its own YAC component (`land_comp_name` in mo_jsb_coupling, predefined
+!> by jsb_construct_coupling before ICON defines its own components), living on the
+!> atmosphere processes and using the cell points of the atmosphere grid. The fields are
+!> defined from ICON's construct_atmo_coupling (before the YAC definitions are
+!> synchronized), the data exchange is done from jsbach_start_timestep, i.e. outside of
+!> the block loop.
 !>
 !> Fields received from EBFM (state at the coupling instant):
 !>   - icefract: ice-covered fraction of the grid cell on the EBFM mesh, conservatively
@@ -56,7 +57,8 @@ MODULE mo_interface_lice_ebfm
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_jsb_control,         ONLY: acc_stream
-  USE mo_coupling_config,     ONLY: is_coupled_run, is_coupled_to_ebfm_land, land_comp_name
+  USE mo_coupling_config,     ONLY: is_coupled_run, is_coupled_to_ebfm_land
+  USE mo_jsb_coupling,        ONLY: land_comp_name, land_comp_id
   USE mo_coupling_utils,      ONLY: cpl_def_field, cpl_def_field_metadata, cpl_def_cell_field_mask, &
     &                               cpl_get_field, cpl_put_field
   USE mo_time_config,         ONLY: time_config
@@ -117,9 +119,8 @@ CONTAINS
   !>
   !> Called from ICON's construct_atmo_coupling before the YAC definitions are synchronized.
   !>
-  SUBROUTINE jsb_fdef_lice_fields(land_comp_id, cell_point_id, grid_id, grid_name)
+  SUBROUTINE jsb_fdef_lice_fields(cell_point_id, grid_id, grid_name)
 
-    INTEGER,          INTENT(in) :: land_comp_id  !< yac component id of the land component
     INTEGER,          INTENT(in) :: cell_point_id !< yac point id (cell points of the atmosphere grid)
     INTEGER,          INTENT(in) :: grid_id       !< yac grid id (atmosphere grid)
     CHARACTER(len=*), INTENT(in) :: grid_name     !< yac grid name (for field metadata)
@@ -147,7 +148,8 @@ CONTAINS
       RETURN
     END IF
 
-    IF (land_comp_id < 0) CALL finish(routine, 'Invalid YAC component id for the land component')
+    IF (land_comp_id < 0) CALL finish(routine, &
+      & 'The YAC component ' // land_comp_name // ' has not been defined (jsb_construct_coupling)')
 
     CALL timedeltaToString(time_config%tc_dt_model, modelTimeStep)
 
