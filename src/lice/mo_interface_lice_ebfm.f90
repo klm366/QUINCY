@@ -108,6 +108,7 @@ MODULE mo_interface_lice_ebfm
   INTEGER :: field_id_evapotrans = -1
 
   LOGICAL :: fields_defined = .FALSE.
+  LOGICAL :: coverage_checked = .FALSE.   !< mesh coverage of the lice tile checked (once per run)
 
   !> Cached pointer to the lice tile (the tile on which the lice process runs; set on first use)
   CLASS(t_jsb_tile_abstract), POINTER :: lice_tile => NULL()
@@ -312,6 +313,11 @@ CONTAINS
     IF (received_data) THEN
       !$ACC UPDATE DEVICE(icefract) ASYNC(acc_stream)
       CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
+      ! Once per run: every cell with a lice tile fraction must be covered by the EBFM mesh
+      IF (.NOT. coverage_checked) THEN
+        CALL check_mesh_coverage()
+        coverage_checked = .TRUE.
+      END IF
     END IF
 
     ! Receive surface albedo
@@ -364,6 +370,42 @@ CONTAINS
     END IF
 
   CONTAINS
+
+    ! Warn if grid cells have a lice tile fraction but receive no data from EBFM, i.e. are not
+    ! covered by the EBFM mesh (icefract carries the fixed value < 0 there). On such cells the lice
+    ! tile runs like a JSBACH glacier tile (runoff P - E, no firn storage), which is consistent
+    ! but not what the tile is meant for: the fraction file (fract_lice) and the mesh disagree.
+    SUBROUTINE check_mesh_coverage()
+
+      USE mo_sync, ONLY: global_sum_array
+
+      LOGICAL,  POINTER     :: is_owned(:,:)
+      REAL(lp), ALLOCATABLE :: uncovered(:,:)
+      REAL(lp)              :: n_uncovered
+      INTEGER               :: jc, jb
+      CHARACTER(len=32)     :: n_str
+
+      is_owned => grid%patch%cells%decomp_info%owner_mask(:,:)
+      ALLOCATE(uncovered(SIZE(icefract,1), SIZE(icefract,2)))
+      uncovered(:,:) = 0._lp
+      DO jb = 1, SIZE(icefract,2)
+        DO jc = 1, SIZE(icefract,1)
+          IF (is_owned(jc,jb) .AND. tile%fract(jc,jb) > 0._lp .AND. icefract(jc,jb) < 0._lp) uncovered(jc,jb) = 1._lp
+        END DO
+      END DO
+      n_uncovered = global_sum_array(uncovered)
+      DEALLOCATE(uncovered)
+
+      WRITE(n_str, '(I0)') NINT(n_uncovered)
+      IF (n_uncovered > 0.5_lp) THEN
+        CALL message(routine, 'WARNING: ' // TRIM(n_str) // ' grid cells have a lice tile fraction > 0 but ' // &
+          & 'are not covered by the EBFM mesh (no data received); the lice tile runs there like a JSBACH ' // &
+          & 'glacier tile (runoff P - E). Check fract_lice in bc_land_frac against the EBFM/Elmer mesh.')
+      ELSE
+        CALL message(routine, 'Mesh coverage check: all grid cells with a lice tile fraction receive EBFM data')
+      END IF
+
+    END SUBROUTINE check_mesh_coverage
 
     SUBROUTINE get_target_field(field_id, name, var)
       INTEGER,          INTENT(in)    :: field_id
