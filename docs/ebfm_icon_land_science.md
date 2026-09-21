@@ -117,6 +117,22 @@ latent heat flux). These replace EBFM's own SEB results as input to the firn mod
 still evaluated every step, but purely as a **diagnostic** (`ebm_*` in its output), which makes
 the two energy balances directly comparable cell by cell.
 
+**Why melt is computed by ICON-Land and not by EBFM.** "Melt" here means surface melt
+*production*: the residual energy of the surface energy balance once the surface temperature is
+capped at the melting point. The same balance also determines the turbulent and radiative fluxes
+the atmosphere receives from this surface. If EBFM computed the melt from its own balance, there
+would be two energy balances for one surface: the atmosphere would see the fluxes of one, the firn
+would receive the melt of the other, and the coupled energy budget could not close. Hence melt
+production belongs to the model that exchanges fluxes with the atmosphere, and everything that
+happens to the melt water afterwards - percolation, refreezing, retention, runoff - belongs to the
+model that owns the firn. EBFM's own melt (`ebm_melt`) is therefore only a diagnostic in the coupled
+system, and refreezing does not reduce the melt sent to EBFM: it shows up as retained water in the
+firn (smaller runoff than melt plus rain) and, through the warmer firn temperature and conductance,
+in the ground heat flux of the following coupling windows (see the known issue "one energy balance,
+two melt paths" below). In ICON-Land's hydrology the corresponding variable is `snowmelt`: on the
+glacier and the lice tile alike it is surface melt production, so it aggregates consistently over
+both, whereas the runoff of the lice tile is EBFM's firn runoff (next section).
+
 Precipitation and the meteorological forcing continue to come from ICON-A directly (they are
 inputs to both models' surface schemes and to EBFM's mass balance).
 
@@ -130,6 +146,25 @@ percolation, refreezing and storage. The difference between the instantaneous IC
 ICON-Land's water balance, which therefore stays closed while representing the physically delayed
 freshwater release. Accumulated snow no longer reaches the ocean immediately: it stays in the firn
 until EBFM releases it - or until it leaves as ice through the dynamics (next section).
+
+**The firn storage variable `weq_firn`, term by term.** Every ICON time step the lice tile updates
+
+$$\mathrm{weq\_firn} \mathrel{+}= (P_\mathrm{rain} + P_\mathrm{snow} + E - R)\,\Delta t / \rho_w ,$$
+
+where $P$ is the precipitation reaching the tile, $E$ the evapotranspiration of ICON-Land's energy
+balance (JSBACH sign convention: negative upward, so adding it removes the water that leaves through
+the air), $R$ the runoff handed to HD, which on this tile is EBFM's firn runoff, and $\Delta t/\rho_w$
+converts the flux to m w.e. per step. The bracket is the water that arrived on the tile in this step
+and did not leave it. On an ordinary JSBACH glacier tile it is zero by construction, because the
+runoff passed to HD *is* P - E. On the lice tile it is not: in the accumulation season the firn
+stores snow and the increment is positive, in the melt season the firn releases stored water and it
+is negative. The variable exists because JSBACH checks its water balance every step by comparing
+the change of the stored land water with the sum of the fluxes; tiles without soil carry no storage
+in that check, so a runoff differing from P - E would be reported as a balance error. `weq_firn` is
+the storage that absorbs the difference, on the lice tile and, through aggregation, on the land and
+box tiles. Two things it is *not*: it is not EBFM's mass balance, which arrives separately as `smb`
+(it is the ICON-Land-side mirror of the same reservoir, and comparing the two is a consistency
+diagnostic); and it is not used by any physics, only by the balance check and the output.
 
 ## The EBFM-Elmer/Ice side
 
@@ -167,6 +202,29 @@ runoff through the land hydrology (HD) or as ice discharge through the ocean.
   Elmer's ice mask); EBFM's own ice mask is likewise frozen at its initialisation. Retreating or
   advancing ice margins are not yet reflected in the tile fractions (this requires ICON-Land's
   land-cover-change machinery with water/energy conservation).
+* **Which ICON cells receive EBFM data, and what to do when that changes** (to think about before
+  the ice geometry becomes dynamic). Three kinds of cells have to be told apart:
+  1. *Cells outside the EBFM mesh coverage* receive nothing (validity flag 0). By construction they
+     have no lice tile area, because `fract_lice` is derived from the same coverage, so the fallback
+     of the lice hydrology (runoff = P - E, no firn storage) is a zero-weight diagnostic there. The
+     fallback exists only as a safety net for a mismatch between the fraction file and the mesh; in
+     that case it is the right behaviour (the tile then acts as a JSBACH glacier tile and conserves
+     water), and ICON-Land warns about it once per run (`interface_lice_get`, mesh coverage check).
+  2. *Cells inside the coverage but ice-free* (the tundra around the ice sheet; EBFM runs a firn
+     column there too, its mask being frozen): data arrive, the flag is 1, EBFM sends a runoff, but
+     `fract_lice` is zero, so the value is unused and the vegetation/glacier tiles handle that land.
+     Consistent: EBFM's budget on these cells is standalone bookkeeping that never enters ICON-Land.
+     Note that the validity flag is coverage-based, not ice-based, which is intended.
+  3. *Cells whose ice cover changes* - the open case. Today nothing changes (static coverage,
+     frozen EBFM mask). Once Elmer's ice extent evolves and EBFM's `icefract` follows, two things
+     must happen together and neither exists yet: on the ICON-Land side `fract_lice` has to follow
+     `icefract` through the land-cover-change framework, moving area to the vegetation or glacier
+     tile *with its state* (the retained firn water `weq_firn`, the snow), water conservation across
+     the transfer being the hard part; on the EBFM side a cell that becomes ice-free needs a defined
+     fate for its firn column and stored water (released as runoff in the transition, or dropped),
+     decided rather than left to the frozen mask (a question for the EBFM developers). The runoff
+     fallback of the hydrology is *not* the mechanism for this; the mechanism is area transfer with
+     state on both sides, to be designed once rather than patched into the hydrology.
 * **Firn spin-up**: EBFM's initial firn column drains for a while (elevated runoff and negative
   smb in the first days) and its deep-water reservoir carries a climatological memory; multi-year
   spin-up is needed before mass-balance numbers are meaningful.

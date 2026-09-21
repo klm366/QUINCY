@@ -29,7 +29,9 @@ Division of labour on ice-covered cells (decided 2026-08-22):
   surface fluxes and the radiative properties seen by the atmosphere depend on it.
 * **EBFM keeps the snow/firn model** (heat conduction, percolation, refreezing, densification,
   runoff) and the mass balance. It no longer solves its own SEB when coupled (it still evaluates it
-  as a diagnostic, `ebm_*`).
+  as a diagnostic, `ebm_*`). Surface melt is thus *produced* by ICON-Land's SEB and sent to EBFM,
+  which decides what becomes of the melt water; the reasoning is given in the science description
+  ("Why melt is computed by ICON-Land and not by EBFM").
 * EBFM is conceptually "the glacier tile engine" of ICON-Land: it provides the surface/firn
   *state*, ICON-Land computes the *fluxes* from it. This is the same pattern as the ICON
   atmosphere-ocean coupling (ocean provides SST, atmosphere computes fluxes).
@@ -265,7 +267,7 @@ concurrently: ICON integrates the next 3 h while EBFM is idle (waiting for the n
 | `icefract` | received, diagnostics only (`icefract_valid`, `glac_fract_diff` = `icefract - fract_lice`); changing `fract_lice` at run time needs the LCC framework (water conservation) - later |
 | `albedo` | used in `update_albedo` (RAD) of the `lice` tile: EBFM's broadband albedo for both bands where EBFM provides data, JSBACH's glacier albedo otherwise (one step before each radiation step) |
 | `t_sub`, `ghf_cond`, `hcap_sub` | `t_sub` additionally initialises the surface temperature of the lice tile at experiment start (in `interface_lice_get`, cold starts only): the SEB memory initval is a constant 280 K, which otherwise melts ~5 mm w.e. during the first coupling window while the surface relaxes. Used in the SEB of the `lice` tile: ground heat flux `ghf_cond * (t_sub - t_srf_old)` and surface-layer heat capacity `hcap_sub` replace SSE's `grnd_hflx`/`hcap_grnd`; **SSE is switched off (`SKIP_`) on the lice tile** (the firn energetics are EBFM's). Note: SSE variables with `l_aggregate_all` are diluted by the lice fraction in land/box aggregates (diagnostics only). |
-| `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P - E that JSBACH uses on glacier tiles. The residual P + E - runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb`. Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
+| `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P - E that JSBACH uses on glacier tiles. The residual P + E - runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb` (term-by-term explanation in the science description, "The firn storage variable `weq_firn`"). Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
 | `smb`, `snowmass` | received, diagnostics |
 
 ## Configuration
