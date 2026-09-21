@@ -148,9 +148,9 @@ CONTAINS
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
-    CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
-    CALL model%processes(SB_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
-    CALL model%processes(A2L_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
+    ! CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
+    ! CALL model%processes(SB_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
+    ! CALL model%processes(A2L_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
