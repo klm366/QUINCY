@@ -215,13 +215,13 @@ CONTAINS
           ! Land ice tile coupled to an external land ice model (EBFM) via the lice process:
           ! a second glacier tile (same lct, i.e. same physics/memory) for the cells covered by the
           ! external model; its fraction fract_lice is read from the fraction file like the others.
+          ! Note: The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB)
+          ! so JSBACH's soil/snow energy computations (SSE_) are not needed on this tile
           IF (model%processes(LICE_)%p%config%active) THEN
             lice_tile => t_jsb_tile('lice', 'Land ice tile coupled to EBFM', &
+              & processes=(/LICE_/), process_actions=(/ON_TILE_/), &
               & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
               & fract_varname='fract_lice')
-            CALL lice_tile%Set_process_action(LICE_, ON_TILE_, action_to_parents=AGGREGATE_)
-            ! The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB):
-            ! JSBACH's soil/snow energy computations are not needed on this tile
             CALL lice_tile%Set_process_action(SSE_, SKIP_)
             !$ACC ENTER DATA COPYIN(lice_tile)
           END IF
@@ -449,17 +449,17 @@ CONTAINS
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
 
-          ! Land ice tile coupled to an external land ice model (EBFM) via the lice process
-          ! (see init_usecase_lite_tmx)
+          ! Land ice tile coupled to an external land ice model (EBFM) via the lice process:
+          ! a second glacier tile (same lct, i.e. same physics/memory) for the cells covered by the
+          ! external model; its fraction fract_lice is read from the fraction file like the others.
+          ! Note: The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB)
+          ! so JSBACH's soil/snow energy computations (SSE_) are not needed on this tile
           IF (model%processes(LICE_)%p%config%active) THEN
             lice_tile => t_jsb_tile('lice', 'Land ice tile coupled to EBFM', &
-              & processes       = (/SEB_,     TURB_,    HYDRO_,   SSE_/), &
+              & processes       = (/SEB_,     LICE_,    TURB_,    HYDRO_/), &
               & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
               & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
               & fract_varname='fract_lice')
-            CALL lice_tile%Set_process_action(LICE_, ON_TILE_, action_to_parents=AGGREGATE_)
-            ! The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB):
-            ! JSBACH's soil/snow energy computations are not needed on this tile
             CALL lice_tile%Set_process_action(SSE_, SKIP_)
             !$ACC ENTER DATA COPYIN(lice_tile)
           END IF
