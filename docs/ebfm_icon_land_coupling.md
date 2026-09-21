@@ -174,7 +174,7 @@ no time axis, so per-leg files would collide in the intake catalog (identical ke
 | couple | direction | fields | YAC settings |
 |---|---|---|---|
 | `atm2ebfm` | ICON-A -> EBFM | `tas`, `sfcwind`, `pr_snow`, `pr`, `rsds`, `rlds`, `clt`, `sfcpres`, `huss` (forcing) | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn |
-| `ebfm2land` | EBFM -> ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface-first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` (EBFM's source names are `runoff_to_icon_land` and `smb_to_icon_land`, mapped to the ICON-Land names with `src:`/`tgt:` in `coupling.yaml`: YAC requires unique source field names per component and EBFM sends `runoff_to_elmer`/`smb_to_elmer` to Elmer/Ice) | PT3H, `none`, `src_lag 0`, `tgt_lag 0` (configurable: `land.lag`), conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
+| `ebfm2land` | EBFM -> ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface-first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` (EBFM's source names are `runoff_to_icon_land` and `smb_to_icon_land`, mapped to the ICON-Land names with `src:`/`tgt:` in `coupling.yaml`: YAC requires unique source field names per component and EBFM sends `runoff_to_elmer`/`smb_to_elmer` to Elmer/Ice) | PT3H, `none`, `src_lag 0`, `tgt_lag 0`, conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
 | `land2ebfm` | ICON-Land -> EBFM | `t_srf`, `melt`, `evapotrans` (negative upward) of the `lice` tile | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn, YAC source mask `fract_lice > 0` |
 
 Conventions: fluxes positive into the surface in both models; ICON-Land sends kg m-2 s-1,
@@ -194,8 +194,12 @@ an event fires when the clock is a multiple of the coupling period.
 * `ebfm2land` (lag 0/0): EBFM puts the state valid at T at the start of its step; ICON-Land gets it
   in `jsbach_start_timestep` of the ICON step starting at T, i.e. **the state of instant T is used
   from T on, also in the very first step**. The price: at every coupling instant ICON waits until
-  EBFM has finished its step (EBFM is on the critical path). With `land.lag = 1` ICON-Land would use
-  the state one period late without waiting (option for cheap test runs).
+  EBFM has finished its step (EBFM is on the critical path). This costs one EBFM step (about 17 s at
+  R2B4 on one rank) per coupling period, independent of ICON's resolution, i.e. negligible at
+  production resolution. A one-period target lag (ICON-Land using the state 3 h late, no waiting,
+  as in ICON's atmosphere-ocean coupling) was available as an option for cheap tests and was
+  dropped: the first firn layer temperature and the albedo respond within hours, so a lagged state
+  would degrade the ground heat flux and radiation feedback for a saving that does not matter.
 
 ### Very first time step of an experiment
 
@@ -281,7 +285,7 @@ concurrently: ICON integrates the next 3 h while EBFM is idle (waiting for the n
   with `use_tmx = .TRUE.` (the lice tile is part of both TMX usecases; the low-res test configs
   use `jsbach_lite`, the high-res R2B8-R2B9 config uses `jsbach_pfts`);
   `bc_land_frac.nc` must contain `fract_lice` (see above); `output_tiles = box, lice` for the tile values
-* mkexp `[[coupling.yaml]]`: `include_ebfm_land = true`, `[[[land]]] name = icon-land`, `lag = 0`
+* mkexp `[[coupling.yaml]]`: `include_ebfm_land = true`, `[[[land]]] name = icon-land`
 * EBFM command line: `--couple-to-icon-atmo --couple-to-icon-land`
 * Output of the lice variables: `output_nml` with `ml_varlist = group:jsb_lice_basic`
   (tiles according to `output_tiles` in `jsb_model_nml`, default `box`)
