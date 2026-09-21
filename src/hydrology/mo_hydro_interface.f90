@@ -640,13 +640,12 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_firn)         ! inout (only used on the lice tile)
-      lice__mem => NULL()
       l_lice_tile = tile%Is_process_calculated(LICE_)
       IF (l_lice_tile) THEN
         ! On the EBFM-coupled land ice tile the runoff sent to the HD model is the firn runoff
         ! received from EBFM (see below)
         dsl4jsb_Get_memory(LICE_)
-        lice_runoff => LICE__mem%runoff%ptr(ics:ice,iblk)   ! in
+        lice_runoff => dsl4jsb_memory(LICE_)%runoff%ptr(ics:ice,iblk)   ! in
       END IF
     ELSE
       ! Variables only needed on tiles with soil
