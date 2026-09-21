@@ -172,7 +172,7 @@ no time axis, so per-leg files would collide in the intake catalog (identical ke
 | couple | direction | fields | YAC settings |
 |---|---|---|---|
 | `atm2ebfm` | ICON-A -> EBFM | `tas`, `sfcwind`, `pr_snow`, `pr`, `rsds`, `rlds`, `clt`, `sfcpres`, `huss` (forcing) | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn |
-| `ebfm2land` | EBFM -> ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface-first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` | PT3H, `none`, `src_lag 0`, `tgt_lag 0` (configurable: `land.lag`), conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
+| `ebfm2land` | EBFM -> ICON-Land | `icefract` (ice-covered fraction of the ICON cell), `albedo`, `t_sub` (first firn layer temperature), `ghf_cond` (conductance surface-first layer), `hcap_sub` (heat capacity of the firn surface layer), `runoff`, `smb`, `snowmass` (EBFM's source names are `runoff_to_icon_land` and `smb_to_icon_land`, mapped to the ICON-Land names with `src:`/`tgt:` in `coupling.yaml`: YAC requires unique source field names per component and EBFM sends `runoff_to_elmer`/`smb_to_elmer` to Elmer/Ice) | PT3H, `none`, `src_lag 0`, `tgt_lag 0` (configurable: `land.lag`), conservative; ICON-Land missing value (state) or 0 (mass) where EBFM has no data |
 | `land2ebfm` | ICON-Land -> EBFM | `t_srf`, `melt`, `evapotrans` (negative upward) of the `lice` tile | PT3H, `average`, `src_lag 1`, `tgt_lag 1`, 1-nn, YAC source mask `fract_lice > 0` |
 
 Conventions: fluxes positive into the surface in both models; ICON-Land sends kg m-2 s-1,
