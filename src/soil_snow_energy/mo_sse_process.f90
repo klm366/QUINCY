@@ -360,7 +360,7 @@ CONTAINS
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
-    & thaw_depth,                         &
+    & thaw_depth, is_snow_covered,        &
     ! optional
     & dsoil, ws_max, matric_pot, bclapp,  &
     & wtr, ice, le_pc_remain,             &
@@ -388,6 +388,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  t_soil_top(:)            !! surface temperature at top of soil [K]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    LOGICAL,  INTENT(in)    ::  is_snow_covered(:)       !! T: soil layer is snow covered
 
     REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
@@ -476,7 +477,9 @@ CONTAINS
     IF (PRESENT(le_pc_remain)) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        le_phase(ic) = le_pc_remain(ic)
+        IF (.NOT. is_snow_covered(ic)) THEN
+          le_phase(ic) = le_pc_remain(ic)
+        END IF
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -506,42 +509,55 @@ CONTAINS
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(wtr)) THEN
 
-        ! Adding residual energy from phase change (from SEB) to top layer soil temperature.
         ! Note that there is an unavoidable inconsistency between the phase change energy computed
         ! in SEB and its use here, because in the mean time the soil heat capacity might have changed
         ! due to hydrological processes.
+
+        ! Temporarily adding residual energy from phase change (from SEB) to top layer soil temperature.
+        ! This allows using the soil temperature difference to tmelt to compute the actual
+        ! freezing/melting water/ice mass.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1)
+          IF (.NOT. is_snow_covered(ic)) THEN
+            t_soil_sl(ic,1) = t_soil_sl(ic,1) + le_phase(ic) / heat_cap(ic,1)
+          END IF
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! Compute mass of freezing water or melting ice using the available energy
-        ! Note: only either freeze_mass or melt_mass is non-zero at any given point
+        ! Compute mass of freezing water or melting ice limited by required/available
+        ! energy (only for snow-free top layer soil) and by the temperature difference
+        ! to tmelt, and available water/ice.
+        ! Note: only either freeze_mass or melt_mass is non-zero at any given point.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
-        DO ic=1,nc
-          DO is=1,nsoil
-            IF (t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
-              freeze_mass(ic,is) = MIN((wtr(ic,is) - liquid_max(ic,is)) * rhoh2o, &
-                & heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / alf)
-            ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
-              melt_mass(ic,is) = MIN(ice(ic,is) * rhoi, &
-                & heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf)
+        DO is=1,nsoil
+          DO ic=1,nc
+            IF (.NOT. is_snow_covered(ic) .AND. is == 1) THEN
+              ! Without snow cover, the top soil layer took part in the surface energy balance and the
+              ! phase change latent heat needs to be accounted for here.
+              IF (le_phase(ic) < 0._wp .AND. t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
+                freeze_mass(ic,is) = MIN(-le_phase(ic) / alf, heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / alf, &
+                  &                     (wtr(ic,is) - liquid_max(ic,is)) * rhoh2o)
+              ELSE IF (le_phase(ic) > 0._wp .AND. t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
+                melt_mass(ic,is)   = MIN(le_phase(ic) / alf,  heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf, &
+                  &                      ice(ic,is) * rhoi)
+              END IF
+            ELSE
+              ! For snow covered soil, the phase change energy is accounted for in snow layers. Top layer and deeper
+              ! soil change phase based only on their temperature difference to tmelt and available water/ice.
+              IF (t_soil_sl(ic,is) < tmelt .AND. wtr(ic,is) > liquid_max(ic,is)) THEN
+                freeze_mass(ic,is) = MIN(heat_cap(ic,is) * (tmelt - t_soil_sl(ic,is)) / alf, &
+                  &                     (wtr(ic,is) - liquid_max(ic,is)) * rhoh2o)
+              ELSE IF (t_soil_sl(ic,is) > tmelt .AND. ice(ic,is) > 0._wp) THEN
+                melt_mass(ic,is)   = MIN(heat_cap(ic,is) * (t_soil_sl(ic,is) - tmelt) / alf, &
+                  &                      ice(ic,is) * rhoi)
+              END IF
             END IF
           END DO
         END DO
         !$ACC END PARALLEL LOOP
 
-        ! Due to the above mentioned inconsistency, the phase change energy from freezing/melting
-        ! (calculated in SEB) does not exactly match the actual amount of freezing/melting water/ice.
-        ! This needs to be tracked in le_phase to be included in the energy balance check.
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-        DO ic=1,nc
-          le_phase(ic) = le_phase(ic) - (freeze_mass(ic,1) - melt_mass(ic,1)) * alf
-        END DO
-        !$ACC END PARALLEL LOOP
-
-        ! Update water/ice storage and soil layer temperature
+        ! Update water/ice storage and soil layer temperature based on the actually
+        ! frozen/melted water/ice mass.
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO is=1,nsoil
           DO ic=1,nc
@@ -554,6 +570,37 @@ CONTAINS
           END DO
         END DO
         !$ACC END PARALLEL LOOP
+
+        ! Diagnose the remaining phase change energy that was not used for freezing/melting, and
+        ! and remove its contribution to the top layer soil temperature change.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          IF (.NOT. is_snow_covered(ic)) THEN
+            le_phase(ic)    = le_phase(ic) + (freeze_mass(ic,1) - melt_mass(ic,1)) * alf
+            t_soil_sl(ic,1) = t_soil_sl(ic,1) - le_phase(ic) / heat_cap(ic,1)
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+
+        ! For unknown reasons, snow layers can have temperatures which are slightly above tmelt. Thus,
+        ! also soil layers with freezing water can start into this routine with values > tmelt,
+        ! and would be reset to this values after the energy release for freezing is accounted for.
+        ! Therefore an additional correction is done, to ensure that the top soil layer cannot cross
+        ! the tmelt threshold as long as freezing/melting is ongoing and will use the residual phase
+        ! change heat term for this. This correction can potentially be removed again, after
+        ! the positive snow temperature issue is resolved.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+        DO ic=1,nc
+          IF (.NOT. is_snow_covered(ic)) THEN
+            IF ((freeze_mass(ic,1) > 0._wp .AND. t_soil_sl(ic,1) > tmelt) .OR. &
+              & (melt_mass(ic,1)   > 0._wp .AND. t_soil_sl(ic,1) < tmelt)) THEN
+              le_phase(ic)    = le_phase(ic) + (t_soil_sl(ic,1) - tmelt) * heat_cap(ic,1)
+              t_soil_sl(ic,1) = tmelt
+            END IF
+          END IF
+        END DO
+        !$ACC END PARALLEL LOOP
+
 #ifndef _OPENACC
         IF (enforce_water_budget /= WB_IGNORE) THEN
           ! Check if phase change causes negative water or ice values
@@ -604,7 +651,9 @@ CONTAINS
         IF (PRESENT(le_pc_remain)) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
-            le_pc_remain(ic) = le_phase(ic)
+            IF (.NOT. is_snow_covered(ic)) THEN
+              le_pc_remain(ic) = le_phase(ic)
+            END IF
           END DO
           !$ACC END PARALLEL LOOP
         END IF

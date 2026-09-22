@@ -496,7 +496,7 @@ CONTAINS
       & sw_srf_net,         &               !< Shortwave net radiation on land surface             [W m-2]
       & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
-      & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & forc_hflx,          &               !< Ground heat and residual phase change flux          [W m-2]
       & le_phase_change,    &               !< Latent energy required/released due to phase change [J m-2]
       & t,                  &               !< Current time steps temperature                          [K]
       & t_old,              &               !< Previous time steps temperature                         [K]

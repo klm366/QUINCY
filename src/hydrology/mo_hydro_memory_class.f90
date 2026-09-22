@@ -609,7 +609,7 @@ CONTAINS
         &      'Remaining latent energy after near-surface water phase change'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & lrestart=.FALSE., output_level=MEDIUM,                                     &
+        & lrestart=.TRUE., output_level=MEDIUM,                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (.NOT. model%config%use_tmx) THEN
