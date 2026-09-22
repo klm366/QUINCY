@@ -197,7 +197,7 @@ CONTAINS
 
   END SUBROUTINE update_chem_specie
 
-  SUBROUTINE methane_update_atm_GHG_conc(options,GAS,source,atm_conc,nml_conc,GHG_atm,dst,dbg)
+  SUBROUTINE methane_update_atm_GHG_conc(options,dbg,GAS,source,nml_conc,GHG_atm,dst,atm_conc)
     USE mo_jsb_time,          ONLY: is_newyear, is_time_experiment_start, is_time_restart, get_date_components
     USE mo_methane_util,      ONLY: concentration_mmr_2_mol_m3, concentration_vmr_2_mol_m3, concentration_mol_m3_2_vmr
     USE mo_methane_constants, ONLY: t_specie_const
@@ -205,13 +205,13 @@ CONTAINS
     USE mo_util,              ONLY: real2string
 
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    LOGICAL,                    INTENT(in)    :: dbg
     TYPE(t_specie_const),       INTENT(in)    :: GAS
     INTEGER,                    INTENT(in)    :: source
-    REAL(wp),                   INTENT(in)    :: atm_conc(:)
     REAL(wp),                   INTENT(in)    :: nml_conc
     TYPE(t_timeseries),         INTENT(in)    :: GHG_atm
     REAL(wp),                   INTENT(inout) :: dst(:)
-    LOGICAL,                    INTENT(in)    :: dbg
+    REAL(wp), OPTIONAL,         INTENT(in)    :: atm_conc(:)
 
     LOGICAL :: lstart, lrestart, lyear, lupdate
     INTEGER :: src, ic, nc, iy, year
@@ -232,6 +232,9 @@ CONTAINS
           lupdate = .TRUE.
         ENDIF
       CASE (2) ! From atmospheric model - update every timestep
+        IF (.NOT. PRESENT(atm_conc)) THEN
+          CALL finish(routine,'atm_conc must be present when source=2')
+        ENDIF
         DO ic = 1, nc
           dst(ic) = concentration_mmr_2_mol_m3(GAS,atm_conc(ic))
         ENDDO
@@ -421,18 +424,37 @@ CONTAINS
 
     ! Atmospheric trace gase concentration needs to be updated here, since restarts doesn't start at a methane time step
 
-    ! A2L_ variables
-    dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+    ! ! A2L_ variables
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+
     ! CH4_ variables
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_conc)
-    ! CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
-    !                                  dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
-    CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
-                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,.TRUE.)
-    ! CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
-    !                                  dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
+    IF (dsl4jsb_Config(CH4_)%CH4_source == 2) THEN
+      CALL methane_update_atm_GHG_conc(options,dbg,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source, &
+        &  dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,            &
+        &  dsl4jsb_var2D_onChunk(A2L_, CH4_air))
+    ELSE
+      CALL methane_update_atm_GHG_conc(options,dbg,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source, &
+        &  dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc)
+    END IF
+    IF (dsl4jsb_Config(CH4_)%CO2_source == 2) THEN
+      CALL methane_update_atm_GHG_conc(options,dbg,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source, &
+        &  dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,            &
+        &  dsl4jsb_var2D_onChunk(A2L_, CO2_air))
+    ELSE
+      CALL methane_update_atm_GHG_conc(options,dbg,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source, &
+        &  dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc)
+    ENDIF
+    IF (dsl4jsb_Config(CH4_)%O2_source == 2) THEN
+      CALL methane_update_atm_GHG_conc(options,dbg, O2_consts,dsl4jsb_Config(CH4_)%O2_source, &
+        &  dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,             &
+        &  dsl4jsb_var2D_onChunk(A2L_, O2_air))
+    ELSE
+      CALL methane_update_atm_GHG_conc(options,dbg, O2_consts,dsl4jsb_Config(CH4_)%O2_source, &
+        &  dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc)
+    ENDIF
 
     CALL get_date_components(options%current_datetime, year=year, hour=hour, minute=minute, second=sec)
     sec = sec + minute*60 + hour*3600

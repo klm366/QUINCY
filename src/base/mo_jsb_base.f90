@@ -367,6 +367,10 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(CH4_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since methane process is active')
+        END IF
         IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
           dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')
