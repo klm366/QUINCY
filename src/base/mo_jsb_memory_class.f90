@@ -30,7 +30,7 @@ MODULE mo_jsb_memory_class
     &                             GRID_LONLAT, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL, GRID_CELL, missval, tables
   USE mo_jsb_io_iface,      ONLY: t_cf_var, t_grib2_var, grib2_var
   USE mo_util,              ONLY: int2string
-  USE mo_jsb_utils_iface,   ONLY: assign_if_present
+  USE mo_fortran_tools,     ONLY: assign_if_present
 
 #ifdef _OPENACC
   use openacc

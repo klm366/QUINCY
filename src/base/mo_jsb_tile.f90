@@ -65,7 +65,9 @@ MODULE mo_jsb_tile
     PROCEDURE :: Is_process_active                => Is_process_active_on_tile
     PROCEDURE :: Has_process_memory               => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
+                 !< Identify conserved quantity types (CQTs) in use on a tile and count their conserved quantities (CQs)
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
+                 !< Collect the pointers to the variables that are conserved quantities (CQs) on a tile
     PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
@@ -994,19 +996,24 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Identifies the conserved quantity types (CQTs) in use on this tile and counts conserved quantities (CQs) of each CQT
+  !> Identifies the conserved quantity types (CQTs) used on this tile, counts the conserved
+  !> quantities (CQs; i.e. the variables) associated to the different CQTs, and enters this information
+  !> into the conserved quantities type ([[t_jsb_consQuan_p:mo_jsb_cqt_class]]).
   !>
   SUBROUTINE Count_conserved_quantities_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are to be counted
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the conserved quantities are to be counted
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER   :: mem
-    INTEGER                        :: iproc, i, id, ind
-    LOGICAL                        :: consQuanTypeInUse
-    TYPE(t_jsb_consQuan), POINTER  :: consQuanType
-    CHARACTER(len=max_cqt_name_length) :: thisCQTName
+    CLASS(t_jsb_memory), POINTER   :: mem               !< Pointer to currently checked process memory
+    INTEGER                        :: iproc,          & !< Looping index for process on tile
+      &                               i,              & !< Looping index for variables
+      &                               id,             & !< ID of CQT
+      &                               ind               !< Looping index for CQTs
+    LOGICAL                        :: consQuanTypeInUse !< True: current CQT in use on current tile
+    TYPE(t_jsb_consQuan), POINTER  :: consQuanType      !< An object of the conserved quantity (CQ) type
+    CHARACTER(len=max_cqt_name_length) :: thisCQTName   !< Name of the current CQT
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_conserved_quantities_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1023,12 +1030,13 @@ CONTAINS
 
       IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
-      ! Loop over all variables in the memory of the process and count number of vars for each used type
+      ! Loop over all variables in the memory of the current process to identify all CQTs used and to
+      ! count the number of variables associated to this CQT.
       mem => this%mem(iproc)%p
-      DO i=1,mem%no_of_vars
+      DO i = 1,mem%no_of_vars
 
         ! Check those variables that have a conservative quantity type
-        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+        IF (mem%vars(i)%p%is_conserved_quan) THEN
           id = mem%vars(i)%p%cons_quan_type_id
 
           ! Check if this type is already accounted for
@@ -1036,23 +1044,26 @@ CONTAINS
           DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
+              ! Increase the CQ variable counter for this CQT
               this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
               EXIT
             END IF
           END DO
 
           IF (.NOT. consQuanTypeInUse) THEN
-            ! Needs to be one of those in mo_jsb_cqt_class
+            ! This CQT has so far not been found and therefore needs to be added to the list of CQTs.
             thisCQTName = Get_cqt_name(id)
             IF (debug_on())  CALL message(TRIM(routine), '... vars of type '//TRIM(thisCQTName))
 
             this%nr_of_cqts = this%nr_of_cqts + 1
 
+            ! Create a new container for this CQT
             ALLOCATE(consQuanType)
             this%conserved_quantities(this%nr_of_cqts)%p => consQuanType
             this%conserved_quantities(this%nr_of_cqts)%p%type_id = id
+            ! And count its first member -> TODO: no need to do + 1 -- would be clearer to directly set it to 1!
             this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
-          ENDIF
+          END IF
 
         END IF
       END DO
@@ -1062,56 +1073,67 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Collects the pointers to the variables that are conserved quantities on the given tile
+  !> Collects the pointers to conserved quantity variables on the given tile to make these variables
+  !> available in the conserved quantities type ([[t_jsb_consQuan_p:mo_jsb_cqt_class]]).
   !>
   SUBROUTINE Collect_conserved_variables_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_util,                ONLY: int2string
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the conserved quantities are collected
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER  :: mem
-    INTEGER                       :: iproc, i, id, ind, last_index, nrOfConsQuans
-    LOGICAL                       :: consQuanTypeInUse
+    CLASS(t_jsb_memory), POINTER  :: mem     !< Pointer to the process memory currently checked
+    LOGICAL :: &
+      & consQuanTypeInUse !< True: the selected CQT was found in the 'conserved_quantities' structure
+    INTEGER :: &
+      & iproc,          & !< Looping index for the tile's processes
+      & i,              & !< Looping index for variables in process memory
+      & id,             & !< CQT ID (from [[mo_jsb_cqt_class]])
+      & ind,            & !< Looping index for CQT in conserved_quantities collection
+      & last_index,     & !< Current index of CQ in container (last indexed CQ)
+      & nrOfConsQuans     !< Number of CQ variables associated to the current CQT on this tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
 
     ! Loop over all processes
-    DO iproc=1,max_no_of_processes
+    DO iproc = 1,max_no_of_processes
 
-      ! If the current process is not on the current tile exit DO loop
+      ! If the current process does not run on the current tile ("ON_TILE_"): skip this process
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
 
+      ! If this process has no associated memory: skip it
       IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
       ! Loop over all variables in the memory of the process
       mem => this%mem(iproc)%p
-      DO i=1,mem%no_of_vars
+      DO i = 1,mem%no_of_vars
 
         ! Only address those variables that have a conservative quantity type
-        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+        IF (mem%vars(i)%p%is_conserved_quan) THEN
           id = mem%vars(i)%p%cons_quan_type_id
           consQuanTypeInUse = .FALSE.
 
-          ! Find container for this type
-          DO ind=1,this%nr_of_cqts
+          ! Find the container for this type
+          DO ind = 1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
               nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
 
               IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars))) THEN
-                ! If this is the first collected variable: allocate collector for var pointers
+                ! If this is the first variable found with the current CQT
+                ! ... allocate a list to collect the ID of the process associated with each variable
                 ALLOCATE(this%conserved_quantities(ind)%p%associated_process(nrOfConsQuans))
+                ! ... allocate a list to collect the pointer to each variable in the according process memory
                 ALLOCATE(this%conserved_quantities(ind)%p%cq_vars(nrOfConsQuans))
-                ! and identify variable dimension
+                ! ... get the dimension of the variable (identical for all variables associated with this CQT)
                 this%conserved_quantities(ind)%p%var_type = mem%vars(i)%p%type
-                ! and transfer property
+                ! ... get the transfer property (identical for all variables associated with this CQT)
                 this%conserved_quantities(ind)%p%transfer_all = mem%vars(i)%p%transfer_all
               ELSE
                 ! Assert that all variables of one type have the same dimension
@@ -1140,7 +1162,7 @@ CONTAINS
               this%conserved_quantities(ind)%p%cq_vars(last_index)%p => mem%vars(i)%p
               this%conserved_quantities(ind)%p%associated_process(last_index) = mem%owner_proc_id
 
-              ! Since the type has been found: exit do loop now
+              ! Since the type has been found: EXIT do loop
               EXIT
             END IF
           END DO
@@ -1212,7 +1234,7 @@ CONTAINS
       END IF
     END IF
 
-    !> Here the naviagtion through the tile tree is handled.
+    !> Here the navigation through the tile tree is handled.
     !> 1. INTEGRATE: On the way downward [from the top tile] to leave level all INTEGRATE actions are performed
     !> this%visited TRUE marks the pathway downwards
     !> INTEGRATE can also be performed 'on_tile'

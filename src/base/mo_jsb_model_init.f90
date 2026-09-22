@@ -250,7 +250,7 @@ CONTAINS
       ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
-        ! Prepare LCC tasks
+        ! Do the pre-processing for all area changing lcc process tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
@@ -278,7 +278,7 @@ CONTAINS
           CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
-        ! Do postprocessing after all LCC tasks were executed
+        ! Do the post-processing after all area changing lcc process tasks have been executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
@@ -418,15 +418,16 @@ CONTAINS
           CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
         END IF
 
-        ! Prepare LCC tasks
+        ! Do the pre-processing for all area changing lcc process tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-        ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
+        ! Here all tasks, of all lcc process, that change area fractions need to be called:
+        ! (For Quincy this is currently only ALCC)
         IF (model%processes(ALCC_)%p%config%active) THEN
           CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
-        ! Do postprocessing after all LCC tasks were executed
+        ! Do the post-processing after all area changing lcc process tasks have been executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
 
         IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
@@ -796,7 +797,9 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
-    !> 4. Iterate over tiles again and initialize hierarchical structure for memories, variables, cq and lcc
+    !> 4. Iterate over tiles again and initialize hierarchical structure for memories, variables and
+    !>    conserved quantities (CQ). In addition, for land cover change (lcc) processes with active and/or
+    !>    passive matter relocation lcc structures are initialised.
     !>
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
@@ -804,7 +807,6 @@ CONTAINS
 
     DO WHILE (ASSOCIATED(tile))
 
-      ! IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
       IF (.NOT. tile%visited(no_omp_thread)) THEN
           CALL model%Goto_next_tile(tile)
         CYCLE
@@ -840,7 +842,10 @@ CONTAINS
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
+      ! Identify all conserved quantity types (CQTs) used on this tile, and count the varaibels that need to
+      ! be conserved (the conserved quantities - CQs) of each CQT
       CALL tile%Count_conserved_quantities()
+      ! Subsequently the pointer to the CQs in the process memories are collected
       CALL tile%Collect_conserved_variables()
 
       CALL model%Goto_next_tile(tile)

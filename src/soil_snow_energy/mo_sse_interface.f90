@@ -188,7 +188,8 @@ CONTAINS
       & grnd_hflx_snow,                &
       & grnd_hflx_soil
     LOGICAL, DIMENSION(options%nc)  :: &
-      & ldglac
+      & ldglac,                        &
+      & is_snow_covered                  !< T: soil layer is snow covered
     REAL(wp), ALLOCATABLE :: ws_max_sl(:,:)
 
     INTEGER, DIMENSION(options%nc) ::  &
@@ -272,7 +273,7 @@ CONTAINS
     l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
 
     !$ACC ENTER DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(snow_depth, snow_fract, t_soil_top) &
+    !$ACC   CREATE(snow_depth, snow_fract, t_soil_top, is_snow_covered) &
     !$ACC   CREATE(hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
@@ -403,6 +404,7 @@ CONTAINS
 #endif
       DO ic = 1,nc
         itop(ic) = nsnow + 1 - COUNT(snow_depth_sl(ic,:) > 0._wp)
+        is_snow_covered(ic) = (weq_snow_soil(ic) * rhoh2o / dens_snow > snow_depth_min)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -468,6 +470,7 @@ CONTAINS
         t_soil_top(ic) = t_srf(ic)
         grnd_hflx_snow(ic) = 0._wp
         hcap_grnd_snow(ic) = 0._wp
+        is_snow_covered(ic) = .FALSE.
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -497,7 +500,8 @@ CONTAINS
         ! out
         & hcap_grnd                           (:  ), &
         & grnd_hflx                           (:  ), &
-        & thaw_depth                          (:  )  &
+        & thaw_depth                          (:  ), &
+        & is_snow_covered                     (:  )  &
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
@@ -538,6 +542,7 @@ CONTAINS
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  ), &
         & thaw_depth                          (:  ), &
+        & is_snow_covered                     (:  ), &
         ! optional, in
         & soil_depth_sl                       (:,:), &
         & ws_max_sl                           (:,:), &
@@ -629,7 +634,7 @@ CONTAINS
     END IF
 
     !$ACC EXIT DATA ASYNC(acc_stream) &
-    !$ACC   DELETE(snow_depth, snow_fract, t_soil_top, hcap_grnd_snow) &
+    !$ACC   DELETE(snow_depth, snow_fract, t_soil_top, hcap_grnd_snow, is_snow_covered) &
     !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
