@@ -466,6 +466,17 @@ for year in ${year_list}; do
             } &  # comment out '&' for serial processing
           done
           wait
+
+          # for the transition scheme we need maps of (potential) C3/C4 pasture ratio and potential natural
+          # vegetation for the entire grid
+          ${cp} c4_ratio_${pft_tag}.nc potveg_${atmGridID}_${npfts}pfts.nc
+          for pft in ${nat_pfts}; do
+            ${cdo} merge potveg_${atmGridID}_${npfts}pfts.nc ${atmGridID}_${pft}.${npfts}.keep potveg_${atmGridID}_${npfts}pfts.tmp
+            mv potveg_${atmGridID}_${npfts}pfts.tmp potveg_${atmGridID}_${npfts}pfts.nc
+          done
+          mv potveg_${atmGridID}_${npfts}pfts.nc ${path_bc}/bc_land_frac_potveg_${npfts}pfts.nc
+          echo "${prog}:     bc_land_frac_potveg_${npfts}pfts.nc done"
+
         fi  # first year
 
 
