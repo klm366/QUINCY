@@ -164,20 +164,9 @@ CONTAINS
     ! No YAC mask is used: YAC writes an interpolated value or the fixed fallback value
     ! (the missing value, see coupling configuration) to every cell, so that the missing
     ! value unambiguously means "no data from EBFM". Land/sea handling remains with ICON-Land.
-    CALL cpl_def_field(                                          &
-      & land_comp_id, cell_point_id, modelTimeStep,              &
-      & fname_icefract, 1, field_id_icefract)
-    CALL cpl_def_field_metadata(                                 &
-      & routine, land_comp_name, grid_name, fname_icefract,      &
-      & 'Ice-covered fraction of grid cell from EBFM (1); missing value where EBFM provides no data')
-
-    CALL cpl_def_field(                                          &
-      & land_comp_id, cell_point_id, modelTimeStep,              &
-      & fname_albedo, 1, field_id_albedo)
-    CALL cpl_def_field_metadata(                                 &
-      & routine, land_comp_name, grid_name, fname_albedo,        &
-      & 'Surface albedo from EBFM (1); missing value where EBFM provides no data')
-
+    CALL def_target_field(fname_icefract, 'Ice-covered fraction of grid cell from EBFM (1); missing value where EBFM provides no data', &
+      &                                                                                                  field_id_icefract)
+    CALL def_target_field(fname_albedo,   'Surface albedo from EBFM (1); missing value where EBFM provides no data', field_id_albedo)
     CALL def_target_field(fname_t_sub,    'Temperature of the first firn layer of EBFM (K); missing value where no data', field_id_t_sub)
     CALL def_target_field(fname_ghf_cond, 'Conductance surface - first firn layer of EBFM (W m-2 K-1); missing value where no data', &
       &                                                                                                    field_id_ghf_cond)
@@ -275,7 +264,7 @@ CONTAINS
     ! Surface temperature state of the SEB process on the lice tile (experiment-start init)
     REAL(lp), POINTER :: seb_t(:,:), seb_t_unfilt(:,:), seb_t_filt(:,:), seb_t_srf(:,:)
 
-    LOGICAL :: received_data
+    LOGICAL :: received_icefract, received_t_sub
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_lice_get'
 
@@ -305,34 +294,17 @@ CONTAINS
     ! The memory is only updated at coupling time steps (received_data=.TRUE.); in between,
     ! the last received (or restarted) values are kept.
 
-    ! Receive ice fraction
-    ! --------------------
-    CALL cpl_get_field(                                           &
-      & routine, field_id_icefract, fname_icefract, grid%ntotal,  &
-      & icefract, first_get=.TRUE., received_data=received_data)
-    IF (received_data) THEN
-      !$ACC UPDATE DEVICE(icefract) ASYNC(acc_stream)
-      CALL message(routine, 'Received ' // fname_icefract // ' from EBFM')
+    ! Receive ice fraction, albedo, firn state and mass balance
+    ! ----------------------------------------------------------
+    ! (the first get of the time step is flagged for ICON's coupling timers)
+    CALL get_target_field(field_id_icefract, fname_icefract, icefract, first_get=.TRUE., received=received_icefract)
+    IF (received_icefract .AND. .NOT. coverage_checked) THEN
       ! Once per run: every cell with a lice tile fraction must be covered by the EBFM mesh
-      IF (.NOT. coverage_checked) THEN
-        CALL check_mesh_coverage()
-        coverage_checked = .TRUE.
-      END IF
+      CALL check_mesh_coverage()
+      coverage_checked = .TRUE.
     END IF
-
-    ! Receive surface albedo
-    ! ----------------------
-    CALL cpl_get_field(                                           &
-      & routine, field_id_albedo, fname_albedo, grid%ntotal,      &
-      & albedo, first_get=.FALSE., received_data=received_data)
-    IF (received_data) THEN
-      !$ACC UPDATE DEVICE(albedo) ASYNC(acc_stream)
-      CALL message(routine, 'Received ' // fname_albedo // ' from EBFM')
-    END IF
-
-    ! Receive firn state and mass balance
-    ! -----------------------------------
-    CALL get_target_field(field_id_t_sub,    fname_t_sub,    t_sub)
+    CALL get_target_field(field_id_albedo,   fname_albedo,   albedo)
+    CALL get_target_field(field_id_t_sub,    fname_t_sub,    t_sub, received=received_t_sub)
     CALL get_target_field(field_id_ghf_cond, fname_ghf_cond, ghf_cond)
     CALL get_target_field(field_id_hcap_sub, fname_hcap_sub, hcap_sub)
     CALL get_target_field(field_id_runoff,   fname_runoff,   runoff)
@@ -347,6 +319,11 @@ CONTAINS
     ! which is above the melting point and would otherwise melt several mm w.e. on the ice sheet
     ! while the surface relaxes during the first coupling window.
     IF (l_experiment_start) THEN
+      ! The initial firn state must have arrived in this very first get; otherwise the coupling
+      ! configuration is wrong (e.g. no ebfm2land couple), and the run would silently continue
+      ! with the SEB initval on the lice tile.
+      IF (.NOT. received_t_sub) CALL finish(routine, &
+        & 'No ' // fname_t_sub // ' received from EBFM at experiment start: check the coupling configuration')
       dsl4jsb_Get_memory(SEB_)
       seb_t        => SEB__mem%t%ptr(:,:)
       seb_t_unfilt => SEB__mem%t_unfilt%ptr(:,:)
@@ -407,18 +384,23 @@ CONTAINS
 
     END SUBROUTINE check_mesh_coverage
 
-    SUBROUTINE get_target_field(field_id, name, var)
+    SUBROUTINE get_target_field(field_id, name, var, first_get, received)
       INTEGER,          INTENT(in)    :: field_id
       CHARACTER(len=*), INTENT(in)    :: name
       REAL(lp), CONTIGUOUS, TARGET, INTENT(inout) :: var(:,:)
+      LOGICAL, OPTIONAL, INTENT(in)   :: first_get   !< first get of the time step (coupling timers)
+      LOGICAL, OPTIONAL, INTENT(out)  :: received    !< data received by this call
 
-      LOGICAL :: lreceived
+      LOGICAL :: lfirst_get, lreceived
 
-      CALL cpl_get_field(routine, field_id, name, grid%ntotal, var, first_get=.FALSE., received_data=lreceived)
+      lfirst_get = .FALSE.
+      IF (PRESENT(first_get)) lfirst_get = first_get
+      CALL cpl_get_field(routine, field_id, name, grid%ntotal, var, first_get=lfirst_get, received_data=lreceived)
       IF (lreceived) THEN
         !$ACC UPDATE DEVICE(var) ASYNC(acc_stream)
         CALL message(routine, 'Received ' // name // ' from EBFM')
       END IF
+      IF (PRESENT(received)) received = lreceived
     END SUBROUTINE get_target_field
 
   END SUBROUTINE interface_lice_get
