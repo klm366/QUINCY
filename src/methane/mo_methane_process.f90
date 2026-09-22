@@ -71,6 +71,9 @@ CONTAINS
     REAL(wp) :: current_thickness
     INTEGER  :: nsoil, iLayer
 
+    nsoil = SIZE(layer_thick)
+    ALLOCATE(effective_layer_volume(nsoil))
+
     relative_moist         = 0._wp
     relative_ice           = 0._wp
     relative_porevol       = 0._wp
@@ -79,9 +82,6 @@ CONTAINS
     effective_layer_volume = 0._wp
     conc2dens              = 0._wp
     dens2conc              = 0._wp
-
-    nsoil = SIZE(layer_thick)
-    ALLOCATE(effective_layer_volume(nsoil))
 
     !  determine relative moisture and ice content in soil layers ->  divide by layer thickness
     DO iLayer = 1,mxlay_above_rock
@@ -1181,15 +1181,22 @@ CONTAINS
     REAL(wp) :: O2_stress                             ! O2 stress factor []
     REAL(wp) :: CH4_stress                            ! CH4 stress factor []
     REAL(wp) :: CH4_Ebul_sum                          ! total Ch4 transported by ebullition [mol m-2 ts-1]
-    REAL(wp) :: Di         (mxlay_above_rock)         ! diffusivity of GAS on layers used [m2 s-1]
-    REAL(wp) :: CH4_source (mxlay_above_rock)         ! CH4 source / sink on layer [mol m-2 ts-1]
-    REAL(wp) :: CO2_source (mxlay_above_rock)         ! CO2 source / sink on layer [mol m-2 ts-1]
-    REAL(wp) :: O2_source  (mxlay_above_rock)         ! O2  source / sink on layer [mol m-2 ts-1]
-    REAL(wp) :: kHCC       (mxlay_above_rock)         ! Henry coefficient relating aqueous to gaseous concentration []
-    INTEGER :: is, nissue_loc
+    REAL(wp), ALLOCATABLE :: Di         (:)         ! diffusivity of GAS on layers used [m2 s-1]
+    REAL(wp), ALLOCATABLE :: CH4_source (:)         ! CH4 source / sink on layer [mol m-2 ts-1]
+    REAL(wp), ALLOCATABLE :: CO2_source (:)         ! CO2 source / sink on layer [mol m-2 ts-1]
+    REAL(wp), ALLOCATABLE :: O2_source  (:)         ! O2  source / sink on layer [mol m-2 ts-1]
+    REAL(wp), ALLOCATABLE :: kHCC       (:)         ! Henry coefficient relating aqueous to gaseous concentration []
+    INTEGER :: is, nsoil, nissue_loc
     LOGICAL :: lissue_loc, lissue_tst
 
-    DO is = 1, mxlay_above_rock
+    nsoil = SIZE(TSoil)
+    ALLOCATE(Di         (nsoil))
+    ALLOCATE(CH4_source (nsoil))
+    ALLOCATE(CO2_source (nsoil))
+    ALLOCATE(O2_source  (nsoil))
+    ALLOCATE(kHCC       (nsoil))
+
+    DO is = 1, nsoil
       CH4_source(is) = 0._wp
       CO2_source(is) = 0._wp
       O2_source (is) = 0._wp
@@ -1297,6 +1304,12 @@ CONTAINS
 
     IF (PRESENT(lissue)) lissue = lissue_loc
     IF (PRESENT(nissue)) nissue = nissue_loc
+
+    DEALLOCATE(Di)
+    DEALLOCATE(CH4_source)
+    DEALLOCATE(CO2_source)
+    DEALLOCATE(O2_source)
+    DEALLOCATE(kHCC)
 
   END SUBROUTINE reaction_diffusion
 

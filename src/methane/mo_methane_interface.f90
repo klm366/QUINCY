@@ -80,7 +80,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_methane::return_ptr)
-    CALL return_ptr%Construct(name='methane_processes', process_id=CH4_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='methane', process_id=CH4_, owner_model_id=model_id)
 
   END FUNCTION Create_task_methane
 
@@ -393,6 +393,8 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(CH4_)) RETURN
 
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_Config(CH4_)
     dsl4jsb_Get_Config(SSE_)
@@ -549,6 +551,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, soil_depth)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond_old)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, water_table)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     ! ! TOP_ variables
@@ -651,6 +654,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, O2_wet%dens_sl)
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, min_mmtemp_20yr)
     IF (dsl4jsb_Config(CH4_)%do_fire) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_fire)
       dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_NO)
@@ -660,7 +664,6 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_termite)
-      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, min_mmtemp_20yr)
     ENDIF
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_herbivore)
@@ -729,13 +732,9 @@ CONTAINS
     END IF
 
     ! Is tile any kind of vegentation? Should always be the case in JSB4 since this process is only active on veg-tiles
-    IF (tile%lcts(1)%lib_id /= 0) THEN
-      is_veg = dsl4jsb_Lctlib_param(NaturalVegFlag) .OR. &
-               dsl4jsb_Lctlib_param(PastureFlag)    .OR. &
-               dsl4jsb_Lctlib_param(CropFlag)
-    ELSE
-      is_veg = .FALSE.
-    ENDIF
+    is_veg = dsl4jsb_Lctlib_param(NaturalVegFlag) .OR. &
+             dsl4jsb_Lctlib_param(PastureFlag)    .OR. &
+             dsl4jsb_Lctlib_param(CropFlag)
 
     ! In case of dynamic roots, the root distribution should be re-calculated here
     IF (is_veg) THEN
