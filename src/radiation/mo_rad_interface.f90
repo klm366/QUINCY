@@ -1041,6 +1041,7 @@ CONTAINS
     LOGICAL :: &
       & ForestFlag_param,         &
       & l_ponds_param
+    INTEGER :: lib_id
 
     ! Set local variables from options argument
     iblk  = options%iblk

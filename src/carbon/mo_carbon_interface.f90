@@ -321,6 +321,7 @@ CONTAINS
 
     ! Variables needed with forest regrowth
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
+    INTEGER :: lib_id
 
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 

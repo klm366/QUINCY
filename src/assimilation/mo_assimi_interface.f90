@@ -842,6 +842,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
     dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
     dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
+    INTEGER :: lib_id
 
     ! Set local variables from options argument
     iblk    = options%iblk
