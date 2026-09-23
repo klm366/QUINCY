@@ -35,6 +35,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_rad_memory_class,     ONLY: t_rad_memory
   USE mo_climbuf_memory_class, ONLY: t_climbuf_memory
   USE mo_trait_memory_class,   ONLY: t_trait_memory
+  USE mo_coast_memory_class,   ONLY: t_coast_memory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
@@ -74,6 +75,8 @@ MODULE mo_jsb_process_factory_core
   USE mo_climbuf_config_class,  ONLY: t_climbuf_config
   USE mo_trait_interface,       ONLY: Register_trait_tasks
   USE mo_trait_config_class,    ONLY: t_trait_config
+  USE mo_coast_interface,       ONLY: Register_coast_tasks
+  USE mo_coast_config_class,    ONLY: t_coast_config
   USE mo_carbon_interface,      ONLY: Register_carbon_tasks
   USE mo_carbon_config_class,   ONLY: t_carbon_config
   USE mo_disturb_interface,     ONLY: Register_disturb_tasks
@@ -107,7 +110,7 @@ MODULE mo_jsb_process_factory_core
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, TRAIT_, &
+    & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, TRAIT_, COAST_, &
     & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   IMPLICIT NONE
@@ -193,6 +196,9 @@ CONTAINS
     CASE (TRAIT_)
       CALL Register_trait_tasks(return_ptr, model_id)
       ALLOCATE(t_trait_config::return_ptr%config)
+    CASE (COAST_)
+      CALL Register_coast_tasks(return_ptr, model_id)
+      ALLOCATE(t_coast_config::return_ptr%config)
     CASE (CARBON_)
       CALL Register_carbon_tasks(return_ptr, model_id)
       ALLOCATE(t_carbon_config::return_ptr%config)
@@ -280,6 +286,7 @@ CONTAINS
     USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
     USE mo_climbuf_memory_class, ONLY: max_no_of_climbuf_vars => max_no_of_vars
     USE mo_trait_memory_class,   ONLY: max_no_of_trait_vars => max_no_of_vars
+    USE mo_coast_memory_class,   ONLY: max_no_of_coast_vars => max_no_of_vars
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
@@ -339,6 +346,9 @@ CONTAINS
     CASE (TRAIT_)
       ALLOCATE(t_trait_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_trait_vars
+    CASE (COAST_)
+      ALLOCATE(t_coast_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_coast_vars
     CASE (CARBON_)
       ALLOCATE(t_carbon_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_carbon_vars
