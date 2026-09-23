@@ -274,14 +274,16 @@ concurrently: ICON integrates the next 3 h while EBFM is idle (waiting for the n
 | `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P - E that JSBACH uses on glacier tiles. The residual P + E - runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb` (term-by-term explanation in the science description, "The firn storage variable `weq_firn`"). Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
 | `smb`, `snowmass` | received, diagnostics |
 
-## Future work: sub-grid resolution of the coupling (TODO)
+## Future work (TODO)
+
+### Sub-grid resolution of the coupling
 
 The exchange couples one value per ICON cell to the EBFM mesh and back. In the R2B4 test setup
 372 241 EBFM columns are averaged onto 122 ICON cells; at R2B9 the ratio is smaller but still large
 at the margins, where a single ICON cell spans hundreds of metres of elevation. Two consequences,
 one per direction, and the YAC feature that could address them.
 
-### The representativeness problem in both directions
+#### The representativeness problem in both directions
 
 * **ICON -> EBFM (forcing).** EBFM receives the forcing by nearest-neighbour interpolation at the
   ICON resolution, i.e. every mesh cell gets the values of one ICON cell, at that cell's mean
@@ -297,7 +299,7 @@ one per direction, and the YAC feature that could address them.
   melts, and a summit that does not. This is the same problem as the forcing one, seen from the
   other side.
 
-### What YAC "raw data exchange" is
+#### What YAC "raw data exchange" is
 
 With the standard exchange YAC computes the interpolation weights of the configured stack at
 `enddef` (overlap areas for conservative interpolation, the nearest source cell for `nnn`) and
@@ -315,7 +317,7 @@ cells with overlap areas. That is the "exchange grid" of ESMF/NUOPC couplers (e.
 et al. 2021, GMD 14, 4843) in tabular form: fluxes can be computed on the intersection pieces and
 summed, instead of being computed once from a linearly averaged state.
 
-### Where it would and would not help
+#### Where it would and would not help
 
 * **Forcing downscaling in EBFM does not need raw exchange.** With nearest-neighbour interpolation
   each mesh cell already corresponds to one ICON cell. What EBFM lacks is the elevation of that
@@ -339,6 +341,56 @@ summed, instead of being computed once from a linearly averaged state.
 
 Both directions are open items of the coupling design; nothing of this is implemented. The forcing
 side and the state side can be done independently, and the forcing side first.
+
+### Ice-area weighting of the EBFM state: YAC dynamic fractional masking
+
+Suggested by Moritz Hanke (jsbach!453, 2026-09-22). **The problem:** EBFM defines no YAC mask and
+runs its firn column on every mesh cell, ice-free ones included (its frozen ice mask only decides
+what it sends as `icefract`). The `ebfm2land` stacks are first-order conservative with `fracarea`
+normalisation, so ICON-Land receives, per cell, the average over the *mesh-covered* part of the
+cell, while the `lice` tile it is applied to has the fraction `fract_lice`, derived from the
+*ice-covered* part. Interior cells are unaffected (covered = iced); along the margin, where one
+cell holds ice and tundra, `t_sub`, `ghf_cond`, `hcap_sub` and `albedo` entering the lice SEB are
+diluted with values of ice-free ground that ICON-Land already represents as vegetation, and the
+mass fields (per unit ice area) are biased likewise - for `runoff` probably positively, since a
+bare column stores nothing. Water stays conserved on the ICON-Land side (`weq_firn` absorbs
+whatever runoff EBFM prescribes); it is a bias of the prescribed value, not a leak. Its magnitude
+has not been measured (bound it once from one output record: covered-area mean vs ice-area mean of
+`albedo` and `runoff` on the margin cells; needs the per-mesh-cell EBFM output and a mesh-to-cell
+mapping).
+
+**The mechanism** ([YAC dynamic fractional masking](https://dkrz-sw.gitlab-pages.dkrz.de/yac/d0/daa/frac_mask_desc.html)):
+the source attaches to every put a fraction `f_i` per source cell and YAC computes
+`F_t = sum(F_i f_i w_i) / sum(f_i w_i) * sum(w_i)`; with all `f_i = 1` nothing changes, and where
+`sum(f_i w_i) = 0` a per-field fallback value is delivered. The weights are computed once at
+`enddef` and never touched, so the fraction may change at every exchange. With `time_reduction:
+average` YAC accumulates `F * f` and `f` separately and divides at the coupling instant. Enabled
+per field after its definition (`yac_fenable_field_frac_mask`, then `yac_fput_frac*` instead of
+`yac_fput*`); the Python bindings expose both.
+
+**Applied here:** EBFM passes its ice mask (the array it sends as `icefract`) as the fraction on
+the seven state and mass fields; ICON-Land then receives the ice-area-weighted mean, i.e. exactly
+the support of the lice tile. The fallback values take the role of today's `fixed` values
+(missing value for the state fields, 0 for the mass fields) but fire for "covered, no ice", while
+the stack's `fixed` value still fires for "not covered" - the two "no data" cases become
+distinguishable. `icefract` itself must stay unmasked (it *is* the ice fraction and uses
+`destarea`). Nothing changes in `coupling.yaml` or in ICON-Land; the coverage-based validity flag
+keeps its meaning. The change is a small EBFM-side PR (after EBFMorg/EBFM#178).
+
+**Two further points:**
+
+* It removes the coupler-side obstacle to a *dynamic* ice mask: EBFM could follow Elmer's ice
+  extent during a run and the received state would follow at no cost. What remains is the
+  ICON-Land side of the area change (see the open item on dynamic `fract_lice`).
+* `land2ebfm` uses `nnn` with a static source mask (`fract_lice > 0`, `cpl_def_cell_field_mask`).
+  A fractional mask can only invalidate a source cell, never re-route a mesh cell to one that
+  becomes valid later, because the neighbour search runs once at `enddef`. If `fract_lice` ever
+  changes at run time, that static mask must be defined generously (all of Greenland) with the
+  selection left to the fraction. For `n = 1` a fractional mask changes validity only, not the
+  value.
+
+Recommended order of the future-work items: fractional masking (cheap, EBFM only), forcing
+downscaling in EBFM (needs ICON's orography as a static field), then the sub-grid SEB.
 
 ## Configuration
 

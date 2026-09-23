@@ -235,7 +235,7 @@ runoff through the land hydrology (HD) or as ice discharge through the ocean.
   steep margins. The mirror problem exists in the other direction (one SEB per ICON cell on the
   mesh-averaged firn state, although melt is a capped, nonlinear residual). Options, incl. YAC raw
   data exchange and elevation-class sub-tiles, are laid out in the technical reference ("Future
-  work: sub-grid resolution of the coupling").
+  work", sub-grid resolution of the coupling).
 * **One energy balance, two melt paths**: melt is computed by ICON-Land, but refreezing happens in
   EBFM; the latent heat of refreezing warms the firn (EBFM) but is not returned to the
   atmosphere's energy budget within the same step. The 3 h exchange makes this a small,
