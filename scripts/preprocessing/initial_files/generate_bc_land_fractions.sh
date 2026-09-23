@@ -467,15 +467,30 @@ for year in ${year_list}; do
           done
           wait
 
-          # for the transition scheme we need maps of (potential) C3/C4 pasture ratio and potential natural
-          # vegetation for the entire grid
-          ${cp} c4_ratio_${pft_tag}.nc potveg_${atmGridID}_${npfts}pfts.nc
+          # for the transition scheme we need maps of potential within-class cover fractions for each PFT for the entire grid:
+          # - for the natural class we use potential natural vegetation
+          # - for the pasture class we use the c3/c4 ratio of pasture
+          # - c3crop and c4crop are their own class, so their potential within-class cover fractions are 1.0
+          # pasture
+          ${cdo} merge c3_ratio_${pft_tag}.nc c4_ratio_${pft_tag}.nc potveg_${atmGridID}_${npfts}pfts.nc
+          ${cdo} chname,c3_ratio,fract_pft09 -chname,c4_ratio,fract_pft10 potveg_${atmGridID}_${npfts}pfts.nc \
+                 potveg_${atmGridID}_${npfts}pfts.tmp
+          mv potveg_${atmGridID}_${npfts}pfts.tmp potveg_${atmGridID}_${npfts}pfts.nc
+          # natural
           for pft in ${nat_pfts}; do
             ${cdo} merge potveg_${atmGridID}_${npfts}pfts.nc ${atmGridID}_${pft}.${npfts}.keep potveg_${atmGridID}_${npfts}pfts.tmp
             mv potveg_${atmGridID}_${npfts}pfts.tmp potveg_${atmGridID}_${npfts}pfts.nc
           done
-          mv potveg_${atmGridID}_${npfts}pfts.nc ${path_bc}/bc_land_frac_potveg_${npfts}pfts.nc
-          echo "${prog}:     bc_land_frac_potveg_${npfts}pfts.nc done"
+          # crop
+          ${cdo} -addc,1. -mulc,0. c3_ratio_${pft_tag}.nc potcrops.tmp
+          for pft in pft11 pft12; do
+            ${cdo} -merge potveg_${atmGridID}_${npfts}pfts.nc -setname,fract_${pft} potcrops.tmp potveg_${atmGridID}_${npfts}pfts.tmp
+            mv potveg_${atmGridID}_${npfts}pfts.tmp potveg_${atmGridID}_${npfts}pfts.nc
+          done
+          rm potcrops.tmp
+
+          mv potveg_${atmGridID}_${npfts}pfts.nc ${path_bc}/bc_land_potential_cf_${npfts}pfts.nc
+          echo "${prog}:     bc_land_potential_cf_${npfts}pfts.nc done"
 
         fi  # first year
 
