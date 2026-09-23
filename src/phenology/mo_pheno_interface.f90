@@ -337,8 +337,6 @@ CONTAINS
       dsl4jsb_Get_config(TRAIT_)
       ! For PFT13 only, supply bounded annual SLA to the existing phenology
       ! and allometric calculations; otherwise retain the static lctlib SLA.
-      ! For PFT13 only, supply bounded annual SLA to the existing phenology
-      ! and allometric calculations; otherwise retain the static lctlib SLA.
       apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
         &                  TRIM(tile%name) == 'pft13'
       IF (apply_pft13_traits) THEN

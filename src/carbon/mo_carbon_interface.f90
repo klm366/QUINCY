@@ -353,8 +353,6 @@ CONTAINS
       dsl4jsb_Get_config(TRAIT_)
       ! For PFT13 only, supply bounded annual SLA to carbon allocation and
       ! CARBON memory; otherwise retain the static lctlib SLA.
-      ! For PFT13 only, supply bounded annual SLA to carbon allocation and
-      ! CARBON memory; otherwise retain the static lctlib SLA.
       apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
         &                  TRIM(tile%name) == 'pft13'
       IF (apply_pft13_traits) THEN
@@ -801,8 +799,6 @@ CONTAINS
     IF (model%Is_process_enabled(NLCC_)) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        ! Store the effective SLA in CARBON memory so established downstream
-        ! consumers receive the same active or fallback value.
         ! Store the effective SLA in CARBON memory so established downstream
         ! consumers receive the same active or fallback value.
         sla(ic) = specificLeafArea_C_active(ic)

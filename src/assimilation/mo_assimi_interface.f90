@@ -465,8 +465,6 @@ CONTAINS
       dsl4jsb_Get_config(TRAIT_)
       ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
       ! bounded annual grid-cell predictions; otherwise retain lctlib values.
-      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
-      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
       apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
         &                  TRIM(tile%name) == 'pft13'
       IF (apply_pft13_traits) THEN
@@ -859,8 +857,6 @@ CONTAINS
     apply_pft13_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
-      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
       ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
       ! bounded annual grid-cell predictions; otherwise retain lctlib values.
       apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
