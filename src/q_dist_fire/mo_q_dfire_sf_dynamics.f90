@@ -796,7 +796,7 @@ CONTAINS
                   ros, &
                   mask) ! optional
 
-    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, &
+    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, & ! 1hr, 10hr, 100hr, cured live grass (dead)
                                     ix_clvg => df_sf_ix_sigma_dd_clvg, &
                                      ix_1hr => df_sf_ix_sigma_dd_1hr, &
                                     ix_10hr => df_sf_ix_sigma_dd_10hr, &
@@ -822,7 +822,7 @@ CONTAINS
     TYPE(t_sf_mf), INTENT(out) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(out) :: ros !< Rate of spread [-]
-    LOGICAL, OPTIONAL :: mask(:) !< True: gridcell enabled
+    LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
 
     REAL(wp) :: woi_dd(nc,ndd)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
     REAL(wp) :: woi_lv(nc,nlv)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
