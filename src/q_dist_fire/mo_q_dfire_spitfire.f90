@@ -486,7 +486,7 @@ CONTAINS
                         burnable_area_ha, &
                         dead_fuel_fcl, cured_live_grass_fuel_fcl, &
                         live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
-                        t_air_min, t_air_max, precip_daily_mmd, wind_sf, & ! weather
+                        t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
@@ -682,10 +682,7 @@ CONTAINS
       ALLOCATE(fuel_moisture_ober)
       fuel_moisture_ober = t_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
 
-      ALLOCATE(tot_live_fuel_tree(nc))
-      DO CONCURRENT (i=1:SIZE(live_tree_fuel,2), j=1:SIZE(live_tree_fuel,3)) !2=fuel pools, 3=fuel classes
-        tot_live_fuel_tree = SUM(live_tree_fuel(:,i,j)) ! sum multiple dimensions
-      END DO
+      tot_live_fuel_tree = SUM(SUM(live_tree_fuel, DIM=3), DIM=2)
 
       CALL calc_spitfire_oberhagemann(nc, &
           df_sf_sigma_dd_nr, & ! all dead fuel classes
@@ -1112,7 +1109,7 @@ CONTAINS
     ENDIF
 
     ! sum up
-    has_any_test_failed = test_BAfract_is_outside_limits .AND. &
+    has_any_test_failed = test_BAfract_is_outside_limits .OR. &
                           test_BA_is_bigger_than_gridcellarea
 
     IF (has_any_test_failed) THEN
