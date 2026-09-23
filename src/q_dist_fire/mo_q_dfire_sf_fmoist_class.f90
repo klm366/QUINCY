@@ -21,6 +21,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
+  USE mo_jsb_math_constants,    ONLY: eps8
   USE mo_q_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
   USE mo_quincy_stats,        ONLY: stats_average_weight
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
@@ -222,6 +223,7 @@ CONTAINS
     DO ic = 1, nc
       dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
     ENDDO
+    mf_10hr = 0._wp
 
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
@@ -229,14 +231,24 @@ CONTAINS
       alphas_weighted_ros(ic) = stats_average_weight(nlitros, alphas_dd(ix_1hr:ix_100hr), dead_fuel_litter(ic,:))
       alphas_weighted_dd(ic) = stats_average_weight(4, alphas_dd, dead_fuel(ic,:))
 
-      mf_10hr = calc_omega(alphas_weighted_ros(ic), nesterov_index(ic))
+      !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
+      IF (SUM(dead_fuel_litter(ic,:)) > eps8 .AND. nesterov_index(ic) > eps8) THEN
+        mf_10hr = calc_omega(alphas_weighted_ros(ic), nesterov_index(ic))
+      ENDIF
 
-      mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
+      !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
+      IF (SUM(dead_fuel(ic,:)) > eps8 .AND. nesterov_index(ic) > eps8) THEN
+        mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
+      ENDIF
       mf%dead(ic,ix_10hr) = mf_10hr * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
       mf%dead(ic,ix_100hr) = mf_10hr * 1.02_wp
       mf%dead(ic,ix_1000hr) = mf_10hr * 1.02_wp
       mf%dead(ic,ix_clvg) = mf%dead(ic,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
+      !< in case  mf_10hr > 1.0_wp, limit to 1.0_wp
+      mf%dead(ic,ix_10hr) = MIN(mf%dead(ic,ix_10hr), 1.0_wp)
+      mf%dead(ic,ix_100hr) = MIN(mf%dead(ic,ix_100hr), 1.0_wp)
+      mf%dead(ic,ix_1000hr) = MIN(mf%dead(ic,ix_1000hr), 1.0_wp)
     ENDDO
     mf%live(:,ix_lvg) = lvg_moisture
     mf%live(:,ix_wdy) = 0._wp !  For later, for shrubs
