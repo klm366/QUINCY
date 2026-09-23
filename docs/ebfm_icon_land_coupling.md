@@ -274,6 +274,72 @@ concurrently: ICON integrates the next 3 h while EBFM is idle (waiting for the n
 | `runoff` | used as the `lice` tile runoff handed to the HD model (`hydro_runoff`), replacing the P - E that JSBACH uses on glacier tiles. The residual P + E - runoff (water stored in or released from the EBFM firn) is accumulated in the new storage variable `hydro_weq_firn` [m w.e.], which `update_water_balance` counts as land water, so the water-balance check stays exact on the lice tile and on the land/box aggregates. `weq_firn` is also a useful diagnostic: the ICON-Land-implied firn storage change, comparable with EBFM's `smb` (term-by-term explanation in the science description, "The firn storage variable `weq_firn`"). Note the water is no longer routed to the ocean immediately: accumulation stays in the firn until EBFM releases it (or, in the full system, until Elmer discharges it as ice). |
 | `smb`, `snowmass` | received, diagnostics |
 
+## Future work: sub-grid resolution of the coupling (TODO)
+
+The exchange couples one value per ICON cell to the EBFM mesh and back. In the R2B4 test setup
+372 241 EBFM columns are averaged onto 122 ICON cells; at R2B9 the ratio is smaller but still large
+at the margins, where a single ICON cell spans hundreds of metres of elevation. Two consequences,
+one per direction, and the YAC feature that could address them.
+
+### The representativeness problem in both directions
+
+* **ICON -> EBFM (forcing).** EBFM receives the forcing by nearest-neighbour interpolation at the
+  ICON resolution, i.e. every mesh cell gets the values of one ICON cell, at that cell's mean
+  orography. Standalone EBFM applies lapse-rate corrections from the forcing elevation to each
+  mesh cell's own elevation; the coupled configuration currently discards that capability. At the
+  margins the two topographies differ by hundreds of metres, i.e. several K in `tas` and a large
+  difference in melt.
+* **EBFM -> ICON-Land (state).** Each ICON cell receives the *mesh-averaged* firn state (`t_sub`,
+  `ghf_cond`, `hcap_sub`, `albedo`) and the lice tile solves one surface energy balance on that
+  mean. The SEB is strongly nonlinear: outgoing longwave goes with T^4 and melt is a residual capped
+  at the melting point. The melt of the mean state is therefore not the mean of the melt: a cell
+  whose mean firn temperature is well below freezing can contain an ablation zone at 0 degC that
+  melts, and a summit that does not. This is the same problem as the forcing one, seen from the
+  other side.
+
+### What YAC "raw data exchange" is
+
+With the standard exchange YAC computes the interpolation weights of the configured stack at
+`enddef` (overlap areas for conservative interpolation, the nearest source cell for `nnn`) and
+applies them at every get: the target receives one value per target point and never learns which
+source points contributed. With `use_raw_exchange: true` on a couple, YAC computes the same weights
+but does *not* apply them: once after `enddef` the target queries, per target point, the indices of
+the contributing source points and their weights (`yac_fget_raw_interp_weights_data`, also a CSR
+variant), and at every get it receives the raw values of those source points (`yac_fget_raw`,
+`yac_fget_raw_frac` with fractional masks) and combines them itself. The source side is unchanged.
+Fortran and Python bindings exist (YAC >= 3.16).
+
+With first-order conservative weights the weight of a source cell for a target cell is exactly
+their overlap fraction, so the target holds, for each of its cells, the list of overlapping source
+cells with overlap areas. That is the "exchange grid" of ESMF/NUOPC couplers (e.g. ICONGETM, Bauer
+et al. 2021, GMD 14, 4843) in tabular form: fluxes can be computed on the intersection pieces and
+summed, instead of being computed once from a linearly averaged state.
+
+### Where it would and would not help
+
+* **Forcing downscaling in EBFM does not need raw exchange.** With nearest-neighbour interpolation
+  each mesh cell already corresponds to one ICON cell. What EBFM lacks is the elevation of that
+  cell: send ICON's orography once as an additional static field with the same interpolation, and
+  EBFM can apply its standalone lapse-rate downscaling (temperature, and consistently humidity,
+  pressure and incoming longwave) per mesh cell. This is the cheap, self-contained first step.
+* **The sub-grid SEB on the lice tile is the genuine use.** With raw exchange on `ebfm2land`
+  ICON-Land would receive every overlapping mesh column with its overlap area and could solve the
+  SEB per column (or per group of columns) and sum the fluxes with the areas. The fluxes back to
+  EBFM (`land2ebfm`) would then have to be per column as well, which the current one-value-per-cell
+  fields cannot carry, and JSBACH would have to hold a variable number of sub-columns per cell,
+  which its tile structure does not do. Exact, but research-scale.
+* **Pragmatic alternative without raw exchange: elevation classes.** A fixed number of
+  elevation-class sub-tiles below the lice tile; EBFM sends its state per class as separate fields,
+  each with a fractional mask giving the class's coverage of the mesh cell (YAC dynamic fractional
+  masking then yields per-class averages); ICON-Land solves the SEB per class and returns per-class
+  fluxes; EBFM applies to each mesh cell the fluxes of its class. This captures most of the
+  nonlinearity with the standard exchange and a fixed tile structure. It is the recommended route
+  if the sub-grid SEB is pursued; raw exchange remains the option if per-mesh-cell fidelity is
+  wanted.
+
+Both directions are open items of the coupling design; nothing of this is implemented. The forcing
+side and the state side can be done independently, and the forcing side first.
+
 ## Configuration
 
 * `NAMELIST_atm`: `coupling_mode_nml` `coupled_to_ebfm = .TRUE.` (atm2ebfm) and
