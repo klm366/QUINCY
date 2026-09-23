@@ -93,6 +93,7 @@ CONTAINS
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_target_year
     dsl4jsb_Real3D_onDomain :: transition_rate
+    dsl4jsb_Real3D_onDomain :: cf_potential
     REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
     REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
@@ -106,6 +107,7 @@ CONTAINS
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_land_use_data
     CHARACTER(len=filename_max) :: filename_land_transitions_data
+    CHARACTER(len=filename_max) :: filename_potential_cf
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=15), DIMENSION(:), ALLOCATABLE :: trans_names
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
@@ -299,8 +301,37 @@ CONTAINS
 
       CALL input_file%Close()
 
-      ! todo-AKN: apply cf_correction if required?
+      !> Read the potential cover fraction map, used in update_alcc_translocation to distribute gained area
+      !> proportionally among the to-tiles of a class (natural, pasture, ...) if their current cover fraction is zero.
+      !> The file provides, for every pft, its potential cover fraction within its class.
+      !> Currently this file is static (no year in the filename), but it is (re-)read every year to allow it to be
+      !> replaced by a per-year file in the future without further code changes.
+      dsl4jsb_Get_var3D_onDomain(ALCC_, cf_potential)
+      cf_potential(:,:,:) = 0.0_wp
 
+      filename_potential_cf = TRIM(dsl4jsb_Config(ALCC_)%alcc_potential_cf_filename)
+      CALL message(TRIM(routine), 'filename_potential_cf: '//TRIM(filename_potential_cf))
+
+      input_file = jsb_netcdf_open_input(TRIM(filename_potential_cf), model%grid_id)
+
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        i_tile = i_tile + 1
+        IF (debug_on()) CALL message(TRIM(routine), '...reading potential cover_fract for '//TRIM(current_tile%name))
+        WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
+        ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), fill_array=cf_potential(:,i_tile,:))
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO ! child tiles
+
+      ! Assert: potential cover fractions >= 0
+      IF (ANY(cf_potential(:,:,:) < 0.0_wp)) THEN
+        CALL finish(TRIM(routine), &
+          & 'Violation of assertion: potential cover fraction data '//TRIM(filename_potential_cf) &
+          & //' leads to fractions <0. Please check.')
+      END IF
+
+      CALL input_file%Close()
 
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )

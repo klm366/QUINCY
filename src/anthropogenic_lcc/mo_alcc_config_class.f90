@@ -30,6 +30,10 @@ MODULE mo_alcc_config_class
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
+     CHARACTER(len=filename_max)   :: alcc_potential_cf_filename
+       !< Filename of the potential cover fraction file, used in the 'transition' scheme to distribute gained area
+       !< among to-tiles of a class when their current cover fraction is zero.
+       !< Currently a static file (read every year but without a year in the name); may later be changed to vary by year.
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
      CHARACTER(len=15), ALLOCATABLE :: trans_names(:)
         !< specifies the transition types used in case of 'transition' scheme
@@ -66,6 +70,7 @@ CONTAINS
     LOGICAL                       :: active, lrestart_cont
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix, alcc_transitions_filename_prefix
+    CHARACTER(len=filename_max)   :: alcc_potential_cf_filename
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: trans_layer
@@ -85,6 +90,7 @@ CONTAINS
          bc_filename,            &
          alcc_filename_prefix,   &
          alcc_transitions_filename_prefix, &
+         alcc_potential_cf_filename, &
          scheme,                 &
          l_daily_alcc
 
@@ -102,6 +108,7 @@ CONTAINS
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
     alcc_transitions_filename_prefix = 'LUH_transitions_'
+    alcc_potential_cf_filename = 'bc_land_potential_cf.nc'
     scheme               = 'maps'        ! options: 'maps', 'transition'
     l_daily_alcc         = .TRUE.
 
@@ -118,6 +125,7 @@ CONTAINS
     config%bc_filename          = bc_filename
     config%alcc_filename_prefix = alcc_filename_prefix
     config%alcc_transitions_filename_prefix = alcc_transitions_filename_prefix
+    config%alcc_potential_cf_filename = alcc_potential_cf_filename
     config%scheme               = scheme
     config%l_daily_alcc         = l_daily_alcc
 

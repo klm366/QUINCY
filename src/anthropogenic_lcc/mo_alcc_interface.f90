@@ -393,6 +393,7 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)          !< Configuration of the anthropogenic land use change process
     dsl4jsb_Real3D_onChunk :: cf_delta        !< Derived change in cover fractions (annual or daily change) []
     dsl4jsb_Real3D_onChunk :: transition_rate !< Transition rate (annual or daily change) []
+    dsl4jsb_Real3D_onChunk :: cf_potential     !< Potential cover fractions used to distribute gained area when to_cf_sum == 0 []
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile    !< Pointer to the tile for which relocations are determined
     CLASS(t_jsb_tile_abstract), POINTER :: age_class_tile  !< Pointer to for age class tiles
@@ -408,7 +409,8 @@ CONTAINS
       & cf_diff,      & !< Change in cover fractions
       & current_fract,& !< Current cover fraction
       & from_cf_sum,  & !< Sum of cover fractions of all tiles losing area for a specific transition
-      & to_cf_sum       !< Sum of cover fractions of all tiles gaining area for a specific transition
+      & to_cf_sum,    & !< Sum of cover fractions of all tiles gaining area for a specific transition
+      & to_potential_sum !< Sum of potential cover fractions of all to-tiles for a specific transition
 
     INTEGER  :: &
       & iblk, &       !< Current block index
@@ -421,8 +423,7 @@ CONTAINS
       & i_cf_tile, &  !< Index of a PFT tile in the array with cover fractions changes
       & nr_of_tiles, & !< Number of tiles participating in the ALCC process
       & idx, &        !< Index for transition loop
-      & idxe, &       !< End index for transition loop
-      & n_to_tiles    !< Number of to-tiles in the standard (non-NLCC back-conversion) case
+      & idxe          !< End index for transition loop
 
     REAL(wp) :: dtime !< Time step length
 
@@ -483,6 +484,7 @@ CONTAINS
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
     CASE('transition')
       dsl4jsb_Get_var3D_onChunk(ALCC_, transition_rate)
+      dsl4jsb_Get_var3D_onChunk(ALCC_, cf_potential)
       ALLOCATE(trans_names(SIZE(dsl4jsb_Config(ALCC_)%trans_names)))
       trans_names = dsl4jsb_Config(ALCC_)%trans_names
       idxe = SIZE(trans_names)
@@ -507,8 +509,7 @@ CONTAINS
 
         from_cf_sum(:) = 0.0_wp
         to_cf_sum(:) = 0.0_wp
-        ! n_to_tiles counts tiles in the to-class; used to distribute area equally when to_cf_sum = 0.
-        n_to_tiles = 0
+        to_potential_sum(:) = 0.0_wp
 
         DO WHILE (ASSOCIATED(current_tile))
           i_tile = i_tile + 1
@@ -527,12 +528,6 @@ CONTAINS
             & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
           END IF
 
-          ! Count to-tiles for the standard (non-NLCC back-conversion) case.
-          ! This is cell-independent so it is evaluated outside the ic loop.
-          IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-            n_to_tiles = n_to_tiles + 1
-          END IF
-
           DO ic = 1,nc
             ! Now actually calculate from_cf_sum and to_cf_sum
             IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
@@ -540,6 +535,7 @@ CONTAINS
             END IF
             IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
               to_cf_sum(ic) = to_cf_sum(ic) + initial_area(ic, i_tile)
+              to_potential_sum(ic) = to_potential_sum(ic) + cf_potential(ic, i_tile)
             END IF
           END DO
 
@@ -693,10 +689,10 @@ CONTAINS
                     ! O(machine_epsilon). Clamp to prevent fractions exceeding 1.
                     gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
                         MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
-                  ELSE IF (n_to_tiles > 0) THEN
+                  ELSE IF (to_potential_sum(ic) > 0.0_wp) THEN
                     ! to_cf_sum == 0: all to-tiles have initial_area == 0.
-                    ! Distribute the transition area equally among all n_to_tiles to-tiles.
-                    gained_area(ic, i_tile) = transition_rate(ic, idx) / REAL(n_to_tiles, wp)
+                    ! Distribute the transition area proportional to each tile's potential cover fraction.
+                    gained_area(ic, i_tile) = transition_rate(ic, idx) * cf_potential(ic, i_tile) / to_potential_sum(ic)
                     ! Floating-point safety clamp
                     gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
                         MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
