@@ -14,8 +14,9 @@
 !> ---------------------------------------
 !>#### Contains memory definitions for the coastal control factors
 !>
-!> The boundary conditions are read from bc_land_coastal.nc by mo_coast_init: the long-
-!> term mean coastal sea surface salinity from Bio-ORACLE v2.0, and the complex harmonic
+!> The boundary conditions are read from bc_land_coastal.nc by mo_coast_init: the mask of
+!> the cells that carry mangrove, the mangrove-area-weighted long-term mean sea surface
+!> salinity from Bio-ORACLE v2.0, and the complex harmonic
 !> constants of eight tidal constituents from the TPXO9-atlas solution. The remaining
 !> variables are recomputed every time step. All variables are allocated on vegetation
 !> tiles only.
@@ -33,10 +34,11 @@ MODULE mo_coast_memory_class
 
   PUBLIC :: t_coast_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 24
+  INTEGER, PARAMETER :: max_no_of_vars = 25
 
   TYPE, EXTENDS(t_jsb_memory) :: t_coast_memory
     TYPE(t_jsb_var_real2d) :: &
+      & coast_mask,           & !< Cells on which the coastal process is evaluated (1) or not (0) [-]
       & salinity,             & !< Long-term mean sea surface salinity [PSS]
       & tide_hre_m2,          & !< Real part of the complex M2 elevation amplitude [m]
       & tide_him_m2,          & !< Imaginary part of the complex M2 elevation amplitude [m]
@@ -110,6 +112,13 @@ CONTAINS
 
       ! Boundary conditions. They are read from bc_land_coastal.nc at the start of every
       ! simulation and are therefore not written to the restart file.
+      CALL mem%Add_var('coast_mask', mem%coast_mask,                                        &
+        & hgrid, surface,                                                                    &
+        & t_cf('coast_mask', '1', 'Cells on which the coastal process is evaluated'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix, output_level=MEDIUM,                                               &
+        & lrestart=.FALSE., initval_r=0.0_wp)
+
       CALL mem%Add_var('salinity', mem%salinity,                                            &
         & hgrid, surface,                                                                    &
         & t_cf('salinity', '1e-3', 'Long-term mean sea surface salinity'),                  &

@@ -914,6 +914,9 @@ CONTAINS
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
+    ! True when the annual SLA is used on this tile (formerly apply_pft13_traits).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL                         :: apply_dynamic_traits
     REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
@@ -1044,7 +1047,11 @@ CONTAINS
     LOGICAL :: &
       & ForestFlag_param,         &
       & l_ponds_param
+    ! lctlib id of the tile's primary lct, and the SLA unit conversion for that type.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     INTEGER :: lib_id
+    REAL(wp) :: sla_to_specificleafarea_c
 
     ! Set local variables from options argument
     iblk  = options%iblk
@@ -1059,7 +1066,11 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     model_scheme = model%config%model_scheme
 
-    ! Step 6: this branch affects only the JSBACH PFT13 tile.
+    ! Step 6: this branch affects only the JSBACH tiles of plant functional types that
+    ! have a fitted SLA model.
+    ! Comment corrected after the trait generalisation (it said PFT13 only).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     apply_dynamic_traits = .FALSE.
 #ifndef __QUINCY_STANDALONE__
     IF (model_scheme == MODEL_JSBACH .AND. model%Is_process_enabled(TRAIT_)) THEN
@@ -1527,11 +1538,16 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+            ! Use the annual SLA where it is valid, else the lctlib value. The unit
+            ! conversion of this type is taken out of the loop, as a scalar.
+            ! Author: Dr. Sri Nandini-Weiß
+            ! Date: 2026-09-23
             IF (apply_dynamic_traits) THEN
+              sla_to_specificleafarea_c = trait_sla_to_specificleafarea_c(lib_id)
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
               DO ic=1,nc
                 IF (pft13_sla_pred(ic) > 0._wp) THEN
-                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
+                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * sla_to_specificleafarea_c
                 ELSE
                   specificLeafArea_C_active(ic) = specificLeafArea_C_param
                 END IF

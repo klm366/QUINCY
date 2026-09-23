@@ -78,6 +78,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     INTEGER :: iblk, ics, ice, nc
+    ! lctlib id of the tile's primary lct, which selects the trait equations.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     INTEGER :: lib_id
     LOGICAL :: new_year, lstart
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_trait'
@@ -147,6 +150,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, map_prev_year, climbuf)
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_mmtemp_prev_year, climbuf)
 
+    ! Evaluate the trait equations of this type (formerly calc_pft13_trait_diagnostics).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     CALL calc_trait_diagnostics(                        &
       & lib_id,                                         &
       & mat_prev_year_climbuf,                          &

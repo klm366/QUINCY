@@ -40,12 +40,18 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
+  ! COAST_ added: update_assimilation reads the coastal control factor.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_, TRAIT_, COAST_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(TRAIT_)
+  ! Configuration of the coastal-constraint process.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   dsl4jsb_Use_config(COAST_)
 
   ! Use of process memories (t_assimi_memory)
@@ -56,6 +62,9 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TRAIT_)
+  ! Memory of the coastal-constraint process.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   dsl4jsb_Use_memory(COAST_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -432,6 +441,10 @@ CONTAINS
       & CarboxRate, &
       & ETransport
     REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
+    ! apply_dynamic_traits (formerly apply_pft13_traits) is true when the annual traits
+    ! are used on this tile; lib_id is the lctlib id of the tile's primary lct.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL :: C4Flag, apply_dynamic_traits
     INTEGER :: lib_id
 
@@ -465,8 +478,12 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(ASSIMI_)
 
-    ! Step 6: annual traits are read only on PFT13 and only when explicitly
-    ! enabled. Zero restart/initial values fall back to the static lctlib.
+    ! Step 6: annual traits are read only for the plant functional types that have a
+    ! fitted model, and only when explicitly enabled. Zero restart/initial values fall
+    ! back to the static lctlib.
+    ! Comment corrected after the trait generalisation (it said PFT13 only).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
@@ -514,6 +531,10 @@ CONTAINS
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
     !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
+    ! Use the annual Vcmax25 and Jmax25 where they are valid, else the lctlib values.
+    ! Renamed from apply_pft13_traits and pft13_*_to_* in the trait generalisation.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -788,10 +809,13 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
+    ! lctlib id of the mangrove tile, on which the coastal factor is applied.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    USE mo_coast_constants, ONLY: mangrove_lct_id
     ! Trait generalisation: import the per-type model mask.
     ! Author: Dr. Sri Nandini-Weiß
     ! Date: 2026-09-23
-    USE mo_coast_process,   ONLY: mangrove_lct_id
     USE mo_trait_process,   ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
       &                           trait_jmax25_to_etransport,             &
       &                           has_dynamic_vcmax25, has_dynamic_jmax25
@@ -806,6 +830,9 @@ CONTAINS
     REAL(wp)                   :: dtime
     REAL(wp)                   :: CarboxRate, ETransport
     REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
+    ! True when the annual traits are used on this tile (formerly apply_pft13_traits).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL                    :: apply_dynamic_traits
     INTEGER                    :: icanopy
 
@@ -820,6 +847,9 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(TRAIT_)
     dsl4jsb_Def_config(PHENO_)
+    ! Configuration and memory of the coastal-constraint process.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     dsl4jsb_Def_config(COAST_)
     dsl4jsb_Def_memory(COAST_)
 
@@ -857,9 +887,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
     dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
     dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
+    ! lib_id: lctlib id of the tile's primary lct; apply_coastal: true when the coastal
+    ! factor multiplies gross assimilation on this tile; control_coastal: that factor [-].
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     INTEGER :: lib_id
     LOGICAL :: apply_coastal
-    dsl4jsb_Real2D_onChunk :: control_coastal
+    dsl4jsb_Real2D_onChunk :: control_coastal     ! Coastal control factor [-]
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -879,7 +913,11 @@ CONTAINS
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
 
-    ! Step 6: activate the bounded annual capacities only on PFT13.
+    ! Step 6: activate the bounded annual capacities only for the plant functional
+    ! types that have a fitted model.
+    ! Comment corrected after the trait generalisation (it said PFT13 only).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
@@ -965,6 +1003,10 @@ CONTAINS
     ETransport = dsl4jsb_Lctlib_param(ETransport)
 
     !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
+    ! Use the annual Vcmax25 and Jmax25 where they are valid, else the lctlib values.
+    ! Renamed from apply_pft13_traits and pft13_*_to_* in the trait generalisation.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc

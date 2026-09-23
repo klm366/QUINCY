@@ -33,7 +33,7 @@ MODULE mo_coast_init
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_tile_class,   ONLY: t_jsb_tile_abstract
   USE mo_jsb_io_netcdf,    ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_coast_process,    ONLY: mangrove_lct_id
+  USE mo_coast_constants,  ONLY: mangrove_lct_id
 
   dsl4jsb_Use_processes COAST_
   dsl4jsb_Use_config(COAST_)
@@ -53,13 +53,33 @@ CONTAINS
   !>
   !>#### Initialise the coastal-constraint process on a tile
   !>
-  !> We here read the boundary conditions on the mangrove tile. The salinity is required
-  !> whenever the process is active. The tidal constants are required only when the
-  !> tidal-inundation factor is applied; without them the tide height is zero, at which
-  !> the aboveground roots ventilate all inundated root and the inundation factor is one.
+  !> Called from jsbach_init in mo_jsb_model_init for every tile on which COAST_ is
+  !> active. The coastal process has boundary conditions only; there are no initial
+  !> conditions to set. Because only the mangrove tile uses the boundary conditions, the
+  !> file is read directly for that tile, without the intermediate init_vars structure
+  !> that processes shared between many tiles use.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
   SUBROUTINE coast_init(tile)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    CALL coast_init_bc(tile)
+
+  END SUBROUTINE coast_init
+
+  ! ======================================================================================================== !
+  !>
+  !>#### Read the coastal boundary conditions on the mangrove tile
+  !>
+  !> We here read the boundary conditions on the mangrove tile. The mask and the salinity
+  !> are required whenever the process is active. The tidal constants are required only
+  !> when the tidal-inundation factor is applied. Without them the tide height stays at
+  !> zero; with the default ventilation weights, which add up to one, the aboveground roots
+  !> then ventilate all inundated root and the inundation factor is one.
+  !>
+  ! -------------------------------------------------------------------------------------------------------- !
+  SUBROUTINE coast_init_bc(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -70,7 +90,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE, TARGET :: buffer(:,:)
     REAL(wp), POINTER             :: ptr_2d(:,:)
 
-    INTEGER :: lib_id, ic
+    INTEGER :: lib_id, ivar
     LOGICAL :: have_tides
 
     CHARACTER(len=11), PARAMETER :: tide_names(16) = [character(len=11) :: &
@@ -82,7 +102,7 @@ CONTAINS
     dsl4jsb_Def_config(COAST_)
     dsl4jsb_Def_memory(COAST_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':coast_init'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':coast_init_bc'
     ! ------------------------------------------------------------------------------------------------------ !
 
     ! The boundary conditions are needed on the mangrove tile only
@@ -103,6 +123,14 @@ CONTAINS
 
     ALLOCATE(buffer(grid%nproma, grid%nblks))
 
+    ! Mask of the cells that carry mangrove. Outside the mask the update routine sets the
+    ! control factors to one without evaluating the equations.
+    IF (.NOT. input_file%Has_var('coast_mask')) &
+      & CALL finish(TRIM(routine), 'Variable coast_mask not found in '//TRIM(dsl4jsb_Config(COAST_)%bc_filename))
+    ptr_2d => input_file%Read_2d(variable_name='coast_mask', fill_array=buffer)
+    dsl4jsb_var2D_onDomain(COAST_, coast_mask) = MERGE(1._wp, 0._wp, buffer > 0.5_wp)
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(COAST_, coast_mask)) ASYNC(1)
+
     ! Salinity. Without it the salinity factor would be evaluated at zero salinity, which
     ! gives the minimum everywhere, so a missing variable is an error.
     IF (.NOT. input_file%Has_var('salinity')) &
@@ -113,8 +141,8 @@ CONTAINS
 
     ! Tidal constants
     have_tides = .TRUE.
-    DO ic = 1, SIZE(tide_names)
-      IF (.NOT. input_file%Has_var(TRIM(tide_names(ic)))) have_tides = .FALSE.
+    DO ivar = 1, SIZE(tide_names)
+      IF (.NOT. input_file%Has_var(TRIM(tide_names(ivar)))) have_tides = .FALSE.
     END DO
 
     IF (have_tides) THEN
@@ -178,7 +206,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE coast_init
+  END SUBROUTINE coast_init_bc
 
 #endif
 END MODULE mo_coast_init

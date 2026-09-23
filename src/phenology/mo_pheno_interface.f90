@@ -276,8 +276,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     ! Local variables
+    ! apply_dynamic_traits (formerly apply_pft13_traits) is true when the annual SLA is
+    ! used on this tile; lib_id is the lctlib id of the tile's primary lct, and
+    ! sla_to_specificleafarea_c the SLA unit conversion for that type.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL :: l_newday, apply_dynamic_traits
     INTEGER :: lib_id
+    REAL(wp) :: sla_to_specificleafarea_c
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(wp) :: MaxLAI
@@ -335,8 +341,12 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
 
-    ! Step 6: convert annual SLA only for PFT13; retain the static lctlib
-    ! value until the first previous-year climate has been completed.
+    ! Step 6: convert annual SLA only for the plant functional types that have a fitted
+    ! SLA model; retain the static lctlib value until the first previous-year climate
+    ! has been completed.
+    ! Comment corrected after the trait generalisation (it said PFT13 only).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
@@ -423,11 +433,16 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    ! Use the annual SLA where it is valid, else the lctlib value. The unit conversion
+    ! of this type is taken out of the loop, as a scalar, before the loop is entered.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     IF (apply_dynamic_traits) THEN
+      sla_to_specificleafarea_c = trait_sla_to_specificleafarea_c(lib_id)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (pft13_sla_pred(ic) > 0._wp) THEN
-          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
+          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * sla_to_specificleafarea_c
         ELSE
           specificLeafArea_C_active(ic) = specificLeafArea_C_param
         END IF

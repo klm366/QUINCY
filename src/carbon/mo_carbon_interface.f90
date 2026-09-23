@@ -169,6 +169,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
+    ! True when the annual SLA is used on this tile (formerly apply_pft13_traits).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL                      :: apply_dynamic_traits
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
@@ -324,7 +327,11 @@ CONTAINS
 
     ! Variables needed with forest regrowth
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
+    ! lctlib id of the tile's primary lct, and the SLA unit conversion for that type.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     INTEGER :: lib_id
+    REAL(wp) :: sla_to_specificleafarea_c
 
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
@@ -352,13 +359,17 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
 
     ! Step 6: use annual SLA in carbon allocation and in the SLA field
-    ! collected by NLCC, but only for PFT13 and only after valid prediction.
+    ! collected by NLCC, but only for the plant functional types that have a fitted
+    ! SLA model and only after valid prediction.
+    ! Comment corrected after the trait generalisation (it said PFT13 only).
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! Supply the bounded annual SLA to carbon allocation for those plant
-      ! functional types that have a fitted SLA model and
-      ! CARBON memory; otherwise retain the static lctlib SLA.
+      ! Supply the bounded annual SLA to carbon allocation and CARBON memory for those
+      ! plant functional types that have a fitted SLA model; otherwise retain the
+      ! static lctlib SLA.
       ! Generalisation of the annual SLA application from PFT13 to every plant
       !   functional type carrying a fitted SLA model.
       ! Author: Dr. Sri Nandini-Weiß
@@ -375,11 +386,16 @@ CONTAINS
     END IF
 
     lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
+    ! Use the annual SLA where it is valid, else the lctlib value. The unit conversion
+    ! of this type is taken out of the loop, as a scalar, before the loop is entered.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     IF (apply_dynamic_traits) THEN
+      sla_to_specificleafarea_c = trait_sla_to_specificleafarea_c(lib_id)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (pft13_sla_pred(ic) > 0._wp) THEN
-          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
+          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * sla_to_specificleafarea_c
         ELSE
           specificLeafArea_C_active(ic) = lctlib_specificLeafArea_C
         END IF

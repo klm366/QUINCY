@@ -24,6 +24,9 @@ MODULE mo_jsb_model_usecases
   USE mo_exception,           ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+  ! COAST_ added to the process identifiers.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               CLIMBUF_, TRAIT_, COAST_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
     &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
@@ -336,9 +339,11 @@ CONTAINS
         IF (model%processes(TRAIT_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(TRAIT_, ON_LEAFS_, AGGREGATE_)
         END IF
-    ! Coastal-constraint process for mangrove salinity and tidal inundation.
-    ! Author: Dr. Sri Nandini-Weiß
-    ! Date: 2026-09-23
+        ! Coastal-constraint process for mangrove salinity and tidal inundation: run on the
+        ! leaves of the vegetation tile and aggregate upwards. The process itself acts only
+        ! on the mangrove tile.
+        ! Author: Dr. Sri Nandini-Weiß
+        ! Date: 2026-09-23
         IF (model%processes(COAST_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(COAST_, ON_LEAFS_, AGGREGATE_)
         END IF
@@ -470,9 +475,11 @@ CONTAINS
         IF (model%processes(TRAIT_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(TRAIT_, ON_LEAFS_, AGGREGATE_)
         END IF
-    ! Coastal-constraint process for mangrove salinity and tidal inundation.
-    ! Author: Dr. Sri Nandini-Weiß
-    ! Date: 2026-09-23
+        ! Coastal-constraint process for mangrove salinity and tidal inundation: run on the
+        ! leaves of the vegetation tile and aggregate upwards. The process itself acts only
+        ! on the mangrove tile.
+        ! Author: Dr. Sri Nandini-Weiß
+        ! Date: 2026-09-23
         IF (model%processes(COAST_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(COAST_, ON_LEAFS_, AGGREGATE_)
         END IF

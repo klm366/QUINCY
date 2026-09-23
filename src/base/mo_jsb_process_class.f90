@@ -37,6 +37,9 @@ MODULE mo_jsb_process_class
   PRIVATE
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
+  ! COAST_ (coastal-constraint process) added to the public process identifiers.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     &       CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, TRAIT_, COAST_, &
     &       Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
@@ -66,6 +69,9 @@ MODULE mo_jsb_process_class
 
   ! -------------------------------------------------------------------------------------------------- !
   ! Assign identifiers to processes
+  ! COAST_ appended after TRAIT_ as the last identifier (28).
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           CLIMBUF_, FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
@@ -158,6 +164,9 @@ CONTAINS
       return_value = 'sb'
     CASE (TRAIT_)
       return_value = 'trait'
+    ! Name of the coastal-constraint process.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     CASE (COAST_)
       return_value = 'coast'
     CASE DEFAULT
@@ -232,6 +241,9 @@ CONTAINS
       return_value = SB_
     CASE ('trait')
       return_value = TRAIT_
+    ! Identifier of the coastal-constraint process.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     CASE ('coast')
       return_value = COAST_
     CASE DEFAULT

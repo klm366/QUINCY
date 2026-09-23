@@ -16,6 +16,9 @@
 MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
+  ! COAST_ added to the processes used in this module.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
     &                   CLIMBUF_, TRAIT_, COAST_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
@@ -159,6 +162,9 @@ CONTAINS
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
+    ! Initialisation of the coastal-constraint process.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_coast_init,          ONLY: coast_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
@@ -240,12 +246,6 @@ CONTAINS
       END IF
       IF (model%processes(TRAIT_)%p%config%active) THEN
         CALL model%Queue_task(TRAIT_, "trait")
-      END IF
-      ! Coastal control factors, needed before the task "assimilation" of ASSIMI_.
-      ! Author: Dr. Sri Nandini-Weiß
-      ! Date: 2026-09-23
-      IF (model%processes(COAST_)%p%config%active) THEN
-        CALL model%Queue_task(COAST_, "coast")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
@@ -333,6 +333,15 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
+      ! Coastal control factors of the mangrove tile (COAST_). The task does not change
+      ! state variables and is not needed by land-cover change, so it runs after the soil
+      ! hydrology, which provides the rooting depth, and before the assimilation tasks,
+      ! of which update_assimilation uses the combined factor.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
+      IF (model%processes(COAST_)%p%config%active) THEN
+        CALL model%Queue_task(COAST_, "coast")
+      END IF
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation
         CALL model%Queue_task(ASSIMI_, "assimilation_scaling_factors")

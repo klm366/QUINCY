@@ -33,7 +33,7 @@ MODULE mo_coast_interface
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class, ONLY: t_jsb_process
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_coast_process,     ONLY: mangrove_lct_id
+  USE mo_coast_constants,   ONLY: mangrove_lct_id, ntide
 
   dsl4jsb_Use_processes COAST_, HYDRO_
   dsl4jsb_Use_config(COAST_)
@@ -89,8 +89,10 @@ CONTAINS
   !>#### Update the coastal control factors
   !>
   !> We here evaluate, for the current time step, the tide height from the harmonic
-  !> constants, the inundated, ventilated and anoxic fractions of belowground root, and
-  !> the salinity and tidal-inundation control factors of Zhao et al. (2025).
+  !> constants, the inundated, ventilated and anoxic fractions of belowground root, the
+  !> salinity and tidal-inundation control factors of Zhao et al. (2025), and their
+  !> product, the scalar coastal stress factor control_coastal. Only cells inside
+  !> coast_mask are evaluated; about 600 of the 20480 cells of R02B04 carry mangrove.
   !>
   !> The aboveground root biomasses in the ventilation term are not prognostic in JSBACH.
   !> The ventilation thresholds of the configuration are passed in their place, which
@@ -101,9 +103,10 @@ CONTAINS
   SUBROUTINE update_coast(tile, options)
 
     USE mo_jsb_time,      ONLY: get_year, get_month, get_day, get_secs_of_day
-    USE mo_coast_process, ONLY: calc_salinity_control, calc_tide_height, calc_bgr_inundated,   &
-      &                         calc_bgr_ventilated, calc_inundation_control, calc_coastal_factor, &
-      &                         days_since_2000, ntide
+    USE mo_coast_util,    ONLY: days_since_2000
+    USE mo_coast_process, ONLY: calc_salinity_control, calc_tide_arguments, calc_tide_height,     &
+      &                         calc_bgr_inundated, calc_bgr_ventilated, calc_inundation_control, &
+      &                         calc_coastal_factor
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -113,13 +116,15 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, ic
     INTEGER  :: lib_id
     REAL(wp) :: time_hours            !< Model time since 1 January 2000 [h]
-    REAL(wp) :: hre(ntide), him(ntide)
+    REAL(wp) :: hre(ntide), him(ntide)          !< Complex amplitudes of the constituents in one cell [m]
+    REAL(wp) :: cos_arg(ntide), sin_arg(ntide)  !< Phase terms of the constituents at the model time []
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_coast'
 
     dsl4jsb_Def_config(COAST_)
     dsl4jsb_Def_memory(COAST_)
     dsl4jsb_Def_memory(HYDRO_)
 
+    dsl4jsb_Real2D_onChunk :: coast_mask
     dsl4jsb_Real2D_onChunk :: salinity
     dsl4jsb_Real2D_onChunk :: tide_hre_m2
     dsl4jsb_Real2D_onChunk :: tide_him_m2
@@ -167,6 +172,7 @@ CONTAINS
     dsl4jsb_Get_memory(COAST_)
     dsl4jsb_Get_memory(HYDRO_)
 
+    dsl4jsb_Get_var2D_onChunk(COAST_, coast_mask)            ! in
     dsl4jsb_Get_var2D_onChunk(COAST_, salinity)              ! in
     dsl4jsb_Get_var2D_onChunk(COAST_, tide_hre_m2)           ! in
     dsl4jsb_Get_var2D_onChunk(COAST_, tide_him_m2)           ! in
@@ -199,14 +205,29 @@ CONTAINS
       &                                        get_day(options%current_datetime)), wp)        &
       &        + get_secs_of_day(options%current_datetime) / 3600._wp
 
+    ! The phase terms depend on the time only, so they are evaluated once for all cells
+    CALL calc_tide_arguments(time_hours, cos_arg, sin_arg)
+
     DO ic = 1, nc
+
+      ! Cells without mangrove: neutral values, the equations are not evaluated
+      IF (coast_mask(ic) < 0.5_wp) THEN
+        tide_height(ic)          = 0._wp
+        bgr_fract_inundated(ic)  = 0._wp
+        bgr_fract_ventilated(ic) = 0._wp
+        bgr_fract_anoxic(ic)     = 0._wp
+        control_salinity(ic)     = 1._wp
+        control_inundation(ic)   = 1._wp
+        control_coastal(ic)      = 1._wp
+        CYCLE
+      END IF
 
       hre = [ tide_hre_m2(ic), tide_hre_s2(ic), tide_hre_n2(ic), tide_hre_k2(ic), &
         &     tide_hre_k1(ic), tide_hre_o1(ic), tide_hre_p1(ic), tide_hre_q1(ic) ]
       him = [ tide_him_m2(ic), tide_him_s2(ic), tide_him_n2(ic), tide_him_k2(ic), &
         &     tide_him_k1(ic), tide_him_o1(ic), tide_him_p1(ic), tide_him_q1(ic) ]
 
-      tide_height(ic) = calc_tide_height(hre, him, time_hours)
+      tide_height(ic) = calc_tide_height(hre, him, cos_arg, sin_arg)
 
       bgr_fract_inundated(ic) = calc_bgr_inundated(tide_height(ic), root_depth(ic))
 
