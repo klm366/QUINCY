@@ -395,8 +395,9 @@ CONTAINS
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited
-    USE mo_trait_process,       ONLY: pft13_vcmax25_to_carboxrate, &
-      &                                    pft13_jmax25_to_etransport
+    USE mo_trait_process,       ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
+      &                               trait_jmax25_to_etransport,             &
+      &                               has_dynamic_vcmax25, has_dynamic_jmax25
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -426,7 +427,8 @@ CONTAINS
       & CarboxRate, &
       & ETransport
     REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
-    LOGICAL :: C4Flag, apply_pft13_traits
+    LOGICAL :: C4Flag, apply_dynamic_traits
+    INTEGER :: lib_id
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
@@ -460,14 +462,19 @@ CONTAINS
 
     ! Step 6: annual traits are read only on PFT13 and only when explicitly
     ! enabled. Zero restart/initial values fall back to the static lctlib.
-    apply_pft13_traits = .FALSE.
+    apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
-      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
-      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
-        &                  TRIM(tile%name) == 'pft13'
-      IF (apply_pft13_traits) THEN
+      ! Replace the static tile-level Vcmax25 and Jmax25 with bounded annual
+      ! grid-cell predictions, for those plant functional types that have a
+      ! fitted model for both. All others retain their lctlib values.
+      lib_id = 0
+      IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
+      apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
+        &                    lib_id >= 1 .AND. lib_id <= max_lct_id
+      IF (apply_dynamic_traits) apply_dynamic_traits = &
+        & has_dynamic_vcmax25(lib_id) .AND. has_dynamic_jmax25(lib_id)
+      IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
@@ -498,12 +505,12 @@ CONTAINS
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
     !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
-    IF (apply_pft13_traits) THEN
+    IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
-          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * pft13_vcmax25_to_carboxrate
-          ETransport_active(ic) = pft13_jmax25_pred(ic) * pft13_jmax25_to_etransport
+          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
+          ETransport_active(ic) = pft13_jmax25_pred(ic) * trait_jmax25_to_etransport
         ELSE
           CarboxRate_active(ic) = CarboxRate
           ETransport_active(ic) = ETransport
@@ -772,8 +779,9 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
-    USE mo_trait_process,   ONLY: pft13_vcmax25_to_carboxrate, &
-      &                              pft13_jmax25_to_etransport
+    USE mo_trait_process,   ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
+      &                           trait_jmax25_to_etransport,             &
+      &                           has_dynamic_vcmax25, has_dynamic_jmax25
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -785,7 +793,7 @@ CONTAINS
     REAL(wp)                   :: dtime
     REAL(wp)                   :: CarboxRate, ETransport
     REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
-    LOGICAL                    :: apply_pft13_traits
+    LOGICAL                    :: apply_dynamic_traits
     INTEGER                    :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
@@ -854,14 +862,19 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
 
     ! Step 6: activate the bounded annual capacities only on PFT13.
-    apply_pft13_traits = .FALSE.
+    apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
-      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
-      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
-        &                  TRIM(tile%name) == 'pft13'
-      IF (apply_pft13_traits) THEN
+      ! Replace the static tile-level Vcmax25 and Jmax25 with bounded annual
+      ! grid-cell predictions, for those plant functional types that have a
+      ! fitted model for both. All others retain their lctlib values.
+      lib_id = 0
+      IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
+      apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
+        &                    lib_id >= 1 .AND. lib_id <= max_lct_id
+      IF (apply_dynamic_traits) apply_dynamic_traits = &
+        & has_dynamic_vcmax25(lib_id) .AND. has_dynamic_jmax25(lib_id)
+      IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
@@ -911,12 +924,12 @@ CONTAINS
     ETransport = dsl4jsb_Lctlib_param(ETransport)
 
     !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
-    IF (apply_pft13_traits) THEN
+    IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
-          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * pft13_vcmax25_to_carboxrate
-          ETransport_active(ic) = pft13_jmax25_pred(ic) * pft13_jmax25_to_etransport
+          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
+          ETransport_active(ic) = pft13_jmax25_pred(ic) * trait_jmax25_to_etransport
         ELSE
           CarboxRate_active(ic) = CarboxRate
           ETransport_active(ic) = ETransport

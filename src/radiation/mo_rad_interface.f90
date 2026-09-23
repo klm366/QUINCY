@@ -893,7 +893,8 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_vgrid
 #ifndef __QUINCY_STANDALONE__
-    USE mo_trait_process,       ONLY: pft13_sla_to_specificleafarea_c
+    USE mo_trait_process,       ONLY: max_lct_id, trait_sla_to_specificleafarea_c, &
+      &                               has_dynamic_sla
 #endif
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -910,7 +911,7 @@ CONTAINS
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
-    LOGICAL                         :: apply_pft13_traits
+    LOGICAL                         :: apply_dynamic_traits
     REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
     REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< helper variable
@@ -1055,15 +1056,18 @@ CONTAINS
     model_scheme = model%config%model_scheme
 
     ! Step 6: this branch affects only the JSBACH PFT13 tile.
-    apply_pft13_traits = .FALSE.
+    apply_dynamic_traits = .FALSE.
 #ifndef __QUINCY_STANDALONE__
     IF (model_scheme == MODEL_JSBACH .AND. model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! For PFT13 only, supply bounded annual SLA to the existing litter-area
+      ! Supply the bounded annual SLA to the existing litter-area
       ! soil-albedo pathway; otherwise retain the static lctlib SLA.
-      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
-        &                  TRIM(tile%name) == 'pft13'
-      IF (apply_pft13_traits) THEN
+      lib_id = 0
+      IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
+      apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
+        &                    lib_id >= 1 .AND. lib_id <= max_lct_id
+      IF (apply_dynamic_traits) apply_dynamic_traits = has_dynamic_sla(lib_id)
+      IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
       END IF
@@ -1515,11 +1519,11 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
-            IF (apply_pft13_traits) THEN
+            IF (apply_dynamic_traits) THEN
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
               DO ic=1,nc
                 IF (pft13_sla_pred(ic) > 0._wp) THEN
-                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * pft13_sla_to_specificleafarea_c
+                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
                 ELSE
                   specificLeafArea_C_active(ic) = specificLeafArea_C_param
                 END IF

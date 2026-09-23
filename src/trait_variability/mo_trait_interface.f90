@@ -68,12 +68,14 @@ CONTAINS
 
   SUBROUTINE update_trait(tile, options)
 
-    USE mo_trait_process, ONLY: calc_pft13_trait_diagnostics
+    USE mo_trait_process, ONLY: calc_trait_diagnostics, max_lct_id, &
+      &                      has_dynamic_vcmax25, has_dynamic_jmax25, has_dynamic_sla
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     INTEGER :: iblk, ics, ice, nc
+    INTEGER :: lib_id
     LOGICAL :: new_year, lstart
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_trait'
 
@@ -99,7 +101,18 @@ CONTAINS
     nc   = options%nc
 
     IF (.NOT. tile%Is_process_calculated(TRAIT_)) RETURN
-    IF (TRIM(tile%name) /= 'pft13') RETURN
+
+    ! The trait equations are selected by the lctlib id of the tile's primary land
+    ! cover type. lcts(1) is always the primary lct; an id outside the coefficient
+    ! table, or a tile carrying no lct, is not a plant functional type tile.
+    IF (.NOT. ALLOCATED(tile%lcts)) RETURN
+    lib_id = tile%lcts(1)%lib_id
+    IF (lib_id < 1 .OR. lib_id > max_lct_id) RETURN
+
+    ! Plant functional types without a fitted model keep their static lctlib
+    ! parameters and are not evaluated.
+    IF (.NOT. (has_dynamic_vcmax25(lib_id) .OR. has_dynamic_jmax25(lib_id) .OR. &
+      &        has_dynamic_sla(lib_id))) RETURN
 
     new_year = is_newyear(options%current_datetime, options%dtime)
     lstart   = is_time_experiment_start(options%current_datetime)
@@ -127,7 +140,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, map_prev_year, climbuf)
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_mmtemp_prev_year, climbuf)
 
-    CALL calc_pft13_trait_diagnostics(                  &
+    CALL calc_trait_diagnostics(                        &
+      & lib_id,                                         &
       & mat_prev_year_climbuf,                          &
       & map_prev_year_climbuf,                          &
       & max_mmtemp_prev_year_climbuf,                   &

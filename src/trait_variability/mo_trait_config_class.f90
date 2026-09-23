@@ -30,12 +30,13 @@ MODULE mo_trait_config_class
     ! Author: Dr. Sri Nandini-Weiß
     ! Date: 2026-07-27
     ! .FALSE.: retain the validated diagnostic-only behavior.
-    ! .TRUE.: use bounded annual PFT13 traits in the JSBACH process calculations.
+    ! .TRUE.: use bounded annual traits in the JSBACH process calculations, for those
+    ! plant functional types that have a fitted model.
     ! Active annual trait use is opt-in: FALSE preserves the
     ! diagnostic-only configuration and prevents unintended physics changes.
     ! Active annual PFT13 trait use is opt-in: FALSE preserves the
     ! diagnostic-only configuration and prevents unintended physics changes.
-    LOGICAL :: l_apply_pft13_traits = .FALSE.
+    LOGICAL :: l_apply_dynamic_traits = .FALSE.
   CONTAINS
     PROCEDURE :: Init => Init_trait_config
   END TYPE t_trait_config
@@ -50,13 +51,13 @@ CONTAINS
 
     CLASS(t_trait_config), INTENT(inout) :: config
 
-    LOGICAL :: active, lrestart_cont, l_apply_pft13_traits
+    LOGICAL :: active, lrestart_cont, l_apply_dynamic_traits
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_trait_nml/ &
       & active,                  &
       & lrestart_cont,           &
-      & l_apply_pft13_traits,    &
+      & l_apply_dynamic_traits,    &
       & ic_filename,         &
       & bc_filename
 
@@ -67,7 +68,7 @@ CONTAINS
 
     active               = .FALSE.
     lrestart_cont        = .FALSE.
-    l_apply_pft13_traits = .FALSE.
+    l_apply_dynamic_traits = .FALSE.
     bc_filename   = 'bc_land_trait.nc'
     ic_filename   = 'ic_land_trait.nc'
 
@@ -78,7 +79,7 @@ CONTAINS
 
     config%active               = active
     config%lrestart_cont        = lrestart_cont
-    config%l_apply_pft13_traits = l_apply_pft13_traits
+    config%l_apply_dynamic_traits = l_apply_dynamic_traits
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 

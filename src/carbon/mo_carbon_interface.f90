@@ -155,7 +155,8 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
-    USE mo_trait_process,     ONLY: pft13_sla_to_specificleafarea_c
+    USE mo_trait_process,     ONLY: max_lct_id, trait_sla_to_specificleafarea_c, &
+      &                             has_dynamic_sla
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -165,7 +166,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
-    LOGICAL                      :: apply_pft13_traits
+    LOGICAL                      :: apply_dynamic_traits
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
@@ -348,25 +349,29 @@ CONTAINS
 
     ! Step 6: use annual SLA in carbon allocation and in the SLA field
     ! collected by NLCC, but only for PFT13 and only after valid prediction.
-    apply_pft13_traits = .FALSE.
+    apply_dynamic_traits = .FALSE.
     IF (model%Is_process_enabled(TRAIT_)) THEN
       dsl4jsb_Get_config(TRAIT_)
-      ! For PFT13 only, supply bounded annual SLA to carbon allocation and
+      ! Supply the bounded annual SLA to carbon allocation for those plant
+      ! functional types that have a fitted SLA model and
       ! CARBON memory; otherwise retain the static lctlib SLA.
-      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
-        &                  TRIM(tile%name) == 'pft13'
-      IF (apply_pft13_traits) THEN
+      lib_id = 0
+      IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
+      apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
+        &                    lib_id >= 1 .AND. lib_id <= max_lct_id
+      IF (apply_dynamic_traits) apply_dynamic_traits = has_dynamic_sla(lib_id)
+      IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
       END IF
     END IF
 
     lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
-    IF (apply_pft13_traits) THEN
+    IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         IF (pft13_sla_pred(ic) > 0._wp) THEN
-          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * pft13_sla_to_specificleafarea_c
+          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
         ELSE
           specificLeafArea_C_active(ic) = lctlib_specificLeafArea_C
         END IF
