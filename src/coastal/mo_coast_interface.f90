@@ -248,10 +248,14 @@ CONTAINS
         & bgr_fract_ventilated(ic),                           &
         & dsl4jsb_Config(COAST_)%cin_min)
 
+      ! Salinity factor, with the one-sided sensitivity switch passed on.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
       control_salinity(ic) = calc_salinity_control(           &
         & salinity(ic),                                       &
         & dsl4jsb_Config(COAST_)%cs_min,                      &
-        & dsl4jsb_Config(COAST_)%l_normalise_cs)
+        & dsl4jsb_Config(COAST_)%l_normalise_cs,              &
+        & dsl4jsb_Config(COAST_)%l_cs_one_sided)
 
       control_coastal(ic) = calc_coastal_factor(              &
         & control_salinity(ic),                               &

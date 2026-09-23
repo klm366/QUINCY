@@ -50,6 +50,12 @@ MODULE mo_coast_constants
   !> coefficients give 0.8402. It is used by the normalisation switch l_normalise_cs.
   REAL(wp), PARAMETER :: cs_quadratic_maximum = cs_a0 - cs_a1 * cs_a1 / (4._wp * cs_a2)
 
+  !> Salinity at the maximum of the quadratic, -cs_a1/(2*cs_a2) = 29.907 PSS [PSS]
+  !> Used by the sensitivity switch l_cs_one_sided.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
+  REAL(wp), PARAMETER :: cs_salinity_optimum = -cs_a1 / (2._wp * cs_a2)
+
   !> Number of tidal constituents, in the order M2, S2, N2, K2, K1, O1, P1, Q1 [-]
   INTEGER,  PARAMETER :: ntide = 8
 

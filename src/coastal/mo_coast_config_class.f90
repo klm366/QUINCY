@@ -35,10 +35,14 @@ MODULE mo_coast_config_class
   PUBLIC :: t_coast_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_coast_config
+    ! l_cs_one_sided added: sensitivity switch for the salinity factor.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     LOGICAL  :: &
       & l_apply_salinity_stress, & !< Apply the salinity control factor to assimilation
       & l_apply_tidal_stress,    & !< Apply the tidal-inundation control factor to assimilation
-      & l_normalise_cs             !< Scale the salinity factor so that its maximum is one
+      & l_normalise_cs,          & !< Scale the salinity factor so that its maximum is one
+      & l_cs_one_sided             !< No salinity penalty below the optimum salinity
     REAL(wp) :: &
       & cs_min,                  & !< Minimum of the salinity control factor
       & cin_min,                 & !< Minimum of the tidal-inundation control factor
@@ -71,11 +75,17 @@ CONTAINS
     CLASS(t_coast_config), INTENT(inout) :: config
 
     LOGICAL  :: active, lrestart_cont
-    LOGICAL  :: l_apply_salinity_stress, l_apply_tidal_stress, l_normalise_cs
+    ! l_cs_one_sided added to the local namelist variables.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    LOGICAL  :: l_apply_salinity_stress, l_apply_tidal_stress, l_normalise_cs, l_cs_one_sided
     REAL(wp) :: cs_min, cin_min, b_agrs_lim, b_agrp_lim
     REAL(wp) :: vent_weight_s, vent_weight_p, tree_density
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
+    ! l_cs_one_sided added to jsb_coast_nml.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     NAMELIST /jsb_coast_nml/     &
       & active,                  &
       & lrestart_cont,           &
@@ -84,6 +94,7 @@ CONTAINS
       & l_apply_salinity_stress, &
       & l_apply_tidal_stress,    &
       & l_normalise_cs,          &
+      & l_cs_one_sided,          &
       & cs_min,                  &
       & cin_min,                 &
       & b_agrs_lim,              &
@@ -109,6 +120,13 @@ CONTAINS
     ! about 16 percent is applied even at the most favourable salinity. Setting it true
     ! divides by that maximum and is a deliberate departure from the publication.
     l_normalise_cs          = .FALSE.
+    ! Sensitivity switch: with l_cs_one_sided true, salinities below the optimum of the
+    ! quadratic (29.907 PSS) are treated as the optimum, so only high salinity reduces
+    ! productivity. The published low-salinity branch rests on few observations. This is
+    ! a departure from the publication; the default keeps Equation 1 as published.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    l_cs_one_sided          = .FALSE.
     cs_min                  = 0.5_wp     ! Zhao et al. (2025), Table 1
     cin_min                 = 0.5_wp     ! Zhao et al. (2025), Table 1
     b_agrs_lim              = 4.0_wp     ! Zhao et al. (2025), Section 2.2.3
@@ -129,6 +147,10 @@ CONTAINS
     config%l_apply_salinity_stress = l_apply_salinity_stress
     config%l_apply_tidal_stress    = l_apply_tidal_stress
     config%l_normalise_cs          = l_normalise_cs
+    ! Store the one-sided salinity switch.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    config%l_cs_one_sided          = l_cs_one_sided
     config%cs_min                  = cs_min
     config%cin_min                 = cin_min
     config%b_agrs_lim              = b_agrs_lim

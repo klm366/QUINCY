@@ -35,7 +35,11 @@ MODULE mo_coast_process
 
   USE mo_kind,               ONLY: wp
   USE mo_jsb_math_constants, ONLY: pi, deg2rad
-  USE mo_coast_constants,    ONLY: cs_a2, cs_a1, cs_a0, cs_quadratic_maximum, ntide, tide_speed, &
+  ! cs_salinity_optimum imported for the one-sided salinity option.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
+  USE mo_coast_constants,    ONLY: cs_a2, cs_a1, cs_a0, cs_quadratic_maximum, cs_salinity_optimum, &
+    &                              ntide, tide_speed,                                                &
     &                              h_agrs_max, h_agrp_max, h_agrp_per_biomass
 
   IMPLICIT NONE
@@ -62,18 +66,29 @@ CONTAINS
   !> coefficients were fitted against. With Cs_min = 0.5 and without normalisation the
   !> factor exceeds its minimum only between 25.92 and 33.89 PSS.
   !>
+  !> With l_one_sided true, a salinity below the optimum of the quadratic is replaced by
+  !> the optimum, so only salinity above it reduces the factor. This is a sensitivity
+  !> option and not part of the publication.
+  !>
   ! -------------------------------------------------------------------------------------------------------- !
-  ELEMENTAL PURE FUNCTION calc_salinity_control(salinity, cs_min, l_normalise) RESULT(cs)
+  ! Argument l_one_sided added for the sensitivity switch l_cs_one_sided.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
+  ELEMENTAL PURE FUNCTION calc_salinity_control(salinity, cs_min, l_normalise, l_one_sided) RESULT(cs)
 
     REAL(wp), INTENT(in) :: &
       & salinity,           & !< Long-term mean sea surface salinity [PSS]
       & cs_min                !< Minimum value of the control factor []
     LOGICAL,  INTENT(in) :: &
-      & l_normalise           !< Scale so that the maximum of the factor is one
+      & l_normalise,        & !< Scale so that the maximum of the factor is one
+      & l_one_sided           !< No reduction below the optimum salinity
 
     REAL(wp) :: cs            !< RESULT: control factor of salinity []
+    REAL(wp) :: s_eff         !< Salinity entering the quadratic [PSS]
 
-    cs = cs_a2 * salinity * salinity + cs_a1 * salinity + cs_a0
+    s_eff = salinity
+    IF (l_one_sided) s_eff = MAX(salinity, cs_salinity_optimum)
+    cs = cs_a2 * s_eff * s_eff + cs_a1 * s_eff + cs_a0
     IF (l_normalise) cs = cs / cs_quadratic_maximum
     cs = MIN(1._wp, MAX(cs, cs_min))
 
