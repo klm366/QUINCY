@@ -416,11 +416,16 @@ CONTAINS
     !  ARGUMENTS
     LOGICAL,  INTENT(in) ::      &
       & C4Flag
-    REAL(wp), INTENT(in) ::      &
-      & CarboxRate,              &
-      & ETransport
-
+    ! Step 6: PFT13 capacities may vary spatially after annual activation.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-07-27
+    ! Grid-cell arrays are required because annual PFT13 Vcmax25 and Jmax25
+    ! vary spatially; the established photosynthesis equations remain unchanged.
+    ! Grid-cell arrays are required because annual PFT13 Vcmax25 and Jmax25
+    ! vary spatially; the established photosynthesis equations are unchanged.
     REAL(wp), INTENT(in), DIMENSION(:) ::      &
+      & CarboxRate,              &
+      & ETransport,              &
       & t_air,                   & ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,               & ! Surface pressure
       & par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -527,15 +532,16 @@ CONTAINS
         KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air(ic)**(-1) )
         KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air(ic)**(-1) )
         GAM = MAX (1.7E-6_wp * TC, 0._wp)
-        VCMAX = CarboxRate * N_scaling_factors(ic) &
+        VCMAX = CarboxRate(ic) * N_scaling_factors(ic) &
                   * EXP(EV * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
 
         DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol(ic),0.0_wp))
         HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
-        DARK_RESP = FRDC3 * CarboxRate * N_scaling_factors(ic)          &     ! RD=RD0*N_scaling_factors*EXP(Energy scaled relative 25C)
+        ! RD=RD0*N_scaling_factors*EXP(Energy scaled relative 25C)
+        DARK_RESP = FRDC3 * CarboxRate(ic) * N_scaling_factors(ic) &
                   * EXP(ER * T0  / R_gas * T1**(-1) * t_air(ic)**(-1) ) &            ! with RD0 proportional PVM0 at 25C
                   * HITINHIB * DARKINHIB
-        JMAX = ETransport * N_scaling_factors(ic)       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
+        JMAX = ETransport(ic) * N_scaling_factors(ic)       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
                   * TC / 25._wp
         JMAX = MAX(JMAX, minOfMaxCarboxrate)
 
@@ -662,14 +668,16 @@ CONTAINS
         !   => A = JC - RD ^ A = JE - RD
         !---------------------------------------------------------------------------------
 
-        K = ETransport * 1.E3_wp * N_scaling_factors(ic)          &      ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        ! K=K0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        K = ETransport(ic) * 1.E3_wp * N_scaling_factors(ic) &
                 * EXP(EK * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )     ! in mmol CO2 Pecase for C4.
-        VCMAX = CarboxRate * N_scaling_factors(ic) &                     ! PVM=PVM0*N_scaling_factors*EXP(Energie
+        VCMAX = CarboxRate(ic) * N_scaling_factors(ic) &                     ! PVM=PVM0*N_scaling_factors*EXP(Energie
                   * EXP(EV * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )
 
         DARKINHIB = 0.5_wp + 0.5_wp * EXP(-2.e5_wp * MAX(par_down_mol(ic),0.0_wp))
         HITINHIB  = 1._wp / ( 1._wp + EXP( 1.3_wp * ( TC - 55._wp ) ) )
-        DARK_RESP = FRDC4 * CarboxRate * N_scaling_factors(ic)  &           ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative
+        ! DARK_RESP=RD0*N_scaling_factors*EXP(Energie scaled relative 25C)
+        DARK_RESP = FRDC4 * CarboxRate(ic) * N_scaling_factors(ic) &
                   * EXP(ER * T0 / R_gas * T1**(-1) * t_air(ic)**(-1) )   & !  25C) with RD0 proportional PVM0 at 25C
                   * HITINHIB * DARKINHIB                               ! Abweichung ab der 16. Stelle nach dem Komma
         !---------------------------------------------------------------------------------

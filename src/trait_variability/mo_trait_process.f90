@@ -18,12 +18,29 @@ MODULE mo_trait_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                    ONLY: wp
-  USE mo_jsb_physical_constants, ONLY: tmelt
+  USE mo_jsb_physical_constants, ONLY: tmelt, molar_mass_C
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: calc_pft13_trait_diagnostics
+  PUBLIC :: pft13_vcmax25_to_carboxrate
+  PUBLIC :: pft13_jmax25_to_etransport
+  PUBLIC :: pft13_sla_to_specificleafarea_c
+
+  ! Step 6 unit conversions for active JSBACH use.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-07-27
+  ! Vcmax25 and Jmax25 diagnostics are stored in umol m-2 s-1, whereas the
+  ! assimilation routines use mol m-2 s-1. The SLA regression is stored in
+  ! m2 gC-1, whereas specificLeafArea_C is m2 molC-1.
+  ! Convert bounded annual trait predictions to the units required by
+  ! the existing JSBACH assimilation and SLA process interfaces.
+  ! Convert bounded annual PFT13 predictions to the units required by
+  ! the existing JSBACH assimilation and SLA process interfaces.
+  REAL(wp), PARAMETER :: pft13_vcmax25_to_carboxrate      = 1.e-6_wp
+  REAL(wp), PARAMETER :: pft13_jmax25_to_etransport      = 1.e-6_wp
+  REAL(wp), PARAMETER :: pft13_sla_to_specificleafarea_c = molar_mass_C
 
   REAL(wp), PARAMETER :: pft13_vcmax25_intercept = 49.5690779208497_wp
   REAL(wp), PARAMETER :: pft13_vcmax25_mat_coef  = -0.391997574087549_wp

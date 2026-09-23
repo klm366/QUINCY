@@ -37,11 +37,12 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_, TRAIT_
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(TRAIT_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(ASSIMI_)
@@ -49,6 +50,7 @@ MODULE mo_carbon_interface
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(L2A_)
+  dsl4jsb_Use_memory(TRAIT_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -153,6 +155,7 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
+    USE mo_trait_process,     ONLY: pft13_sla_to_specificleafarea_c
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -162,6 +165,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
+    LOGICAL                      :: apply_pft13_traits
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
@@ -179,13 +183,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
     REAL(wp), DIMENSION(options%nc) :: MaxLai
-    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes, specificLeafArea_C_active
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(TRAIT_)
+    dsl4jsb_Def_config(TRAIT_)
 
     CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
     dsl4jsb_Def_memory_tile(CLIMBUF_, climbuf)
@@ -193,6 +199,7 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
+    dsl4jsb_Real2D_onChunk ::  pft13_sla_pred
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -320,7 +327,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes)
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, specificLeafArea_C_active)
 
     iblk  = options%iblk
     ics   = options%ics
@@ -338,6 +345,42 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
+
+    ! Step 6: use annual SLA in carbon allocation and in the SLA field
+    ! collected by NLCC, but only for PFT13 and only after valid prediction.
+    apply_pft13_traits = .FALSE.
+    IF (model%Is_process_enabled(TRAIT_)) THEN
+      dsl4jsb_Get_config(TRAIT_)
+      ! For PFT13 only, supply bounded annual SLA to carbon allocation and
+      ! CARBON memory; otherwise retain the static lctlib SLA.
+      ! For PFT13 only, supply bounded annual SLA to carbon allocation and
+      ! CARBON memory; otherwise retain the static lctlib SLA.
+      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
+        &                  TRIM(tile%name) == 'pft13'
+      IF (apply_pft13_traits) THEN
+        dsl4jsb_Get_memory(TRAIT_)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
+      END IF
+    END IF
+
+    lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
+    IF (apply_pft13_traits) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        IF (pft13_sla_pred(ic) > 0._wp) THEN
+          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * pft13_sla_to_specificleafarea_c
+        ELSE
+          specificLeafArea_C_active(ic) = lctlib_specificLeafArea_C
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        specificLeafArea_C_active(ic) = lctlib_specificLeafArea_C
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
     ! climbuf, as the pointer name is appended to the climate buffer variables below.
@@ -608,7 +651,7 @@ CONTAINS
           &  lctlib_tau_c_woods,                                & ! in
           &  lctlib_LAI_shed_constant,                          & ! in
           &  lctlib_Max_C_content_woods,                        & ! in
-          &  lctlib_specificLeafArea_C,                         & ! in
+          &  specificLeafArea_C_active(ic),                    & ! in
           &  lctlib_reserveC2leafC,                             & ! in
           &  lctlib_PhenologyType,                              & ! in
           !
@@ -756,10 +799,13 @@ CONTAINS
 
     ! Write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
     IF (model%Is_process_enabled(NLCC_)) THEN
-      lctlib_specificLeafArea_C = dsl4jsb_Lctlib_param(specificLeafArea_C)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        sla(ic) = lctlib_specificLeafArea_C
+        ! Store the effective SLA in CARBON memory so established downstream
+        ! consumers receive the same active or fallback value.
+        ! Store the effective SLA in CARBON memory so established downstream
+        ! consumers receive the same active or fallback value.
+        sla(ic) = specificLeafArea_C_active(ic)
       END DO
       !$ACC END PARALLEL LOOP
     END IF

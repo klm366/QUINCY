@@ -40,11 +40,12 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_
+  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_, TRAIT_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(TRAIT_)
 
   ! Use of process memories (t_assimi_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -53,6 +54,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TRAIT_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -393,6 +395,8 @@ CONTAINS
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited
+    USE mo_trait_process,       ONLY: pft13_vcmax25_to_carboxrate, &
+      &                                    pft13_jmax25_to_etransport
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -411,15 +415,18 @@ CONTAINS
     !dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(TRAIT_)
 
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(TRAIT_)
 
     ! Declare pointers to variables in memory
     INTEGER :: ncanopy              ! number of canopy layers
     REAL(wp) :: &
       & CarboxRate, &
       & ETransport
-    LOGICAL :: C4Flag
+    REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
+    LOGICAL :: C4Flag, apply_pft13_traits
 
     dsl4jsb_Real2D_onChunk :: t_air                 ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: press_srf             ! Surface pressure
@@ -433,6 +440,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
+    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
+    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
 
 
     ! Get local variables from options argument
@@ -448,6 +457,24 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(ASSIMI_)
+
+    ! Step 6: annual traits are read only on PFT13 and only when explicitly
+    ! enabled. Zero restart/initial values fall back to the static lctlib.
+    apply_pft13_traits = .FALSE.
+    IF (model%Is_process_enabled(TRAIT_)) THEN
+      dsl4jsb_Get_config(TRAIT_)
+      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
+      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
+      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
+      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
+      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
+        &                  TRIM(tile%name) == 'pft13'
+      IF (apply_pft13_traits) THEN
+        dsl4jsb_Get_memory(TRAIT_)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
+      END IF
+    END IF
 
     ! Get process memories
     dsl4jsb_Get_memory(ASSIMI_)
@@ -472,6 +499,28 @@ CONTAINS
     CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
+    !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
+    IF (apply_pft13_traits) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
+          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * pft13_vcmax25_to_carboxrate
+          ETransport_active(ic) = pft13_jmax25_pred(ic) * pft13_jmax25_to_etransport
+        ELSE
+          CarboxRate_active(ic) = CarboxRate
+          ETransport_active(ic) = ETransport
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        CarboxRate_active(ic) = CarboxRate
+        ETransport_active(ic) = ETransport
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
@@ -484,8 +533,8 @@ CONTAINS
       DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
         & C4Flag,                      &
-        & CarboxRate,                  &
-        & ETransport,                  &
+        & CarboxRate_active(ic),       &
+        & ETransport_active(ic),       &
         & t_air(ic),                   &
         & press_srf(ic),               &
         & par_down_mol(ic),            &
@@ -504,6 +553,7 @@ CONTAINS
       canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
     END DO
     !$ACC END PARALLEL
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -724,6 +774,8 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
+    USE mo_trait_process,   ONLY: pft13_vcmax25_to_carboxrate, &
+      &                              pft13_jmax25_to_etransport
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -733,6 +785,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice, nc, ic
     REAL(wp)                   :: dtime
+    REAL(wp)                   :: CarboxRate, ETransport
+    REAL(wp), DIMENSION(options%nc) :: CarboxRate_active, ETransport_active
+    LOGICAL                    :: apply_pft13_traits
     INTEGER                    :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
@@ -742,7 +797,9 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(TRAIT_)
     dsl4jsb_Def_config(ASSIMI_)
+    dsl4jsb_Def_config(TRAIT_)
     dsl4jsb_Def_config(PHENO_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
@@ -777,6 +834,8 @@ CONTAINS
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
+    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
+    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -795,6 +854,23 @@ CONTAINS
 
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(PHENO_)
+
+    ! Step 6: activate the bounded annual capacities only on PFT13.
+    apply_pft13_traits = .FALSE.
+    IF (model%Is_process_enabled(TRAIT_)) THEN
+      dsl4jsb_Get_config(TRAIT_)
+      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
+      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
+      ! For PFT13 only, replace static tile-level Vcmax25 and Jmax25 with
+      ! bounded annual grid-cell predictions; otherwise retain lctlib values.
+      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
+        &                  TRIM(tile%name) == 'pft13'
+      IF (apply_pft13_traits) THEN
+        dsl4jsb_Get_memory(TRAIT_)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
+      END IF
+    END IF
 
     ncanopy = dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -835,11 +911,36 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    CarboxRate = dsl4jsb_Lctlib_param(CarboxRate)
+    ETransport = dsl4jsb_Lctlib_param(ETransport)
+
+    !$ACC DATA CREATE(CarboxRate_active, ETransport_active) ASYNC(acc_stream)
+    IF (apply_pft13_traits) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
+          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * pft13_vcmax25_to_carboxrate
+          ETransport_active(ic) = pft13_jmax25_pred(ic) * pft13_jmax25_to_etransport
+        ELSE
+          CarboxRate_active(ic) = CarboxRate
+          ETransport_active(ic) = ETransport
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        CarboxRate_active(ic) = CarboxRate
+        ETransport_active(ic) = ETransport
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
     DO icanopy=1,ncanopy
       CALL calc_assimilation_waterlimited(    &
         & dsl4jsb_Lctlib_param(C4Flag),       &
-        & dsl4jsb_Lctlib_param(CarboxRate),   &
-        & dsl4jsb_Lctlib_param(ETransport),   &
+        & CarboxRate_active(:),               &
+        & ETransport_active(:),               &
         & t_air(:),                           & ! in
         & press_srf(:),                       & ! in
         & par_down_mol(:),                    & ! in
@@ -856,6 +957,7 @@ CONTAINS
         & e_transport_rate_cl(:,icanopy)      & ! out
         & )
     END DO
+    !$ACC END DATA
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR

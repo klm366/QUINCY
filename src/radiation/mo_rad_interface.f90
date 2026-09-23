@@ -53,14 +53,16 @@ MODULE mo_rad_interface
 #ifdef __QUINCY_STANDALONE__
 #else
   ! Use of processes in this module
-  dsl4jsb_Use_processes PHENO_, ASSIMI_, CARBON_
+  dsl4jsb_Use_processes PHENO_, ASSIMI_, CARBON_, TRAIT_
 
   ! Use process configurations
   dsl4jsb_Use_config(ASSIMI_)
+  dsl4jsb_Use_config(TRAIT_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(TRAIT_)
 #endif
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -890,6 +892,9 @@ CONTAINS
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_vgrid
+#ifndef __QUINCY_STANDALONE__
+    USE mo_trait_process,       ONLY: pft13_sla_to_specificleafarea_c
+#endif
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -905,9 +910,11 @@ CONTAINS
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
+    LOGICAL                         :: apply_pft13_traits
     REAL(wp)                        :: dtime                     !< timestep
     REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
-    REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
+    REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< helper variable
+    REAL(wp), ALLOCATABLE           :: specificLeafArea_C_active(:)
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
@@ -923,6 +930,8 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(TRAIT_)
+    dsl4jsb_Def_config(TRAIT_)
 #endif
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
@@ -1000,6 +1009,9 @@ CONTAINS
       c_nonsoluble_bg2,        &
       c_humus_1,               &
       c_humus_2
+#ifndef __QUINCY_STANDALONE__
+    dsl4jsb_Real2D_onChunk :: pft13_sla_pred
+#endif
 
     REAL(wp), ALLOCATABLE ::   &
       & litter_carbon(:),      &  ! Amount of litter carbon [mol(C)/m2(canopy)], used with use_alb_soil_litter
@@ -1041,6 +1053,24 @@ CONTAINS
     ! Set model
     model => Get_model(tile%owner_model_id)
     model_scheme = model%config%model_scheme
+
+    ! Step 6: this branch affects only the JSBACH PFT13 tile.
+    apply_pft13_traits = .FALSE.
+#ifndef __QUINCY_STANDALONE__
+    IF (model_scheme == MODEL_JSBACH .AND. model%Is_process_enabled(TRAIT_)) THEN
+      dsl4jsb_Get_config(TRAIT_)
+      ! For PFT13 only, supply bounded annual SLA to the existing litter-area
+      ! soil-albedo pathway; otherwise retain the static lctlib SLA.
+      ! For PFT13 only, supply bounded annual SLA to the existing litter-area
+      ! soil-albedo pathway; otherwise retain the static lctlib SLA.
+      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
+        &                  TRIM(tile%name) == 'pft13'
+      IF (apply_pft13_traits) THEN
+        dsl4jsb_Get_memory(TRAIT_)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
+      END IF
+    END IF
+#endif
 
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
@@ -1195,8 +1225,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   fract_par_diffuse)     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   snow)                  ! in
 
-    ALLOCATE(temperature_surface(nc))
-    !$ACC ENTER DATA CREATE(temperature_surface) ASYNC(acc_stream)
+    ALLOCATE(temperature_surface(nc), specificLeafArea_C_active(nc))
+    !$ACC ENTER DATA CREATE(temperature_surface, specificLeafArea_C_active) ASYNC(acc_stream)
     SELECT CASE (model_scheme)
 #ifndef __QUINCY_STANDALONE__
     CASE (MODEL_JSBACH)
@@ -1487,9 +1517,31 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+            IF (apply_pft13_traits) THEN
+              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+              DO ic=1,nc
+                IF (pft13_sla_pred(ic) > 0._wp) THEN
+                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * pft13_sla_to_specificleafarea_c
+                ELSE
+                  specificLeafArea_C_active(ic) = specificLeafArea_C_param
+                END IF
+              END DO
+              !$ACC END PARALLEL LOOP
+            ELSE
+              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+              DO ic=1,nc
+                specificLeafArea_C_active(ic) = specificLeafArea_C_param
+              END DO
+              !$ACC END PARALLEL LOOP
+            END IF
 #endif
           CASE (MODEL_QUINCY)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(sla)
+            !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+            DO ic=1,nc
+              specificLeafArea_C_active(ic) = specificLeafArea_C_param
+            END DO
+            !$ACC END PARALLEL LOOP
           END SELECT
           AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
           AlbedoLitterNIR_param    = dsl4jsb_Lctlib_param(AlbedoLitterNIR)
@@ -1504,7 +1556,7 @@ CONTAINS
               & use_alb_soil_litter,                      & ! in
               & litter_carbon(ic),                        & ! in
               & soil_carbon(ic),                          & ! in
-              & specificLeafArea_C_param,                 & ! in
+              & specificLeafArea_C_active(ic),             & ! in
               & AlbedoLitterVIS_param,                    & ! in
               & AlbedoLitterNIR_param,                    & ! in
               & alb_background(ic),                       & ! in
@@ -1691,8 +1743,8 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC EXIT DATA DELETE(l_day, temperature_surface) ASYNC(acc_stream)
-    DEALLOCATE(l_day, temperature_surface)
+    !$ACC EXIT DATA DELETE(l_day, temperature_surface, specificLeafArea_C_active) ASYNC(acc_stream)
+    DEALLOCATE(l_day, temperature_surface, specificLeafArea_C_active)
 
     IF (use_alb_soil_scheme .AND. (tile%is_bare .OR. tile%is_vegetation)) THEN
       !$ACC EXIT DATA DELETE(litter_carbon, soil_carbon) ASYNC(acc_stream)

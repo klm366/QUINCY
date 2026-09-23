@@ -26,6 +26,16 @@ MODULE mo_trait_config_class
   PUBLIC :: t_trait_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_trait_config
+    ! Step 6 active-trait switch.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-07-27
+    ! .FALSE.: retain the validated diagnostic-only behavior.
+    ! .TRUE.: use bounded annual PFT13 traits in the JSBACH process calculations.
+    ! Active annual trait use is opt-in: FALSE preserves the
+    ! diagnostic-only configuration and prevents unintended physics changes.
+    ! Active annual PFT13 trait use is opt-in: FALSE preserves the
+    ! diagnostic-only configuration and prevents unintended physics changes.
+    LOGICAL :: l_apply_pft13_traits = .FALSE.
   CONTAINS
     PROCEDURE :: Init => Init_trait_config
   END TYPE t_trait_config
@@ -40,12 +50,13 @@ CONTAINS
 
     CLASS(t_trait_config), INTENT(inout) :: config
 
-    LOGICAL :: active, lrestart_cont
+    LOGICAL :: active, lrestart_cont, l_apply_pft13_traits
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_trait_nml/ &
-      & active,              &
-      & lrestart_cont,       &
+      & active,                  &
+      & lrestart_cont,           &
+      & l_apply_pft13_traits,    &
       & ic_filename,         &
       & bc_filename
 
@@ -54,8 +65,9 @@ CONTAINS
 
     CALL message(TRIM(routine), 'Starting trait configuration')
 
-    active        = .FALSE.
-    lrestart_cont = .FALSE.
+    active               = .FALSE.
+    lrestart_cont        = .FALSE.
+    l_apply_pft13_traits = .FALSE.
     bc_filename   = 'bc_land_trait.nc'
     ic_filename   = 'ic_land_trait.nc'
 
@@ -64,8 +76,9 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_trait_nml)
     CALL close_nml(nml_handler)
 
-    config%active        = active
-    config%lrestart_cont = lrestart_cont
+    config%active               = active
+    config%lrestart_cont        = lrestart_cont
+    config%l_apply_pft13_traits = l_apply_pft13_traits
     config%ic_filename   = ic_filename
     config%bc_filename   = bc_filename
 

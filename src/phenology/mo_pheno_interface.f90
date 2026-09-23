@@ -29,15 +29,17 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_, TRAIT_
 
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(TRAIT_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
+  dsl4jsb_Use_memory(TRAIT_)
 
   IMPLICIT NONE
   PRIVATE
@@ -189,6 +191,7 @@ CONTAINS
     USE mo_jsb_grid_class,         ONLY: t_jsb_grid
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_trait_process,          ONLY: pft13_sla_to_specificleafarea_c
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -204,7 +207,8 @@ CONTAINS
       & t_air_in_Celcius,              &
       & LaiMax_corrected,              &
       & veg_fract_correction_old,      &
-      & old_c_state_sum_ta, dummy_flux
+      & old_c_state_sum_ta, dummy_flux,       &
+      & specificLeafArea_C_active
 
     TYPE(t_jsb_grid), POINTER :: grid
 
@@ -216,6 +220,8 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(CARBON_) ! JN 10.01.18 only required with l_forestRegrowth = true
+    dsl4jsb_Def_memory(TRAIT_)
+    dsl4jsb_Def_config(TRAIT_)
 
     ! Declare pointers for variables in memory
     !INTEGER                :: ncanopy     ! number of canopy layers
@@ -249,6 +255,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    dsl4jsb_Real2D_onChunk :: pft13_sla_pred
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -265,7 +272,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     ! Local variables
-    LOGICAL :: l_newday
+    LOGICAL :: l_newday, apply_pft13_traits
     REAL(wp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(wp) :: MaxLAI
@@ -301,7 +308,7 @@ CONTAINS
 
     !$ACC DATA ASYNC(acc_stream) &
     !$ACC   CREATE(t_air_in_Celcius, LaiMax_corrected) &
-    !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
+    !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux, specificLeafArea_C_active)
 
     ! Set model
     model => Get_model(tile%owner_model_id)
@@ -322,6 +329,23 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(ASSIMI_)
+
+    ! Step 6: convert annual SLA only for PFT13; retain the static lctlib
+    ! value until the first previous-year climate has been completed.
+    apply_pft13_traits = .FALSE.
+    IF (model%Is_process_enabled(TRAIT_)) THEN
+      dsl4jsb_Get_config(TRAIT_)
+      ! For PFT13 only, supply bounded annual SLA to the existing phenology
+      ! and allometric calculations; otherwise retain the static lctlib SLA.
+      ! For PFT13 only, supply bounded annual SLA to the existing phenology
+      ! and allometric calculations; otherwise retain the static lctlib SLA.
+      apply_pft13_traits = dsl4jsb_Config(TRAIT_)%l_apply_pft13_traits .AND. &
+        &                  TRIM(tile%name) == 'pft13'
+      IF (apply_pft13_traits) THEN
+        dsl4jsb_Get_memory(TRAIT_)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
+      END IF
+    END IF
 
     !ncanopy =  dsl4jsb_Config(ASSIMI_)%ncanopy
 
@@ -388,6 +412,24 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    IF (apply_pft13_traits) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        IF (pft13_sla_pred(ic) > 0._wp) THEN
+          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * pft13_sla_to_specificleafarea_c
+        ELSE
+          specificLeafArea_C_active(ic) = specificLeafArea_C_param
+        END IF
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        specificLeafArea_C_active(ic) = specificLeafArea_C_param
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
     IF (.NOT. tile%is_vegetation) THEN
        CALL finish(TRIM(routine), 'The programm tries to calculate phenology on a non vegetated tile...')
     END IF
@@ -439,7 +481,7 @@ CONTAINS
             & alpha_leaf_param,            & ! in
             & beta_leaf_param,             & ! in
             & clumpinessFactor_param,      & ! in
-            & specificLeafArea_C_param,    & ! in
+            & specificLeafArea_C_active(ic), & ! in
             & c_woods(ic),                 & ! in
             & current_max_green(ic),       & ! InOut
             & veg_carbon_at_max_green(ic), & ! InOut
@@ -610,7 +652,7 @@ CONTAINS
           & wtr_rootzone_rel(ic),             & ! in
           & previous_day_temp_min(ic),        & ! in
           & previous_day_temp_max(ic),        & ! in
-          & specificLeafArea_C_param,         & ! in
+          & specificLeafArea_C_active(ic),     & ! in
           & heat_sum_CRP(ic),                 & ! inout
           & heat_sum_winter(ic),              & ! inout
           & growth_phase_CRP(ic),             & ! inout
