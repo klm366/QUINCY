@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, TRAIT_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, TRAIT_, COAST_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -159,6 +159,7 @@ CONTAINS
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
+    USE mo_coast_init,          ONLY: coast_init
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_carbon_init,         ONLY: carbon_init
@@ -239,6 +240,12 @@ CONTAINS
       END IF
       IF (model%processes(TRAIT_)%p%config%active) THEN
         CALL model%Queue_task(TRAIT_, "trait")
+      END IF
+      ! Coastal control factors, needed before the task "assimilation" of ASSIMI_.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
+      IF (model%processes(COAST_)%p%config%active) THEN
+        CALL model%Queue_task(COAST_, "coast")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
@@ -616,6 +623,13 @@ CONTAINS
       ! Initialize HYDRO_ before VEG_
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
+      END IF
+      ! Coastal boundary conditions of the mangrove tile, read after HYDRO_ whose rooting
+      ! depth the coastal process uses.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
+      IF (tile%Is_process_active(COAST_)) THEN
+        CALL coast_init(tile)
       END IF
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)

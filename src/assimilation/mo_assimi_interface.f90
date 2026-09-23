@@ -40,12 +40,13 @@ MODULE mo_assimi_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module (Get_assimi_memory and Get_assimi_config)
-  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_, TRAIT_
+  dsl4jsb_Use_processes ASSIMI_, HYDRO_, PHENO_, RAD_, A2L_, SEB_, TRAIT_, COAST_
 
   ! Use of process configurations (t_assimi_config)
   dsl4jsb_Use_config(ASSIMI_)
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(TRAIT_)
+  dsl4jsb_Use_config(COAST_)
 
   ! Use of process memories (t_assimi_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -55,6 +56,7 @@ MODULE mo_assimi_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(TRAIT_)
+  dsl4jsb_Use_memory(COAST_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -789,6 +791,7 @@ CONTAINS
     ! Trait generalisation: import the per-type model mask.
     ! Author: Dr. Sri Nandini-Weiß
     ! Date: 2026-09-23
+    USE mo_coast_process,   ONLY: mangrove_lct_id
     USE mo_trait_process,   ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
       &                           trait_jmax25_to_etransport,             &
       &                           has_dynamic_vcmax25, has_dynamic_jmax25
@@ -817,6 +820,8 @@ CONTAINS
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(TRAIT_)
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(COAST_)
+    dsl4jsb_Def_memory(COAST_)
 
     INTEGER :: ncanopy                 ! number of canopy layers
 
@@ -853,6 +858,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
     dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
     INTEGER :: lib_id
+    LOGICAL :: apply_coastal
+    dsl4jsb_Real2D_onChunk :: control_coastal
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -893,6 +900,25 @@ CONTAINS
         dsl4jsb_Get_memory(TRAIT_)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
         dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
+      END IF
+    END IF
+
+    ! Coastal constraints on mangrove productivity, Zhao et al. (2025): the salinity and
+    ! tidal-inundation factors of the coastal process multiply gross assimilation on the
+    ! mangrove tile when one of its application switches is set.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    apply_coastal = .FALSE.
+    IF (model%Is_process_enabled(COAST_)) THEN
+      dsl4jsb_Get_config(COAST_)
+      IF (ALLOCATED(tile%lcts)) THEN
+        apply_coastal = tile%lcts(1)%lib_id == mangrove_lct_id .AND.     &
+          & (dsl4jsb_Config(COAST_)%l_apply_salinity_stress .OR.         &
+          &  dsl4jsb_Config(COAST_)%l_apply_tidal_stress)
+      END IF
+      IF (apply_coastal) THEN
+        dsl4jsb_Get_memory(COAST_)
+        dsl4jsb_Get_var2D_onChunk(COAST_, control_coastal)
       END IF
     END IF
 
@@ -1009,6 +1035,21 @@ CONTAINS
       dark_respiration(ic)   = dark_respiration_ca(ic)   * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
     !$ACC END PARALLEL
+
+    ! Coastal constraints: scale gross assimilation on the mangrove tile. Dark respiration
+    ! is not changed, as in Zhao et al. (2025). The canopy-layer values
+    ! gross_assimilation_cl are left unscaled. The loop runs in its own region so that
+    ! control_coastal is referenced only when it is associated.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
+    IF (apply_coastal) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        gross_assimilation_ca(ic) = gross_assimilation_ca(ic) * control_coastal(ic)
+        gross_assimilation(ic)    = gross_assimilation(ic)    * control_coastal(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     CALL calc_NPP_pot_rate(gross_assimilation_ca(:), dark_respiration_ca(:), NPP_pot_rate_ca(:))
 
