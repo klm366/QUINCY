@@ -893,6 +893,9 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_vgrid
 #ifndef __QUINCY_STANDALONE__
+    ! Trait generalisation: import the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_trait_process,       ONLY: max_lct_id, trait_sla_to_specificleafarea_c, &
       &                               has_dynamic_sla
 #endif
@@ -1063,6 +1066,10 @@ CONTAINS
       dsl4jsb_Get_config(TRAIT_)
       ! Supply the bounded annual SLA to the existing litter-area
       ! soil-albedo pathway; otherwise retain the static lctlib SLA.
+      ! Generalisation of the annual SLA application from PFT13 to every plant
+      !   functional type carrying a fitted SLA model.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
       lib_id = 0
       IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
       apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &

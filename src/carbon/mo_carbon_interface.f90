@@ -155,6 +155,9 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_process,    ONLY: calc_Cpools
     USE mo_jsb_time,          ONLY: is_newday, is_newyear, timesteps_per_day, is_time_experiment_start
+    ! Trait generalisation: import the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_trait_process,     ONLY: max_lct_id, trait_sla_to_specificleafarea_c, &
       &                             has_dynamic_sla
 
@@ -356,6 +359,10 @@ CONTAINS
       ! Supply the bounded annual SLA to carbon allocation for those plant
       ! functional types that have a fitted SLA model and
       ! CARBON memory; otherwise retain the static lctlib SLA.
+      ! Generalisation of the annual SLA application from PFT13 to every plant
+      !   functional type carrying a fitted SLA model.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
       lib_id = 0
       IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
       apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &

@@ -26,6 +26,10 @@ MODULE mo_trait_config_class
   PUBLIC :: t_trait_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_trait_config
+    ! Renamed from l_apply_pft13_traits: the switch now governs every plant
+    !   functional type with a fitted model, not PFT13 alone.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     ! Step 6 active-trait switch.
     ! Author: Dr. Sri Nandini-Weiß
     ! Date: 2026-07-27

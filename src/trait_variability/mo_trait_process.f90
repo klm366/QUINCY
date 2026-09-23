@@ -1,5 +1,8 @@
 ! Author: Dr. Sri Nandini-Weiß
 ! Date: 2026-07-15
+! Generalised from PFT13 to all plant functional types
+! Author: Dr. Sri Nandini-Weiß
+! Date: 2026-09-23
 !> Scientific calculations for the trait-variability process
 !>
 !> ICON-Land
@@ -45,6 +48,9 @@ MODULE mo_trait_process
   PUBLIC :: trait_sla_to_specificleafarea_c
   PUBLIC :: max_lct_id
 
+  ! Coefficient tables are indexed by lctlib id rather than held as scalars.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   !> Largest lctlib id that can carry a fitted trait model. The mangrove lctlib file has
   !> 22 columns and Read_lctlib discards the glacier column for the jsbach usecases, so
   !> model%lctlib runs from 1 to 21 and the mangrove clone is id 21.
@@ -59,6 +65,10 @@ MODULE mo_trait_process
   REAL(wp), PARAMETER :: trait_vcmax25_to_carboxrate = 1.e-6_wp
   REAL(wp), PARAMETER :: trait_jmax25_to_etransport  = 1.e-6_wp
 
+  ! The SLA conversion is now per plant functional type, because the fitted
+  !   equations do not share one input unit.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   ! lctlib%specificLeafArea_C is a specific leaf area in m2(leaf) mol(C)-1. The type
   ! declaration comment in mo_jsb_lctlib_class states the reciprocal unit and is
   ! incorrect; the lctlib data file header gives the correct one, and all three
@@ -131,6 +141,9 @@ MODULE mo_trait_process
   ! two extremes, but a global grid will. Clamping frequency should be diagnosed per
   ! grid cell rather than assumed from the offline table.
 
+  ! Coefficients for lctlib ids 1 and 2 added from the frozen offline table.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   !--------------------------------------- Vcmax25 [umol m-2 s-1] ----------------------------------------!
   LOGICAL,  PARAMETER :: has_dynamic_vcmax25(max_lct_id) = [ &
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., & !  1 -  8
@@ -201,6 +214,9 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, 131.4725_wp, 0._wp, 0._wp, 0._wp ]
 
+  ! Coefficients for lctlib ids 1 and 4 added from the frozen offline table.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   !------------------------------------------- SLA [fitted unit] -----------------------------------------!
   ! The raw SLA diagnostic is held in the unit of each fitted equation, which is
   ! mm2 mg-1 for lctlib ids 1 and 4 and m2 gC-1 for id 21. Only the converted
@@ -260,6 +276,10 @@ CONTAINS
   !> from the returned value.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
+  ! Renamed from calc_pft13_trait_diagnostics; takes the lctlib id and
+  !   evaluates only the traits that have a fitted model for that type.
+  ! Author: Dr. Sri Nandini-Weiß
+  ! Date: 2026-09-23
   ELEMENTAL PURE SUBROUTINE calc_trait_diagnostics( &
     & lib_id, mat_prev_year, map_prev_year, max_mmtemp_prev_year, &
     & vcmax25_raw, vcmax25_pred,                                  &

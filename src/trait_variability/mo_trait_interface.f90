@@ -68,6 +68,9 @@ CONTAINS
 
   SUBROUTINE update_trait(tile, options)
 
+    ! Trait generalisation: import the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_trait_process, ONLY: calc_trait_diagnostics, max_lct_id, &
       &                      has_dynamic_vcmax25, has_dynamic_jmax25, has_dynamic_sla
 
@@ -102,6 +105,10 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_calculated(TRAIT_)) RETURN
 
+    ! Generalisation: the process is no longer restricted to the PFT13 tile.
+    !   Selection is by lctlib id and by the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     ! The trait equations are selected by the lctlib id of the tile's primary land
     ! cover type. lcts(1) is always the primary lct; an id outside the coefficient
     ! table, or a tile carrying no lct, is not a plant functional type tile.

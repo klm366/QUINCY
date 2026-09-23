@@ -395,6 +395,9 @@ CONTAINS
   SUBROUTINE update_canopy_cond_unstressed(tile, options)
 
     USE mo_assimi_process,      ONLY: calc_assimilation_waterunlimited
+    ! Trait generalisation: import the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_trait_process,       ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
       &                               trait_jmax25_to_etransport,             &
       &                               has_dynamic_vcmax25, has_dynamic_jmax25
@@ -468,6 +471,10 @@ CONTAINS
       ! Replace the static tile-level Vcmax25 and Jmax25 with bounded annual
       ! grid-cell predictions, for those plant functional types that have a
       ! fitted model for both. All others retain their lctlib values.
+      ! Generalisation of the annual trait application from PFT13 to every plant
+      !   functional type carrying a fitted Vcmax25 and Jmax25 model.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
       lib_id = 0
       IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
       apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
@@ -779,6 +786,9 @@ CONTAINS
   SUBROUTINE update_assimilation(tile, options)
 
     USE mo_assimi_process,  ONLY: calc_assimilation_waterlimited, calc_NPP_pot_rate
+    ! Trait generalisation: import the per-type model mask.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-09-23
     USE mo_trait_process,   ONLY: max_lct_id, trait_vcmax25_to_carboxrate, &
       &                           trait_jmax25_to_etransport,             &
       &                           has_dynamic_vcmax25, has_dynamic_jmax25
@@ -869,6 +879,10 @@ CONTAINS
       ! Replace the static tile-level Vcmax25 and Jmax25 with bounded annual
       ! grid-cell predictions, for those plant functional types that have a
       ! fitted model for both. All others retain their lctlib values.
+      ! Generalisation of the annual trait application from PFT13 to every plant
+      !   functional type carrying a fitted Vcmax25 and Jmax25 model.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-09-23
       lib_id = 0
       IF (ALLOCATED(tile%lcts)) lib_id = tile%lcts(1)%lib_id
       apply_dynamic_traits = dsl4jsb_Config(TRAIT_)%l_apply_dynamic_traits .AND. &
