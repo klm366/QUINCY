@@ -1350,7 +1350,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE.)
-    ENDIF
+    END IF
 
     ! Diagnostic global carbon sums for experiment monitoring - only calculated on top (i.e. box) tile
     IF (ASSOCIATED(mem%parent)) RETURN

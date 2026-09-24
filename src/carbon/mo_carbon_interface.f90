@@ -1437,12 +1437,12 @@ CONTAINS
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
         & //real2string(MINVAL(oldRefArea)) //'; max: '//real2string(MAXVAL(oldRefArea))  )
-    ENDIF
+    END IF
     IF ( ANY(newRefArea .LE. 0) .OR. ANY(newRefArea .GT. 1) ) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
         & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
-    ENDIF
+    END IF
 #endif
 
     model => Get_model(tile%owner_model_id)
@@ -2275,7 +2275,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
           & c_acid_ag2_ta(ic) + c_water_ag2_ta(ic) + c_ethanol_ag2_ta(ic) + c_nonsoluble_ag2_ta(ic)
       END DO
       !$ACC END LOOP
-    ENDIF
+    END IF
 
     IF (is_present_c_sum_litter_bg_ta) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -2369,7 +2369,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
       not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
       this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
-    ENDIF
+    END IF
 
     ! Distribution of the litter to the different yasso carbon pools
     DO i_pool = 1, nr_of_yasso_pools
@@ -2725,7 +2725,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
           carbon_conservation_test(ic) = 0._wp
         END DO
         !$ACC END PARALLEL LOOP
-      ENDIF
+      END IF
 
       CALL calculate_current_c_ta_state_sum(tile, options, yday_c_state_sum(:))
 

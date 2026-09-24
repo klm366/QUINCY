@@ -109,7 +109,7 @@ CONTAINS
     ELSE
       prev_day_mean_temp = temp_sum_day / seconds_day
       temp_sum_day = t_air * dtime
-    ENDIF
+    END IF
 
     IF (.NOT. new_month .OR. lstart) THEN
       temp_sum_month = temp_sum_month + t_air * dtime
@@ -136,7 +136,7 @@ CONTAINS
        max_snow_prev_year = max_snow_of_yr
        max_snow_of_yr = 0._wp
        max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
-    ENDIF
+    END IF
 
     !-- Soil thaw depth
     !  ---------------------
@@ -146,7 +146,7 @@ CONTAINS
       max_thaw_prev_year = max_thaw_of_yr
       max_thaw_of_yr = 0._wp
       max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
-    ENDIF
+    END IF
 
     !-- Multi-year minimum and maximum monthly mean temperatures
     !  ----------------------
@@ -163,7 +163,7 @@ CONTAINS
         ELSE
           min_mmtemp_20yr = (min_mmtemp_20yr * 19._wp + min_mmtemp_of_yr) / 20._wp
           max_mmtemp_20yr = (max_mmtemp_20yr * 19._wp + max_mmtemp_of_yr) / 20._wp
-        ENDIF
+        END IF
         ! --- reset for current year
         min_mmtemp_of_yr =  1000._wp
         max_mmtemp_of_yr = -1000._wp
