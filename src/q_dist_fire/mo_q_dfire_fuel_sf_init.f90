@@ -214,6 +214,9 @@ CONTAINS
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
 
+    !< All PFTs values are loaded, it is useful for aggregation to account for all of them
+    !< Initialization at the process only loads those values that are specific to the PFT,
+    !< so the aggregation could be less than expected
     IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
       moisture_extinction = dsl4jsb_Lctlib_param(q_moisture_extinction_thon)
     ELSE IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
