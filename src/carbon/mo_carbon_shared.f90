@@ -438,7 +438,7 @@ CONTAINS
     REAL(wp),                INTENT(in)  :: dt                 ! Carbon time step
     ! TODO: instead of Yasso_in_pools and Yasso_out use a variable Yasso_pools or such with intent INOUT
     !       for the Yasso pools and a variable Yasso_fluxes or such replacing Yasso_out(10:18) with intent out.
- 
+
     REAL(wp), DIMENSION(9),  INTENT(in)  :: Yasso_in_pools     ! Yasso pools in [mol(C) m-2]
     REAL(wp),                INTENT(in)  :: WoodLitterSize     ! Size of woody litter;
                                                                !   is zero when the subroutine is called for non-woody litter
