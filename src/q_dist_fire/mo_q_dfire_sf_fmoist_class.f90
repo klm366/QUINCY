@@ -15,6 +15,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_kind,                ONLY: wp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
+  USE mo_jsb_math_constants,    ONLY: eps8
   USE mo_q_dfire_sf_fuel_class, ONLY: sf_calc_has_any_fuel
   USE mo_quincy_stats,        ONLY: stats_average_weight
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
@@ -297,6 +298,7 @@ CONTAINS
     DO ic = 1, nc
       dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
     ENDDO
+    mf_10hr = 0._wp
 
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
