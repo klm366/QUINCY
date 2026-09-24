@@ -108,7 +108,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: NPP_act                 ! Actual NPP after N-limitation and excess carbon drop
     REAL(wp), INTENT(out)   :: Cflx_2_root_exudates    ! Carbon flux into root exudates
     REAL(wp), INTENT(out)   :: Cflx_greenwood_2_litter ! Total carbon flux from vegetation to litter (green+woody, ag+bg)
-    REAL(wp), INTENT(out)   :: Cflx_green_2_litter     ! Total carbon flux of fastly decomposable material
+    REAL(wp), INTENT(out)   :: Cflx_green_2_litter     ! Total carbon flux of easily decomposable material
     REAL(wp), INTENT(out)   :: Cflx_wood_2_litter      ! Total carbon flux of slowly decomposable material
     REAL(wp), INTENT(out)   :: Cflx_herbivory
     REAL(wp), INTENT(out)   :: Cflx_herb_2_littergreen
@@ -126,7 +126,6 @@ CONTAINS
     REAL(wp), PARAMETER :: tau_c_reserve        = 1.0_wp * days_per_year ! time constant by which reserve pool is depreciated [d]
     REAL(wp), PARAMETER :: tau_c_crop_harvest   = 1.0_wp * days_per_year ! time constant by which the crop harvest pool decays [d]
 
-    ! Locals
     REAL(wp) :: c_green_max, c_reserve_optimal
     REAL(wp) :: c_NPP_2_greenPool, c_NPP_2_woodPool, c_NPP_2_reservePool, c_NPP_2_rootExudates, c_green_2_herbivory
     REAL(wp) :: c_2_litter_greenPool, c_2_litter_woodPool, c_reserve_2_litter_greenPool
@@ -144,8 +143,6 @@ CONTAINS
     REAL(wp) :: redFact_Nlimitation
     ! R: only for spitfire
     !REAL(wp) :: litter_wood_new, litter_wood_total
-
-    ! on all veg tiles:
 
     ! Initializations
     c_2_crop_harvest     = 0.0_wp
@@ -357,16 +354,12 @@ CONTAINS
                                                          ! except c_reserve was < 0.0_wp.
     END IF
 
-    ! Input of fastly decomposable material to the soil
-
-    ! always:
     !! ============== Decay of crop harvest =============
 
     c_crop_harvest_2_atm    =  c_crop_harvest / tau_c_crop_harvest
     c_crop_harvest          =  c_crop_harvest - c_crop_harvest_2_atm
 
     Cflx_crop_harvest_2_atm = -c_crop_harvest_2_atm / dt
-    !Cflx_crop_harvest_2_atm_pot = harvestResp_rate_pot - Cflx_crop_harvest_2_atm
 
     !! ============== COMPUTE Herbivory RESPIRATION =====
 
@@ -421,13 +414,13 @@ CONTAINS
     !! Yasso - Soil carbon model (Jari Liski)
     !!
     !! The code for the yasso model has been developed and is provided by the Finnish Environment Institute SYKE. It is
-    !! distributed as part of the MPI Earth System Model under the MPI-M license conditions as stated in the header of this module.
+    !! distributed as part of the ICON Earth System Model under the license conditions as stated in the header of this module.
     !!
     !! model to calculate the amount of soil organic carbon, changes in the amount of soil organic carbon and
     !! heterotrophic soil respiration.
     !! For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
     !!
-    !! implementation: Tea Thum (FMI), Petri Raeisaenen (FMI), Daniel Goll (MPI-M)
+    !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
     USE mo_carbon_constants, ONLY: sec_per_year, LCT_HUMUS,                &
@@ -443,6 +436,9 @@ CONTAINS
     IMPLICIT NONE
 
     REAL(wp),                INTENT(in)  :: dt                 ! Carbon time step
+    ! TODO: instead of Yasso_in_pools and Yasso_out use a variable Yasso_pools or such with intent INOUT
+    !       for the Yasso pools and a variable Yasso_fluxes or such replacing Yasso_out(10:18) with intent out.
+ 
     REAL(wp), DIMENSION(9),  INTENT(in)  :: Yasso_in_pools     ! Yasso pools in [mol(C) m-2]
     REAL(wp),                INTENT(in)  :: WoodLitterSize     ! Size of woody litter;
                                                                !   is zero when the subroutine is called for non-woody litter
@@ -480,8 +476,6 @@ CONTAINS
     REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    ! first  order size dependence [cm-1]
     REAL(wp), PARAMETER   :: size_p2                    =  0.86_wp    ! second order size dependence [cm-1]
     REAL(wp), PARAMETER   :: size_p3                    = -0.306_wp   ! size dependence power [ ]
-
-    ! locals
 
     ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
@@ -589,8 +583,8 @@ CONTAINS
     ! anoxic & peat decomposition modifier
     LOGICAL      :: anoxic_flag, peat_flag
 
-    ! time stepping; the parameterization of yasso is done on a annual time
-    ! step, thus the fluxes have to be scaled up to annual rates.
+    ! time stepping: yasso is parameterized based on annual time
+    ! steps, thus the fluxes have to be scaled up to annual rates.
     REAL(wp)     :: years_per_ts, ts_per_year
 
     ts_per_year = REAL(sec_per_year,wp) / dt
@@ -620,7 +614,7 @@ CONTAINS
 
     anoxic_flag = .FALSE.; IF (PRESENT(is_anoxic)) anoxic_flag = is_anoxic
     peat_flag   = .FALSE.; IF (PRESENT(is_peat))   peat_flag   = is_peat
-    redFactor   =  1.0_wp;
+    redFactor   =  1.0_wp
     IF (PRESENT(redFact_Nlimit)) THEN
       ! nitrogen cycle active & we know already the Nlimitation factor
       redFactor = redFact_Nlimit
@@ -907,11 +901,14 @@ CONTAINS
   PURE &
 #endif
   SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
-                                     litter, fraction, coefficients)
-  !$ACC ROUTINE SEQ
-    USE mo_carbon_constants, ONLY:   LCT_ACID, LCT_WATER, LCT_ETHANOL,    &
-                     LCT_NONSOLUBLE, LCT_HUMUS
+    &                                litter, fraction, coefficients)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_carbon_constants, ONLY:   LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS
+
     IMPLICIT NONE
+
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(INOUT)             :: c_acid        !< yasso acid pool
     REAL(wp), INTENT(INOUT)             :: c_water       !< yasso water pool
@@ -939,7 +936,7 @@ CONTAINS
   ELEMENTAL &
 #endif
   SUBROUTINE add_litter_to_yasso_pool(this_pool, litter, fraction, coefficient)
-  !$ACC ROUTINE SEQ
+    !$ACC ROUTINE SEQ
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool
@@ -970,7 +967,7 @@ CONTAINS
 
     INTEGER :: ic
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, SIZE(fract_fpc_max)
       Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
     END DO
