@@ -227,12 +227,6 @@ CONTAINS
     fuel_bulk_density = 0._wp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
-    IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
-      moisture_extinction = lctlib%q_moisture_extinction_thon
-    ELSE IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      moisture_extinction = lctlib%q_moisture_extinction_ober
-    END IF
-    fwd_wind_factor = lctlib%q_fwd_wind_factor
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science

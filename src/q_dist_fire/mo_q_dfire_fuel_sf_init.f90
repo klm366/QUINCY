@@ -17,7 +17,10 @@ MODULE mo_q_dfire_fuel_sf_init
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
+  USE mo_jsb_process_class,       ONLY: Q_DFIRE_SF_
   USE mo_veg_constants,           ONLY: itree, igrass   !< lctlib%growthform
+
+  dsl4jsb_Use_config(Q_DFIRE_SF_)
 
   IMPLICIT NONE
   PRIVATE
@@ -34,9 +37,11 @@ CONTAINS
   SUBROUTINE q_dfire_fuel_sf_init(tile)
     USE mo_jsb_class,               ONLY: get_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: Q_DFIRE_FUEL_SF_
+    USE mo_jsb_process_class,       ONLY: Q_DFIRE_FUEL_SF_, Q_DFIRE_SF_
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
+
+   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -47,6 +52,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':q_dfire_fuel_sf_init'
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain      :: dead_fuel_1hr_dfp
@@ -107,6 +113,7 @@ CONTAINS
     model  => get_model(tile%owner_model_id)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_SF_, dead_fuel_1hr_dfp)
@@ -175,8 +182,6 @@ CONTAINS
     grass_fract = 0._wp
 
     fuel_bulk_density = 0._wp
-    moisture_extinction = 0._wp
-    fwd_wind_factor = 0._wp
 
     pm_fire = 0._wp
     pm_fire_output = 0._wp
@@ -208,6 +213,13 @@ CONTAINS
     veg_fire_emissions_total_els = 0._wp
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
+
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      moisture_extinction = dsl4jsb_Lctlib_param(q_moisture_extinction_thon)
+    ELSE IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      moisture_extinction = dsl4jsb_Lctlib_param(q_moisture_extinction_ober)
+    END IF
+    fwd_wind_factor = dsl4jsb_Lctlib_param(q_fwd_wind_factor)
 
     ! Mark process as successfully initialized, MR 428
     !CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Set_init_status_true
