@@ -1,4 +1,4 @@
-!> Contains the utilities for the soil and snow energy process
+!> Contains utility functions for the soil and snow energy process.
 !>
 !> ICON-Land
 !>
@@ -11,6 +11,11 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Provide utility functions for the soil and snow energy process
+!>
+!> The module is intended to host small auxiliary routines that support the SSE
+!> scheme and are shared by several process-related modules.
+!>
 MODULE mo_sse_util
 #ifndef __NO_JSBACH__
 
@@ -22,6 +27,7 @@ MODULE mo_sse_util
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_util'
 
+  !> Utility helpers for the SSE process can be added here as needed.
 CONTAINS
 
 #endif
