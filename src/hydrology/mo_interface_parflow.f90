@@ -82,6 +82,8 @@ CONTAINS
     INTEGER :: nproma!, nblks
     INTEGER :: nsoil
 
+    INTEGER :: cell_point_id_arr(1)
+
     CHARACTER(len=MAX_TIMEDELTA_STR_LEN) :: modelTimeStep
 
     CHARACTER(len=40), ALLOCATABLE :: field_name(:)
@@ -131,11 +133,12 @@ CONTAINS
     received_soil_water(:,:,:) = .FALSE.
     is_valid_parflow(:,:) = 0.0_wp
 
+    cell_point_id_arr(1) = cell_point_id
     DO jc = 1, no_of_fields
       CALL yac_fdef_field (            &
         & TRIM(field_name(jc)),        &
         & comp_id,                     &
-        & cell_point_id,               &
+        & cell_point_id_arr,           &
         & 1,                           &
         & collection_size(jc),         &
         & modelTimeStep,               &

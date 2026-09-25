@@ -1458,13 +1458,15 @@ CONTAINS
     dsl4jsb_Def_memory(Q_ASSIMI_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: fract_parflow
-    dsl4jsb_Real3D_onChunk :: change_by_parflow
-    dsl4jsb_Real3D_onChunk :: tracked_diff_parflow
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl        !< Amount of liquid water in soil layers [m]
     dsl4jsb_Real3D_onChunk :: ice_soil_sl        !< Amount of ice in soil layers [m water equivalent]
     dsl4jsb_Real3D_onChunk :: vol_weq_soil_sl    !< Volumetric water content (liquid+ice) in soil layers
                                                  !< [m3 water equiv. / m3]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
+    dsl4jsb_Real2D_onChunk :: fract_parflow
+    dsl4jsb_Real3D_onChunk :: change_by_parflow
+    dsl4jsb_Real3D_onChunk :: tracked_diff_parflow
+
     dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl !< Faction of water transported vertically to the below layer []
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl !< Fraction of soil water that is lost laterally (horizontally) []
     dsl4jsb_Real3D_onChunk :: drainage_sl        !< Drainage from the soil layers [kg m-2 s-1]
@@ -1527,7 +1529,6 @@ CONTAINS
       & l_fract(options%nc), &                   !< Tile has a non-zero grid cell fraction
       & l_pf_soil(options%nc)                    !< Permafrost affects bottom layer drainage
     REAL(wp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
->>>>>>> land4icon-mpim
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
