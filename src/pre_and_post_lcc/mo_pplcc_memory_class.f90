@@ -1,9 +1,9 @@
-!> pplcc (pre- and post lcc) memory class
+!> Contains the pre and post land cover change (PPLCC) memory
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -11,14 +11,18 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain memory definitions for pplcc
+!>### Memory definitions for the pre and post land cover change (PPLCC) process
 !>
-!> currently of no use beyond infrastructural requirements
+!> The memory of the PPLCC process is currently only used for area sum variables on the
+!> box tile if antropogenic or natural land cover change (ALCC or NLCC) are active:
+!>
+!> * Area fractions of different vegetation types for the basic output
+!> * Global land area sums for the monitoring time series
 !>
 MODULE mo_pplcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,                   ONLY: wp
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -30,30 +34,30 @@ MODULE mo_pplcc_memory_class
 
   PUBLIC :: t_pplcc_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 20 !< Maximum number of 'Add_var' calls in this module
 
-  !> Type definition for memory
+  !> Memory of the PPLCC process
   TYPE, EXTENDS(t_jsb_memory) :: t_pplcc_memory
     TYPE(t_jsb_var_real2d) :: &
-      tree_fract,             & ! land fraction covered with tree PFTs
-      shrub_fract,            & ! land fraction covered with shrub PFTs
-      grass_fract,            & ! land fraction covered with grass PFTs
-      crop_fract,             & ! land fraction covered with crop PFTs
-      pasture_fract,          & ! land fraction covered with pasture PFTs
-      C3pft_fract,            & ! land fraction covered with C3 PFTs
-      C4pft_fract,            & ! land fraction covered with C4 PFTs
-      baresoil_fract            ! bare land fraction
+      & tree_fract,           & !< Land fraction covered with tree PFTs
+      & shrub_fract,          & !< Land fraction covered with shrub PFTs
+      & grass_fract,          & !< Land fraction covered with grass PFTs
+      & crop_fract,           & !< Land fraction covered with crop PFTs
+      & pasture_fract,        & !< Land fraction covered with pasture PFTs
+      & C3pft_fract,          & !< Land fraction covered with C3 PFTs
+      & C4pft_fract,          & !< Land fraction covered with C4 PFTs
+      & baresoil_fract          !< Bare land fraction
 
-    ! Diagnostic global sums e.g. for monitoring (only available with ICON)
+    ! Diagnostic global sums e.g. for monitoring time series
     TYPE(t_jsb_var_real1d) :: &
-      tree_area_gsum,         & ! global land area covered with tree PFTs
-      shrub_area_gsum,        & ! global land area covered with shrub PFTs
-      grass_area_gsum,        & ! global land area covered with grass PFTs
-      crop_area_gsum,         & ! global land area covered with crop PFTs
-      pasture_area_gsum,      & ! global land area covered with pasture PFTs
-      C3pft_area_gsum,        & ! global land area covered with C3 PFTs
-      C4pft_area_gsum,        & ! global land area covered with C4 PFTs
-      baresoil_area_gsum        ! global bare land area
+      & tree_area_gsum,       & !< Global land area covered with tree PFTs
+      & shrub_area_gsum,      & !< Global land area covered with shrub PFTs
+      & grass_area_gsum,      & !< Global land area covered with grass PFTs
+      & crop_area_gsum,       & !< Global land area covered with crop PFTs
+      & pasture_area_gsum,    & !< Global land area covered with pasture PFTs
+      & C3pft_area_gsum,      & !< Global land area covered with C3 PFTs
+      & C4pft_area_gsum,      & !< Global land area covered with C4 PFTs
+      & baresoil_area_gsum      !< Global bare land area
 
   CONTAINS
     PROCEDURE :: Init => Init_pplcc_memory
@@ -63,6 +67,18 @@ MODULE mo_pplcc_memory_class
 
 CONTAINS
 
+  ! ============================================================================================== !
+  !>
+  !>### Initialization of the PPLCC process memory
+  !>
+  !> In this subroutine we initialize the memory of the pre and post land cover change (PPLCC)
+  !> process. The subroutine is a type-bound procedure of [[t_pplcc_memory]]. It is called within
+  !> the initialization phase for all tiles ([[mo_jsb_tile:init_tile]]:
+  !> 'CALL this%mem(iproc)%p%Init(TRIM(process_name), ...)')
+  !>
+  !> The routine is currently only used to define variables on the box tile
+  !> and only if a process changing the land cover fractions is active.
+  !>
   SUBROUTINE Init_pplcc_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
@@ -72,18 +88,18 @@ CONTAINS
     dsl4jsb_Use_processes     ALCC_, NLCC_
 
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_pplcc_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)    :: prefix
-    CHARACTER(len=*),    INTENT(in)    :: suffix
-    INTEGER,             INTENT(in)    :: lct_ids(:)
-    INTEGER,             INTENT(in)    :: lib_id     !< id of primary lct in lctlib
-    INTEGER,             INTENT(in)    :: model_id
+    CLASS(t_pplcc_memory), INTENT(inout), TARGET :: mem !< Memory of the pplcc process
+    CHARACTER(len=*),    INTENT(in)    :: prefix        !< Prefix for variable names in output/restart files ("pplcc")
+    CHARACTER(len=*),    INTENT(in)    :: suffix        !< Suffix for variable names in output/restart files (tile name)
+    INTEGER,             INTENT(in)    :: lct_ids(:)    !< Land cover type IDs
+    INTEGER,             INTENT(in)    :: lib_id        !< ID of primary land cover type of this tile in lctlib
+    INTEGER,             INTENT(in)    :: model_id      !< ID of the current model instance
     ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
-    INTEGER :: table
-    INTEGER :: output_level
+    TYPE(t_jsb_model), POINTER :: model   !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: hgrid   !< Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface !< Vertical grid
+    INTEGER :: table                      !< Grib code table ID
+    INTEGER :: output_level               !< Output level: set depending on tile and active processes
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pplcc_memory'
     ! -------------------------------------------------------------------------------------------------- !
@@ -95,11 +111,13 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
+    ! Currently natural and anthropogenic land cover change (NLCC and ALCC) are the only processes changing
+    ! land cover fractions.
     IF ((model%Is_process_enabled(NLCC_) .OR. model%Is_process_enabled(ALCC_)) &
         .AND. TRIM(suffix) == 'box') THEN
       output_level = BASIC   ! Assign variable to basic output group
     ELSE
-      output_level = NONE    ! Do not assigne variable to an output group
+      output_level = NONE    ! Do not assign variable to an output group
     END IF
 
     ! Area fractions of selected groups of PFTs - only calculated on box tile

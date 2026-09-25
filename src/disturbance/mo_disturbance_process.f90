@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -23,7 +23,7 @@ MODULE mo_disturb_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+  PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
@@ -80,8 +80,8 @@ CONTAINS
     & wind_threshold,                                  & ! in
     & wind_damage_scale,                               & ! in
     & cover_fract_pot,                                 & ! in
-    & prev_day_max_wind_10m,                           & ! in
-    & max_wind_10m,                                    & ! in
+    & max_wind_yDay,                                   & ! in
+    & max_wind_clim,                                   & ! in
     & damaged_fract                                    & ! inout
     & )
 
@@ -90,8 +90,8 @@ CONTAINS
       & wind_threshold,           &
       & wind_damage_scale,        &
       & cover_fract_pot(:),       &
-      & prev_day_max_wind_10m(:), &
-      & max_wind_10m(:)
+      & max_wind_yDay(:),         &
+      & max_wind_clim(:)
 
     REAL(wp), INTENT(inout) :: &
       & damaged_fract(:)
@@ -101,50 +101,18 @@ CONTAINS
 
     REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
 
-    nc = SIZE(max_wind_10m)
+    nc = SIZE(max_wind_clim)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. prev_day_max_wind_10m(ic) > max_wind_10m(ic) * wind_threshold) THEN
+      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
         damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
-        &                        delta_time_yr * wind_damage_scale * prev_day_max_wind_10m(ic) ** 3._wp / max_wind_10m(ic) )
+        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._wp / max_wind_clim(ic) )
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE broken_woody_fract_jsbach
-
-  FUNCTION get_relative_humidity_air(air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
-
-    USE mo_jsb_physical_constants, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
-    USE mo_jsb_physical_constants, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
-    USE mo_phy_schemes,            ONLY: qsat_water
-
-    REAL(wp), INTENT(in) :: &
-      air_moisture(:),      & ! Specific humidity of air [kg kg-1]
-      air_temperature(:),   & ! Temperature of air [K]
-      air_press(:)            ! Pressure of air [Pa]
-
-    REAL(wp) :: air_qsat      ! Saturation specific humidity
-    REAL(wp) :: relative_humidity_air(SIZE(air_moisture))
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
-    INTEGER :: ic, nc
-
-    nc = SIZE(air_moisture)
-
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
-    !$ACC   PRIVATE(air_qsat)
-    DO ic = 1, nc
-      air_qsat = qsat_water(air_temperature(ic), air_press(ic), use_convect_tables=.TRUE.)
-      relative_humidity_air(ic) = 100._wp * air_moisture(ic)                                       &
-                                 * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
-                                 / ( ((1._wp - rd / rv) * air_moisture(ic) + (rd / rv)) * air_qsat )
-      relative_humidity_air(ic) = MIN(100._wp, relative_humidity_air(ic))
-    END DO
-    !$ACC END PARALLEL LOOP
-
-  END FUNCTION get_relative_humidity_air
 
 #endif
 END MODULE mo_disturb_process

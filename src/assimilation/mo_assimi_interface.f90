@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -569,7 +569,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat_water
+    USE mo_phy_schemes,   ONLY: qsat_water, qsat_mixed
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -638,7 +638,11 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
-      q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic), use_convect_tables=.NOT. use_tmx)
+      IF (use_tmx) THEN
+        q_air_gt_qsat_tmp = q_air(ic) > qsat_water(t(ic),press_srf(ic))
+      ELSE
+        q_air_gt_qsat_tmp = q_air(ic) > qsat_mixed(t(ic),press_srf(ic))
+      END IF
       canopy_cond_limited(ic) = &
         &  get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
                                   water_stress(ic),          & ! in, water stress factor
@@ -972,7 +976,7 @@ CONTAINS
     INTEGER                    :: iblk, ics, ice !, nc
     REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
     REAL(wp)                   :: dtime
-    LOGICAL                    :: lstart, init_running_means, init_npp, new_year
+    LOGICAL                    :: lstart, init_running_means, new_year
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_npp_buffer'
 
@@ -1032,14 +1036,8 @@ CONTAINS
     seconds_year = get_previous_year_length(options%current_datetime)
 
     init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
-    init_NPP = .TRUE.
-    IF (MINVAL(NPP_mean_5year(:)) < -999._wp) init_NPP = .FALSE.
     CALL calc_NPPbuf(lstart, init_running_means, new_year, dtime, NPP_pot_rate_ca, &
                      seconds_year, NPP_sum_year, NPP_mean_5year)
-
-    IF (.NOT. init_NPP .AND. debug_on() .AND. iblk==1) THEN
-       IF (MINVAL(NPP_mean_5year(:)) >= -999._wp) CALL message(TRIM(routine), 'initialisation of NPP_mean_5year')
-    ENDIF
 
     ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
     land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), wp)

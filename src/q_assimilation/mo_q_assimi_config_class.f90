@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,7 +16,7 @@
 !>#### define assimilation config structure, read assimilation namelist and init configuration parameters
 !>
 MODULE mo_q_assimi_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
@@ -28,6 +28,7 @@ MODULE mo_q_assimi_config_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_q_assimi_config
+  PUBLIC :: MEDLYN, BALLBERRY
 
   ! ======================================================================================================= !
   !> Q_ASSIMI_ configuration parameters
@@ -38,10 +39,17 @@ MODULE mo_q_assimi_config_class
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
-    CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
+    INTEGER                 :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
   CONTAINS
     PROCEDURE :: Init => Init_q_assimi_config
   END TYPE t_q_assimi_config
+
+  ENUM, BIND(C)
+    !> Canopy conductance scheme
+    ENUMERATOR :: &
+      MEDLYN = 1, &  ! Canopy conductance scheme following Medlyn et al. 2011 (default); uses lctlib%g1_medlyn
+      BALLBERRY      ! Canopy conductance scheme following Ball-Berry et al. 1987; uses lctlib%g1_bberry
+  END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_config_class'
 
@@ -68,18 +76,14 @@ CONTAINS
     LOGICAL                     :: flag_t_resp_acclimation
     LOGICAL                     :: flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
-    CHARACTER(15)               :: canopy_conductance_scheme
+    CHARACTER(15)               :: canopy_conductance_scheme_string
     REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy_q_assimi
 
-#ifdef __QUINCY_STANDALONE__
-    NAMELIST /assimilation_ctl/  &
-#else
-    NAMELIST /q_assimi_nml/  &
-#endif
+    NAMELIST /lnd_q_assimi_nml/  &
       & active,                   &
       & lrestart_cont,            &
       & ic_filename,              &
@@ -89,7 +93,7 @@ CONTAINS
       & flag_t_resp_acclimation,  &
       & flag_t_jmax_acclimation,  &
       & canopy_layer_scheme,      &
-      & canopy_conductance_scheme
+      & canopy_conductance_scheme_string
 
     INTEGER                     :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_assimi_config'
@@ -97,26 +101,22 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting assimi configuration')
     ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
-    active                        = .TRUE.
-    lrestart_cont                 = .FALSE.      ! TRUE: Continue although ASSIMI variables are missing in restart file
-    bc_filename                   = 'bc_land_assimi.nc'
-    ic_filename                   = 'ic_land_assimi.nc'
-    ncanopy                       = 10           ! (default for FAPAR based canopy layers would be 10)
-    flag_optimal_Nfraction        = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_resp_acclimation       = .FALSE.      ! .TRUE. .FALSE.
-    flag_t_jmax_acclimation       = .FALSE.      ! .TRUE. .FALSE.
-    canopy_layer_scheme           = "fapar"      !
-    canopy_conductance_scheme     = "medlyn"
+    active                           = .TRUE.
+    lrestart_cont                    = .FALSE.      ! TRUE: Continue although ASSIMI variables are missing in restart file
+    bc_filename                      = 'bc_land_assimi.nc'
+    ic_filename                      = 'ic_land_assimi.nc'
+    ncanopy                          = 10           ! (default for FAPAR based canopy layers would be 10)
+    flag_optimal_Nfraction           = .FALSE.      ! .TRUE. .FALSE.
+    flag_t_resp_acclimation          = .TRUE.       ! .TRUE. .FALSE.
+    flag_t_jmax_acclimation          = .TRUE.       ! .TRUE. .FALSE.
+    canopy_layer_scheme              = "fapar"      !
+    canopy_conductance_scheme_string = "medlyn"
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-#ifdef __QUINCY_STANDALONE__
-    nml_unit    = position_nml('assimilation_ctl', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, assimilation_ctl)
-#else
-    nml_unit    = position_nml('q_assimi_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, q_assimi_nml)
-#endif
+    nml_unit    = position_nml('lnd_q_assimi_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_q_assimi_nml)
+    CALL close_nml(nml_handler)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Write namelist values into config
     config%active                       = active
@@ -128,8 +128,18 @@ CONTAINS
     config%flag_t_resp_acclimation      = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation      = flag_t_jmax_acclimation
     config%canopy_layer_scheme          = TRIM(canopy_layer_scheme)
-    config%canopy_conductance_scheme    = TRIM(canopy_conductance_scheme)
-    CALL close_nml(nml_handler)
+    SELECT CASE(TRIM(canopy_conductance_scheme_string))
+    CASE ("medlyn")
+      config%canopy_conductance_scheme = MEDLYN
+      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: medlyn. '// &
+        &                         'The local lctlib_g1 variable is set to lctlib%g1_medlyn')
+    CASE ("ballberry")
+      config%canopy_conductance_scheme = BALLBERRY
+      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: ballberry. '// &
+        &                         'The local lctlib_g1 variable is set to lctlib%g1_bberry')
+    CASE DEFAULT
+      CALL finish(routine, 'Invalid canopy_conductance_scheme: '// TRIM(canopy_conductance_scheme_string))
+    END SELECT
 
     ! extinction coefficient for canopy layer depth calculation
     k_canopy_layer = 0.7_wp
@@ -157,20 +167,6 @@ CONTAINS
       END DO
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme', config%canopy_layer_scheme
-      CALL finish(routine, message_text)
-    END SELECT
-
-    !> check validity of canopy-conductance scheme
-    !>
-    SELECT CASE(TRIM(config%canopy_conductance_scheme))
-    CASE ("medlyn")
-      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
-        &                         ' the local lctlib_g1 variable is set to lctlib%g1_medlyn')
-    CASE ("ballberry")
-      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
-        &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
-    CASE DEFAULT
-      WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
       CALL finish(routine, message_text)
     END SELECT
 

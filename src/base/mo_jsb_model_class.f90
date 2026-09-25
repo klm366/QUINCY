@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -92,9 +92,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
-#ifndef __NO_QUINCY__
     PROCEDURE :: Write_back_to_bgcms
-#endif
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -144,7 +142,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:new_model'
 
-    CALL message(TRIM(routine), 'starting construction of new JSBACH model instance.')
+    IF (debug_on()) CALL message(TRIM(routine), 'starting construction of new ICON-Land model instance.')
 
     ALLOCATE(return_ptr)
 
@@ -172,7 +170,7 @@ CONTAINS
 
     ALLOCATE(return_ptr%queue)
 
-    CALL message(TRIM(routine), 'construction of JSBACH model completed.')
+    IF (debug_on()) CALL message(TRIM(routine), 'construction of ICON-Land model completed.')
 
   END FUNCTION new_model
 
@@ -443,9 +441,9 @@ CONTAINS
   END FUNCTION Get_tile
 
   SUBROUTINE Set_options(this, current_datetime, dtime, alpha, iblk, ics, ice, nc, &
-    &                    nsoil_e, nsoil_w, nsnow_e)
+    &                    nsoil_e, nsoil_w, nsnow_e, npft)
 
-    USE mo_jsb_utils_iface, ONLY: assign_if_present
+    USE mo_fortran_tools,   ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
 
     CLASS(t_jsb_model),                  INTENT(inout) :: this
@@ -459,8 +457,10 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_e
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_w
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsnow_e
+    INTEGER,          OPTIONAL,          INTENT(in)    :: npft
 
     INTEGER :: no_omp_thread
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_options'
 
     no_omp_thread = Get_omp_thread()
 
@@ -473,10 +473,37 @@ CONTAINS
     IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
     ! Set number of soil and snow layers to options on all threads
     ! Note: The assign_if_present interface does not support assigning a value to a vector.
-    IF (PRESENT(nsoil_e)) this%options(:)%nsoil_e = nsoil_e
-    IF (PRESENT(nsoil_w)) this%options(:)%nsoil_w = nsoil_w
-    IF (PRESENT(nsnow_e)) this%options(:)%nsnow_e = nsnow_e
+    IF (PRESENT(npft)) THEN
+      IF (Is_omp_inside_serial()) THEN
+        this%options(:)%npft = npft
+      ELSE
+        CALL finish(routine, 'npft may only be set outside OpenMP parallel regions')
+      END IF
+    END IF
 
+    IF (PRESENT(nsoil_e)) THEN
+      IF (Is_omp_inside_serial()) THEN
+        this%options(:)%nsoil_e = nsoil_e
+      ELSE
+        CALL finish(routine, 'nsoil_e may only be set outside OpenMP parallel regions')
+      END IF
+    END IF
+
+    IF (PRESENT(nsoil_w)) THEN
+      IF (Is_omp_inside_serial()) THEN
+        this%options(:)%nsoil_w = nsoil_w
+      ELSE
+        CALL finish(routine, 'nsoil_w may only be set outside OpenMP parallel regions')
+      END IF
+    END IF
+
+    IF (PRESENT(nsnow_e)) THEN
+      IF (Is_omp_inside_serial()) THEN
+        this%options(:)%nsnow_e = nsnow_e
+      ELSE
+        CALL finish(routine, 'nsnow_e may only be set outside OpenMP parallel regions')
+      END IF
+    END IF
   END SUBROUTINE Set_options
 
   SUBROUTINE Set_subset(this, type, iblk, ics, ice)
@@ -520,7 +547,6 @@ CONTAINS
 
   END SUBROUTINE Set_subset
 
-#ifndef __NO_QUINCY__
   ! ====================================================================================================== !
   !>
   !> Write all values from matrices back to the bgcms for all tiles that have a bgcm store
@@ -559,7 +585,7 @@ CONTAINS
           ics = grid%Get_col_start(iblk)
           ! index of gridcell at end of the chunk
           ice = grid%Get_col_end(iblk)
-          CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, ics, ice, iblk)
+          CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
         ENDDO
       ENDIF
 
@@ -567,7 +593,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Write_back_to_bgcms
-#endif
 
   ! ====================================================================================================== !
   !>

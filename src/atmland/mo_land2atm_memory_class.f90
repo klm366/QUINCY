@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -198,7 +198,6 @@ CONTAINS
       & initval_r = 0.0_wp)
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-#ifndef __NO_QUINCY__
       CALL mem%Add_var('q_total_c', mem%q_total_c, &
         & hgrid, surface, &
         & t_cf('q_total_c', '[mol m-2]', 'total C, sum of all quincy carbon pools'), &
@@ -218,13 +217,11 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-#endif
+        & lrestart = .TRUE., &
+        & initval_r = -999.0_wp)
     ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
-
       ! jsbach carbon
       IF (model%processes(CARBON_)%p%config%active) THEN
         CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
@@ -240,11 +237,11 @@ CONTAINS
           & t_cf('yday_c_state_sum', '', 'yday c state sum required for carbon conservation test'),  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
           & prefix, suffix,                                                                          &
-          & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,             &
+          & loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,                                 &
           & initval_r=0.0_wp )
-      END IF
+      END IF ! CARBON_ active
 #endif
-    END IF
+    END IF  ! QUINCY / JSBACH
 
     ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN

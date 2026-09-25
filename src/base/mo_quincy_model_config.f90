@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,7 +16,7 @@
 !>#### defines QUINCY model modes and related helper routines
 !>
 MODULE mo_quincy_model_config
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_util,             ONLY: tolower
   USE mo_exception,        ONLY: finish

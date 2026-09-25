@@ -3,7 +3,7 @@
 # ICON-Land
 #
 # ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
+# Copyright (C) 2013-2026, MPI-M, MPI-BGC
 #
 # Contact: icon-model.org
 # Authors: AUTHORS.md
@@ -33,7 +33,7 @@ production_run=${13:=false}
 comp=gfortran
 
 #Setup working directory
-mkdir ${work_dir} || true
+mkdir -p ${work_dir}
 
 #Setup input file
 

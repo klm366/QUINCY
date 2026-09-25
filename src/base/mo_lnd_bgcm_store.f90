@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,7 +16,7 @@
 !>#### defines methods (used on tiles) for collecting, storing and providing bgc materials
 !>
 MODULE mo_lnd_bgcm_store
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,             ONLY: finish, message
   USE mo_kind,                  ONLY: wp
@@ -29,10 +29,14 @@ MODULE mo_lnd_bgcm_store
 
   PUBLIC :: t_lnd_bgcm_store, get_bgcm_idx
 
+#ifndef __QUINCY_STANDALONE__
+  PUBLIC :: read_bgcm_from_file
+#endif
 
   ! ======================================================================================================= !
   !>
   !> bgc material store - stores pointers to the element variables of all bgcms across all processes
+  !> and stores matrices onto which the values in these elements are copied
   !>
   TYPE, EXTENDS(t_lnd_bgcm_store_abstract) :: t_lnd_bgcm_store
   CONTAINS
@@ -40,8 +44,16 @@ MODULE mo_lnd_bgcm_store
     PROCEDURE :: Init           => Init_bgcm_store
     PROCEDURE :: Append_bgcms   => Append_process_bgcms_to_store
     !> Additional procedures
-    PROCEDURE :: Store_bgcms_in_matrices
-    PROCEDURE :: Write_stored_matrices_to_bgcms
+    PROCEDURE :: Store_bgcm_vars_in_matrices
+    PROCEDURE :: Write_matrices_to_bgcm_vars
+
+    PROCEDURE :: Write_matrix_to_2l_2d_bgcm_vars
+    PROCEDURE :: Write_matrix_to_2l_3d_bgcm_vars
+    PROCEDURE :: Write_matrix_to_1l_2d_bgcm_vars
+    PROCEDURE :: Write_matrix_to_1l_3d_bgcm_vars
+
+    PROCEDURE :: Update_matrix_with_2d_bgcm_element_vars
+
     PROCEDURE :: Get_matrix_from_store_2l_2d
     PROCEDURE :: Get_matrix_from_store_2l_3d
     PROCEDURE :: Get_matrix_from_store_1l_2d
@@ -90,11 +102,11 @@ CONTAINS
   SUBROUTINE Append_process_bgcms_to_store(this, main_bgcm, nblks, nproma, nsoil, tile_name, idx_bgcm, &
       &                                    idx_1l_2d_bgcm, idx_2l_2d_bgcm, idx_1l_3d_bgcm, idx_2l_3d_bgcm)
 
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_class,      ONLY: get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this           !< this bgcm store instance
-    CLASS(t_jsb_pool),       INTENT(IN)    :: main_bgcm      !< 'main' bgcm of a process
+    CLASS(t_lnd_bgcm),       INTENT(IN)    :: main_bgcm      !< 'main' bgcm of a process
     CHARACTER(len=*),        INTENT(IN)    :: tile_name      !< name of the tile with this bgcm store
     INTEGER,                 INTENT(IN)    :: nblks          !< number of blocks
     INTEGER,                 INTENT(IN)    :: nproma         !< number of grid-cells
@@ -105,7 +117,7 @@ CONTAINS
     INTEGER,                 INTENT(INOUT) :: idx_1l_3d_bgcm !< idx of last 1l 3d bgcm
     INTEGER,                 INTENT(INOUT) :: idx_2l_3d_bgcm !< idx of last 2l 3d bgcm
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool),   POINTER  :: bgcm
+    CLASS(t_lnd_bgcm),   POINTER  :: bgcm
     INTEGER                       :: i_bgcm, i_compartment, i_element
     INTEGER                       :: nr_of_bgcms_this_proc, nr_of_elements, nr_of_compartments
 
@@ -115,12 +127,12 @@ CONTAINS
     IF (debug_on()) &
       & CALL message(TRIM(routine), 'Append bgcms: '//TRIM(main_bgcm%name)//' - tile '//TRIM(tile_name))
 
-    nr_of_bgcms_this_proc = SIZE(main_bgcm%pool_list)
+    nr_of_bgcms_this_proc = SIZE(main_bgcm%bgcm_list)
     DO i_bgcm = 1, nr_of_bgcms_this_proc
       idx_bgcm = idx_bgcm + 1
-      bgcm => main_bgcm%pool_list(i_bgcm)%p
+      bgcm => main_bgcm%bgcm_list(i_bgcm)%p
 
-      this%bgc_material_name(idx_bgcm) = bgcm%name
+      this%bgc_material_name(idx_bgcm) = bgcm%shortname
       IF(bgcm%id == -1) THEN
         CALL finish(TRIM(routine), 'Found bgcm with no specified id '//TRIM(bgcm%name)// &
           & ' in tile '//TRIM(tile_name)//', please check!')
@@ -141,6 +153,7 @@ CONTAINS
         CASE(2)
           idx_1l_2d_bgcm = idx_1l_2d_bgcm + 1
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(nr_of_elements))
+          ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%element_shortname(nr_of_elements))
 
           ALLOCATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(nr_of_elements, nproma, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%mt_1l_2d_bgcm(:,:,:))
@@ -152,10 +165,13 @@ CONTAINS
           DO i_element = 1, nr_of_elements
             this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%collection_1l_p(i_element)%p &
               & => bgcm%element_list(i_element)%p
-          ENDDO
+            this%store_1l_2d_bgcms(idx_1l_2d_bgcm)%element_shortname(i_element) &
+              & = bgcm%element_list(i_element)%p%element_shortname
+          END DO
         CASE(3)
           idx_1l_3d_bgcm = idx_1l_3d_bgcm + 1
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(nr_of_elements))
+          ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%element_shortname(nr_of_elements))
 
           ALLOCATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(nr_of_elements, nproma, nsoil, nblks))
           !$ACC ENTER DATA CREATE(this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%mt_1l_3d_bgcm(:,:,:,:))
@@ -167,8 +183,10 @@ CONTAINS
           DO i_element = 1, nr_of_elements
             this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%collection_1l_p(i_element)%p &
               & => bgcm%element_list(i_element)%p
-          ENDDO
-        ENDSELECT
+            this%store_1l_3d_bgcms(idx_1l_3d_bgcm)%element_shortname(i_element) &
+              & = bgcm%element_list(i_element)%p%element_shortname
+          END DO
+        END SELECT
 
       ELSE
         ! i.e. no elements but one layer of compartments which are then expected to have elements
@@ -176,15 +194,17 @@ CONTAINS
         this%nr_of_levels(idx_bgcm) = 2
         ! current assumption (asserted in the counting routine): all elements of all compartments have the same dimension
         this%nr_of_dimensions(idx_bgcm) &
-          & = get_dimension_of_element_variables(bgcm%pool_list(1)%p, tile_name, routine)
+          & = get_dimension_of_element_variables(bgcm%bgcm_list(1)%p, tile_name, routine)
 
-        nr_of_compartments = SIZE(bgcm%pool_list)
-        nr_of_elements = SIZE(bgcm%pool_list(1)%p%element_list)
+        nr_of_compartments = SIZE(bgcm%bgcm_list)
+        nr_of_elements = SIZE(bgcm%bgcm_list(1)%p%element_list)
 
         SELECT CASE(this%nr_of_dimensions(idx_bgcm))
         CASE(2)
           idx_2l_2d_bgcm = idx_2l_2d_bgcm + 1
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+          ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%element_shortname(nr_of_elements))
+          ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(nr_of_compartments))
 
           ALLOCATE(this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%mt_2l_2d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nblks))
@@ -198,6 +218,8 @@ CONTAINS
         CASE(3)
           idx_2l_3d_bgcm = idx_2l_3d_bgcm + 1
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(nr_of_compartments, nr_of_elements))
+          ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%element_shortname(nr_of_elements))
+          ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(nr_of_compartments))
 
           ALLOCATE(this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%mt_2l_3d_bgcm(nr_of_compartments, nr_of_elements, &
             &                                                           nproma, nsoil, nblks))
@@ -213,14 +235,20 @@ CONTAINS
         DO i_compartment = 1, nr_of_compartments
           SELECT CASE(this%nr_of_dimensions(idx_bgcm))
           CASE(2)
+            this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%compartment_shortname(i_compartment) = bgcm%bgcm_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
+              this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%element_shortname(i_element) &
+                & = bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_2d_bgcms(idx_2l_2d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
-                & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
+                & => bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
           CASE(3)
+            this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%compartment_shortname(i_compartment) = bgcm%bgcm_list(i_compartment)%p%shortname
             DO i_element = 1, nr_of_elements
+              this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%element_shortname(i_element) &
+                & = bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p%element_shortname
               this%store_2l_3d_bgcms(idx_2l_3d_bgcm)%collection_2l_p(i_compartment, i_element)%p &
-                & => bgcm%pool_list(i_compartment)%p%element_list(i_element)%p
+                & => bgcm%bgcm_list(i_compartment)%p%element_list(i_element)%p
             ENDDO
           ENDSELECT
         ENDDO ! compartments
@@ -232,9 +260,9 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Store current values of all bgcms in the storage matrices (currently only required after a restart)
+  !> Store current values of all bgcm variables in the storage matrices
   !>
-  SUBROUTINE Store_bgcms_in_matrices(this, tile_name, ics, ice, iblk)
+  SUBROUTINE Store_bgcm_vars_in_matrices(this, tile_name, ics, ice, iblk)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this           !< this bgcm store instance
     CHARACTER(len=*),        INTENT(IN)    :: tile_name      !< name of the tile with this bgcm store
@@ -253,7 +281,7 @@ CONTAINS
     REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
     REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms_in_matrices'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcm_vars_in_matrices'
     ! ----------------------------------------------------------------------------------------------------- !
 
     IF (debug_on() .AND. iblk == 1) &
@@ -332,14 +360,14 @@ CONTAINS
       ENDSELECT
     ENDDO
 
-  END SUBROUTINE Store_bgcms_in_matrices
+  END SUBROUTINE Store_bgcm_vars_in_matrices
 
 
   ! ======================================================================================================= !
   !>
-  !> Write all stored matrices back to bgcms
+  !> Write all stored matrices back to the associated bgcm variables
   !>
-  SUBROUTINE Write_stored_matrices_to_bgcms(this, tile_name, ics, ice, iblk)
+  SUBROUTINE Write_matrices_to_bgcm_vars(this, tile_name, ics, ice, iblk)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this           !< this bgcm store instance
     CHARACTER(len=*),        INTENT(IN)    :: tile_name      !< name of the tile with this bgcm store
@@ -358,7 +386,7 @@ CONTAINS
     REAL(wp), POINTER                      :: ptr4D(:,:,:,:)
     REAL(wp), POINTER                      :: ptr5D(:,:,:,:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_stored_matrices_to_bgcms'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrices_to_bgcm_vars'
     ! ----------------------------------------------------------------------------------------------------- !
 
     IF (debug_on() .AND. iblk == 1) &
@@ -441,11 +469,12 @@ CONTAINS
       ENDSELECT
     ENDDO
 
-  END SUBROUTINE Write_stored_matrices_to_bgcms
+  END SUBROUTINE Write_matrices_to_bgcm_vars
 
   ! ======================================================================================================= !
   !>
   !> Get a matrix for the chunk (ics:ice, iblk) from the store for this 2l 2d bgcm
+  !> ... i.e. this routine only assignes the pointer it does not care for synchronisations of matrices and variables.
   !>
   FUNCTION Get_matrix_from_store_2l_2d(this, bgcm_id, ics, ice, iblk, tile_name) RESULT(bgcm_matrix)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -473,6 +502,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Get a matrix for the chunk (ics:ice, iblk) from the store for this 2l 3d bgcm
+  !> ... i.e. this routine only assignes the pointer it does not care for synchronisations of matrices and variables.
   !>
   FUNCTION Get_matrix_from_store_2l_3d(this, bgcm_id, ics, ice, iblk, tile_name) RESULT(bgcm_matrix)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -500,6 +530,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Get a matrix for the chunk (ics:ice, iblk) from the store for this 1l 2d bgcm
+  !> ... i.e. this routine only assignes the pointer it does not care for synchronisations of matrices and variables.
   !>
   FUNCTION Get_matrix_from_store_1l_2d(this, bgcm_id, ics, ice, iblk, tile_name) RESULT(bgcm_matrix)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -527,6 +558,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Get a matrix for the chunk (ics:ice, iblk) from the store for this 1l 3d bgcm
+  !> ... i.e. this routine only assignes the pointer it does not care for synchronisations of matrices and variables.
   !>
   FUNCTION Get_matrix_from_store_1l_3d(this, bgcm_id, ics, ice, iblk, tile_name) RESULT(bgcm_matrix)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -549,6 +581,168 @@ CONTAINS
     bgcm_matrix => this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%mt_1l_3d_bgcm(:,ics:ice,:,iblk)
 
   END FUNCTION Get_matrix_from_store_1l_3d
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Write the values for a given chunk (ics:ice, iblk) of a given matrix back to its 2l 2d bgcm variables
+  !>
+  SUBROUTINE Write_matrix_to_2l_2d_bgcm_vars(this, bgcm_id, ics, ice, iblk, tile_name, bgcm_matrix)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(INOUT) :: this               !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id            !< id of bgcm queried from the store
+    INTEGER,                    INTENT(IN)    :: ics                !< start index
+    INTEGER,                    INTENT(IN)    :: ice                !< end index
+    INTEGER,                    INTENT(IN)    :: iblk               !< current block
+    CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
+    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (part,elem,nc)
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
+    INTEGER                                   :: i_elem             !< iterator over elements
+    INTEGER                                   :: i_part             !< iterator over compartments
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrix_to_2l_2d_bgcm_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+
+    ! 2levels 2D -> write matrix (parts, elems, nc) back
+    DO i_part = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+      DO i_elem = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+        this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part,i_elem)%p%ptr2d(ics:ice,iblk) &
+          & = bgcm_matrix(i_part,i_elem,:)
+
+ !       ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
+      END DO
+    END DO
+
+  END SUBROUTINE Write_matrix_to_2l_2d_bgcm_vars
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Write the values for a given chunk (ics:ice, iblk) of a given matrix back to its 2l 3d bgcm variables
+  !>
+  SUBROUTINE Write_matrix_to_2l_3d_bgcm_vars(this, bgcm_id, ics, ice, iblk, tile_name, bgcm_matrix)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(INOUT) :: this                 !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id              !< id of bgcm queried from the store
+    INTEGER,                    INTENT(IN)    :: ics                  !< start index
+    INTEGER,                    INTENT(IN)    :: ice                  !< end index
+    INTEGER,                    INTENT(IN)    :: iblk                 !< current block
+    CHARACTER (len=*),          INTENT(IN)    :: tile_name            !< name of the current tile
+    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:,:) !< dims: (part,elem,nc,layer)
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                                   :: bgcm_idx             !< index of bgcm queried from the store
+    INTEGER                                   :: i_elem               !< iterator over elements
+    INTEGER                                   :: i_part               !< iterator over compartments
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrix_to_2l_3d_bgcm_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+
+    ! 2levels 3D -> write matrix (parts, elems, nc, var_dim3) back
+    DO i_part = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+      DO i_elem = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+        this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part,i_elem)%p%ptr3d(ics:ice,:,iblk) &
+          & = bgcm_matrix(i_part,i_elem,:,:)
+      END DO
+    END DO
+
+  END SUBROUTINE Write_matrix_to_2l_3d_bgcm_vars
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Write the values for a given chunk (ics:ice, iblk) of a given matrix back to its 1l 2d bgcm variables
+  !>
+  SUBROUTINE Write_matrix_to_1l_2d_bgcm_vars(this, bgcm_id, ics, ice, iblk, tile_name, bgcm_matrix)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(INOUT) :: this             !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id          !< id of bgcm queried from the store
+    INTEGER,                    INTENT(IN)    :: ics              !< start index
+    INTEGER,                    INTENT(IN)    :: ice              !< end index
+    INTEGER,                    INTENT(IN)    :: iblk             !< current block
+    CHARACTER (len=*),          INTENT(IN)    :: tile_name        !< name of the current tile
+    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:) !< dims: (elem,nc)
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                                   :: bgcm_idx         !< index of bgcm queried from the store
+    INTEGER                                   :: i_elem           !< iterator over elements
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrix_to_1l_2d_bgcm_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+
+    ! 1level 2D -> write matrix (elems, nc) back
+    DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+      this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk) = bgcm_matrix(i_elem,:)
+    END DO
+
+  END SUBROUTINE Write_matrix_to_1l_2d_bgcm_vars
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Write the values for a given chunk (ics:ice, iblk) of a given matrix back to its 1l 3d bgcm variables
+  !>
+  SUBROUTINE Write_matrix_to_1l_3d_bgcm_vars(this, bgcm_id, ics, ice, iblk, tile_name, bgcm_matrix)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(INOUT) :: this               !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id            !< id of bgcm queried from the store
+    INTEGER,                    INTENT(IN)    :: ics                !< start index
+    INTEGER,                    INTENT(IN)    :: ice                !< end index
+    INTEGER,                    INTENT(IN)    :: iblk               !< current block
+    CHARACTER (len=*),          INTENT(IN)    :: tile_name          !< name of the current tile
+    REAL(wp),          POINTER, INTENT(IN)    :: bgcm_matrix(:,:,:) !< dims: (elem,nc,layer)
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                                   :: bgcm_idx           !< index of bgcm queried from the store
+    INTEGER                                   :: i_elem             !< iterator over elements
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Write_matrix_to_1l_3d_bgcm_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+
+    ! 1level 3D -> write matrix (elems, nc, var_dim3) back
+    DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+      this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr3d(ics:ice,:,iblk) &
+        & = bgcm_matrix(i_elem,:,:)
+    END DO
+
+  END SUBROUTINE Write_matrix_to_1l_3d_bgcm_vars
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Update the 1l 2d matrix with the given id (bgcm_id) for a given chunk (ics:ice, iblk)
+  !> with the values of its bgcm element vars
+  !>
+  SUBROUTINE Update_matrix_with_2d_bgcm_element_vars(this, bgcm_id, ics, ice, iblk, tile_name, bgcm_matrix)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(INOUT) :: this             !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id          !< id of bgcm queried from the store
+    INTEGER,                    INTENT(IN)    :: ics              !< start index
+    INTEGER,                    INTENT(IN)    :: ice              !< end index
+    INTEGER,                    INTENT(IN)    :: iblk             !< current block
+    CHARACTER (len=*),          INTENT(IN)    :: tile_name        !< name of the current tile
+    REAL(wp),          POINTER, INTENT(INOUT) :: bgcm_matrix(:,:) !< dims: (elem,nc)
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                                   :: bgcm_idx         !< index of bgcm queried from the store
+    INTEGER                                   :: i_elem           !< iterator over elements
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Update_matrix_with_2d_bgcm_element_vars'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+
+    ! 1level 2D -> write matrix (elems, nc) back
+    DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+      bgcm_matrix(i_elem,:) = this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk)
+    END DO
+
+  END SUBROUTINE Update_matrix_with_2d_bgcm_element_vars
 
 
   ! ======================================================================================================= !
@@ -588,6 +782,99 @@ CONTAINS
 
   END FUNCTION get_bgcm_idx
 
+#ifndef __QUINCY_STANDALONE__
+  ! ======================================================================================================= !
+  !>
+  !> Read the bgcm with the given id from the given file
+  !>
+  SUBROUTINE read_bgcm_from_file(this, bgcm_id, process_name, tile_name, caller, input_file, name_extdim, size_extdim)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    USE mo_util,                    ONLY: read_2D_var, read_3D_var
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_lnd_bgcm_store),    INTENT(IN)    :: this         !< this bgcm store instance
+    INTEGER,                    INTENT(IN)    :: bgcm_id      !< id of bgcm queried from the store
+    CHARACTER(len=*),           INTENT(IN)    :: process_name !< name of the current tile
+    CHARACTER(len=*),           INTENT(IN)    :: tile_name    !< name of the current tile
+    CHARACTER(len=*),           INTENT(in)    :: caller       !< calling routine
+    TYPE(t_input_file),         INTENT(INOUT) :: input_file   !< file to read passed bgcm from
+    CHARACTER(len=*), OPTIONAL, INTENT(IN)    :: name_extdim  !< name of the variable in the file
+    INTEGER, OPTIONAL,          INTENT(IN)    :: size_extdim  !< size of additional dim for bgcms with 3dims
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER :: bgcm_idx                   !< index of this bgcm in the store
+    INTEGER :: i_part                     !< index of compartment
+    INTEGER :: i_elem                     !< index of element
+    INTEGER :: i_dim3                     !< third dim index
+    REAL(wp), POINTER :: ptr2D(:,:)       !< temporary pointers for 2D variables (elements)
+    REAL(wp), POINTER :: ptr3D(:,:,:)     !< temporary pointers for 3D variables (elements)
+    CHARACTER(len=:), ALLOCATABLE :: elem_name
+    CHARACTER(len=:), ALLOCATABLE :: compartment_name
+    CHARACTER(len=:), ALLOCATABLE :: bgcm_var_name_prefix
+    CHARACTER(len=:), ALLOCATABLE :: var_name
+    CHARACTER(len=*), PARAMETER   :: routine = modname//':read_bgcm_from_file'
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Get index of the queried bgcm in this store
+    bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
+    IF (debug_on()) &
+      & CALL message(TRIM(routine), 'Read bcgm '// TRIM(this%bgc_material_name(bgcm_idx)) //' for tile '//TRIM(tile_name))
+
+    bgcm_var_name_prefix = process_name//'_'//TRIM(this%bgc_material_name(bgcm_idx))
+
+    IF (this%nr_of_dimensions(bgcm_idx) == 3 .AND. (.NOT. (PRESENT(size_extdim) .AND. PRESENT(name_extdim)))) THEN
+      CALL finish(TRIM(routine), 'Please pass the size and the name of the additional dimension in order to read the 3D' &
+        &   // ' bgcm '//TRIM(this%bgc_material_name(bgcm_idx))//' on tile '//TRIM(tile_name)//'!')
+    END IF
+
+    SELECT CASE(this%nr_of_levels(bgcm_idx))
+    CASE(1)
+      ! i.e. only elements
+      SELECT CASE(this%nr_of_dimensions(bgcm_idx))
+      CASE(2)
+        ! 1level 2D
+        DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+          elem_name = TRIM(this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+          var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
+          ptr2D => this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(:,:)
+          CALL read_2D_var(input_file, ptr2D, var_name)
+        END DO
+      CASE(3)
+        ! 1level 3D
+        DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+          elem_name = TRIM(this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+          var_name = bgcm_var_name_prefix//'_'//elem_name//'_'//TRIM(tile_name)
+          ptr3D => this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr3d(:,:,:)
+          CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+        END DO
+      END SELECT
+    CASE(2)
+      ! i.e. with compartments
+      SELECT CASE(this%nr_of_dimensions(bgcm_idx))
+      CASE(2)
+        ! 2levels 2D
+        DO i_part = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+          compartment_name = TRIM(this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%compartment_shortname(i_part))
+          DO i_elem = 1,this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+            elem_name = TRIM(this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+            var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
+            ptr2D => this%store_2l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr2d(:,:)
+            CALL read_2D_var(input_file, ptr2D, var_name)
+          END DO
+        END DO
+      CASE(3)
+        ! 2levels 3D -> fill matrix (parts, elems, nc, var_dim3, nblks)
+        DO i_part = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_parts
+          compartment_name = TRIM(this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%compartment_shortname(i_part))
+          DO i_elem = 1,this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+            elem_name = TRIM(this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%element_shortname(i_elem))
+            var_name = bgcm_var_name_prefix//'_'//compartment_name//'_'//elem_name//'_'//TRIM(tile_name)
+            ptr3D => this%store_2l_3d_bgcms(this%idx_in_store(bgcm_idx))%collection_2l_p(i_part, i_elem)%p%ptr3d(:,:,:)
+            CALL read_3D_var(input_file, ptr3D, var_name, name_extdim, size_extdim)
+          END DO
+        END DO
+      END SELECT
+    END SELECT
+
+  END SUBROUTINE read_bgcm_from_file
+#endif
 
   ! ======================================================================================================= !
   !>
@@ -609,6 +896,8 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%collection_1l_p)
+        IF(ALLOCATED(bgcm_store%store_1l_2d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%element_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_2d_bgcms(i)%mt_1l_2d_bgcm)
@@ -623,6 +912,8 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_1l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%collection_1l_p)
+        IF(ALLOCATED(bgcm_store%store_1l_3d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%element_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_1l_3d_bgcms(i)%mt_1l_2d_bgcm)
@@ -637,6 +928,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_2d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%collection_2l_p)
+        IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%element_shortname)
+        IF(ALLOCATED(bgcm_store%store_2l_2d_bgcms(i)%compartment_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%compartment_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)) &
            & DEALLOCATE(bgcm_store%store_2l_2d_bgcms(i)%mt_2l_2d_bgcm)
@@ -651,6 +946,10 @@ CONTAINS
       DO i = 1,SIZE(bgcm_store%store_2l_3d_bgcms)
         IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%collection_2l_p)
+        IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%element_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%element_shortname)
+        IF(ALLOCATED(bgcm_store%store_2l_3d_bgcms(i)%compartment_shortname)) &
+          & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%compartment_shortname)
         !$ACC EXIT DATA DELETE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)
         IF(ASSOCIATED(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)) &
           & DEALLOCATE(bgcm_store%store_2l_3d_bgcms(i)%mt_2l_2d_bgcm)

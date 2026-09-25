@@ -1,9 +1,9 @@
-!> calculate vegetation respiration (QUINCY)
+!> QUINCY calculate vegetation respiration
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -16,7 +16,7 @@
 !>#### calculate vegetation maintenance-respiration considering, e.g., temperature and acclimation
 !>
 MODULE mo_q_veg_respiration
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
   PRIVATE

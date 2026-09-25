@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -51,13 +51,14 @@ MODULE mo_seb_memory_class
       & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
-      & q_sat_srf,              & !< surface saturated specific humidity  [?]
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
       & forc_hflx,              & !< Additional heat flux at surface                                 [W m-2]
                                   !! (additional to radiative fluxes and latent and sensible
                                   !!  heat fluxes, e.g. ground heat flux)
+      & le_phase_change,        & !< Latent energy due to phase changes at land surface              [J m-2]
+      & net_srf_rad_balance,    & !< Net surface radiation balance                                   [W m-2]
       & richardson                !< Richardson number (standalone model)                            []
     !
     ! Additional variables for LAND lct_type
@@ -127,7 +128,7 @@ CONTAINS
 
   SUBROUTINE Init_seb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -179,7 +180,6 @@ CONTAINS
         & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & output_level=BASIC,                                                        &
         & initval_r=280.0_wp**4 )
     END IF
 
@@ -198,12 +198,21 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=280.0_wp )
 
-    CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
+    CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                        &
       & hgrid, surface,                                                              &
-      & t_cf('sfc_heat_cap', 'J m-2 K-1)', 'surface layer heat capacity'),           &
+      & t_cf('le_phase_change', 'J m-2',                                             &
+      &      'Latent energy of phase changes at land surface'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & output_level=BASIC, &
+      & lrestart=.FALSE., output_level=MEDIUM,                                       &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('sfc_heat_cap', 'J m-2 K-1', 'surface layer heat capacity'),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=MEDIUM,                                                         &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                                &
@@ -226,12 +235,22 @@ CONTAINS
 
     CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('forc_hflx', 'W m-2)', 'additional heat flux at surface'),              &
+      & t_cf('forc_hflx', 'W m-2', 'additional heat flux at surface'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'net_srf_rad_balance', mem%net_srf_rad_balance,                &
+      & hgrid, surface,                                                              &
+      & t_cf('net_srf_rad_balance', 'W m-2',                                         &
+      &      'Net surface radiation balance'),                                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp)
 
     IF (jsbach_runs_standalone()) THEN
       CALL mem%Add_var( 'richardson', mem%richardson,                                &
@@ -254,9 +273,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
@@ -264,8 +281,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & output_level=BASIC, &
-        & initval_r=2.9E5_wp )
+        & output_level=FULL,                                                                 &
+        & initval_r=2.9E5_wp)
 
       CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
         & hgrid, surface,                                                                    &
@@ -273,24 +290,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.TRUE.,                                                                   &
-        & output_level=BASIC,                                                                &
-        & initval_r=0.0075_wp )
-
-#ifndef __NO_QUINCY__
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        CALL mem%Add_var('q_sat_srf', mem%q_sat_srf, &
-          & hgrid, surface, &
-          & t_cf('q_sat_srf', '[?]', 'surface saturated specific humidity'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart=.TRUE., &
-          & initval_r=0.0_wp)
-      END SELECT
-#endif
+        & output_level=FULL,                                                                 &
+        & initval_r=0.0075_wp)
 
       CALL mem%Add_var( 't_unfilt_old', mem%t_unfilt_old,                                    &
         & hgrid, surface,                                                                    &
@@ -315,6 +316,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=(    (.NOT. model%config%use_tmx .AND. .NOT. jsbach_runs_standalone())    &
         &           .OR. dsl4jsb_Config(SEB_)%l_skin_temp),                                  &
+        & output_level = BASIC,                                                              &
         & initval_r=280.0_wp )
 
       CALL mem%Add_var( 'dt_sk_dt_srf', mem%dt_sk_dt_srf,                                    &

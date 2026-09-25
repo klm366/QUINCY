@@ -3,7 +3,7 @@
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
@@ -30,15 +30,13 @@ MODULE mo_jsb4_forcing
   USE mo_math_constants,         ONLY: pi
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util_string,            ONLY: tolower, int2string, real2string
+  USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
   USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config,    ONLY: QCANOPY
-#endif
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
@@ -278,9 +276,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
     force_c_isotopes = .FALSE.
-#ifndef __NO_QUINCY__
     force_c_isotopes = (model%config%force_c_isotopes)
-#endif
     lstart  = is_time_experiment_start(current_datetime)
     lresume = is_time_restart(current_datetime)
     use_quincy = (model_scheme == MODEL_QUINCY)
@@ -810,6 +806,7 @@ CONTAINS
     ALLOCATE(forcing_input(no_of_models))
     ALLOCATE(forcing_options(no_of_models))
 
+    CALL message('', '')
     CALL message(routine, 'Allocated forcing_input and forcing_options ('//TRIM(int2string(no_of_models))//')')
 
   END SUBROUTINE setup_forcing
@@ -920,6 +917,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
+
+    CALL message('', '')
 
     !------------------------------------------------------------------------------------
     model => Get_model(model_id)
@@ -1226,6 +1225,8 @@ CONTAINS
         & forcing_c14_file_prefix, forcing_c14_unit, forcing_c14_const_c14, forcing_input(model_id)%C14_concentr)
     END SELECT
 
+    CALL message('', '')
+
   END SUBROUTINE init_forcing
 
   ! ======================================================================================================= !
@@ -1448,7 +1449,11 @@ CONTAINS
       ! check timeseries
       IF (my_process_is_stdio()) THEN
         IF (TRIM(forcing_input_variable%variable_name) == 'precip') THEN
-          WRITE(message_text,*) ' Reading forcing for ', ydate
+          IF (model%config%is_single_site) THEN
+            WRITE(message_text,*) ' Reading forcing for ', ydate, '(site '//model%config%single_site_shortname//')'
+          ELSE
+            WRITE(message_text,*) ' Reading forcing for ', ydate
+          END IF
           CALL message('----- ', message_text)
         END IF
         !Assertion: currentTimeStep needs to be contained in the file
@@ -1906,7 +1911,7 @@ CONTAINS
   !>
   SUBROUTINE sat_specific_humidity(temp, pressure, qsat)
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
     REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
@@ -1927,7 +1932,7 @@ CONTAINS
         CALL finish(TRIM(routine), TRIM(message_text))
       ELSE
 #endif
-        qsat(ic) = qsat_water(temp(ic), pressure(ic), use_convect_tables=.TRUE.)
+        qsat(ic) = qsat_mixed(temp(ic), pressure(ic))
 #ifndef _OPENACC
       ENDIF
 #endif
@@ -1940,7 +1945,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_phy_schemes, ONLY: qsat_water
+    USE mo_phy_schemes, ONLY: qsat_mixed
 
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
@@ -1957,7 +1962,7 @@ CONTAINS
 !          & 'Temperature out of bound: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
 !        CALL finish(TRIM(routine), TRIM(message_text))
     ELSE
-      qsat = qsat_water(temp, pressure, use_convect_tables=.TRUE.)
+      qsat = qsat_mixed(temp, pressure)
     ENDIF
 
   END SUBROUTINE sat_specific_humidity_scalar
@@ -2056,8 +2061,7 @@ CONTAINS
   !
   SUBROUTINE vapour_pressure_from_evapor(startblk, endblk, startidx, endidx, evapo_ratio_mean, Tmin, Tair, vpress)
 
-    ! USE mo_phy_schemes, ONLY: sat_pres_water
-    USE mo_phy_schemes, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_phy_schemes, ONLY: sat_pres_mixed
 
     INTEGER,  INTENT(IN) :: startblk, endblk, startidx(:), endidx(:)
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
@@ -2083,7 +2087,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic = ics, ice
 
-        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
+        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds in convect tables -> consistency check
 #ifndef _OPENACC
         IF (Tmin(ic,ib) + tmelt < 50._wp .OR. Tmin(ic,ib) + tmelt > 400._wp) THEN
           WRITE (message_text,*) &
@@ -2097,11 +2101,8 @@ CONTAINS
         ENDIF
 #endif
 
-        !jsb3: rdv = eps
-        evapo_sat_min = tlucua(INT(1000._wp * (Tmin(ic,ib) + tmelt)))/rdv ! saturation pressure at minimum temperature
-        evapo_sat     = tlucua(INT(1000._wp * (Tair(ic,ib) + tmelt)))/rdv ! saturation pressure at actual temperature
-        ! evapo_sat_min = sat_pres_water(Tmin(i,j) + tmelt) ! saturation pressure at minimum temperature
-        ! evapo_sat     = sat_pres_water(Tair(i,j) + tmelt) ! saturation pressure at actual temperature
+        evapo_sat_min = sat_pres_mixed(Tmin(ic,ib) + tmelt) ! saturation pressure at minimum temperature
+        evapo_sat     = sat_pres_mixed(Tair(ic,ib) + tmelt) ! saturation pressure at actual temperature
         e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(ic,ib))                               ! Eq. (2) from above
         vpress(ic,ib) = e0_vap + h1 * evapo_ratio_mean(ic,ib) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
 
@@ -2596,6 +2597,7 @@ CONTAINS
         DO i=1,nc
           u(i,j) = sin_lat(i,j) * SIN(delta)
           v(i,j) = cos_lat(i,j) * COS(delta)
+          ! derive half day-length hh: time from solar noon to sunset (angular units)
           IF (u(i,j).GE.v(i,j)) THEN
             hh(i,j) = pi
           ELSE IF (u(i,j).LE.(0._wp-v(i,j))) THEN
@@ -2607,8 +2609,20 @@ CONTAINS
 
           !estimate of noon radiation giving rise to the recorded radiation sum
           rad_sw_in_corr(i,j) = 0._wp
-          IF((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp)THEN
+
+          ! If the day is very short (half day length less then ~25 min.) we distribute the small
+          ! daily SW flux proportional to cos_zenith. With longer days, the daily-mean SW value
+          ! is normalized by the analytical integral of cos(zenith) over the daytime window.
+          IF (hh(i,j) .GE. 0.0_wp .AND. hh(i,j) .LT. 0.1_wp) THEN
+            ! Polar twilight: day-length integral is near-zero
+            IF (cos_zenith(i,j) .GT. 0._wp) THEN
+              rad_sw_in_corr(i,j) = rad_sw_in(i,j)
+            END IF
+          ELSE IF ((u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) .GT. 1e-5_wp) THEN
+            ! Longer days: normalization with the integral of cos(zenith)
             rad_sw_in_corr(i,j) = rad_sw_in(i,j) / (2._wp * (u(i,j) * hh(i,j) + v(i,j) * sinehh(i,j)) * K) * 86400._wp
+            ! Cap to physically realistic maximum (top-of-atmosphere noon flux)
+            rad_sw_in_corr(i,j) = MIN(rad_sw_in_corr(i,j), solar_const * r_sun_earth_2)
           END IF
           rad_sw(i,j) = rad_sw_in_corr(i,j) * cos_zenith(i,j)
         END DO
