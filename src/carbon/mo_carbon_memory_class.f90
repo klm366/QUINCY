@@ -100,7 +100,7 @@ MODULE mo_carbon_memory_class
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
                                     ! negative (positive correction).
-      excess_NPP,                 & ! That part of NPP that because of structural limits could not be allocated in
+      NPP_excess,                 & ! That part of NPP that because of structural limits could not be allocated in
                                     ! carbon pools [mol(CO2)/m^2(canopy) s]
       LAI_yyDayMean,              & ! previous previous day mean
       LAI_yDayMean,               & ! previous day mean
@@ -189,7 +189,7 @@ MODULE mo_carbon_memory_class
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
                                     ! negative (positive correction).
-      excess_NPP_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
+      NPP_excess_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
                                     ! carbon pools [mol(CO2)/m^2(tile area) s]
 !      LAI_yyDayMean_ta,              & ! previous previous day mean
 !      LAI_yDayMean_ta,               & ! previous day mean
@@ -573,9 +573,9 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('excess_npp', mem%excess_NPP,                                                                     &
+    CALL mem%Add_var('NPP_excess', mem%NPP_excess,                                                                     &
       & hgrid, surface,                                                                                                &
-      & t_cf('excess_NPP', 'mol(C) m-2 (canopy) s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
+      & t_cf('NPP_excess', 'mol(C) m-2 (canopy) s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
       & prefix, suffix,                                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
@@ -932,9 +932,9 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('excess_npp_ta', mem%excess_NPP_ta,                                                          &
+    CALL mem%Add_var('NPP_excess_ta', mem%NPP_excess_ta,                                                          &
       & hgrid, surface,                                                                                           &
-      & t_cf('excess_NPP_ta', 'mol(C) m-2  s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
+      & t_cf('NPP_excess_ta', 'mol(C) m-2  s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3

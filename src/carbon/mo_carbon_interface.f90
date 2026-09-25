@@ -323,7 +323,7 @@ CONTAINS
                                                       ! This correction arises either because otherwise the reserve pool would
                                                       ! get negative (positive correction), or the wood pool would exceed its
                                                       ! maximum value (negative correction).
-    dsl4jsb_Real2D_onChunk ::  excess_NPP             ! That part of NPP that because of structural limits could not be
+    dsl4jsb_Real2D_onChunk ::  NPP_excess             ! That part of NPP that because of structural limits could not be
                                                       ! allocated in carbon pools [mol(CO2)/m^2(canopy) s]
 
     dsl4jsb_Real2D_onChunk ::  root_exudates          ! Total root exudates entering to the litter green pools
@@ -511,7 +511,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  excess_NPP)                 ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_excess)                 ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  root_exudates )             ! inout
 
@@ -816,7 +816,7 @@ CONTAINS
           &  c_crop_harvest(ic),                                & ! inout
           !
           &  NPP_flux_correction(ic),                           & ! out
-          &  excess_NPP(ic),                                    & ! out
+          &  NPP_excess(ic),                                    & ! out
           &  NPP_act_yDayMean(ic),                              & ! out
           &  root_exudates(ic),                                 & ! out
           &  cflux_c_greenwood_2_litter(ic),                    & ! out
@@ -1229,7 +1229,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_greenwood_2_litter_ta, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_flux_correction_ta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, excess_NPP_ta,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, NPP_excess_ta,            weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yyDayMean_ta,         weighted_by_fract)
 !    dsl4jsb_Aggregate_onChunk(CARBON_, LAI_yDayMean_ta,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, NPP_pot_yDayMean_ta,      weighted_by_fract)

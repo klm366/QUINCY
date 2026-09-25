@@ -30,39 +30,39 @@ CONTAINS
 #endif
   SUBROUTINE calc_plant_c( &
     ! Inputs
-    & dt, is_crop,                &
-    & LAI,                        &
-    & LAI_previous,               &
-    & max_LAI,                    &
-    & NPP_pot_yDayMean,           &
+  & dt, is_crop,                &
+  & LAI,                        &
+  & LAI_previous,               &
+  & max_LAI,                    &
+  & NPP_pot_yDayMean,           &
     !
-    & fract_npp_2_woodPool,       &
-    & fract_npp_2_reservePool,    &
-    & fract_npp_2_exudates,       &
-    & fract_green_2_herbivory,    &
-    & tau_c_woods,                &
-    & LAI_shed_constant,          &
-    & Max_C_content_woods,        &
-    & specific_leaf_area_C,       &
-    & reserveC2leafC,             &
+  & fract_npp_2_woodPool,       &
+  & fract_npp_2_reservePool,    &
+  & fract_npp_2_exudates,       &
+  & fract_green_2_herbivory,    &
+  & tau_c_woods,                &
+  & LAI_shed_constant,          &
+  & Max_C_content_woods,        &
+  & specific_leaf_area_C,       &
+  & reserveC2leafC,             &
     ! Inouts
-    & c_green,                    &
-    & c_woods,                    &
-    & c_reserve,                  &
-    & c_crop_harvest,             &
+  & c_green,                    &
+  & c_woods,                    &
+  & c_reserve,                  &
+  & c_crop_harvest,             &
     ! Outputs
-    & NPP_flux_correction,        &
-    & NPP_excess,                 &
-    & NPP_act,                    &
-    & Cflx_2_root_exudates,       &
-    & Cflx_greenwood_2_litter,    &
-    & Cflx_green_2_litter,        &
-    & Cflx_wood_2_litter,         &
-    & Cflx_herbivory,             &
-    & Cflx_herb_2_littergreen,    &
-    & Cflx_herb_2_atm,            &
-    & Cflx_crop_harvest_2_atm     &
-    & )
+  & NPP_flux_correction,        &
+  & NPP_excess,                 &
+  & NPP_act,                    &
+  & Cflx_2_root_exudates,       &
+  & Cflx_greenwood_2_litter,    &
+  & Cflx_green_2_litter,        &
+  & Cflx_wood_2_litter,         &
+  & Cflx_herbivory,             &
+  & Cflx_herb_2_littergreen,    &
+  & Cflx_herb_2_atm,            &
+  & Cflx_crop_harvest_2_atm     &
+  & )
     !$ACC ROUTINE SEQ
 
     USE mo_carbon_constants, ONLY: fract_green_aboveGround
@@ -87,7 +87,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: fract_npp_2_exudates    !< Fraction of NPP to be put into the optimally into the root exudates
     REAL(wp), INTENT(in)    :: fract_green_2_herbivory
     REAL(wp), INTENT(in)    :: tau_c_woods             !< Time constant by which woods Pool is depreciated  [d]
-                                                       !< Note: in lctlib it is given in [a-1] but used by JS4 in [d-1].
+                                                       !< Note: in lctlib it is given in [yr-1] but used by JS4 in [d-1].
     REAL(wp), INTENT(in)    :: LAI_shed_constant       !< Leaf shedding at a constant rate for evergreens etc. [d-1]
     REAL(wp), INTENT(in)    :: Max_C_content_woods     !< Maximum carbon content of wood pool (from lctLib)
     REAL(wp), INTENT(in)    :: specific_leaf_area_C    !< Specific leaf area (from lctLib) [m2(leaf) mol(C)-1]
@@ -123,8 +123,8 @@ CONTAINS
                                                                   !<   sugars) to leaf carbon
     REAL(wp), PARAMETER :: fract_c_crop_harvest = 0.5_wp          !< fraction of C from ag litter flux put to the crop harvest pool
     REAL(wp), PARAMETER :: fract_c_faeces2_LG   = 0.3_wp          !< fraction of C from faces put into the litter green pool
-    REAL(wp), PARAMETER :: tau_c_reserve        = 1.0_wp * days_per_year !< time constant by which reserve pool is depreciated [d]
-    REAL(wp), PARAMETER :: tau_c_crop_harvest   = 1.0_wp * days_per_year !< time constant by which the crop harvest pool decays [d]
+    REAL(wp), PARAMETER :: tau_c_reserve        = 1.0_wp * days_per_year !< time constant by which reserve pool is depreciated [yr]
+    REAL(wp), PARAMETER :: tau_c_crop_harvest   = 1.0_wp * days_per_year !< time constant by which the crop harvest pool decays [yr]
 
     REAL(wp) :: c_green_max, c_reserve_optimal
     REAL(wp) :: c_NPP_2_greenPool, c_NPP_2_woodPool, c_NPP_2_reservePool, c_NPP_2_rootExudates, c_green_2_herbivory
@@ -347,8 +347,8 @@ CONTAINS
 
     IF (NPP_pot_yDayMean > 0.0_wp) THEN
       NPP_act = (c_NPP_2_green_via_mobileN + c_NPP_2_wood_via_mobileN + c_NPP_2_rootExudates +             &
-        & redFact_Nlimitation * (c_NPP_2_green_pot + c_NPP_2_wood_pot) + c_NPP_2_reserve_pot  &
-        & ) / dt
+  & redFact_Nlimitation * (c_NPP_2_green_pot + c_NPP_2_wood_pot) + c_NPP_2_reserve_pot  &
+  & ) / dt
     ELSE
       NPP_act = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
                                                          ! except c_reserve was < 0.0_wp.
@@ -390,8 +390,8 @@ CONTAINS
   PURE &
 #endif
   SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
-    &               c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
-    &               A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+  &               c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
+  &               A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
     !$ACC ROUTINE SEQ
     !! DSG: 11.03.2013
     !! modified Yasso soil C model using an Euler scheme and readable coding style
@@ -424,14 +424,14 @@ CONTAINS
     !!-------------------------------------------------------------------------------------------------------------------------
 
     USE mo_carbon_constants, ONLY: sec_per_year, LCT_HUMUS,                &
-                   & POOL_ACID_AG, POOL_WATER_AG, POOL_ETHANOL_AG,         &
-                   & POOL_NONSOLUBLE_AG,                                   &
-                   & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG,         &
-                   & POOL_NONSOLUBLE_BG, POOL_HUMUS,                       &
-                   & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG,                     &
-                   & FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,                &
-                   & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG,             &
-                   & REL_FLUX_AWEN, FLUX_FROM_HUMUS, FLUX_LITTER_2_HUMUS
+  & POOL_ACID_AG, POOL_WATER_AG, POOL_ETHANOL_AG,         &
+  & POOL_NONSOLUBLE_AG,                                   &
+  & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG,         &
+  & POOL_NONSOLUBLE_BG, POOL_HUMUS,                       &
+  & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG,                     &
+  & FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,                &
+  & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG,             &
+  & REL_FLUX_AWEN, FLUX_FROM_HUMUS, FLUX_LITTER_2_HUMUS
     USE mo_jsb_physical_constants, ONLY: tmelt
     IMPLICIT NONE
 
@@ -461,17 +461,17 @@ CONTAINS
     REAL(wp), OPTIONAL,      INTENT(in)  :: A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H
 
     ! Yasso parameters (Tuomi '11)
-    !   reference decompositation rates for T = 0C and unlimited water availability in [a-1]...
+    !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
     REAL(wp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !<  ... acid-soluble fraction
     REAL(wp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !<  ... water-soluble fraction
     REAL(wp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !<  ... ethanol-soluble fraction
     REAL(wp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !<  ... nonsoluble-soluble fraction
     REAL(wp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !<  ... humus
     !   parameters for temperature dependence
-    REAL(wp), PARAMETER   :: temp_p1                    =  0.095_wp   !< first  order temperature dependence [C-1]
-    REAL(wp), PARAMETER   :: temp_p2                    = -0.0014_wp  !< second order temperature dependence [C-1]
+    REAL(wp), PARAMETER   :: temp_p1                    =  0.095_wp   !< first  order temperature dependence [K-1]
+    REAL(wp), PARAMETER   :: temp_p2                    = -0.0014_wp  !< second order temperature dependence [K-1]
     !   parameter for precipitation dependence
-    REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    !< first  order precipitation dependence [a m-1]
+    REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    !< first  order precipitation dependence [yr-1]
     !   parameters for size dependence
     REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    !< first  order size dependence [cm-1]
     REAL(wp), PARAMETER   :: size_p2                    =  0.86_wp    !< second order size dependence [cm-1]
@@ -519,7 +519,7 @@ CONTAINS
     REAL(wp)     :: c_nonsoluble_bg
     REAL(wp)     :: c_humus
 
-    ! Carbon fluxes [mol(C) m-2 a-1] - Unit indicated by names CAflx (Carbon annual flux)
+    ! Carbon fluxes [mol(C) m-2 yr-1] - Unit indicated by names CAflx (Carbon annual flux)
     !   Aboveground
     REAL(wp)     :: CAflx_from_acid_ag              !< Loss flux of acid soluble pool
     REAL(wp)     :: CAflx_from_water_ag             !< Loss flux of water soluble pool
@@ -554,7 +554,7 @@ CONTAINS
     REAL(wp)     :: CAflx_resp_from_litter_ag       !< Flux to the atmosphere; from AWEN ag only
     REAL(wp)     :: CAflx_resp_from_litter_bg       !< Flux to the atmosphere; from AWEN bg only
 
-    ! Decomposition rates [a-1]
+    ! Decomposition rates [yr-1]
     REAL(wp)     :: d_acid
     REAL(wp)     :: d_water
     REAL(wp)     :: d_ethanol
@@ -575,7 +575,7 @@ CONTAINS
     REAL(wp)     :: Pseudo_litter_green     !< Sum of all AWEN pools
 
     ! climatic drivers
-    REAL(wp)     :: precip                  !< runnning mean of precipitation      [m a-1]
+    REAL(wp)     :: precip                  !< runnning mean of precipitation      [m yr-1]
     REAL(wp)     :: temp                    !< runnning mean of 2m air temperature [C]
 
     REAL(wp)     :: redFactor               !< dummy for redFact_Nlimit
@@ -596,7 +596,7 @@ CONTAINS
       AWE_2_H = AWEN2H
       N_2_H   = AWEN2H
     END IF
-    ! Default values in [a-1]
+    ! Default values in [yr-1]
     AWE_2_H  = 0.0045_wp; IF (PRESENT(AWE2H))  AWE_2_H  = AWE2H
     N_2_H    = 0.0045_wp; IF (PRESENT(  N2H))    N_2_H  =   N2H
     A_2_W    = 0.99_wp;   IF (PRESENT(  A2W))    A_2_W  =   A2W
@@ -624,8 +624,10 @@ CONTAINS
     d_anoxic_ag = 1._wp
     d_anoxic_bg = 1._wp
     IF (anoxic_flag) THEN
-      d_anoxic_ag = 0.35_wp ! same as Rita Wania
-      d_anoxic_bg = 0.35_wp ! same as Rita Wania
+      ! anoxic conditions are present, reduce decomposition rates of AWEN pools
+      ! following Wania et al. 2009, https://doi.org/10.1029/2008GB003413)
+      d_anoxic_ag = 0.35_wp
+      d_anoxic_bg = 0.35_wp
     END IF
 
     ! set up peat decomposition rate modifiers
@@ -832,10 +834,10 @@ CONTAINS
     !   3b. distribute litter
     !    ag
     CALL distribute_yasso_litter(c_acid_ag, c_water_ag, c_ethanol_ag, c_nonsoluble_ag, c_humus, &
-      &                          c_2_litter,          fract_aboveground, Lit_coefV)
+  &                          c_2_litter,          fract_aboveground, Lit_coefV)
     !    bg
     CALL distribute_yasso_litter(c_acid_bg, c_water_bg, c_ethanol_bg, c_nonsoluble_bg, c_humus, &
-      &                          c_2_litter, 1.0_wp - fract_aboveground, Lit_coefV)
+  &                          c_2_litter, 1.0_wp - fract_aboveground, Lit_coefV)
 
     ! Cflx_litter_2_humus is not only required for distribution, but possibly also as output for the eq script
     CAflx_litter_2_humus = Lit_coefV(LCT_HUMUS) * c_2_litter * ts_per_year
@@ -901,7 +903,7 @@ CONTAINS
   PURE &
 #endif
   SUBROUTINE distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
-    &                                litter, fraction, coefficients)
+  &                                litter, fraction, coefficients)
 
     !$ACC ROUTINE SEQ
 
@@ -953,17 +955,17 @@ CONTAINS
   ! calculate per tile density from density per canopy m2
   !
   SUBROUTINE get_per_tile(  &
-    & Cpool_per_tile,                 & ! out
-    & Cpool_per_canopy,               & ! in
-    & veg_fract_correction,           & ! in
-    & fract_fpc_max)                    ! in
+  & Cpool_per_tile,                 & ! out
+  & Cpool_per_canopy,               & ! in
+  & veg_fract_correction,           & ! in
+  & fract_fpc_max)                    ! in
 
     REAL(wp), INTENT(IN), DIMENSION(:) :: &
-      & Cpool_per_canopy, &
-      & fract_fpc_max,    &
-      & veg_fract_correction
+  & Cpool_per_canopy, &
+  & fract_fpc_max,    &
+  & veg_fract_correction
     REAL(wp), INTENT(OUT), DIMENSION(:) :: &
-      & Cpool_per_tile
+  & Cpool_per_tile
 
     INTEGER :: ic
 
