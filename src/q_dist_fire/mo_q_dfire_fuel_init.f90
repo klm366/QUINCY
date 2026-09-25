@@ -41,7 +41,7 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,         ONLY: t_jsb_model
 
-    USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
+    USE mo_q_dfire_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
     dsl4jsb_Use_memory(Q_DFIRE_FUEL_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -214,16 +214,16 @@ CONTAINS
     sb_fire_emissions_total_els = 0._wp
     sb_fire_litter_ash_total_els = 0._wp
 
-    IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+    IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
       moisture_extinction = dsl4jsb_Lctlib_param(q_moisture_extinction_thon)
-    ELSE IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+    ELSE IF (dsl4jsb_Config(Q_DFIRE_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
       moisture_extinction = dsl4jsb_Lctlib_param(q_moisture_extinction_ober)
     END IF
     fwd_wind_factor = dsl4jsb_Lctlib_param(q_fwd_wind_factor)
 
     ! Mark process as successfully initialized, MR 428
     !CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Set_init_status_true
-  END SUBROUTINE q_dfire_fuel_sf_init
+  END SUBROUTINE q_dfire_fuel_init
 
 #endif
 END MODULE mo_q_dfire_fuel_init
