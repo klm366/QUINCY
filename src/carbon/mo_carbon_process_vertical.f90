@@ -482,20 +482,20 @@ CONTAINS
     REAL(wp)     :: d_humus
 
     ! Carbon fluxes [mol(C) m-2 yr-1] - Unit indicated by names CAflx (Carbon annual flux)
-    REAL(wp)     :: CAflx_from_acid              !< Loss flux of acid soluble pool        [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_from_water             !< Loss flux of water soluble pool       [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_from_ethanol           !< Loss flux of ethanol soluble pool     [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_from_nonsoluble        !< Loss flux of non soluble pool         [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_from_humus             !< Loss flux of humus pool               [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_from_acid              !< Loss flux of acid soluble pool        [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_from_water             !< Loss flux of water soluble pool       [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_from_ethanol           !< Loss flux of ethanol soluble pool     [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_from_nonsoluble        !< Loss flux of non soluble pool         [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_from_humus             !< Loss flux of humus pool               [mol(c)/m2/yr]
 
-    REAL(wp)     :: CAflx_2_acid                 !< Gain flux of acid soluble pool        [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_2_water                !< Gain flux of water soluble pool       [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_2_ethanol              !< Gain flux of ethanol soluble pool     [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_2_nonsoluble           !< Gain flux of non soluble pool         [mol(c)/m2/yr]
-    REAL(wp)     :: CAflx_2_humus                !< Gain flux of humus pool               [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_2_acid                 !< Gain flux of acid soluble pool        [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_2_water                !< Gain flux of water soluble pool       [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_2_ethanol              !< Gain flux of ethanol soluble pool     [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_2_nonsoluble           !< Gain flux of non soluble pool         [mol(c)/m2/yr]
+    REAL(wp)     :: Cflx_yr_2_humus                !< Gain flux of humus pool               [mol(c)/m2/yr]
 
-    REAL(wp)     :: CAflx_resp_from_litter
-    REAL(wp)     :: CAflx_respiration
+    REAL(wp)     :: Cflx_yr_resp_from_litter
+    REAL(wp)     :: Cflx_yr_respiration
 
     ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
@@ -586,71 +586,71 @@ CONTAINS
 
     ! 2. Calculate fluxes
     !   annual loss fluxes (negative values):
-    CAflx_from_acid         = c_acid       * d_acid
-    CAflx_from_water        = c_water      * d_water
-    CAflx_from_ethanol      = c_ethanol    * d_ethanol
-    CAflx_from_nonsoluble   = c_nonsoluble * d_nonsoluble
-    CAflx_from_humus        = c_humus      * d_humus
+    Cflx_yr_from_acid         = c_acid       * d_acid
+    Cflx_yr_from_water        = c_water      * d_water
+    Cflx_yr_from_ethanol      = c_ethanol    * d_ethanol
+    Cflx_yr_from_nonsoluble   = c_nonsoluble * d_nonsoluble
+    Cflx_yr_from_humus        = c_humus      * d_humus
 
     !   annual gain fluxes (positive values):
     !   fixed fractions of each loss flux enters another pool; REMARK: the fraction can be zero (see above why)
-    CAflx_2_acid           = ABS(CAflx_from_water      * W_2_A  &    ! returns positive fluxes
-                               + CAflx_from_ethanol    * E_2_A  &
-                               + CAflx_from_nonsoluble * N_2_A)
+    Cflx_yr_2_acid            = ABS(Cflx_yr_from_water      * W_2_A  &    ! returns positive fluxes
+                                  + Cflx_yr_from_ethanol    * E_2_A  &
+                                  + Cflx_yr_from_nonsoluble * N_2_A)
 
-    CAflx_2_water          = ABS(CAflx_from_acid       * A_2_W  &
-                               + CAflx_from_ethanol    * E_2_W  &
-                               + CAflx_from_nonsoluble * N_2_W)
+    Cflx_yr_2_water           = ABS(Cflx_yr_from_acid       * A_2_W  &
+                                  + Cflx_yr_from_ethanol    * E_2_W  &
+                                  + Cflx_yr_from_nonsoluble * N_2_W)
 
-    CAflx_2_ethanol        = ABS(CAflx_from_acid       * A_2_E  &
-                               + CAflx_from_water      * W_2_E  &
-                               + CAflx_from_nonsoluble * N_2_E)
+    Cflx_yr_2_ethanol         = ABS(Cflx_yr_from_acid       * A_2_E  &
+                                  + Cflx_yr_from_water      * W_2_E  &
+                                  + Cflx_yr_from_nonsoluble * N_2_E)
 
-    CAflx_2_nonsoluble     = ABS(CAflx_from_acid       * A_2_N  &
-                               + CAflx_from_water      * W_2_N  &
-                               + CAflx_from_ethanol    * E_2_N)
+    Cflx_yr_2_nonsoluble      = ABS(Cflx_yr_from_acid       * A_2_N  &
+                                  + Cflx_yr_from_water      * W_2_N  &
+                                  + Cflx_yr_from_ethanol    * E_2_N)
 
-    CAflx_2_humus          = ABS(CAflx_from_acid                &
-                               + CAflx_from_water               &
-                               + CAflx_from_ethanol             &
-                             ) * AWE_2_H                        &
-                               +                                &
-                             ABS(CAflx_from_nonsoluble)         &
-                               * N_2_H
+    Cflx_yr_2_humus           = ABS(Cflx_yr_from_acid                &
+                                  + Cflx_yr_from_water               &
+                                  + Cflx_yr_from_ethanol             &
+                                  ) * AWE_2_H                        &
+                                    +                                &
+                                ABS(Cflx_yr_from_nonsoluble)         &
+                                  * N_2_H
 
     !   litter ag & bg respiration (needed for N cycle)
-    CAflx_resp_from_litter =  CAflx_from_acid       * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
-                            + CAflx_from_water      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
-                            + CAflx_from_ethanol    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
-                            + CAflx_from_nonsoluble * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
+    Cflx_yr_resp_from_litter =  Cflx_yr_from_acid       * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
+                              + Cflx_yr_from_water      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
+                              + Cflx_yr_from_ethanol    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
+                              + Cflx_yr_from_nonsoluble * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
 
-    CAflx_respiration      =  CAflx_resp_from_litter                      &
-                            + CAflx_from_humus
+    Cflx_yr_respiration      =  Cflx_yr_resp_from_litter                      &
+                              + Cflx_yr_from_humus
 
     ! 3. update Yasso pools
 
     !   3a. redistribution among yasso pools
     c_acid        = MAX(0.0_wp,                                    &
                         c_acid                                     & ! old pool
-                     + (CAflx_from_acid                            & ! incoming flux from AWEN pools
-                      + CAflx_2_acid) * years_per_ts)
+                     + (Cflx_yr_from_acid                          & ! incoming flux from AWEN pools
+                      + Cflx_yr_2_acid) * years_per_ts)
     c_water       = MAX(0.0_wp,                                    & ! ...
                         c_water                                    &
-                     + (CAflx_from_water                           &
-                     +  CAflx_2_water) * years_per_ts  )          !  &
+                     + (Cflx_yr_from_water                         &
+                      +  Cflx_yr_2_water) * years_per_ts)
     c_ethanol     = MAX(0.0_wp,                                    &
                         c_ethanol                                  &
-                     + (CAflx_from_ethanol                         &
-                      + CAflx_2_ethanol) * years_per_ts)
+                     + (Cflx_yr_from_ethanol                       &
+                      + Cflx_yr_2_ethanol) * years_per_ts)
     c_nonsoluble  = MAX(0.0_wp,                                    &
                         c_nonsoluble                               &
-                     + (CAflx_from_nonsoluble                      &
-                      + CAflx_2_nonsoluble) * years_per_ts)
+                     + (Cflx_yr_from_nonsoluble                    &
+                      + Cflx_yr_2_nonsoluble) * years_per_ts)
 
     c_humus       = MAX(0.0_wp,                                    &
                         c_humus                                    &
-                     + (CAflx_from_humus                           &
-                      + CAflx_2_humus) * years_per_ts)
+                     + (Cflx_yr_from_humus                         &
+                      + Cflx_yr_2_humus) * years_per_ts)
 
     ! 4.1 Write pools into the output array
     Y_out_pools(Y_ACID)       = c_acid
@@ -660,15 +660,15 @@ CONTAINS
     Y_out_pools(Y_HUMUS)      = c_humus
 
     ! 4.2 Write respiration into the output array
-    Y_out_fluxes(F_RESP)     = CAflx_respiration * years_per_ts ! convert back to daily
+    Y_out_fluxes(F_RESP)     = Cflx_yr_respiration * years_per_ts ! convert back to daily
 
     ! the routine might have been called to diagnose the nutrient demand, so we give out
     ! 1. flux for immobilisation: this is the sum of all carbon coming from the non-humus pools to humus
-    Y_out_fluxes(F_2_HUMUS)  =  CAflx_2_humus * years_per_ts !  per timestep ! the flux is positive
+    Y_out_fluxes(F_2_HUMUS)  =  Cflx_yr_2_humus * years_per_ts !  per timestep ! the flux is positive
     ! 2. flux for mineralisation:  this is the flux from humus to atmosphere
-    Y_out_fluxes(F_F_HUMUS)  = -CAflx_from_humus * years_per_ts !  per timestep ! sign CHECKED!
+    Y_out_fluxes(F_F_HUMUS)  = -Cflx_yr_from_humus * years_per_ts !  per timestep ! sign CHECKED!
     ! ... as well as all fluxes from AWEN pools to atmosphere
-    Y_out_fluxes(F_LITRESP)  = -CAflx_resp_from_litter * years_per_ts ! per timestep ! the flux is negative
+    Y_out_fluxes(F_LITRESP)  = -Cflx_yr_resp_from_litter * years_per_ts ! per timestep ! the flux is negative
   END SUBROUTINE yasso_minimal
 
   ! ---------------------------------------------------------------------------------------------------------
