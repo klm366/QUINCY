@@ -203,8 +203,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: soil_depth_thaw(:)        !< Minimum of either soil or thaw depth [m]
     REAL(wp), ALLOCATABLE  :: thaw_depth(:)             !< Maximum thaw depth / active layer depth [m]
 
-    REAL(wp), DIMENSION(options%nc) :: frac_inun_loc    !< Surface inundation fraction [m]
-
     REAL(wp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
     REAL(wp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
@@ -319,7 +317,6 @@ CONTAINS
                                                       !< For oxic soils in methane process only. [mol m-2(ground) d-1].
     dsl4jsb_Real2D_onChunk ::  soil_respiration_anox  !< mean daily rate of heterotrophic (soil) respiration!
                                                       !< For anoxic soils in methane process only. [mol m-2(ground) d-1].
-    dsl4jsb_Real2D_onChunk ::  frac_inun              !< Inundated fraction (from topmodel/pond scheme)
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction    ! Daily updated flux correction from yesterdays carbon balance
                                                       ! [mol(CO2)/m^2(canopy) s]
                                                       ! Amount by which the NPP rate entering the routine has to be corrected.
@@ -400,6 +397,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl              !< Soil layer depth until bedock [m]
 
     dsl4jsb_Real2D_onChunk :: n_thaw_cycle_prev          !< Number of thaw cycles during last year [-]
+    dsl4jsb_Real2D_onChunk :: fract_pond                 !< Fraction of inundated area [-]
 
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
@@ -573,13 +571,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
     END IF
 
-    ! frac_inun must wait until the use of any kind of inundated fraction (Topmodel or pond scheme)
-    ! is implemented here, this will be implemented with methane module merge
-    frac_inun => NULL()
-
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic )     ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox )     ! inout
     dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond)                 ! in
 
     lstart   = is_time_experiment_start(options%current_datetime)
     lresume  = is_time_restart(options%current_datetime)
@@ -791,15 +786,6 @@ CONTAINS
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-      ! Get inundated surface fraction
-      IF (ASSOCIATED(frac_inun)) THEN
-        frac_inun_loc(:) = frac_inun(:)
-        IF (debug_on()) CALL message(TRIM(routine), 'Using frac_inun from Topmodel or pond scheme.')
-      ELSE
-        frac_inun_loc(:) = 0._wp
-        IF (debug_on()) CALL message(TRIM(routine), 'No frac_inun provided.')
-      END IF
-
       ! Check whether or not we are on a crop pft
       is_crop = lctlib_PhenologyType == 5
 
@@ -927,7 +913,7 @@ CONTAINS
             &  wtr_soil_rel_sl              = wtr_soil_rel_sl_15d_yDay_climbuf(ic,:),   & ! in
             &  n_thaw_cycle                 = n_thaw_cycle_prev(ic),                    & ! in
                !
-            &  frac_inun                    = frac_inun_loc(ic),                        & ! in
+            &  frac_inun                    = fract_pond(ic),                           & ! in
                !
             &  soil_depth                   = soil_depth(ic),                           & ! in
             &  soil_depth_sl                = soil_depth_sl(ic,:),                      & ! in

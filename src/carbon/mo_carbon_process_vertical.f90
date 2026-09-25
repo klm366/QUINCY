@@ -114,8 +114,8 @@ CONTAINS
     REAL(wp),  INTENT(in)    :: wtr_soil_rel_sl(:)       ! soil water, relative
     REAL(wp),  INTENT(in)    :: n_thaw_cycle             ! number of freeze-thaw cycles
 
-    ! Input parameters from topmodel (or other wetland scheme)
-    REAL(wp),  INTENT(in)    :: frac_inun                ! Fraction of tile inundated []
+    ! Input parameters from pond scheme
+    REAL(wp),  INTENT(in)    :: frac_inun                ! Inundated tile fraction []
 
     ! Input soil and / or active layer depth
     REAL(wp),  INTENT(in)    :: soil_depth               ! soil depth [m]
