@@ -364,8 +364,7 @@ CONTAINS
     live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
     live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
 
-    !< Init variables
-    !< Make sure those values are set to 0, as it means there is no fire.
+    !< Init variables (set output variables to 0)
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
     i_surface = 0._wp

@@ -305,8 +305,10 @@ CONTAINS
     dead_fuel_1000hr_dfp = dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx)
 
     IF (lctlib%growthform == igrass) THEN
+      ! Live grass to add to live fuel (not applies in Thonicke (so 0%), (1-cured)% in oberhagemann)
       live_grass_fuel_fcl = fuel_cls % Calc_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%live_fuel_factor
       live_grass_fuel_1hr_lfp = live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
+      ! Live grass to include as dead fuel (not applies to Thonicke (so 100%), x? in oberhagemann)
       cured_live_grass_fuel_fcl = fuel_cls % Calc_cured_live_grass_fuel() * dsl4jsb_Config(Q_DFIRE_SF_)%dead_fuel_factor
       cured_live_grass_fuel_1hr_dfp = cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx)
     ELSE IF (lctlib%growthform == itree) THEN
