@@ -866,7 +866,7 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL LOOP
-    
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO is = 2, nsoil
       DO ic = 1, nc
