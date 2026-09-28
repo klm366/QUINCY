@@ -370,7 +370,7 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: get_soilhyd_properties, calc_surface_hydrology_land, &
       &                                  calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: dens_snow, grav
+    USE mo_jsb_physical_constants, ONLY: dens_snow, grav, rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< Current tile
@@ -448,13 +448,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl             !< Soil temperature of the layer [K]
     dsl4jsb_Real3D_onChunk :: t_snow                !< Snow temperature (on snow layers) [K]
     dsl4jsb_Real3D_onChunk :: snow_depth_sl         !< Snow depth within the snow layers [m]
+    dsl4jsb_Real2D_onChunk :: water_to_parflow
     ! quincy
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_sl       !< Soil water potential per layer [MPa]
-
     dsl4jsb_Real2D_onChunk :: wtr_latflow_res_srf   !< Intermediate storage for surface runoff [m]
     dsl4jsb_Real2D_onChunk :: wtr_latflow_srf       !< Outflow from intermediate surface runoff storage
                                                     !< [kg m-2 s-1]
-
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
@@ -565,6 +564,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, water_to_parflow)   ! out
       IF (use_tmx) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)    ! out
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(acc_stream) GANG VECTOR
@@ -574,6 +574,7 @@ CONTAINS
         drainage(ic) = 0._wp
         weq_snow(ic) = 0._wp            ! Later updated in lake energy balance
         evapo_snow(ic) = evapopot(ic)   ! TODO: check why this is set to evapopot
+        water_to_parflow(ic) = runoff(ic) / rhoh2o ! kg m-2 s-1 -> m/s
       END DO
       !$ACC END PARALLEL LOOP
       IF (use_tmx) THEN
@@ -622,6 +623,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff_horton)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, water_to_parflow) ! out
 
     IF (tile%is_glacier) THEN
       ! Variables only needed on glacier tile
@@ -735,6 +737,7 @@ CONTAINS
         weq_snow_soil(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
         snow_soil_dens(ic) = dens_snow
+        water_to_parflow(ic) = runoff_glac(ic) / rhoh2o ! kg m-2 s-1 -> m/s
       END DO
       !$ACC END PARALLEL LOOP
     ! NOT tile%is_glacier
@@ -959,6 +962,22 @@ CONTAINS
         & wtr_latflow_srf(:)              & ! outflow from intermediate storage for surface runoff [kg m-2 s-1]
         & )
 
+      ! Let ParFlow do the full runoff/infiltration partitioning (without pond storage)
+      ! Ponds should only exist in JSBACH and not be mixed up with the ParFlow surface water
+      ! water_to_soil = water_to_soil + wtr_pond_inflow - wtr_pond_outflow - wtr_pond_overflow
+      ! -> water_to_parflow = water_to_soil + wtr_pond_net_flux - (pond_melt - pond_freeze + evapo_pond)
+      !
+      ! IF (evapo_pond_in_m > 0._wp ...: add evapo_pond to water_to_soil
+      ! ELSE: add evapo_pond to evapotrans_to_parflow
+      ! -> just add evapo_pond to water_to_parflow
+      ! -> water_to_parflow = water_to_soil + wtr_pond_net_flux - (pond_melt - pond_freeze)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+        water_to_parflow(ic) = water_to_soil(ic) / dtime &
+          & + ( wtr_pond_net_flx(ic) - pond_melt(ic) + pond_freeze(ic) ) / rhoh2o ! m -> m/s, kg m-2 s-1 -> m/s
+      END DO
+      !$ACC END PARALLEL LOOP
+
       ! Update the pond storage
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -1088,6 +1107,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond_net_flx,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_srf,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_parflow,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, le_pc_remain,        weighted_by_fract)
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
@@ -1423,6 +1443,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_interface_parflow,      ONLY: received_soil_water, is_valid_parflow, parflow_buffer
     USE mo_hydro_constants,        ONLY: frac_wtr_vertical_transport_up_max, frac_wtr_vertical_transport_down_max, &
       &                                  frac_w_lat_loss_max
     USE mo_jsb_math_constants,     ONLY: eps8
@@ -1441,6 +1462,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl        !< Amount of ice in soil layers [m water equivalent]
     dsl4jsb_Real3D_onChunk :: vol_weq_soil_sl    !< Volumetric water content (liquid+ice) in soil layers
                                                  !< [m3 water equiv. / m3]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
+    dsl4jsb_Real2D_onChunk :: fract_parflow
+    dsl4jsb_Real3D_onChunk :: change_by_parflow
+    dsl4jsb_Real3D_onChunk :: tracked_diff_parflow
+
     dsl4jsb_Real3D_onChunk :: frac_wtr_transp_down_sl !< Faction of water transported vertically to the below layer []
     dsl4jsb_Real3D_onChunk :: frac_w_lat_loss_sl !< Fraction of soil water that is lost laterally (horizontally) []
     dsl4jsb_Real3D_onChunk :: drainage_sl        !< Drainage from the soil layers [kg m-2 s-1]
@@ -1477,6 +1503,10 @@ CONTAINS
       & nsoil                                    !< Number of vertical layers (grid dimension)
     REAL(wp) :: dtime                            !< Time step length [s]
 
+    LOGICAL, POINTER :: received_onChunk(:,:)
+    REAL(wp), POINTER :: is_valid_onChunk(:)
+    REAL(wp), POINTER :: parflow_buffer_onChunk(:,:)
+    REAL(wp) :: soil_water_tmp
     INTEGER :: last_soil_layer(options%nc)       !< Deepest active soil layer index (above the bedrock boundary)
 
     REAL(wp), POINTER :: &
@@ -1530,6 +1560,9 @@ CONTAINS
     area       => grid%area (ics:ice, iblk)
     lat        => grid%lat  (ics:ice, iblk)
     lon        => grid%lon  (ics:ice, iblk)
+    IF (ALLOCATED(received_soil_water)) received_onChunk => received_soil_water(ics:ice, :, iblk)
+    IF (ALLOCATED(is_valid_parflow)) is_valid_onChunk => is_valid_parflow(ics:ice, iblk)
+    IF (ALLOCATED(parflow_buffer)) parflow_buffer_onChunk => parflow_buffer(ics:ice, :, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1551,6 +1584,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_parflow)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, change_by_parflow)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, tracked_diff_parflow)
 
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
@@ -1690,7 +1727,8 @@ CONTAINS
         & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     & ! Residual of vertical soil water transport
                                                                     ! scheme [m]
         & drainage_lowest_soil_layer(:),                          & ! Bottom layer drainage [kg m-2 s-1]
-        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    )      & ! Outflow of wtr_latflow_res_sl [kg m-2 s-1]
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_latflow_sl    ),     & ! Outflow of wtr_latflow_res_sl [kg m-2 s-1]
+        & dsl4jsb_var3D_onChunk (HYDRO_, evapotrans_to_parflow)   &
         & )
 
     CASE (MODEL_QUINCY)
@@ -1849,6 +1887,46 @@ CONTAINS
 
     !$ACC END DATA
 
+    ! If running with ParFlow, copy the values from the ParFlow buffer
+    ! (but only within the ParFlow coverage)
+    ! and do not overwrite soil water with zeros at the first time step
+    IF (ALLOCATED(is_valid_parflow)) THEN
+      !$ACC DATA CREATE(soil_water_tmp) &
+      !$ACC & COPY(received_soil_water(ics:ice, :, iblk)) &
+      !$ACC & COPYIN(is_valid_parflow(ics:ice, iblk), parflow_buffer(ics:ice, :, iblk)) &
+      !$ACC & PRESENT(received_onChunk, is_valid_onChunk, parflow_buffer_onChunk)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
+      !$ACC LOOP GANG VECTOR
+      DO ic = 1, nc
+        fract_parflow(ic) = is_valid_onChunk(ic)
+      END DO
+      change_by_parflow(:,:) = 0.0_wp
+      !$ACC LOOP SEQ
+      DO is = 1, nsoil
+        !$ACC LOOP GANG VECTOR PRIVATE(soil_water_tmp)
+        DO ic = 1, nc
+          IF ( is_valid_onChunk(ic) > 0.0_wp .AND. received_onChunk(ic,is) ) THEN
+            soil_water_tmp = is_valid_onChunk(ic) * parflow_buffer_onChunk(ic,is) &
+              & + ( 1.0_wp - is_valid_onChunk(ic) ) * wtr_soil_sl(ic,is)
+
+            IF ( soil_water_tmp > wtr_soil_sat_sl(ic,is) ) THEN
+              change_by_parflow(ic,is) = wtr_soil_sat_sl(ic,is) - wtr_soil_sl(ic,is)
+              !tracked_diff_parflow(ic,is) = is_valid_onChunk(ic) * ( parflow_buffer_onChunk(ic,is) - wtr_soil_sat_sl(ic,is) )
+              tracked_diff_parflow(ic,is) = soil_water_tmp - wtr_soil_sat_sl(ic,is)
+              wtr_soil_sl(ic,is) = wtr_soil_sat_sl(ic,is)
+            ELSE
+              change_by_parflow(ic,is) = soil_water_tmp - wtr_soil_sl(ic,is)
+              tracked_diff_parflow(ic,is) = 0.0_wp
+              wtr_soil_sl(ic,is) = soil_water_tmp
+            END IF
+            received_onChunk(ic,is) = .FALSE.
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL
+      !$ACC END DATA
+    END IF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_soil_hydrology
@@ -1911,6 +1989,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_srf, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_res_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_latflow_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_parflow,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_to_parflow, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, change_by_parflow,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, tracked_diff_parflow, weighted_by_fract)
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       dsl4jsb_Aggregate_onChunk(HYDRO_, frac_wtr_transp_down_sl,     weighted_by_fract)
@@ -3327,7 +3409,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &               !< Amount of liquid water in the soil layers [m]
       & ice_soil_sl, &               !< Amount of ice in the soil layers [m]
-      & wtr_latflow_res_sl           !< Amount of water in lateral flow reservoir [m]
+      & wtr_latflow_res_sl, &        !< Amount of water in lateral flow reservoir [m]
+      & change_by_parflow
 
     REAL(wp), POINTER :: &
       & tile_fract(:), &             !< Fraction of the tile (rel. to the grid cell) []
@@ -3339,7 +3422,8 @@ CONTAINS
     REAL(wp) :: &
       & tile_area,    &              !< Area of the tile fraction [m2]
       & wb_threshold, &              !< Threshold for water balance errors
-      & weq_land_new                 !< Total amount of land water, updated in this time step []
+      & weq_land_new, &              !< Total amount of land water, updated in this time step []
+      & err_corr_parflow
 
     REAL(wp), DIMENSION(options%nc) :: &
       & weq_soil, &                  !< Amount of water or ice in the soil [m water equivalent]
@@ -3412,6 +3496,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_latflow_res_srf) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_latflow_res_sl)  ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    change_by_parflow)   ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
@@ -3421,7 +3506,7 @@ CONTAINS
 
     n_errors = 0   ! initialize error counter
 
-    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res) ASYNC(acc_stream)
+    !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res, err_corr_parflow) ASYNC(acc_stream)
 
     ! Calculation of the amount of liquid or frozen water at the surface or in the soil as well as in
     ! the reservoir representing lateral flow.
@@ -3450,10 +3535,13 @@ CONTAINS
       weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
       weq_fluxes(ic) = weq_fluxes(ic) * tile_area / rhoh2o               ! kg m-2 s-1 -> m3/s
 
+      err_corr_parflow = 0._wp
+
       IF (tile_contains_soil) THEN
         weq_land_new = (wtr_skin(ic) + weq_snow(ic) + weq_pond(ic) &
           &            + weq_soil(ic) + wtr_latflow_res(ic))       &
           &          * tile_area          ! m -> m^3
+        err_corr_parflow = SUM(change_by_parflow(ic,:)) * tile_area
       ELSE
         weq_land_new = 0._wp
       END IF
@@ -3465,7 +3553,7 @@ CONTAINS
       !  As weq_land, the water budget of the previous time step, is not available at the very first time
       !  step, no error is calculated right after mode initialization.
       IF (.NOT. is_experiment_start) THEN
-        weq_balance_err(ic) = weq_land(ic) + weq_fluxes(ic) * dtime - weq_land_new
+        weq_balance_err(ic) = weq_land(ic) + weq_fluxes(ic) * dtime - weq_land_new + err_corr_parflow
       END IF
       ! Define weq_land for the next time step
       weq_land(ic) = weq_land_new

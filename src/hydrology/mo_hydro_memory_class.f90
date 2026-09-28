@@ -99,7 +99,9 @@ MODULE mo_hydro_memory_class
       & drainage,             & !< Total (subsurface) drainage                           [kg m-2 s-1]
       & discharge,            & !< Discharge (local)                                     [m3 s-1]
       & discharge_ocean,      & !< Discharge to the ocean                                [m3 s-1]
-      & internal_drain          !< Internal drainage                                     [kg m-2 s-1]
+      & internal_drain,       & !< Internal drainage                                     [kg m-2 s-1]
+      & fract_parflow,        & !< Fraction of ParFlow coverage
+      & water_to_parflow        !< Water to Parflow
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Topographic height                                    [m]
@@ -191,8 +193,11 @@ MODULE mo_hydro_memory_class
       & wtr_latflow_res_sl,   & !< Water content of intermediary reservoir representing
                                 !< lateral flow of subsurface runoff (only with
                                 !< [[t_hydro_config:hydro_scale=Uniform]])               [m]
-      & wtr_latflow_sl          !< Outflow from the intermediary reservoir representing
+      & wtr_latflow_sl,       & !< Outflow from the intermediary reservoir representing
                                 !< lateral flow of subsurface runoff                     [kg m-2 s-1]
+      & evapotrans_to_parflow,& !< Evapotranspiration to Parflow                         [m/s]
+      & change_by_parflow,    & !< Water content change by Parflow                       [m]
+      & tracked_diff_parflow    !< Water content difference between Parflow and here     [m]
 
     TYPE(t_jsb_var_real2d) :: &
       & wtr_plant_avail_rel, &  !< relative plant available water (difference between saturation and PWP in root zone) [unitless]
@@ -481,6 +486,46 @@ CONTAINS
       & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'fract_parflow', mem%fract_parflow,                    &
+      & hgrid, surface,                                                      &
+      & t_cf('fract_parflow', '-', 'fraction of parflow coverage'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & loutput=.TRUE.,                                                      &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'water_to_parflow', mem%water_to_parflow,              &
+      & hgrid, surface,                                                      &
+      & t_cf('water_to_parflow', 'm s-1', 'water to parflow'),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & loutput=.TRUE.,                                                      &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'evapotrans_to_parflow', mem%evapotrans_to_parflow,     &
+      & hgrid, soil_w,                                                        &
+      & t_cf('evapotrans_to_parflow', 'm s-1', 'evapotrans to parflow'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'change_by_parflow', mem%change_by_parflow,             &
+      & hgrid, soil_w,                                                        &
+      & t_cf('change_by_parflow', 'm', 'change by parflow'),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'tracked_diff_parflow', mem%tracked_diff_parflow,       &
+      & hgrid, soil_w,                                                        &
+      & t_cf('tracked_diff_parflow', 'm', 'tracked diff parflow'),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+      & prefix, suffix,                                                       &
+      & loutput=.TRUE.,                                                       &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'internal_drain', mem%internal_drain,                          &

@@ -720,7 +720,7 @@ CONTAINS
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_wres_sl, runoff_dunne, drainage, &
     & drainage_sl, wtr_transp_down_sl, wtr_soilhyd_res, drainage_lowest_soil_layer,      &
-    & wtr_latflow_sl,                                                                    &
+    & wtr_latflow_sl, evapotrans_to_parflow,                                             &
     ! optional: only used with QUINCY
     & ftranspiration_sl                                                                  &
     & )
@@ -794,8 +794,9 @@ CONTAINS
       & wtr_wres_sl,             & !< Residual water content in soil layer (reduced by ice) [m]
       & wtr_transp_down_sl,      & !< Vertical water transport to the below soil layer [kg m-2 s-1]
       & drainage_sl,             & !< Drainage [kg m-2 s-1]
-      & wtr_latflow_sl             !< Outflow from the intermediary reservoir representing
+      & wtr_latflow_sl,          & !< Outflow from the intermediary reservoir representing
                                    !< lateral flow of subsurface drainage [kg m-2 s-1]
+      & evapotrans_to_parflow
     REAL(wp), OPTIONAL, INTENT(in), DIMENSION(:,:) :: &
       & ftranspiration_sl          !< Transpiration fraction []
 
@@ -853,6 +854,30 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! Calculate evapotrans_to_parflow
+    ! (positive contributions are already included in water_to_parflow)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
+        evapotrans_to_parflow(ic,1) = (MIN(evapo_soil_in_m(ic), 0.0_wp) &
+          & + MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,1)/SUM(root_depth_sl(ic,:))) / dtime
+      ELSE
+        evapotrans_to_parflow(ic,1) = MIN(evapo_soil_in_m(ic), 0.0_wp) / dtime
+      END IF
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    DO is = 2, nsoil
+      DO ic = 1, nc
+        IF (SUM(root_depth_sl(ic,:)) > 0.0_wp) THEN
+          evapotrans_to_parflow(ic,is) = (MIN(transpiration_in_m(ic), 0.0_wp) * root_depth_sl(ic,is)/SUM(root_depth_sl(ic,:))) / dtime
+        ELSE
+          evapotrans_to_parflow(ic,is) = 0.0_wp
+        END IF
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Calculation of vertical soil water movement for multiple soil layers
     !---------------------------------------------
