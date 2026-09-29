@@ -227,13 +227,13 @@ CONTAINS
       IF (.NOT. mask(ic)) CYCLE
       mf_10hr = 0._wp
 
-      !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
+      !< Ensure there is fuel
       IF (SUM(dead_fuel_litter(ic,:)) > eps8) THEN
         alphas_weighted_ros(ic) = stats_average_weight(nlitros, alphas_dd(ix_1hr:ix_100hr), dead_fuel_litter(ic,:))
         mf_10hr = calc_omega(alphas_weighted_ros(ic), nesterov_index(ic))
       ENDIF
 
-      !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
+      !< Ensure there is fuel
       IF (SUM(dead_fuel(ic,:)) > eps8) THEN
         alphas_weighted_dd(ic) = stats_average_weight(4, alphas_dd, dead_fuel(ic,:))
         mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
