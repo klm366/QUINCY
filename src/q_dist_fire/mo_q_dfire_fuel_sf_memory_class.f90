@@ -48,7 +48,7 @@ MODULE mo_q_dfire_fuel_sf_memory_class
     TYPE(t_jsb_var_real3d)  :: dead_fuel_100hr_dfp        !< 100hr dead fuel [g DM m-2], _dfp = dead fuel pools
     TYPE(t_jsb_var_real3d)  :: dead_fuel_1000hr_dfp       !< 1000hr dead fuel [g DM m-2], _dfp = dead fuel pools
 
-    TYPE(t_jsb_var_real3d)  :: live_grass_fuel_1hr_lfp    !< 1hr live grass fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools
+    TYPE(t_jsb_var_real3d)  :: live_grass_fuel_1hr_lfp    !< 1hr live grass fuel (#nc, #nlivepools) [g DM m-2], _lfp = live fuel pools -oberhagemann only-
     !< cured liveg grass is considered dead fuel
     TYPE(t_jsb_var_real3d)  :: cured_live_grass_fuel_1hr_dfp !< 1hr cured dead fuel (#nc, #nlivepools) [g DM m-2], _lfp = dead fuel pools
 
@@ -76,7 +76,7 @@ MODULE mo_q_dfire_fuel_sf_memory_class
     TYPE(t_jsb_var_real2d)  :: crown_length               !< Crown length of woody PFT [m]
     TYPE(t_jsb_var_real2d)  :: tree_height                !< Tree height [m]
 
-    TYPE(t_jsb_var_real2d)  :: lvg_moisture               !< Livegrass moisture content [0 to 2.5]%
+    TYPE(t_jsb_var_real2d)  :: lvg_moisture               !< Livegrass moisture content [0 to 2.5]% -oberhagemann only-
 
     TYPE(t_jsb_var_real3d)  :: fuel_consumption_els       !< Fuel consumption per elements (#nc,#elements) [umol m-2 s-1]
     TYPE(t_jsb_var_real3d)  :: emissions_spc              !< Fire emissions per species (nc, #species) [g X m-2 s-1]
