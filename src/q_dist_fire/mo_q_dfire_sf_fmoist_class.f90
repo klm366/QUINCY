@@ -415,7 +415,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: mf_lg(:)     ! Livegrass moisture [0.3 to 2.5]
 
     ! As paper's source code
-    mf_lg = lfmc_par%b + lfmc_par%c * phen
+    mf_lg = lfmc_par%b + (lfmc_par%max - lfmc_par%b) * phen
     WHERE (mf_lg < lfmc_par%min) mf_lg = lfmc_par%min !< set min value
     WHERE (mf_lg > lfmc_par%max) mf_lg = lfmc_par%max !< up to 250% livegrass moisture
   END FUNCTION calc_mflg_ober
