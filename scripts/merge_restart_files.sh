@@ -74,4 +74,3 @@ cdo infov -selvar,${testvar} ${src_restart}
 echo ${dst_restart}:
 cdo infov -selvar,${testvar} ${dst_restart}
 echo ${new_restart}:
-cdo infov -selvar,${testvar} ${new_restart}

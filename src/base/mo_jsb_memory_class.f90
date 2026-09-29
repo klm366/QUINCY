@@ -181,6 +181,7 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
         ! Number of standard output groups: 2 groups per output_level:
@@ -191,8 +192,6 @@ CONTAINS
       ELSE
         no_groups = 0
       END IF
-    ELSE
-      no_groups = 0
     END IF
 
     IF (PRESENT(output_groups)) THEN
@@ -362,6 +361,7 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
         ! Number of standard output groups: 2 groups per output_level:
@@ -372,8 +372,6 @@ CONTAINS
       ELSE
         no_groups = 0
       END IF
-    ELSE
-      no_groups = 0
     END IF
 
     IF (PRESENT(output_groups)) THEN
@@ -565,6 +563,7 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    no_groups = 0
     IF (PRESENT(output_level)) THEN
       IF (output_level > 0) THEN                   ! Output level is not NONE (i.e. variable is assigned to a group)
         ! Number of standard output groups: 2 groups per output_level:
@@ -575,8 +574,6 @@ CONTAINS
       ELSE
         no_groups = 0
       END IF
-    ELSE
-      no_groups = 0
     END IF
 
     IF (PRESENT(output_groups)) THEN

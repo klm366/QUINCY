@@ -28,7 +28,7 @@ MODULE mo_jsb_control
   USE mo_jsb_time_iface,     ONLY: l_timer_host   ! ICON namelist flag indicating if timers are enabled in the ICON host
                                                   ! This flag is independent of the ICON-Land timer_level.
   USE mo_jsb_io_iface,       ONLY: ldebugio
-  USE mo_jsb_thermo_iface,   ONLY: init_jsb_thermo_iface, iaes, inwp
+  USE mo_jsb_thermo_iface,   ONLY: init_jsb_thermo_iface
 
 #ifdef _OPENACC
   USE openacc, ONLY: acc_async_sync

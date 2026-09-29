@@ -24,18 +24,19 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes PHENO_, CARBON_, NLCC_
+  dsl4jsb_Use_processes PHENO_, CARBON_, NLCC_, CH4_
 
   ! Use process configurations
   dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth
   dsl4jsb_Use_config(CARBON_)    ! needed for l_forestRegrowth
+  dsl4jsb_Use_config(CH4_)    ! needed for certain extra variables
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 155
+  INTEGER, PARAMETER :: max_no_of_vars = 300
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
@@ -88,9 +89,16 @@ MODULE mo_carbon_memory_class
       LAI_sum,                    & ! used to accumulate LAI over a day
       NPP_pot_sum,                    & ! used to accumulated NPP-Rate over a day
       GPP_sum,                    & ! used to accumulated GPP-Rate over a day
+      GPP_ann_sum,                & ! used to accumulated GPP-Rate over a year
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
-      soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
+      soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol m-2(canopy)].
                                     ! Without N limitation!
+      soil_respiration_oxic,      & ! mean daily rate of heterotrophic (oxid soils) respiration [mol m-2(canopy)].
+                                    ! Without N limitation! Only with methane processes active
+      soil_respiration_anoxic,    & ! mean daily rate of heterotrophic (anoxid soils) respiration [mol m-2(canopy)].
+                                    ! Without N limitation! Only with methane processes active
+      acrotelm_height_ag,         & ! Above ground height of acrotelm. Only with methane process active
+      acrotelm_height_bg,         & ! Below ground height of acrotelm. Only with methane process active
       NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(canopy) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -105,6 +113,7 @@ MODULE mo_carbon_memory_class
                                     ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
+      GPP_prev_year_ta,           & !
       root_exudates,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(canopy) s]
       cflux_c_green_2_herb,       & ! Total carbon flux from C pool green to herbivory.
       cflux_herb_2_littergreen,   & ! ..part of cflux_c_green_2_herb that goes into green litter
@@ -176,6 +185,10 @@ MODULE mo_carbon_memory_class
 !      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
       soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
                                        ! Without N limitation!
+      soil_respiration_oxic_ta,      & ! mean daily rate of heterotrophic (oxic soils) respiration [mol(CO2)/m^2(tile area)].
+                                       ! Without N limitation! Only with methane process active
+      soil_respiration_anoxic_ta,    & ! mean daily rate of heterotrophic (anoxic soils) respiration [mol(CO2)/m^2(tile area)].
+                                       ! Without N limitation! Only with methane process active
       NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(tile area) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -245,6 +258,7 @@ CONTAINS
 
     dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
     dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(CH4_)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
@@ -264,6 +278,36 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(CH4_)
+
+!    ! R: only if we would want to have these variables in 2d (see mo_carbon_init.f90 for their initialization):
+!    CALL mem%Add_var('n_pseudo_temp', mem%N_pseudo_temp,                                             &
+!      & hgrid, surface,                                                                              &
+!      & t_cf('N_pseudo_temp', 'K', 'Normalization for computing pseudo-15-day mean air temperature'),    &
+!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+!      & prefix, suffix,                                                                                &
+!      & lrestart=.FALSE., initval_r=0.0_wp )
+!
+!    CALL mem%Add_var('f_pseudo_temp', mem%F_pseudo_temp,                                             &
+!      & hgrid, surface,                                                                              &
+!      & t_cf('F_pseudo_temp', '-', 'Exponential factor used for updating the pseudo-15-day mean temperature'),    &
+!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+!      & prefix, suffix,                                                                                &
+!      & lrestart=.FALSE., initval_r=0.0_wp )
+!
+!    CALL mem%Add_var('n_pseudo_precip', mem%N_pseudo_precip,                                         &
+!      & hgrid, surface,                                                                              &
+!      & t_cf('N_pseudo_precip', 'Kg m-2 s-1', 'Normalization for computing pseudo-15-day mean precipitation rate'),  &
+!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+!      & prefix, suffix,                                                                                &
+!      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!
+!    CALL mem%Add_var('f_pseudo_precip', mem%F_pseudo_precip,                                         &
+!      & hgrid, surface,                                                                              &
+!      & t_cf('F_pseudo_precip', '-', 'Exponential factor used for updating the pseudo-15-day mean precip'),    &
+!      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+!      & prefix, suffix,                                                                                &
+!      & lrestart=.FALSE., initval_r=0.0_wp )
 
     ! Carbon variables on canopy area
     CALL mem%Add_var('c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                             &
@@ -492,12 +536,37 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('soil_respiration', mem%soil_respiration,                 &
-      & hgrid, surface,                                                        &
-      & t_cf('soil_respiration', 'mol(C) m-2(canopy) s-1', 'Soil respiration.'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-      & prefix, suffix,                                                        &
+    CALL mem%Add_var('gpp_ann_sum', mem%GPP_ann_sum,                                     &
+      & hgrid, surface,                                                                  &
+      & t_cf('GPP_ann_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate GPP over a year.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('soil_respiration', mem%soil_respiration,                   &
+      & hgrid, surface,                                                          &
+      & t_cf('soil_respiration', 'mol(C) m-2(canopy) s-1', 'Soil respiration.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+        & output_level=BASIC,                                                        &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL mem%Add_var('soil_respiration_anoxic', mem%soil_respiration_anoxic,   &
+        & hgrid, surface,                                                        &
+        & t_cf('soil_respiration_anoxic', 'mol m-2(canopy) s-1', 'Soil respiration from anoxic soils.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('soil_respiration_oxic', mem%soil_respiration_oxic,       &
+        & hgrid, surface,                                                        &
+        & t_cf('soil_respiration_oxic', 'mol(C) m-2(canopy) s-1', 'Soil respiration from oxic soils.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & output_level=BASIC,                                                        &
+        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+    ENDIF
 
     CALL mem%Add_var('npp_flux_correction', mem%NPP_flux_correction,                                 &
       & hgrid, surface,                                                                              &
@@ -547,6 +616,13 @@ CONTAINS
     CALL mem%Add_var('gpp_ydaymean', mem%GPP_yDayMean,                                        &
       & hgrid, surface,                                                                       &
       & t_cf('GPP_yDayMean', 'mol(C) m-2(canopy) s-1', 'Mean GPP Rate of the previous day.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
+      & prefix, suffix,                                                                       &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    CALL mem%Add_var('gpp_prev_year', mem%GPP_prev_year_ta,                                   &
+      & hgrid, surface,                                                                       &
+      & t_cf('GPP_prev_year', 'mol(C) m-2 yr-1', 'Total GPP of the previous year.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                       &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
@@ -841,6 +917,41 @@ CONTAINS
       & prefix, suffix,                                                     &
       & output_level=BASIC,                                                 &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL mem%Add_var('soil_respiration_oxic_ta', mem%soil_respiration_oxic_ta,     &
+        & hgrid, surface,                                                            &
+        & t_cf('soil_respiration_oxic_ta', 'mol(C) m-2 s-1', 'Soil respiration from oxic soils.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & output_level=BASIC,                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('soil_respiration_anoxic_ta', mem%soil_respiration_anoxic_ta, &
+        & hgrid, surface,                                                            &
+        & t_cf('soil_respiration_anoxic_ta', 'mol(C) m-2 s-1', 'Soil respiration from anoxic soils.'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & output_level=BASIC,                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('acrotelm_height_ag', mem%acrotelm_height_ag,                 &
+        & hgrid, surface,                                                            &
+        & t_cf('acrotelm_height_ag', 'm', 'height of above ground acrotelm.'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & output_level=BASIC,                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+      CALL mem%Add_var('acrotelm_height_bg', mem%acrotelm_height_bg,                 &
+        & hgrid, surface,                                                            &
+        & t_cf('acrotelm_height_bg', 'm', 'height of below ground acrotelm.'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & output_level=BASIC,                                                        &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+
+    ENDIF
 
     CALL mem%Add_var('npp_flux_corr_ta', mem%NPP_flux_correction_ta,                                 &
       & hgrid, surface,                                                                              &

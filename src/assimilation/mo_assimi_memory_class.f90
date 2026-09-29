@@ -136,17 +136,17 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     TYPE(t_jsb_model), POINTER :: model
-    INTEGER :: table
+    INTEGER                    :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
 
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
 
-    table = tables(1)
+    table        =  tables(1)
 
-    hgrid   => Get_grid(mem%grid_id)
-    surface => Get_vgrid('surface')
+    hgrid        => Get_grid(mem%grid_id)
+    surface      => Get_vgrid('surface')
     canopy_layer => Get_vgrid('canopy_layer')
     model   => Get_model(model_id)
 

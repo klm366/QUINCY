@@ -65,7 +65,8 @@ CONTAINS
     !>
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, &
+      &                   ALCC_, TOP_, CH4_, MEGAN_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -76,9 +77,11 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(FAGE_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(CH4_)
     dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(VEG_)
@@ -94,9 +97,11 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(FAGE_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(VEG_)
@@ -283,8 +288,34 @@ CONTAINS
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
         dsl4jsb_Get_config(FAGE_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
+        dsl4jsb_Get_config(PPLCC_)
+        dsl4jsb_Get_config(CH4_)
+
+        ! Make number of vertical layers available from the options type
+        IF (model%Is_process_enabled(HYDRO_)) THEN
+          soil_w => Get_vgrid('soil_depth_water')
+          nsoil_w = soil_w%n_levels
+        END IF
+        IF (model%Is_process_enabled(SSE_)) THEN
+          soil_e => Get_vgrid('soil_depth_energy')
+          nsoil_e = soil_e%n_levels
+          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
+            snow_e => Get_vgrid('snow_depth_energy')
+            nsnow_e = snow_e%n_levels
+          END IF
+        END IF
+        CALL model%Set_options(nsoil_e=nsoil_e, nsoil_w=nsoil_w, nsnow_e=nsnow_e)
+
+        ! Crosscheck process configs
+        IF (model%Is_process_enabled(HYDRO_) .AND. model%Is_process_enabled(SSE_) &
+          & .AND. (nsoil_e /= nsoil_w)) THEN
+          CALL finish(routine, &
+            & 'The number of soil layers used for water and energy currently need to be identical:'  &
+            & //' nsoil_w = '//TRIM(int2string(nsoil_w))//', nsoil_e = '//TRIM(int2string(nsoil_e)))
+        END IF
 
       END SELECT
 
