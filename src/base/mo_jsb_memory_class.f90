@@ -141,7 +141,7 @@ CONTAINS
 
 ! 1d list elements are not supported with ECHAM streams
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: name_loc
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
@@ -321,7 +321,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: name_loc
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
@@ -506,7 +506,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: name_loc
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
@@ -705,7 +705,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: transfer_all        !< transfer all or only a proportion of matter upon lcc
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: name_loc
     ! TYPE(t_cf_var)    :: cf_loc
     TYPE(t_cf)        :: cf
     TYPE(t_grib2_var) :: grib2_loc
@@ -797,7 +797,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
+    CHARACTER(len=:), ALLOCATABLE :: name_loc
     LOGICAL           :: loutput_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
