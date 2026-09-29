@@ -220,9 +220,8 @@ CONTAINS
     INTEGER :: ic
 
     mf = t_sf_mf(nc, ndd, nlv)
-    DO ic = 1, nc
-      dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
-    ENDDO
+    dead_fuel(:,ix_1hr:ix_100hr) = dead_fuel_litter
+    dead_fuel(:,ix_clvg)         = dead_fuel_grass
 
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
