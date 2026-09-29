@@ -105,7 +105,8 @@ run_generate_hdpara_file=false         # Needed with internal HD model
 # - coupled
 # - atmGridID and refinement
 # - oceGridID (if coupled=true)
-# - start_year and end_year or year_list
+# - start_year and end_year or year_list (for natural vegetation use year_list="natveg"
+#                                         or add "natveg" to the year_list)
 # - extpar_dir and extpar_file
 # - extpar_source_dir (if extpar_file not yet existing)
 # - nwp_extpar_file (for simulations with NWP atmosphere)
@@ -170,8 +171,8 @@ for ((yr=${start_year}; yr<=${end_year}; yr++)); do
   export year_list="${year_list} $yr"
 done
 #---
-# b) Define list of years
-#export year_list="1850 1979 1990 1992 2005 2015"
+# b) Define list of years - use/add "natveg" for natural vegetation only
+#export year_list="1850 1979 1990 1992 2005 2015 natveg"
 
 # For years after 2015: chose scenario (not available for all resolutions)
 export scenario="ssp119"   # ssp119 / ssp126 / ssp245 / ssp370 / ssp434 / ssp460 / ssp534os / ssp585

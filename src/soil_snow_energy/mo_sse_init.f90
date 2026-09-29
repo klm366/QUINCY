@@ -1,4 +1,4 @@
-!> Initialization of the the soil and snow memory.
+!> Contains the initialization routines for the soil and snow energy process.
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,17 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!>#### Initialize soil properties and initial conditions of the SSE process
+!>
+!> The module provides the subroutines used to initialize the soil and snow energy process.
+!> The main subroutine is [[sse_init]], which calls the other initialization routines.
+!>
+!> Depending on the SSE configuration, initial and boundary-condition data is read from input
+!> files in subroutine [[sse_read_init_vars]]. The data are then used to set the soil properties
+!> in subroutine [[sse_init_bc]] and the initial conditions in subroutine [[sse_init_ic]].
+!> After the last tile has been initialized, the temporary initialization data are released in
+!> subroutine [[sse_finalize_init_vars]].
 !>
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
@@ -41,50 +52,59 @@ MODULE mo_sse_init
   PUBLIC :: sse_init, init_soil_properties
 
   REAL(wp), PARAMETER :: &
-    & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), &
-    & fao_vol_hcap    (0:6) = (/2.25e+6_wp,1.93e+6_wp,2.10e+6_wp,2.25e+6_wp,2.36e+6_wp,2.48e+6_wp,-1._wp/)
+    & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), & !< FAO thermal diffusivity by soil class [m2 s-1]
+    & fao_vol_hcap    (0:6) = (/2.25e+6_wp,1.93e+6_wp,2.10e+6_wp,2.25e+6_wp,2.36e+6_wp,2.48e+6_wp,-1._wp/)    !< FAO volumetric heat capacity by soil class [J m-3 K-1]
 
-  ! heat capacity [J/Km^3] (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp
-  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
+  ! Heat capacity [J m-3 K-1] (see table 2.2 in Reick et al. 2020,
+  ! Reports on Earth System Science 240)
+  REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp !< Volumetric heat capacity of sand [J m-3 K-1]
+  REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp !< Volumetric heat capacity of silt [J m-3 K-1]
+  REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp !< Volumetric heat capacity of clay [J m-3 K-1]
+  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp    !< Volumetric heat capacity of organic carbon [J m-3 K-1]
 
-  ! heat conductivity (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp
-  REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp
-  REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp
-  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp ! see hcond_org in mo_sse_constants.f90
+  ! Heat conductivity (see table 2.2 in Reick et al. 2020,
+  ! Reports on Earth System Science 240)
+  REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp !< Thermal conductivity of sand [J m-1 s-1 K-1]
+  REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp  !< Thermal conductivity of silt [J m-1 s-1 K-1]
+  REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp !< Thermal conductivity of clay [J m-1 s-1 K-1]
+  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp     !< Thermal conductivity of organic carbon [J m-1 s-1 K-1]
 
+  !> Temporary container for auxiliary variables that are read from input files and used to
+  !> initialize the SSE state.
   TYPE t_sse_init_vars
     REAL(wp), POINTER ::     &
-      & fao         (:,:  ) => NULL(), &
-      & vol_heat_cap(:,:  ) => NULL(), &
-      & heat_cond   (:,:  ) => NULL(), &
-      & fr_sand     (:,:  ) => Null(), &
-      & fr_silt     (:,:  ) => Null(), &
-      & fr_clay     (:,:  ) => Null(), &
-      & fr_sand_deep(:,:  ) => Null(), &
-      & fr_silt_deep(:,:  ) => Null(), &
-      & fr_clay_deep(:,:  ) => Null(), &
-      & bulk_density(:,:  ) => NULL(), &
-      & t_srf_mon   (:,:,:) => NULL(), &
-      & ifs_tsoil   (:,:,:) => NULL(), &
-      & ifs_tskin   (:,:  ) => NULL()
+      & fao         (:,:  ) => NULL(), & !< FAO soil classification index
+      & vol_heat_cap(:,:  ) => NULL(), & !< Volumetric heat capacity of dry soil [J m-3 K-1]
+      & heat_cond   (:,:  ) => NULL(), & !< Thermal conductivity of dry soil [J m-1 s-1 K-1]
+      & fr_sand     (:,:  ) => Null(), & !< Sand fraction in upper soil []
+      & fr_silt     (:,:  ) => Null(), & !< Silt fraction in upper soil []
+      & fr_clay     (:,:  ) => Null(), & !< Clay fraction in upper soil []
+      & fr_sand_deep(:,:  ) => Null(), & !< Sand fraction in deep soil []
+      & fr_silt_deep(:,:  ) => Null(), & !< Silt fraction in deep soil []
+      & fr_clay_deep(:,:  ) => Null(), & !< Clay fraction in deep soil []
+      & bulk_density(:,:  ) => NULL(), & !< Soil bulk density [kg m-3]
+      & t_srf_mon   (:,:,:) => NULL(), & !< Monthly climatological surface temperature [K]
+      & ifs_tsoil   (:,:,:) => NULL(), & !< Soil temperatures from IFS [K]
+      & ifs_tskin   (:,:  ) => NULL()    !< Skin temperatures from IFS [K]
   END TYPE t_sse_init_vars
 
-  TYPE(t_sse_init_vars) :: sse_init_vars
+  TYPE(t_sse_init_vars) :: sse_init_vars !< Temporary initialization data
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_init'
 
 CONTAINS
 
-  !
-  !> Intialize soil and snow energy process (after memory has been set up)
-  !
+  ! ====================================================================================================== !
+  !>
+  !>#### Initialize the soil and snow energy process
+  !>
+  !> The routine is called once the process memory has already been set up. It delegates to the
+  !> routines that read input data, populate the boundary-condition fields, and initialize the
+  !> soil and snow state according to the current configuration and tile structure.
+  !>
   SUBROUTINE sse_init(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
@@ -105,6 +125,12 @@ CONTAINS
 #endif
   END SUBROUTINE sse_init
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Finalize the temporary SSE initialization state
+  !>
+  !> Release the temporary arrays that were created while reading and processing the SSE
+  !> initialization data.
   SUBROUTINE sse_finalize_init_vars
 
     DEALLOCATE(                     &
@@ -130,22 +156,28 @@ CONTAINS
 
 #ifdef __QUINCY_STANDALONE__
 #else
+  ! ====================================================================================================== !
+  !>
+  !>#### Read initial and boundary-condition data for SSE
+  !>
+  !> Read the soil-energy input fields and climatological data needed to initialize the SSE
+  !> state for the current tile.
   SUBROUTINE sse_read_init_vars(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
+    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< Temporary input-data pointers
 
-    TYPE(t_input_file) :: input_file
+    TYPE(t_input_file) :: input_file !< Current boundary-condition input file
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
-    TYPE(t_jsb_vgrid), POINTER :: soil_e
-    INTEGER :: nproma, nblks, isoil
-    LOGICAL :: l_organic
+    TYPE(t_jsb_model), POINTER :: model  !< Current model instance
+    TYPE(t_jsb_grid),  POINTER :: grid   !< Model horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_e !< Soil energy vertical grid
+    INTEGER :: nproma, nblks, isoil !< Horizontal block dimensions and IFS soil-layer index
+    LOGICAL :: l_organic !< Whether organic soil properties are enabled
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -205,22 +237,22 @@ CONTAINS
     !
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
 
-      !>     - Fraction of sand in upper soil
+      !> Fraction of sand in the upper soil
       CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._wp)
 
-      !>     - Fraction of silt in upper soil
+      !> Fraction of silt in the upper soil
       CALL read_bc_data(input_file, 'FR_SILT', tile%name, sse_init_vars%fr_silt, llimit=0._wp)
 
-      !>     - Fraction of clay in upper soil
+      !> Fraction of clay in the upper soil
       CALL read_bc_data(input_file, 'FR_CLAY', tile%name, sse_init_vars%fr_clay, llimit=0._wp)
 
-      !>     - Fraction of sand in deep soil
+      !> Fraction of sand in the deep soil
       CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, sse_init_vars%fr_sand_deep, llimit=0._wp)
 
-      !>     - Fraction of silt in deep soil
+      !> Fraction of silt in the deep soil
       CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, sse_init_vars%fr_silt_deep, llimit=0._wp)
 
-      !>     - Fraction of clay in deep soil
+      !> Fraction of clay in the deep soil
       CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
 
       SELECT CASE (model%config%model_scheme)
@@ -231,7 +263,7 @@ CONTAINS
           &                               sse_init_vars%bulk_density(:,:) > 0.0_wp)
       END SELECT
 
-      ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+      ! calculate soil heat capacity [J m-3 K-1] incl. organic fraction
       CALL soil_init_from_texture( &
          heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
@@ -253,7 +285,7 @@ CONTAINS
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
-        ! Volumetric heat capacity of dry soil [J/(m^3*K)]
+        ! Volumetric heat capacity of dry soil [J m-3 K-1]
         CALL read_bc_data(input_file, 'heat_capacity', tile%name, sse_init_vars%vol_heat_cap, &
           &  l_organic=l_organic, default=2.e6_wp)
       END IF
@@ -306,23 +338,27 @@ CONTAINS
 #endif
 
 #ifdef __QUINCY_STANDALONE__
+  ! ====================================================================================================== !
+  !>
+  !>#### Initialize QUINCY-specific SSE boundary conditions
+  !>
   SUBROUTINE qs_sse_init_bc(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< Current model instance
     CHARACTER(len=*), PARAMETER :: routine = modname//':qs_sse_init_bc'
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
 
-    dsl4jsb_Real2D_onDomain :: vol_heat_cap
-    dsl4jsb_Real2D_onDomain :: heat_cond
-    dsl4jsb_Real3D_onDomain :: sand_sl
-    dsl4jsb_Real3D_onDomain :: silt_sl
-    dsl4jsb_Real3D_onDomain :: clay_sl
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+    dsl4jsb_Real2D_onDomain :: vol_heat_cap !< Volumetric heat capacity of dry soil [J m-3 K-1]
+    dsl4jsb_Real2D_onDomain :: heat_cond    !< Thermal conductivity of dry soil [J m-1 s-1 K-1]
+    dsl4jsb_Real3D_onDomain :: sand_sl      !< Sand fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: silt_sl      !< Silt fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: clay_sl      !< Clay fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl !< Soil bulk density by layer [kg m-3]
 
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting QS soil energy boundary conditions for tile '//TRIM(tile%name))
@@ -358,7 +394,7 @@ CONTAINS
     !>
     bulk_dens_sl(:,:,:) = dsl4jsb_Config(SSE_)%qs_bulk_density
 
-    ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+    ! calculate soil heat capacity [J m-3 K-1] incl. organic fraction
     CALL soil_init_from_texture( &
       &     heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc, &
       &     sand_sl(:,1,:), silt_sl(:,1,:), clay_sl(:,1,:), &
@@ -375,27 +411,33 @@ CONTAINS
   END SUBROUTINE qs_sse_init_bc
 #endif
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Set SSE boundary conditions for the tiles
+  !>
+  !> Transfer the initialized soil-property fields into the tile memory so that the SSE state
+  !> can be advanced during the subsequent model time steps.
   SUBROUTINE sse_init_bc(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
 
-    INTEGER :: iblk
-    INTEGER :: nsoil
+    INTEGER :: iblk !< Horizontal block index
+    INTEGER :: nsoil !< Number of soil energy layers
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    TYPE(t_jsb_model), POINTER :: model !< Current model instance
+    TYPE(t_jsb_vgrid), POINTER :: soil_e !< Soil energy vertical grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_bc'
 
     ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain :: sand_sl
-    dsl4jsb_Real3D_onDomain :: silt_sl
-    dsl4jsb_Real3D_onDomain :: clay_sl
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+    dsl4jsb_Real3D_onDomain :: sand_sl      !< Sand fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: silt_sl      !< Silt fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: clay_sl      !< Clay fraction by soil layer []
+    dsl4jsb_Real3D_onDomain :: bulk_dens_sl !< Soil bulk density by layer [kg m-3]
 
     model => get_model(tile%owner_model_id)
     soil_e => Get_vgrid('soil_depth_energy')
@@ -420,7 +462,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)
     END SELECT
 
-    ! Volumetric heat capacity of dry soil [J/(m^3*K)]
+    ! Volumetric heat capacity of dry soil [J m-3 K-1]
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       dsl4jsb_var_ptr(SSE_, vol_heat_cap) = sse_init_vars%vol_heat_cap
     ELSE
@@ -482,21 +524,27 @@ CONTAINS
 
   END SUBROUTINE sse_init_bc
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Initialize the SSE initial conditions
+  !>
+  !> Populate the initial soil and surface temperatures in the SSE memory from either the
+  !> climatological forcing or the IFS input data, depending on the model configuration.
   SUBROUTINE sse_init_ic(tile)
 
     USE mo_sse_process, ONLY: init_soil_temperature
     USE mo_util,        ONLY: ifs2soil
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    TYPE(t_jsb_model), POINTER :: model  !< Current model instance
+    TYPE(t_jsb_vgrid), POINTER :: soil_e !< Soil energy vertical grid
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
 
-    INTEGER :: iblk
+    INTEGER :: iblk !< Horizontal block index
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init_ic'
 
@@ -518,7 +566,8 @@ CONTAINS
     !
     IF (model%config%init_from_ifs) THEN
 
-      ! CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:), &
+      ! CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), &
+      !   & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:), &
       !   & ifs_sfc=sse_init_vars%ifs_tskin(:,:))
       CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
 
@@ -558,6 +607,12 @@ CONTAINS
 
   END SUBROUTINE sse_init_ic
 
+  ! ====================================================================================================== !
+  !>
+  !>#### Initialize the soil thermal and hydrological properties
+  !>
+  !> Derive the initial soil thermal properties, snow properties, and supercooled-water limits
+  !> from the current soil state and the selected SSE configuration.
   SUBROUTINE init_soil_properties(tile)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min, tmelt, alf, rhoh2o
@@ -579,41 +634,41 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
-      & vol_heat_cap, &
-      & heat_cond, &
-      & vol_heat_cap_snow, &
-      & heat_cond_snow
+      & vol_heat_cap,          & !< Volumetric heat capacity of dry soil [J m-3 K-1]
+      & heat_cond,             & !< Thermal conductivity of dry soil [J m-1 s-1 K-1]
+      & vol_heat_cap_snow,     & !< Volumetric heat capacity of snow [J m-3 K-1]
+      & heat_cond_snow           !< Thermal conductivity of snow [J m-1 s-1 K-1]
     dsl4jsb_Real3D_onDomain :: &
-      & soil_depth_sl, &
-      & wtr_soil_sl, &
-      & ice_soil_sl, &
-      & t_soil_sl, &
-      & matric_pot_sl, &
-      & bclapp_sl, &
-      & fract_org_sl, &
-      & vol_heat_cap_sl, &
-      & heat_cond_sl, &
-      & vol_porosity_sl
+      & soil_depth_sl,         & !< Soil layer depths [m]
+      & wtr_soil_sl,           & !< Liquid water content by soil layer [m]
+      & ice_soil_sl,           & !< Ice content by soil layer [m]
+      & t_soil_sl,             & !< Soil layer temperature [K]
+      & matric_pot_sl,         & !< Soil matric potential [m]
+      & bclapp_sl,             & !< Clapp-Hornberger parameter []
+      & fract_org_sl,          & !< Organic matter fraction by soil layer []
+      & vol_heat_cap_sl,       & !< Dynamic volumetric heat capacity [J m-3 K-1]
+      & heat_cond_sl,          & !< Dynamic thermal conductivity [J m-1 s-1 K-1]
+      & vol_porosity_sl          !< Volumetric soil porosity []
 
     ! Locally allocated vectors
     !
     dsl4jsb_Real3D_onDomain :: &
-      & liquid_max,            &
-      & fract_water,           &
-      & fract_ice,             &
-      & vol_heat_cap_tmp,      &
-      & vol_heat_cap_org_tmp,  &
-      & heat_cond_tmp,         &
-      & vol_porosity_org_tmp,  &
-      & hcond_org_tmp,         &
-      & hcond_dry_org_tmp
+      & liquid_max,            & !< Maximum liquid water content by soil layer [m]
+      & fract_water,           & !< Volumetric water fraction by soil layer []
+      & fract_ice,             & !< Volumetric ice fraction by soil layer []
+      & vol_heat_cap_tmp,      & !< Temporary soil heat capacity [J m-3 K-1]
+      & vol_heat_cap_org_tmp,  & !< Temporary organic heat capacity [J m-3 K-1]
+      & heat_cond_tmp,         & !< Temporary soil thermal conductivity [J m-1 s-1 K-1]
+      & vol_porosity_org_tmp,  & !< Temporary organic soil porosity []
+      & hcond_org_tmp,         & !< Temporary organic thermal conductivity [J m-1 s-1 K-1]
+      & hcond_dry_org_tmp        !< Temporary dry organic thermal conductivity [J m-1 s-1 K-1]
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_e
+    TYPE(t_jsb_model), POINTER :: model !< Current model instance
+    TYPE(t_jsb_vgrid), POINTER :: soil_e !< Soil energy vertical grid
 
-    INTEGER  :: nsoil, nproma, nblks, ic, is, ib
-    REAL(wp), POINTER :: soil_e_dz(:)
-    REAL(wp) ::heat_cap_sl, ws_max_sl
+    INTEGER  :: nsoil, nproma, nblks, ic, is, ib !< Soil layers, horizontal dimensions, and loop indices
+    REAL(wp), POINTER :: soil_e_dz(:) !< Soil energy-layer thicknesses [m]
+    REAL(wp) :: heat_cap_sl, ws_max_sl !< Soil-layer heat capacity and maximum water storage [J m-2 K-1, m]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
