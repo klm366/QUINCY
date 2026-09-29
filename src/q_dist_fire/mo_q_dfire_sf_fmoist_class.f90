@@ -223,23 +223,23 @@ CONTAINS
     DO ic = 1, nc
       dead_fuel(ic,:) = [dead_fuel_litter(ic,:), dead_fuel_grass(ic)]
     ENDDO
-    mf_10hr = 0._wp
 
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
-
-      alphas_weighted_ros(ic) = stats_average_weight(nlitros, alphas_dd(ix_1hr:ix_100hr), dead_fuel_litter(ic,:))
-      alphas_weighted_dd(ic) = stats_average_weight(4, alphas_dd, dead_fuel(ic,:))
+      mf_10hr = 0._wp
 
       !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
-      IF (SUM(dead_fuel_litter(ic,:)) > eps8 .AND. nesterov_index(ic) > eps8) THEN
+      IF (SUM(dead_fuel_litter(ic,:)) > eps8) THEN
+        alphas_weighted_ros(ic) = stats_average_weight(nlitros, alphas_dd(ix_1hr:ix_100hr), dead_fuel_litter(ic,:))
         mf_10hr = calc_omega(alphas_weighted_ros(ic), nesterov_index(ic))
       ENDIF
 
       !< Ensure there is fuel and NI is dry (>0) -when NI = 0 is wet-
-      IF (SUM(dead_fuel(ic,:)) > eps8 .AND. nesterov_index(ic) > eps8) THEN
+      IF (SUM(dead_fuel(ic,:)) > eps8) THEN
+        alphas_weighted_dd(ic) = stats_average_weight(4, alphas_dd, dead_fuel(ic,:))
         mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
       ENDIF
+
       mf%dead(ic,ix_10hr) = mf_10hr * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
       mf%dead(ic,ix_100hr) = mf_10hr * 1.02_wp
       mf%dead(ic,ix_1000hr) = mf_10hr * 1.02_wp
