@@ -352,17 +352,19 @@ CONTAINS
     ! Determine distribution of roots in soil layers.
     ! NOTE: In case of dynamical roots, this should be moved into the time loop in update_methane
     !       and be changed from working on domain to chunk
-    IF (tile%is_vegetation) THEN
-      DO j=1,nblks
-        DO i=1,nproma
-           CALL determine_root_dist(INT(mxlay_above_rock(i,j)+0.5_wp),layer%dz(:),layer%ubounds(:), &
-             &                      dsl4jsb_Lctlib_param(root_dist_beta),                           &
-             &                      root_dist_sl(i,:,j))
+    IF (ASSOCIATED(tile%parent_tile)) THEN
+      IF (TRIM(tile%parent_tile%name(:3)) == 'veg') THEN
+        DO j=1,nblks
+          DO i=1,nproma
+             CALL determine_root_dist(INT(mxlay_above_rock(i,j)+0.5_wp),layer%dz(:),layer%ubounds(:), &
+               &                      dsl4jsb_Lctlib_param(root_dist_beta),                           &
+               &                      root_dist_sl(i,:,j))
+          ENDDO
         ENDDO
-      ENDDO
-    ELSE
-      root_dist_sl(:,:,:) = 0._wp
-    ENDIF
+      ELSE
+        root_dist_sl(:,:,:) = 0._wp
+      ENDIF
+    END IF
     !$acc update device(root_dist_sl)
 
   END SUBROUTINE methane_init_ic
