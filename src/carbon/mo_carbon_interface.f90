@@ -367,7 +367,10 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(TOP_)
+
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_memory(TOP_)
+    END IF
 
     ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
     ! climbuf, as the pointer name is appended to the climate buffer variables below.
@@ -825,13 +828,13 @@ CONTAINS
       ! determine annual maximum content of green pool for NLCC process
       IF (model%Is_process_enabled(NLCC_)) THEN
         IF (new_year) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             max_green_bio(ic) = c_green(ic)
           END DO
           !$ACC END PARALLEL LOOP
         ELSE IF (new_day) THEN
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             max_green_bio(ic) = MAX(max_green_bio(ic), c_green(ic))
           END DO
@@ -842,21 +845,21 @@ CONTAINS
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
 
-      CALL recalc_per_tile_vars(tile, options,                                                   &
-        & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),                    &
-        & c_crop_harvest = c_crop_harvest(:),                                                     &
-        & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                               &
-        & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:),               &
-        & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                               &
-        & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:),               &
-        & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                               &
-        & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:),               &
-        & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                               &
-        & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:),               &
-        & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                                     &
-        & c_decomp_humus_1_sum = c_decomp_humus_1_sum(:),                                         &
-        & c_decomp_humus_2_sum = c_decomp_humus_2_sum(:),                                         &
-        & c_into_humus_1_sum = c_into_humus_1_sum(:),                                             &
+      CALL recalc_per_tile_vars(tile, options,                                      &
+        & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+        & c_crop_harvest = c_crop_harvest(:),                                       &
+        & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+        & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+        & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+        & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+        & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+        & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+        & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+        & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+        & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+        & c_decomp_humus_1_sum = c_decomp_humus_1_sum(:),                           &
+        & c_decomp_humus_2_sum = c_decomp_humus_2_sum(:),                           &
+        & c_into_humus_1_sum = c_into_humus_1_sum(:),                               &
         & c_into_humus_2_sum = c_into_humus_2_sum(:), root_exudates = root_exudates(:),           &
         & soil_respiration = soil_respiration(:), NPP_flux_correction = NPP_flux_correction(:),   &
         & cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter(:),                             &
@@ -870,7 +873,7 @@ CONTAINS
 
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
       ! thus + here instead of - to reduce NPP by these fluxes
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         current_fluxes(ic) = (NPP_act_yDayMean(ic) + cflux_herb_2_atm(ic) + soil_respiration(ic)) &
           &                   * sec_per_day * veg_fract_correction(ic) * fract_fpc_max(ic)
@@ -884,14 +887,14 @@ CONTAINS
 
     ! Calc sum of GPP for total GPP of previous year for the methane process
     IF (new_year) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         GPP_prev_year_ta(ic) = GPP_ann_sum(ic) / 365._wp
         GPP_ann_sum(ic) = GPP_yDayMean_ta(ic)
       ENDDO
       !$ACC END PARALLEL LOOP
     ELSE
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         GPP_ann_sum(ic) = GPP_ann_sum(ic) + GPP_yDayMean_ta(ic)
       ENDDO
@@ -1495,8 +1498,11 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
     REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
 
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
+
+    TYPE(t_jsb_model), POINTER      :: model
 
     ! Local variables
     CHARACTER(len=*), PARAMETER     :: routine = modname//':recalc_per_tile_vars'
@@ -1549,12 +1555,14 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
     dsl4jsb_Real2D_onChunk ::  fract_fpc_max
 
-    dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(PHENO_)
-
+    model => Get_model(tile%owner_model_id)
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+
+    dsl4jsb_Get_config(CH4_)
+    dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(PHENO_)
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green_ta )             ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve_ta )           ! opt out
@@ -1590,8 +1598,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  cflux_dist_woods_2_soil_ta )   ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta )    ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_ta )          ! opt out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic_ta )     ! opt out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anoxic_ta )   ! opt out
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic_ta )   ! opt out
+      dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anoxic_ta ) ! opt out
+    END IF
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean_ta )          ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean_ta )          ! opt out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction_ta)        ! opt out
