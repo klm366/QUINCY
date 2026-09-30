@@ -204,49 +204,6 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(DISTURB_)
 
-    ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
-!!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
-
-    ! Required time diagnostics
-    lstart    = is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc
-    new_year  = is_newyear (options%current_datetime, options%dtime)
-    new_month = is_newmonth(options%current_datetime, options%dtime)
-    new_day   = is_newday  (options%current_datetime, options%dtime)
-
-    ! Update climbuf
-    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
-    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
-    init_mmtemp20 = MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp
-    CALL calc_climbuf(lstart, init_running_means .OR. init_mmtemp20, new_day, new_month, new_year, dtime, t_air, &
-                      seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                      min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                      gdd_sum_year, gdd_prev_year)
-
-    IF (.NOT. init_mmtemp20 .AND. debug_on() .AND. iblk==1) THEN
-       IF (MAXVAL(min_mmtemp20(:)) <= 999._wp .OR. MINVAL(max_mmtemp20(:)) >= -999._wp) &
-          CALL message(TRIM(routine), 'initialisation of mmtemp20')
-    ENDIF
-
-    ! For CH4_%do_termite, only calc_climbuf is needed. Thus we can now return if no real NLCC_ is wanted
-    IF (dsl4jsb_Config(NLCC_)%climbuf_only) RETURN
-
     ! import lct information from PFT tiles
     !!$ TR collect_var_real2d has to be replaced by appropriate dsl4jsb invocations!
     ! build masks for different vegetation types (is_dynamic, is_woody, etc)

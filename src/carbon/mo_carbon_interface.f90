@@ -183,7 +183,6 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
     REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
-    CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: frac_inun_min
     REAL(wp)                     :: dtime
     REAL(wp), POINTER            :: lat(:)
@@ -201,7 +200,6 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(TOP_)
 
     CLASS(t_jsb_tile_abstract), POINTER :: climbuf   ! Pointer to the climate buffer memory residing on the veg tile
@@ -369,7 +367,6 @@ CONTAINS
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(TOP_)
 
     ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
@@ -714,8 +711,8 @@ CONTAINS
             & WoodLitterSize               = lctlib_WoodLitterSize,          & ! in
             & frac_inun_min                = frac_inun_min,                  & ! in
             !
-            & temp                         = pseudo_temp_yDay(ic),           & ! in
-            & precip                       = pseudo_precip_yDay(ic),         & ! in
+            & temp                         = temp_15d_yDay_climbuf(ic),      & ! in
+            & precip                       = precip_15d_yDay_climbuf(ic),    & ! in
             !
             & frac_inun                    = frac_inun(ic),                  & ! in
             & wt_peat                      = peat_water_table(ic),           & ! in
@@ -779,8 +776,8 @@ CONTAINS
             & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
             & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
             !
-            & temp                    = pseudo_temp_yDay(ic),                                    & ! in
-            & precip                  = pseudo_precip_yDay(ic),                                  & ! in
+            & temp                    = temp_15d_yDay_climbuf(ic),                               & ! in
+            & precip                  = precip_15d_yDay_climbuf(ic),                             & ! in
             !
             & Cflx_wood_2_litter      = cflux_c_wood_2_litter(ic),                               & ! in
             & Cflx_green_2_litter     = cflux_c_green_2_litter(ic),                              & ! in

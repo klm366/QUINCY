@@ -246,9 +246,6 @@ CONTAINS
             ! ... and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
-            dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! out
-
-            fract_fpc_max_save(:) = fract_fpc_max(:)
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
@@ -454,9 +451,6 @@ CONTAINS
             ! ... and get required variables on this tile
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
-            dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max_save)      ! in
-
-            fract_fpc_max(:) = fract_fpc_max_save(:)
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
           CASE (IQ_2L2D_POOL_CQ_TYPE, IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE)

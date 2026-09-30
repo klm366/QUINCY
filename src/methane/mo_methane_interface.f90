@@ -32,7 +32,7 @@ MODULE mo_methane_interface
   USE mo_jsb_grid_class,         ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,               ONLY: Get_vgrid, Get_grid
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, TOP_, CARBON_, A2L_, HYDRO_, SSE_, NLCC_, MEGAN_
+  USE mo_jsb_process_class,      ONLY: t_jsb_process, PHENO_, CH4_, TOP_, CARBON_, A2L_, CLIMBUF_, HYDRO_, SSE_, NLCC_, MEGAN_
   USE mo_jsb_task_class,         ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_math_constants,     ONLY: eps8
   USE mo_jsb_physical_constants, ONLY: tmelt
@@ -69,6 +69,7 @@ MODULE mo_methane_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(NLCC_)
@@ -316,6 +317,7 @@ CONTAINS
     dsl4jsb_Def_memory(TOP_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(NLCC_)
@@ -378,7 +380,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: GPP_prev_year_ta
     dsl4jsb_Real2D_onChunk :: GDD_prev_year
     dsl4jsb_Real2D_onChunk :: GDD_sum
-    dsl4jsb_Real2D_onChunk :: min_mmtemp20
+    dsl4jsb_Real2D_onChunk :: min_mmtemp_20yr
     dsl4jsb_Real2D_onChunk :: ch4_2_atm
     dsl4jsb_Real2D_onChunk :: co_2_atm
     dsl4jsb_Real2D_onChunk :: no_2_atm
@@ -443,6 +445,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(NLCC_)
     dsl4jsb_Get_memory(MEGAN_)
@@ -680,7 +683,7 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_termite)
-      dsl4jsb_Get_var2D_onChunk(NLCC_, min_mmtemp20)
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, min_mmtemp_20yr)
     ENDIF
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_herbivore)
@@ -1083,7 +1086,7 @@ CONTAINS
       ! TODO, StW: The way the termite CH4 emissions are calculated for crops depends on the processing order of the tiles.
       ! Currently it only gives expected results if crop tiles are processed last.
       ! This is unsatisfactory and should be somehow replaced!>!
-      IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp20(1) < 1000._wp)) THEN
+      IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp_20yr(1) < 1000._wp)) THEN
 
         l_GPP_dep = dsl4jsb_Lctlib_param(PhenologyType)==3 .OR. dsl4jsb_Lctlib_param(C4flag) ! Crops are separate anyway
         IF (GDD_prev_year(1) < 0._wp) THEN
@@ -1094,7 +1097,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(2) GANG VECTOR
         DO ic = 1, nc
           CALL calc_methane_termites(dsl4jsb_Lctlib_param(CropFlag),                                            &
-                                     frac_tile(ic), GPP_prev_year_ta(ic), GDD(ic), min_mmtemp20(ic), l_GPP_dep, &
+                                     frac_tile(ic), GPP_prev_year_ta(ic), GDD(ic), min_mmtemp_20yr(ic), l_GPP_dep, &
                                      termite_biomass(ic), CH4_out_termite(ic),                                  &
                                      frac_non_crop(ics+ic-1,iblk), sum_non_crop(ics+ic-1,iblk))
         ENDDO
@@ -1355,16 +1358,17 @@ CONTAINS
         ENDDO
         rname = fname(1:ind-1)//syear//TRIM(fname(ind+6:))
       ENDIF
-      IF (ASSOCIATED(jsb_netcdf_open_input(rname,ifile,model%grid_id))) THEN
-        IF (my_process_is_stdio()) THEN
-          ifile%is_readable = ifile%is_open
-          IF (ifile%is_open) THEN
-            ifile%nrec = ifile%Get_dimlen('time')
-          ELSE
-            CALL finish(routine,'Source file '//TRIM(rname)//' could not be opened')
-          ENDIF
-        ENDIF
-      ENDIF
+      ! Temporarily disable until it is clear whether or not this will be used
+      ! IF (ASSOCIATED(jsb_netcdf_open_input(rname,ifile,model%grid_id))) THEN
+      !   IF (my_process_is_stdio()) THEN
+      !     ifile%is_readable = ifile%is_open
+      !     IF (ifile%is_open) THEN
+      !       ifile%nrec = ifile%Get_dimlen('time')
+      !     ELSE
+      !       CALL finish(routine,'Source file '//TRIM(rname)//' could not be opened')
+      !     ENDIF
+      !   ENDIF
+      ! ENDIF
       CALL p_bcast(ifile%nrec,p_io)
       CALL p_bcast(ifile%is_readable,p_io)
 
