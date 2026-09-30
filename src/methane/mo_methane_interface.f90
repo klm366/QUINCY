@@ -72,7 +72,6 @@ MODULE mo_methane_interface
   dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(NLCC_)
 
   IMPLICIT NONE
   PRIVATE
@@ -320,7 +319,6 @@ CONTAINS
     dsl4jsb_Def_memory(CLIMBUF_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(NLCC_)
 
     ! Multivariables defined for chemical species
     TYPE (t_chem_ptrs) :: &
@@ -447,7 +445,6 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(CLIMBUF_)
     dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(NLCC_)
     dsl4jsb_Get_memory(MEGAN_)
 
     lstart = is_time_experiment_start(options%current_datetime)

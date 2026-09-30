@@ -152,7 +152,6 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%iso%beta     = 0._wp
     dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._wp
     dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_iso
-    dsl4jsb_memory(MEGAN_)%iso%ef       = dsl4jsb_Lctlib_param(em_fac_iso)
 
     ! --- carbon monoxide ---
     dsl4jsb_memory(MEGAN_)%CO%longname  = 'carbon monoxide'
@@ -164,7 +163,6 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%CO%beta     = dsl4jsb_Config(MEGAN_)%beta_CO
     dsl4jsb_memory(MEGAN_)%CO%ldf      = 1._wp
     dsl4jsb_memory(MEGAN_)%CO%scale    = dsl4jsb_Config(MEGAN_)%scale_CO
-    dsl4jsb_memory(MEGAN_)%CO%ef       = dsl4jsb_Lctlib_param(em_fac_CO)
 
     ! --- nitricoxide ---
     dsl4jsb_memory(MEGAN_)%NO%longname  = 'nitricoxide'
@@ -176,7 +174,19 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%NO%beta     = dsl4jsb_Config(MEGAN_)%beta_NO
     dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._wp
     dsl4jsb_memory(MEGAN_)%NO%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
-    dsl4jsb_memory(MEGAN_)%NO%ef       = dsl4jsb_Lctlib_param(em_fac_NO)
+
+    IF (ASSOCIATED(tile%parent_tile)) THEN
+      IF (TRIM(tile%parent_tile%name(:3)) == 'veg') THEN
+        dsl4jsb_memory(MEGAN_)%iso%ef = dsl4jsb_Lctlib_param(em_fac_iso)
+        dsl4jsb_memory(MEGAN_)%CO%ef  = dsl4jsb_Lctlib_param(em_fac_CO)
+        dsl4jsb_memory(MEGAN_)%NO%ef  = dsl4jsb_Lctlib_param(em_fac_NO)
+      ELSE
+        ! This are not valid values, but just the one from pft01
+        dsl4jsb_memory(MEGAN_)%iso%ef = 10000._wp
+        dsl4jsb_memory(MEGAN_)%CO%ef  = 1000._wp
+        dsl4jsb_memory(MEGAN_)%NO%ef  = 5._wp
+      ENDIF
+    END IF
 
 !    IF (debug_on() .OR. dsl4jsb_Config(MEGAN_)%dbg_process) &
 !      CALL message(TRIM(routine), 'Setting megan boundary conditions for tile '//TRIM(tile%name))

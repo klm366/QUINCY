@@ -208,6 +208,7 @@ CONTAINS
     config%month_summer_start     = month_summer_start
     config%month_summer_end       = month_summer_end
     config%years_long_term        = years_long_term
+    config%soil_depth_min         = soil_depth_min
     config%scale_inun             = scale_inun
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename

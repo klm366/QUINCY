@@ -244,10 +244,10 @@ CONTAINS
       USE mo_jsb_io,            ONLY: TSTEP_CONSTANT, TSTEP_INSTANT
       dsl4jsb_Use_config(MEGAN_)
 
-      CHARACTER(len=*),            INTENT(in)      :: specie_name
-      TYPE (t_megan_specie),       INTENT(inout)   :: specie
-      LOGICAL,          OPTIONAL,  INTENT(in)      :: use_other
-      CHARACTER(len=*), OPTIONAL,  INTENT(in)      :: other_name
+      CHARACTER(len=*),              INTENT(in)    :: specie_name
+      TYPE (t_megan_specie), TARGET, INTENT(inout) :: specie
+      LOGICAL,          OPTIONAL,    INTENT(in)    :: use_other
+      CHARACTER(len=*), OPTIONAL,    INTENT(in)    :: other_name
 
       TYPE(t_jsb_vgrid), POINTER  :: surface                ! Vertical grids
       CHARACTER(len=256) :: str
