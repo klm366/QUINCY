@@ -72,7 +72,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober, calc_live_me
-  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf, t_sf_atm
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
@@ -131,6 +131,7 @@ CONTAINS
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
+    TYPE(t_sf_atm)                        :: sf_atm                                       !< Atmosphere related variables / Weather
 
     !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
@@ -392,10 +393,11 @@ CONTAINS
 #endif
 
     !> Units conversion
-    t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
-    t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
-    precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
-    wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+    ! t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
+    ! t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
+    ! precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
+    ! wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+    sf_atm = t_sf_atm(t_air_min, t_air_max, precip_daily, wind_10m)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -418,7 +420,7 @@ CONTAINS
                         burnable_area_ha, &
                         dead_fuel_fcl, cured_live_grass_fuel_fcl, &
                         live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
-                        t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
+                        sf_atm%t_air_min_c, sf_atm%t_air_max_c, sf_atm%precip_daily_mmd, sf_atm%wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties

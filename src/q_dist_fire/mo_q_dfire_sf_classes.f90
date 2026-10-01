@@ -20,13 +20,33 @@ MODULE mo_q_dfire_sf_classes
   USE mo_exception,             ONLY: message, finish
 
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
+  USE mo_q_dfire_sf_adaptor_class,  ONLY: sf_convert_units
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort
+  PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort, &
+            t_sf_atm
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
+
+  TYPE :: t_sf_atm
+    !< Quincy units
+    REAL(wp), POINTER :: t_air_min(:) => NULL() ! [K]
+    REAL(wp), POINTER :: t_air_max(:) => NULL() ! [K]
+    REAL(wp), POINTER :: precip_daily(:) => NULL() ! [kg m-2 s-1]
+    REAL(wp), POINTER :: wind_10m(:) => NULL() ! [m/s]
+
+    !< Spitfire units
+    REAL(wp), ALLOCATABLE :: t_air_min_c(:) ! [C]
+    REAL(wp), ALLOCATABLE :: t_air_max_c(:) ! [C]
+    REAL(wp), ALLOCATABLE :: precip_daily_mmd(:) ! [mm/day]
+    REAL(wp), ALLOCATABLE :: wind_sf(:) ! [m/min]
+  END TYPE t_sf_atm
+
+  INTERFACE t_sf_atm
+    MODULE PROCEDURE :: create_sf_atm
+  END INTERFACE t_sf_atm
 
   !< Rate of spread characteristics type
   TYPE t_sf_ros
@@ -188,6 +208,33 @@ CONTAINS
     sf_ros%mineral_damp_coeff(:) = 0._wp
   END FUNCTION create_sf_ros_init
 
+
+  ! ======================================================================================================= !
+  !>
+  !> t_sf_atm constructor: Allocate and initialize
+  !>
+  FUNCTION create_sf_atm(t_air_min, t_air_max, precip_daily, wind_10m) RESULT (sf_atm)
+    TYPE(t_sf_atm) :: sf_atm !< Output
+    REAL(wp), POINTER, INTENT(in) :: t_air_min(:) !< [K]
+    REAL(wp), POINTER, INTENT(in) :: t_air_max(:) !< [K]
+    REAL(wp), POINTER, INTENT(in) :: precip_daily(:) !< [kg m-2 s-1]
+    REAL(wp), POINTER, INTENT(in) :: wind_10m(:) !< [m/min]
+
+    INTEGER :: nc
+
+    sf_atm%t_air_min => t_air_min
+    sf_atm%t_air_max => t_air_max
+    sf_atm%precip_daily => precip_daily
+    sf_atm%wind_10m => wind_10m
+
+    nc = SIZE(t_air_min)
+    ALLOCATE(sf_atm%t_air_max_c(nc), sf_atm%t_air_min_c(nc), sf_atm%precip_daily_mmd(nc), sf_atm%wind_sf(nc))
+
+    sf_atm%t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
+    sf_atm%t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
+    sf_atm%precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
+    sf_atm%wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
+  END FUNCTION create_sf_atm
 
   ! ======================================================================================================= !
   !>
