@@ -143,11 +143,7 @@ CONTAINS
     !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
 
-    REAL(wp)                              :: wind_sf(options%nc)                          !< Wind into spitfire units [m min-1]
-    REAL(wp)                              :: t_air_min_c(options%nc)                      !< Minimum daily temperature [Celsius]
-    REAL(wp)                              :: t_air_max_c(options%nc)                      !< Maximum daily temperature [Celsius]
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
-    LOGICAL, PARAMETER                    :: are_all_pfts_wave =.FALSE. ! todo: replace by config option, flag_wa_pfts=all|only
 
     TYPE(t_sf_dynamics)                   :: sf_spitfire
 
@@ -416,7 +412,6 @@ CONTAINS
                         burnable_area_ha, &
                         dead_fuel_fcl, cured_live_grass_fuel_fcl, &
                         live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
-                        !t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                         sf_atm%t_air_min_c, sf_atm%t_air_max_c, sf_atm%precip_daily_mmd, sf_atm%wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
