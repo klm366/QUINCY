@@ -392,11 +392,6 @@ CONTAINS
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
-    !> Units conversion
-    ! t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
-    ! t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)
-    ! precip_daily_mmd = sf_convert_units("kg m-2 s-1", "mm/day", precip_daily)
-    ! wind_sf = sf_convert_units("m/s", "m/min", wind_10m) !< wind to spitfire units
     sf_atm = t_sf_atm(t_air_min, t_air_max, precip_daily, wind_10m)
 
     !< Pack vegetation cover fraction
