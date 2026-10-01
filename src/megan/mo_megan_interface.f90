@@ -115,6 +115,7 @@ CONTAINS
     USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, is_newyear, is_newmonth, is_newday, &
       &                              timesteps_per_day, get_date_components, get_year_length, get_month_length
     USE mo_megan_memory_class, ONLY: t_megan_specie, t_megan_ptrs
+    USE mo_jsb_control,        ONLY: jsbach_runs_standalone
     ! TODO: These are likely specific to the DWD-NWP physics and do likely not work with ECHAM physics
     USE mo_nwp_phy_types,      ONLY: t_nwp_phy_diag
     USE mo_nwp_phy_state,      ONLY: prm_diag
@@ -260,14 +261,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_pfd)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_CO2)
     dsl4jsb_Get_var2D_onChunk(MEGAN_, gamma_sm)
-!    IF (iforcing == inwp) THEN
+    IF (jsbach_runs_standalone()) THEN
+      ! @TODO: Wrong! needs to be solved differently for standalone runs, but this is a quick fix for now
+      sw_toa_down => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
+    ELSE IF (iforcing == inwp) THEN
       sw_toa_down => prm_diag(model%id)%flxdwswtoa(ics:ice,iblk)
 !    ELSE ! ECHAM physics no longer supported
 !      sw_toa_down => prm_field(model%id)%rsdt(ics:ice,iblk)
-!    ENDIF
+    ENDIF
     isos => dsl4jsb_memory(MEGAN_)%iso
-     COs => dsl4jsb_memory(MEGAN_)%CO
-     NOs => dsl4jsb_memory(MEGAN_)%NO
+    COs  => dsl4jsb_memory(MEGAN_)%CO
+    NOs  => dsl4jsb_memory(MEGAN_)%NO
 
     !--- calculate vegetation emissions
     !    Isoprene:

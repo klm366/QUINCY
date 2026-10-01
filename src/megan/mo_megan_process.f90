@@ -84,7 +84,8 @@ CONTAINS
   END SUBROUTINE calc_gamma_lai
 
 !------------------------------------------------------------------------------------
-  PURE SUBROUTINE calc_gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
+  ! PURE
+  SUBROUTINE calc_gamma_pfd(zenith, pfd, tpfd, avg_pfd, gamma)
     USE mo_jsb_math_constants, ONLY: rad2deg
     ! ----- photosynthetically active radiation adjustment
     !             GAMMA_P = 0.0         a<=0, a>=180, sin(a) <= 0.0
@@ -121,9 +122,9 @@ CONTAINS
     REAL(wp), PARAMETER :: conv_pfd = 4.766_wp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
 
     ! ### assumes zenith angle in degrees
-    IF (zenith < 0.0_wp) THEN   !zenith = SIN(solar angle)
+    IF (zenith < 1.0e-10_wp) THEN   !zenith = SIN(solar angle)
       gamma = 0.0_wp
-    ELSEIF (zenith > 0.0_wp) THEN
+    ELSE
 
       !  ### PFD and PFD at the top of the atmosphere are adjusted for solar angle
       IF(tpfd <= 0.0_wp) THEN
@@ -319,8 +320,12 @@ CONTAINS
     END IF
 
     ! TODO: This code may break if either lai or laip is == 0
-
-    fac_lai = laip / lai
+    ! Good enough fix? Needs to be checked!
+    IF (lai > 1.0e-10_wp) THEN
+      fac_lai = laip / lai
+    ELSE
+      fac_lai = 1.0_wp
+    ENDIF
 
     !...  Calculate foliage fraction
     IF (laip == lai) THEN      ! mature state
