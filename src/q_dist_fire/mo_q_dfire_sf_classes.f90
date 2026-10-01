@@ -31,17 +31,11 @@ MODULE mo_q_dfire_sf_classes
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
   TYPE :: t_sf_atm
-    !< Quincy units
-    REAL(wp), POINTER :: t_air_min(:) => NULL() ! [K]
-    REAL(wp), POINTER :: t_air_max(:) => NULL() ! [K]
-    REAL(wp), POINTER :: precip_daily(:) => NULL() ! [kg m-2 s-1]
-    REAL(wp), POINTER :: wind_10m(:) => NULL() ! [m/s]
-
-    !< Spitfire units
+    !< To spitfire units
     REAL(wp), ALLOCATABLE :: t_air_min_c(:) ! [C]
     REAL(wp), ALLOCATABLE :: t_air_max_c(:) ! [C]
-    REAL(wp), ALLOCATABLE :: precip_daily_mmd(:) ! [mm/day]
     REAL(wp), ALLOCATABLE :: wind_sf(:) ! [m/min]
+    REAL(wp), POINTER :: precip_daily_mmd(:) => NULL() ! [mm/day]
   END TYPE t_sf_atm
 
   INTERFACE t_sf_atm
@@ -213,22 +207,20 @@ CONTAINS
   !>
   !> t_sf_atm constructor: Allocate and initialize
   !>
-  FUNCTION create_sf_atm(t_air_min, t_air_max, precip_daily, wind_10m) RESULT (sf_atm)
+  FUNCTION create_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd) RESULT (sf_atm)
     TYPE(t_sf_atm) :: sf_atm !< Output
-    REAL(wp), POINTER, INTENT(in) :: t_air_min(:) !< [K]
-    REAL(wp), POINTER, INTENT(in) :: t_air_max(:) !< [K]
-    REAL(wp), POINTER, INTENT(in) :: precip_daily(:) !< [kg m-2 s-1]
-    REAL(wp), POINTER, INTENT(in) :: wind_10m(:) !< [m/min]
+    REAL(wp), INTENT(in) :: t_air_min(:) !< [K]
+    REAL(wp), INTENT(in) :: t_air_max(:) !< [K]
+    REAL(wp), INTENT(in) :: wind_10m(:) !< [m/min]
+    REAL(wp), INTENT(in) :: precip_daily(:) !< in quincy units [kg m-2 s-1]
+    REAL(wp), POINTER, INTENT(inout) :: precip_daily_mmd(:) !< in Spitfire units [mm/day]
 
     INTEGER :: nc
 
-    sf_atm%t_air_min => t_air_min
-    sf_atm%t_air_max => t_air_max
-    sf_atm%precip_daily => precip_daily
-    sf_atm%wind_10m => wind_10m
+    sf_atm%precip_daily_mmd => precip_daily_mmd
 
     nc = SIZE(t_air_min)
-    ALLOCATE(sf_atm%t_air_max_c(nc), sf_atm%t_air_min_c(nc), sf_atm%precip_daily_mmd(nc), sf_atm%wind_sf(nc))
+    ALLOCATE(sf_atm%t_air_max_c(nc), sf_atm%t_air_min_c(nc), sf_atm%wind_sf(nc))
 
     sf_atm%t_air_max_c = sf_convert_units("Kelvin", "Celsius", t_air_max)
     sf_atm%t_air_min_c = sf_convert_units("Kelvin", "Celsius", t_air_min)

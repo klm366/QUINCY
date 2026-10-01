@@ -392,7 +392,7 @@ CONTAINS
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
-    sf_atm = t_sf_atm(t_air_min, t_air_max, precip_daily, wind_10m)
+    sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -415,6 +415,7 @@ CONTAINS
                         burnable_area_ha, &
                         dead_fuel_fcl, cured_live_grass_fuel_fcl, &
                         live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
+                        !t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
                         sf_atm%t_air_min_c, sf_atm%t_air_max_c, sf_atm%precip_daily_mmd, sf_atm%wind_sf, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
