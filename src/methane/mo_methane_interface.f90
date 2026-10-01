@@ -423,6 +423,8 @@ CONTAINS
     REAL(wp) :: CH4_diff, CO2_diff, O2_diff
     INTEGER  :: mxlay_above_wt, mxlay_acrotelm, nly
 
+    REAL(wp), TARGET :: empty(options%nc)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_methane'
 
     IF (.NOT. tile%Is_process_calculated(CH4_)) RETURN
@@ -461,6 +463,11 @@ CONTAINS
 
     ! A2L_ variables
     dsl4jsb_Get_var2D_onChunk(A2L_, CO2_air)
+    CH4_air => empty(:)
+    O2_air => empty(:)
+    IF (dsl4jsb_Config(CH4_)%CH4_source > 1 .OR. dsl4jsb_Config(CH4_)%O2_source > 1) THEN
+      CALL finish(routine,'CH4 and O2 currently only implemented as constant value. Please use *_source=1')
+    END IF
     ! CH4_ variables
     dsl4jsb_Get_var2D_onChunk(CH4_, CH4_conc)
     dsl4jsb_Get_var2D_onChunk(CH4_, CO2_conc)
