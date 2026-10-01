@@ -475,7 +475,7 @@ CONTAINS
     CALL methane_update_atm_GHG_conc(options,CH4_consts,dsl4jsb_Config(CH4_)%CH4_source,CH4_air, &
                                      dsl4jsb_Config(CH4_)%CH4_conc,dsl4jsb_memory(CH4_)%GHG_atm_CH4,CH4_conc,dbg)
     CALL methane_update_atm_GHG_conc(options,CO2_consts,dsl4jsb_Config(CH4_)%CO2_source,CO2_air, &
-                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,.TRUE.)
+                                     dsl4jsb_Config(CH4_)%CO2_conc,dsl4jsb_memory(CH4_)%GHG_atm_CO2,CO2_conc,dbg)
     CALL methane_update_atm_GHG_conc(options, O2_consts,dsl4jsb_Config(CH4_)%O2_source, O2_air, &
                                      dsl4jsb_Config(CH4_)%O2_conc, dsl4jsb_memory(CH4_)%GHG_atm_O2,O2_conc,dbg)
 
@@ -678,6 +678,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_initial)
     dsl4jsb_Get_var2D_onChunk(CH4_, O2_wet%total_final)
     dsl4jsb_Get_var3D_onChunk(CH4_, O2_wet%dens_sl)
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_, min_mmtemp_20yr)
     IF (dsl4jsb_Config(CH4_)%do_fire) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_fire)
       dsl4jsb_Get_var2D_onChunk(CH4_, fire_em_NO)
@@ -687,7 +688,6 @@ CONTAINS
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, termite_biomass)
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_termite)
-      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, min_mmtemp_20yr)
     ENDIF
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
       dsl4jsb_Get_var2D_onChunk(CH4_, CH4_out_herbivore)
