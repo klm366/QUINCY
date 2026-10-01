@@ -25,34 +25,56 @@ MODULE mo_q_dfire_sf_ignition_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: t_sf_ignitions, calc_sf_ignition
+  PUBLIC :: calc_sf_ignitions, wrap_calc_sf_ignitions
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_ignition_class'
 
 CONTAINS
 
+  !>
+  !>  Wrapper for calc_sf_ignitions
+  !>
+  !> Call main ignition method and applies time scaling to ignition events.
+  !>
+  SUBROUTINE wrap_calc_sf_ignitions(nc, dtime, one_day, sf_ignitions)
+    INTEGER, INTENT(in)    :: nc                     !< dimensions
+    REAL(wp), INTENT(in)   :: dtime, one_day         !< time step (sec),  one day in seconds (sec)
+    TYPE(t_sf_ignitions), INTENT(inout) :: sf_ignitions
+
+    CALL calc_sf_ignitions(nc, sf_ignitions%max_human_pop_dens, &
+                          sf_ignitions%pop_dens, &
+                          sf_ignitions%a_nd, &
+                          sf_ignitions%lightning_freq,  &
+                          sf_ignitions%e_n_humans, sf_ignitions%e_n_lightning, sf_ignitions%e_n_ignitions)
+
+    !< Daily to ts
+    sf_ignitions%e_n_ignitions = sf_ignitions%e_n_ignitions * (dtime / one_day)
+    sf_ignitions%e_n_humans = sf_ignitions%e_n_humans * (dtime / one_day)
+    sf_ignitions%e_n_lightning = sf_ignitions%e_n_lightning * (dtime / one_day)
+  END SUBROUTINE wrap_calc_sf_ignitions
+
+
   ! ======================================================================================================= !
   !>
   !> Calculation of total ignitions (lightning + human) based on Section 2.2.1 from Thonicke et al. (2010)
   !>
-  FUNCTION calc_sf_ignition(nc, dens_hum_pop, a_nd, n_lightning_ig, max_dens_hum_pop) RESULT (sf_ignitions)
+  SUBROUTINE calc_sf_ignitions(nc, max_dens_hum_pop, dens_hum_pop, a_nd, lightning_freq, e_n_humans, e_n_lightnings, e_n_ignitions)
     INTEGER, INTENT(in)    :: nc                     !< dimensions
     REAL(wp), INTENT(in)   :: dens_hum_pop(nc)       !< average human population density in the grid cell
                                                      !< [individuals km-2]
     REAL(wp), INTENT(in)   :: max_dens_hum_pop       !< max human population density allowed per gridcell
                                                      !< [individuals km-2]
-    REAL(wp), INTENT(in)   :: n_lightning_ig(nc)     !< average number of flashes per day [ha-1 d-1]
+    REAL(wp), INTENT(in)   :: lightning_freq(nc)     !< average number of flashes per day [ha-1 d-1]
     REAL(wp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
                                                      !< [ignitions individual-1 d-1]
-    TYPE(t_sf_ignitions) :: sf_ignitions           !< (output)
+    REAL(wp), INTENT(out)  :: e_n_humans(nc)         !< Expected number of human-caused ignitions [ha-1 ts-1]
+    REAL(wp), INTENT(out)  :: e_n_lightnings(nc)     !<
+    REAL(wp), INTENT(out)  :: e_n_ignitions(nc)      !<
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sf_ignition'
     REAL(wp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]
     REAL(wp)             :: k_pd(nc)                 !< Spatial dependence of human-caused ignitions [-]
     INTEGER              :: ic
-
-    !< Initialize output to 0
-    sf_ignitions = t_sf_ignitions(nc)
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -68,12 +90,12 @@ CONTAINS
 
     !< Calculate how likely a fire is about to ignite due to human population
     !< Section 2.2.1, equation 3 from Thonicke et al. (2010)
-    sf_ignitions%human = sel_dens_hum_pop * k_pd * a_nd / 100._wp
+    e_n_humans = sel_dens_hum_pop * k_pd * a_nd / 100._wp
 
-    sf_ignitions%lightning = n_lightning_ig * df_sf_lign_cg * df_sf_lign_eff
+    e_n_lightnings = lightning_freq * df_sf_lign_cg * df_sf_lign_eff
     !< Section 2.2, last paragraph (below eq. 2 from Thonicke et al. (2010))
-    sf_ignitions%total = sf_ignitions%human + sf_ignitions%lightning
-  END FUNCTION calc_sf_ignition
+    e_n_ignitions = e_n_humans + e_n_lightnings
+  END SUBROUTINE calc_sf_ignitions
 
 #endif
 END MODULE mo_q_dfire_sf_ignition_class

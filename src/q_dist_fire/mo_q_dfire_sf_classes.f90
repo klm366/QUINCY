@@ -75,10 +75,6 @@ MODULE mo_q_dfire_sf_classes
   !< Move spitfire dynamics data from calc_sf_dynamics <-> update_q_dfire_sf_dynamics subroutines
   !<
   TYPE t_sf_dynamics
-    REAL(wp), ALLOCATABLE :: e_n_ignitions(:)           !< total number of ignitions per unit area [ha-1 ts-1]
-    REAL(wp), ALLOCATABLE :: e_n_humans(:)              !< number of human ignitions per unit area [ha-1 ts-1]
-    REAL(wp), ALLOCATABLE :: e_n_lightning(:)           !< number of lightning ignitions per unit area [ha-1 ts-1]
-
     REAL(wp), ALLOCATABLE :: fdi(:)                     !< fire danger index [0 to 1]
     TYPE(t_sf_ros)        :: ros                        !< Rate of spread
 
@@ -122,13 +118,19 @@ MODULE mo_q_dfire_sf_classes
 
 
   TYPE t_sf_ignitions
-    REAL(wp), ALLOCATABLE :: human(:)
-    REAL(wp), ALLOCATABLE :: lightning(:)
-    REAL(wp), ALLOCATABLE :: total(:)
+    REAL(wp), POINTER :: a_nd(:) => NULL() ! [ignitions individuals-1 d-1]
+    REAL(wp), POINTER :: pop_dens(:) => NULL() ! [individuals km-2]
+    REAL(wp), POINTER :: lightning_freq(:) => NULL() ! [lightning ha-1 d-1]
+
+    REAL(wp), POINTER :: e_n_humans(:) => NULL() ! Rate of human caused ignitions [ha-1 ts-1]
+    REAL(wp), POINTER :: e_n_lightning(:) => NULL() ! Rate of lightning caused ignitions [ha-1 ts-1]
+    REAL(wp), POINTER :: e_n_ignitions(:) => NULL() ! Total rate of ignitions [ha-1 ts-1]
+
+    REAL(wp) :: max_human_pop_dens !< maximum human population density [individuals km-2]
   END TYPE t_sf_ignitions
 
   INTERFACE t_sf_ignitions
-    MODULE PROCEDURE :: create_t_sf_ignitions
+    MODULE PROCEDURE :: create_sf_ignitions
   END INTERFACE
 
   !> Livegrass fuel moisture content paremeters from Oberhagemann et al. (2025)
@@ -238,9 +240,6 @@ CONTAINS
     INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
     TYPE(t_sf_dynamics) :: sf_dynamics !< Output
 
-    ALLOCATE(sf_dynamics % e_n_ignitions(nc))
-    ALLOCATE(sf_dynamics % e_n_humans(nc))
-    ALLOCATE(sf_dynamics % e_n_lightning(nc))
     ALLOCATE(sf_dynamics % fdi(nc))
     ALLOCATE(sf_dynamics % area_burned(nc))
     ALLOCATE(sf_dynamics % area_burned_fract(nc))
@@ -249,9 +248,6 @@ CONTAINS
     ALLOCATE(sf_dynamics % i_surface(nc))
     ALLOCATE(sf_dynamics % is_fire_intense_enough(nc))
 
-    sf_dynamics % e_n_ignitions = 0._wp
-    sf_dynamics % e_n_humans = 0._wp
-    sf_dynamics % e_n_lightning = 0._wp
     sf_dynamics % fdi = 0._wp
     sf_dynamics % ros = t_sf_ros(nc)
     sf_dynamics % area_burned = 0._wp
@@ -335,21 +331,32 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Copy from "other" into "self"
+  !> Constructor for t_sf_ignitions: allocate and initialize
   !>
-  FUNCTION create_t_sf_ignitions(nc) RESULT (sf_ignitions)
-    INTEGER, INTENT(in) :: nc
-    TYPE(t_sf_ignitions) :: sf_ignitions
-    ALLOCATE(sf_ignitions%human(nc))
-    ALLOCATE(sf_ignitions%lightning(nc))
-    ALLOCATE(sf_ignitions%total(nc))
+  FUNCTION create_sf_ignitions(nc, max_human_pop_dens, pop_dens, a_nd, lightning_freq, &
+                        e_n_humans, e_n_lightning, e_n_ignitions) RESULT (sf_ignitions)
+    INTEGER, INTENT(in)              :: nc
+    REAL(wp), INTENT(in)             :: max_human_pop_dens
+    REAL(wp), POINTER, INTENT(in)    :: pop_dens(:), a_nd(:), lightning_freq(:)
+    REAL(wp), POINTER, INTENT(inout) :: e_n_humans(:), e_n_lightning(:), e_n_ignitions(:)
+    TYPE(t_sf_ignitions)             :: sf_ignitions
 
-    sf_ignitions%human = 0._wp
-    sf_ignitions%lightning = 0._wp
-    sf_ignitions%total = 0._wp
-  END FUNCTION create_t_sf_ignitions
+    sf_ignitions%a_nd => a_nd
+    sf_ignitions%pop_dens => pop_dens
+    sf_ignitions%lightning_freq => lightning_freq
+    sf_ignitions%max_human_pop_dens = max_human_pop_dens
+
+    sf_ignitions%e_n_humans => e_n_humans
+    sf_ignitions%e_n_lightning => e_n_lightning
+    sf_ignitions%e_n_ignitions => e_n_ignitions
+
+    sf_ignitions%e_n_humans = 0._wp
+    sf_ignitions%e_n_lightning = 0._wp
+    sf_ignitions%e_n_ignitions = 0._wp
+  END FUNCTION create_sf_ignitions
 
 
+  ! ======================================================================================================= !
   !>
   !> t_sf_mf fuel moisture constructor (Oberhagemann only)
   !>

@@ -67,7 +67,7 @@ MODULE mo_q_dfire_sf_dynamics
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann
-  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_sf_ignition
+  USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
@@ -132,6 +132,7 @@ CONTAINS
 
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_atm)                        :: sf_atm                                       !< Atmosphere related variables / Weather
+    TYPE(t_sf_ignitions)                  :: sf_ignitions                                 !< Ignition variables
 
     !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
@@ -393,6 +394,8 @@ CONTAINS
 #endif
 
     sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
+    sf_ignitions = t_sf_ignitions(nc, df_sf_max_density_human_pop, ic_pop_dens, a_nd, a2l_lightning_events, &
+                                  e_n_humans, e_n_lightning, e_n_ignitions)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
@@ -403,9 +406,7 @@ CONTAINS
     CALL calc_sf_dynamics(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, &
                         dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, &
                         fuel_bulk_density, fwd_wind_factor, & ! lctlib weighted
-                        ic_pop_dens, & ! ignition events
-                        a_nd, &
-                        a2l_lightning_events, &
+                        sf_ignitions, &
                         df_sf_calorific_heat_content, &
                         df_sf_isurface_extinc_th, &
                         df_sf_alphas, &
@@ -433,9 +434,6 @@ CONTAINS
     dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
 
     !< Ignitions into process memory
-    e_n_ignitions = sf_spitfire % e_n_ignitions
-    e_n_humans = sf_spitfire % e_n_humans
-    e_n_lightning = sf_spitfire % e_n_lightning
 
     dead_frac_consumption = sf_spitfire % dead_frac_consump
     i_surface = sf_spitfire % i_surface
@@ -482,7 +480,7 @@ CONTAINS
   SUBROUTINE calc_sf_dynamics(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   config_ros_model_id, &
                   lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
-                  density_human_population, a_nd, lightning_frequency, & ! ignition events
+                  sf_ignitions, &
                   const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
                   moisture_extinction, &
@@ -510,9 +508,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
 
-    REAL(wp), INTENT(in)  :: density_human_population(nc)          !< Average human population density in the grid cell [individuals km-2]
-    REAL(wp), INTENT(in)  :: a_nd(nc)                              !< Propensity of people to produce ignition events [ignitions individual-1 d-1]
-    REAL(wp), INTENT(in)  :: lightning_frequency(nc)               !< Lightning frequency [ha-1 d-1]
+    TYPE(t_sf_ignitions), INTENT(inout)  :: sf_ignitions
 
     REAL(wp), INTENT(in)  :: const_calorific_heat_content          !< Fuel calorific heat content [kJ kg-1]
     REAL(wp), INTENT(in)  :: const_i_surface_thd                   !< Fire intensity threshold [kW m-1]
@@ -545,7 +541,6 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    TYPE(t_sf_ignitions)  :: sf_ignitions
     REAL(wp)                :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
     REAL(wp), ALLOCATABLE   :: dry_lvg(:,:)                     !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
     REAL(wp)                :: tot_lvg_fuel(nc)                 !< Total livegrass fuel [g DM m-2]
@@ -579,7 +574,6 @@ CONTAINS
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
-    sf_ignitions = t_sf_ignitions(nc)
     spitfire = t_sf_dynamics(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
@@ -646,19 +640,13 @@ CONTAINS
                   spitfire % ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    sf_ignitions = calc_sf_ignition(nc, density_human_population, &
-                                    a_nd, lightning_frequency, &
-                                    df_sf_max_density_human_pop)
-    !< From daily to ts
-    spitfire%e_n_ignitions = sf_ignitions%total * (dtime / one_day)
-    spitfire%e_n_humans = sf_ignitions%human * (dtime / one_day)
-    spitfire%e_n_lightning = sf_ignitions%lightning * (dtime / one_day)
+    CALL wrap_calc_sf_ignitions(nc, dtime, one_day, sf_ignitions)
 
     !< no ignitions events, no fire conditions
-    has_fire_conditions = has_fire_conditions .AND. (spitfire%e_n_ignitions > 0._wp)
+    has_fire_conditions = has_fire_conditions .AND. (sf_ignitions%e_n_ignitions > 0._wp)
 
     !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
-    CALL calc_area_burned(nc, spitfire % e_n_ignitions, & !< in
+    CALL calc_area_burned(nc, sf_ignitions % e_n_ignitions, & !< in
                           spitfire % fdi, &
                           spitfire % ros % mean_fire_area, &
                           grid_cell_area, &
