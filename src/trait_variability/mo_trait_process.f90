@@ -30,8 +30,11 @@
 !> relative humidity [%], x6 SoilMoist = volumetric soil water 0-1 m [m3 m-3], x7 NSWR =
 !> net surface shortwave radiation [W m-2]. At most one interaction (x_i * x_j) per model.
 !> The prediction is limited to the 2.5 and 97.5 percentiles of the individual
-!> observations of the PFT, and Jmax25 is further kept inside the 95 % prediction
-!> interval of the Jmax25-Vcmax25 relationship of the PFT (Verheijen et al. 2013).
+!> observations of the fitted group (the pooled group for pooled relationships), and the
+!> pair (Vcmax25, Jmax25) is kept inside the 95 % confidence interval of the Jmax25-Vcmax25
+!> regression of the PFT, moved to its border by the shortest distance (Verheijen et al. 2013).
+!> C4 grass: Vcmax25 and the PEPcase CO2 specificity (held in jmax25, mmol m-2 s-1) come from
+!> one leaf-nitrogen relationship (Simioni et al. 2004) and need no constraint.
 !>
 !> A PFT without a fitted model is skipped through the has_dynamic_* masks and keeps
 !> its static lctlib parameters. The coefficient tables are generated, never typed:
@@ -78,29 +81,30 @@ MODULE mo_trait_process
   ! Date: 2026-10-01
   !
   ! Switched-on models (lctlib id: source):
-  !   sla      id  1: Table 3 SLA PFT01, 84 community means, R2adj 0.158
-  !   sla      id  2: Table 3 SLA PFT02, 49 community means, R2adj 0.261
-  !   sla      id  3: Table 3 SLA PFT03, 306 community means, R2adj 0.129
-  !   sla      id  4: Table 3 SLA PFT04, 298 community means, R2adj 0.385
+  !   sla      id  1: Table 3 SLA PFT01, 84 community means, R2adj 0.155
+  !   sla      id  2: Table 3 SLA PFT02, 49 community means, R2adj 0.289
+  !   sla      id  3: Table 3 SLA PFT03, 306 community means, R2adj 0.092
+  !   sla      id  4: Table 3 SLA PFT04, 298 community means, R2adj 0.301
   !   sla      id  9: Table 3 SLA PFT05, 5 community means, R2adj 0.922
-  !   sla      id 10: Table 3 SLA PFT06, 222 community means, R2adj 0.159
-  !   sla      id 11: Table 3 SLA PFT07, 617 community means, R2adj 0.051
-  !   sla      id 12: Table 3 SLA PFT08, 168 community means, R2adj 0.281
-  !   sla      id 21: validated PFT13 equation (Zhao et al. 2025 data), x 1000 to m2 kgC-1; refit before E4-E6
-  !   vcmax25  id  1: Table 3 Vcmax25 TROP_TREE, 43 community means, R2adj 0.722
-  !   vcmax25  id  2: Table 3 Vcmax25 TROP_TREE, 43 community means, R2adj 0.722
-  !   vcmax25  id  3: Table 3 Vcmax25 PFT03, 67 community means, R2adj 0.148
-  !   vcmax25  id  4: Table 3 Vcmax25 PFT04, 40 community means, R2adj 0.103
-  !   vcmax25  id  9: Table 3 Vcmax25 SHRUB, 9 community means, R2adj 0.453
-  !   vcmax25  id 10: Table 3 Vcmax25 SHRUB, 9 community means, R2adj 0.453
-  !   vcmax25  id 11: Table 3 Vcmax25 PFT07, 16 community means, R2adj 0.660
-  !   jmax25   id  1: Table 3 Jmax25 TROP_TREE, 25 community means, R2adj 0.793
-  !   jmax25   id  2: Table 3 Jmax25 TROP_TREE, 25 community means, R2adj 0.793
-  !   jmax25   id  3: Table 3 Jmax25 PFT03, 30 community means, R2adj 0.181
-  !   jmax25   id  4: Table 3 Jmax25 PFT04, 22 community means, R2adj 0.334
+  !   sla      id 10: Table 3 SLA PFT06, 222 community means, R2adj 0.157
+  !   sla      id 11: Table 3 SLA PFT07, 617 community means, R2adj 0.055
+  !   sla      id 12: Table 3 SLA PFT08, 168 community means, R2adj 0.270
+  !   vcmax25  id  1: Table 3 Vcmax25 TROP_TREE, 41 community means, R2adj 0.829
+  !   vcmax25  id  2: Table 3 Vcmax25 TROP_TREE, 41 community means, R2adj 0.829
+  !   vcmax25  id  3: Table 3 Vcmax25 PFT03, 67 community means, R2adj 0.135
+  !   vcmax25  id  4: Table 3 Vcmax25 PFT04, 40 community means, R2adj 0.163
+  !   vcmax25  id  9: Table 3 Vcmax25 SHRUB, 5 community means, R2adj 0.825, not significant
+  !   vcmax25  id 10: Table 3 Vcmax25 SHRUB, 5 community means, R2adj 0.825, not significant
+  !   vcmax25  id 11: Table 3 Vcmax25 PFT07, 14 community means, R2adj 0.887
+  !   vcmax25  id 12: Table 3 Vcmax25 PFT08, 15 community means, R2adj 0.766
+  !   jmax25   id  1: Table 3 Jmax25 TROP_TREE, 25 community means, R2adj 0.858
+  !   jmax25   id  2: Table 3 Jmax25 TROP_TREE, 25 community means, R2adj 0.858
+  !   jmax25   id  3: Table 3 Jmax25 PFT03, 30 community means, R2adj 0.212
+  !   jmax25   id  4: Table 3 Jmax25 PFT04, 22 community means, R2adj 0.391
   !   jmax25   id  9: Table 3 Jmax25 SHRUB, 6 community means, R2adj 0.987
   !   jmax25   id 10: Table 3 Jmax25 SHRUB, 6 community means, R2adj 0.987
-  !   jmax25   id 11: Table 3 Jmax25 PFT07, 12 community means, R2adj 0.607
+  !   jmax25   id 11: Table 3 Jmax25 PFT07, 12 community means, R2adj 0.615
+  !   jmax25   id 12: Table 3 PEPcase from leaf N PFT08, 15 community means, R2adj 0.766
 
   INTEGER, PARAMETER :: n_pred = 7   !< MAT, MAP, Tmin, Tmax, Reh, SoilMoist, NSWR
 
@@ -110,23 +114,23 @@ MODULE mo_trait_process
     & .TRUE. , .TRUE. , .TRUE. , .TRUE. , .FALSE., .FALSE., &
     & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .TRUE. , &
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., &
-    & .FALSE., .FALSE., .TRUE. , .FALSE., .FALSE., .FALSE. ] )
+    & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE. ] )
 
   !---------------------------------------- vcmax25 [umol m-2 s-1] ----------------------------------------!
   LOGICAL,  PARAMETER :: has_dynamic_vcmax25(max_lct_id) = [ &
     & .TRUE. , .TRUE. , .TRUE. , .TRUE. , .FALSE., .FALSE., &   ! 1-6
-    & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .FALSE., &   ! 7-12
+    & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .TRUE. , &   ! 7-12
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., &   ! 13-18
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE. ]   ! 19-24
   REAL(wp), PARAMETER :: vcmax25_coef(0:n_pred, max_lct_id) = RESHAPE( [ &
-    & -253.0663040852799_wp, 15.00394165720491_wp, 0._wp, -7.556128984938753_wp, &
-    & 0._wp, 0._wp, 0._wp, 0.5145896398886425_wp, &   ! id 1
-    & -253.0663040852799_wp, 15.00394165720491_wp, 0._wp, -7.556128984938753_wp, &
-    & 0._wp, 0._wp, 0._wp, 0.5145896398886425_wp, &   ! id 2
-    & 117.9024145761717_wp, 0._wp, 0._wp, 0._wp, &
-    & 0._wp, 0._wp, -122.5822804387149_wp, -0.1945306920803238_wp, &   ! id 3
-    & -48.65089210040083_wp, 0._wp, 0._wp, 0._wp, &
-    & 4.633025926592828_wp, 0._wp, 397.7900858942706_wp, 0._wp, &   ! id 4
+    & -268.2952351659212_wp, 0._wp, 0._wp, -4.862990762997263_wp, &
+    & 12.57237362356458_wp, 0._wp, 0._wp, 0.5116157495673235_wp, &   ! id 1
+    & -268.2952351659212_wp, 0._wp, 0._wp, -4.862990762997263_wp, &
+    & 12.57237362356458_wp, 0._wp, 0._wp, 0.5116157495673235_wp, &   ! id 2
+    & 120.6554017963595_wp, 0._wp, 0._wp, 0._wp, &
+    & 0._wp, 0._wp, -124.86975723384_wp, -0.2044553300440425_wp, &   ! id 3
+    & -102.1426150227984_wp, 0._wp, 0._wp, 0._wp, &
+    & 7.094408678047357_wp, 0._wp, 547.1730980883472_wp, 0._wp, &   ! id 4
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 5
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -135,14 +139,14 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 7
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 8
-    & -171.6651414517909_wp, 0._wp, 0._wp, 0._wp, &
-    & 0._wp, 3.154184615531433_wp, 0._wp, 0._wp, &   ! id 9
-    & -171.6651414517909_wp, 0._wp, 0._wp, 0._wp, &
-    & 0._wp, 3.154184615531433_wp, 0._wp, 0._wp, &   ! id 10
-    & -223.0456797436773_wp, 0._wp, -0.1015575924786065_wp, 0._wp, &
-    & 0._wp, 3.325336493258569_wp, 0._wp, 1.068648468466633_wp, &   ! id 11
-    & 0._wp, 0._wp, 0._wp, 0._wp, &
-    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 12
+    & -59.5774183852557_wp, 0._wp, 0._wp, 0._wp, &
+    & -3.242551573283955_wp, 2.24038378759219_wp, 0._wp, 0._wp, &   ! id 9
+    & -59.5774183852557_wp, 0._wp, 0._wp, 0._wp, &
+    & -3.242551573283955_wp, 2.24038378759219_wp, 0._wp, 0._wp, &   ! id 10
+    & 2.374977236694917_wp, 0._wp, 0._wp, 7.686198996894808_wp, &
+    & 0._wp, 0.9922995842311706_wp, 0._wp, 0._wp, &   ! id 11
+    & 175.1408103061371_wp, 0._wp, -0.197104038103008_wp, 0._wp, &
+    & 0._wp, -2.076646529285447_wp, 0._wp, 0._wp, &   ! id 12
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 13
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -170,57 +174,57 @@ MODULE mo_trait_process
     & ], [n_pred + 1, max_lct_id] )
   INTEGER,  PARAMETER :: vcmax25_int_i(max_lct_id) = [ &
     & 0, 0, 0, 4, 0, 0, &   ! 1-6
-    & 0, 0, 0, 0, 0, 0, &   ! 7-12
+    & 0, 0, 0, 0, 3, 2, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
     & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   INTEGER,  PARAMETER :: vcmax25_int_j(max_lct_id) = [ &
     & 0, 0, 0, 6, 0, 0, &   ! 1-6
-    & 0, 0, 0, 0, 0, 0, &   ! 7-12
+    & 0, 0, 0, 0, 5, 5, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
     & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   REAL(wp), PARAMETER :: vcmax25_int_c(max_lct_id) = [ &
     & 0._wp, 0._wp, 0._wp, &   ! 1-3
-    & -18.29635245698318_wp, 0._wp, 0._wp, &   ! 4-6
+    & -24.74431500787971_wp, 0._wp, 0._wp, &   ! 4-6
     & 0._wp, 0._wp, 0._wp, &   ! 7-9
-    & 0._wp, 0._wp, 0._wp, &   ! 10-12
+    & 0._wp, -0.1050158360569416_wp, 0.0028202557733853_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: vcmax25_lower(max_lct_id) = [ &
-    & 11.527_wp, 17.81604085742264_wp, 13.9_wp, &   ! 1-3
-    & 14.34127924501023_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 33.4456130959505_wp, &   ! 7-9
-    & 9.84634988002226_wp, 25.80500000000001_wp, 0._wp, &   ! 10-12
+    & 11.09456459260558_wp, 11.09456459260558_wp, 13.77350876449804_wp, &   ! 1-3
+    & 14.40481642809861_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 10.29968882335603_wp, &   ! 7-9
+    & 10.29968882335603_wp, 37.92741993263682_wp, 23.74083909673173_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: vcmax25_upper(max_lct_id) = [ &
-    & 100.1885653526678_wp, 136.6696587743677_wp, 150._wp, &   ! 1-3
-    & 137.6355633903134_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 98.85785366991574_wp, &   ! 7-9
-    & 162.2853080659865_wp, 159.8355688734351_wp, 0._wp, &   ! 10-12
+    & 133.454178116485_wp, 133.454178116485_wp, 156.4429685544303_wp, &   ! 1-3
+    & 136.273_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 167.2304899549145_wp, &   ! 7-9
+    & 167.2304899549145_wp, 168.1426608546983_wp, 52.64179268817207_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
 
-  !---------------------------------------- jmax25 [umol m-2 s-1] ----------------------------------------!
+  !---------------------------------------- jmax25 [umol m-2 s-1; C4: PEP mmol m-2 s-1] ----------------------------------------!
   LOGICAL,  PARAMETER :: has_dynamic_jmax25(max_lct_id) = [ &
     & .TRUE. , .TRUE. , .TRUE. , .TRUE. , .FALSE., .FALSE., &   ! 1-6
-    & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .FALSE., &   ! 7-12
+    & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .TRUE. , &   ! 7-12
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., &   ! 13-18
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE. ]   ! 19-24
   REAL(wp), PARAMETER :: jmax25_coef(0:n_pred, max_lct_id) = RESHAPE( [ &
-    & -448.9012318641051_wp, 30.94002184522258_wp, 0._wp, -11.73518063906627_wp, &
-    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 1
-    & -448.9012318641051_wp, 30.94002184522258_wp, 0._wp, -11.73518063906627_wp, &
-    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 2
-    & 275.8241080163108_wp, 0._wp, -0.0267167765190061_wp, 3.092970649851722_wp, &
-    & -6.206379507256733_wp, 0._wp, 0._wp, 0._wp, &   ! id 3
-    & 419.1128890998157_wp, 0._wp, -0.4148109305940413_wp, 0._wp, &
-    & 0._wp, -3.705326375937275_wp, 0._wp, 0._wp, &   ! id 4
+    & -476.6850550569813_wp, 0._wp, 0._wp, 0._wp, &
+    & 19.82287274392588_wp, 0._wp, 0._wp, 0._wp, &   ! id 1
+    & -476.6850550569813_wp, 0._wp, 0._wp, 0._wp, &
+    & 19.82287274392588_wp, 0._wp, 0._wp, 0._wp, &   ! id 2
+    & 294.9168012466707_wp, 0._wp, -0.0274658976587964_wp, 3.539684104192398_wp, &
+    & -6.829757743673446_wp, 0._wp, 0._wp, 0._wp, &   ! id 3
+    & 494.4991500309876_wp, 0._wp, -0.4313493271800985_wp, 0._wp, &
+    & 0._wp, -4.704245824306836_wp, 0._wp, 0._wp, &   ! id 4
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 5
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -229,14 +233,14 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 7
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 8
-    & -1376.685831060944_wp, -1.509603958452587_wp, 0._wp, 0._wp, &
-    & 0._wp, 20.31211961559538_wp, 0._wp, 0._wp, &   ! id 9
-    & -1376.685831060944_wp, -1.509603958452587_wp, 0._wp, 0._wp, &
-    & 0._wp, 20.31211961559538_wp, 0._wp, 0._wp, &   ! id 10
-    & 266.6722368246149_wp, 0._wp, -0.1309068619392587_wp, 0._wp, &
+    & -1770.989345629837_wp, 0._wp, 0._wp, 0._wp, &
+    & 0._wp, 25.61412288588961_wp, 0._wp, 0._wp, &   ! id 9
+    & -1770.989345629837_wp, 0._wp, 0._wp, 0._wp, &
+    & 0._wp, 25.61412288588961_wp, 0._wp, 0._wp, &   ! id 10
+    & 273.7641064035606_wp, 0._wp, -0.1310088294983611_wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 11
-    & 0._wp, 0._wp, 0._wp, 0._wp, &
-    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 12
+    & 2522.134421282032_wp, 0._wp, -2.987729131787312_wp, 0._wp, &
+    & 0._wp, -31.47808330912353_wp, 0._wp, 0._wp, &   ! id 12
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 13
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -264,37 +268,37 @@ MODULE mo_trait_process
     & ], [n_pred + 1, max_lct_id] )
   INTEGER,  PARAMETER :: jmax25_int_i(max_lct_id) = [ &
     & 0, 0, 0, 2, 0, 0, &   ! 1-6
-    & 0, 0, 0, 0, 0, 0, &   ! 7-12
+    & 0, 0, 0, 0, 0, 2, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
     & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   INTEGER,  PARAMETER :: jmax25_int_j(max_lct_id) = [ &
     & 0, 0, 0, 5, 0, 0, &   ! 1-6
-    & 0, 0, 0, 0, 0, 0, &   ! 7-12
+    & 0, 0, 0, 0, 0, 5, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
     & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   REAL(wp), PARAMETER :: jmax25_int_c(max_lct_id) = [ &
     & 0._wp, 0._wp, 0._wp, &   ! 1-3
-    & 0.0049779151120457_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0.0051982327221508_wp, 0._wp, 0._wp, &   ! 4-6
     & 0._wp, 0._wp, 0._wp, &   ! 7-9
-    & 0._wp, 0._wp, 0._wp, &   ! 10-12
+    & 0._wp, 0._wp, 0.0427498107818121_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: jmax25_lower(max_lct_id) = [ &
-    & 19.97766083435633_wp, 39.05392636413955_wp, 30.178_wp, &   ! 1-3
-    & 38.01053582465638_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 55.26207246250373_wp, &   ! 7-9
-    & 29.8617672157933_wp, 87.60923430593337_wp, 0._wp, &   ! 10-12
+    & 20.73588319665885_wp, 20.73588319665885_wp, 33.579190081284_wp, &   ! 1-3
+    & 36.53395095735517_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 29.8617672157933_wp, &   ! 7-9
+    & 29.8617672157933_wp, 83.5069053092781_wp, 227.1935926334411_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: jmax25_upper(max_lct_id) = [ &
-    & 157.7534218077332_wp, 203.9390792626152_wp, 288.8185598211251_wp, &   ! 1-3
-    & 234.5847499999999_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 139.0621272011965_wp, &   ! 7-9
-    & 363.8726624883944_wp, 405.0749528077252_wp, 0._wp, &   ! 10-12
+    & 204.3555049219492_wp, 204.3555049219492_wp, 295.8259711717423_wp, &   ! 1-3
+    & 236.4235308120971_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 371.7935210624482_wp, &   ! 7-9
+    & 371.7935210624482_wp, 417.891511317337_wp, 665.2780774193552_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
@@ -305,16 +309,16 @@ MODULE mo_trait_process
     & .TRUE. , .TRUE. , .TRUE. , .TRUE. , .FALSE., .FALSE., &   ! 1-6
     & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .TRUE. , &   ! 7-12
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., &   ! 13-18
-    & .FALSE., .FALSE., .TRUE. , .FALSE., .FALSE., .FALSE. ]   ! 19-24
+    & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE. ]   ! 19-24
   REAL(wp), PARAMETER :: sla_coef(0:n_pred, max_lct_id) = RESHAPE( [ &
-    & -264.6117368399383_wp, 0._wp, 0._wp, 10.33250222803353_wp, &
-    & 0._wp, 4.180136475906664_wp, 0._wp, 0._wp, &   ! id 1
-    & -365.3639897185811_wp, 0._wp, 0._wp, 13.82997170773674_wp, &
-    & 0._wp, 5.793254405902545_wp, 0._wp, 0._wp, &   ! id 2
-    & 13.56126062360548_wp, 0._wp, 0._wp, 2.030778774025066_wp, &
-    & 0.4057461812019727_wp, 0._wp, 0._wp, 0._wp, &   ! id 3
-    & 34.21442679658357_wp, 0._wp, 0.0125931316422182_wp, 0.577795280554252_wp, &
-    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 4
+    & -279.7208907751893_wp, 0._wp, 0._wp, 11.00277273719332_wp, &
+    & 0._wp, 4.424054756857863_wp, 0._wp, 0._wp, &   ! id 1
+    & -406.0998584188323_wp, 0._wp, 0._wp, 15.45502369445305_wp, &
+    & 0._wp, 6.420833363075849_wp, 0._wp, 0._wp, &   ! id 2
+    & 75.19276203563669_wp, 0._wp, 0._wp, 0._wp, &
+    & -2.772030730255589_wp, 0._wp, -158.1843977319195_wp, 0._wp, &   ! id 3
+    & 73.16215807976064_wp, 0._wp, 0.009399337683634001_wp, -1.187593454477916_wp, &
+    & 0._wp, -0.3691255590465796_wp, -36.32915146457854_wp, 0._wp, &   ! id 4
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 5
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -325,12 +329,12 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 8
     & -98.97344850178872_wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 461.4794287684795_wp, 0._wp, &   ! id 9
-    & 28.02674937543264_wp, 0._wp, 0._wp, 1.655310094473117_wp, &
-    & 0._wp, 0._wp, 0._wp, 0.0992435244330258_wp, &   ! id 10
-    & -6.276717779767665_wp, 0._wp, 0._wp, 0._wp, &
-    & 2.434364223211217_wp, 0._wp, 0._wp, 0.5388930344167117_wp, &   ! id 11
-    & 27.15646333733383_wp, 2.041478408581396_wp, 0._wp, 0._wp, &
-    & -2.502033923273533_wp, 0.6263801514712164_wp, 0._wp, 0._wp, &   ! id 12
+    & 27.48125129593543_wp, 0._wp, 0._wp, 1.604995601772025_wp, &
+    & 0._wp, 0._wp, 0._wp, 0.1025912983876993_wp, &   ! id 10
+    & -10.56585456353008_wp, 0._wp, 0._wp, 0._wp, &
+    & 2.91497453424556_wp, 0._wp, 0._wp, 0.5604027026654583_wp, &   ! id 11
+    & 30.05443835739599_wp, 2.009185168544826_wp, 0._wp, 0._wp, &
+    & -2.534103368832049_wp, 0.5997004777083121_wp, 0._wp, 0._wp, &   ! id 12
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 13
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -347,8 +351,8 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 19
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 20
-    & 60.960327_wp, 0._wp, -0.045172134_wp, 0._wp, &
-    & -1.5723334_wp, 0._wp, 0._wp, 0._wp, &   ! id 21
+    & 0._wp, 0._wp, 0._wp, 0._wp, &
+    & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 21
     & 0._wp, 0._wp, 0._wp, 0._wp, &
     & 0._wp, 0._wp, 0._wp, 0._wp, &   ! id 22
     & 0._wp, 0._wp, 0._wp, 0._wp, &
@@ -357,72 +361,99 @@ MODULE mo_trait_process
     & 0._wp, 0._wp, 0._wp, 0._wp  &   ! id 24
     & ], [n_pred + 1, max_lct_id] )
   INTEGER,  PARAMETER :: sla_int_i(max_lct_id) = [ &
-    & 3, 3, 3, 2, 0, 0, &   ! 1-6
+    & 3, 3, 4, 0, 0, 0, &   ! 1-6
     & 0, 0, 0, 3, 4, 0, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
-    & 0, 0, 2, 0, 0, 0 ]   ! 19-24
+    & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   INTEGER,  PARAMETER :: sla_int_j(max_lct_id) = [ &
-    & 5, 5, 4, 3, 0, 0, &   ! 1-6
+    & 5, 5, 6, 0, 0, 0, &   ! 1-6
     & 0, 0, 0, 7, 7, 0, &   ! 7-12
     & 0, 0, 0, 0, 0, 0, &   ! 13-18
-    & 0, 0, 4, 0, 0, 0 ]   ! 19-24
+    & 0, 0, 0, 0, 0, 0 ]   ! 19-24
   REAL(wp), PARAMETER :: sla_int_c(max_lct_id) = [ &
-    & -0.1494397974485725_wp, -0.2056242448377997_wp, -0.1009197492173917_wp, &   ! 1-3
-    & -0.0019184209736277_wp, 0._wp, 0._wp, &   ! 4-6
+    & -0.160340199470438_wp, -0.231027021415858_wp, 8.127477467234918_wp, &   ! 1-3
+    & 0._wp, 0._wp, 0._wp, &   ! 4-6
     & 0._wp, 0._wp, 0._wp, &   ! 7-9
-    & -0.0179888020229775_wp, -0.0247122616635386_wp, 0._wp, &   ! 10-12
+    & -0.0176790628763099_wp, -0.0278107710366178_wp, 0._wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
-    & 0._wp, 0._wp, 0.0015332445_wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: sla_lower(max_lct_id) = [ &
-    & 13.20334757916667_wp, 12.50438243829334_wp, 5.389355316558443_wp, &   ! 1-3
-    & 20.21256818030039_wp, 0._wp, 0._wp, &   ! 4-6
+    & 12.76212526736464_wp, 12.50232484868917_wp, 5.731088334816514_wp, &   ! 1-3
+    & 18.59976356252941_wp, 0._wp, 0._wp, &   ! 4-6
     & 0._wp, 0._wp, 14.77604166666667_wp, &   ! 7-9
-    & 18.12314799788327_wp, 14.90500308125_wp, 16.39583333333334_wp, &   ! 10-12
+    & 18.45375_wp, 14.90500308125_wp, 16.06348834269771_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
-    & 0._wp, 0._wp, 6.295_wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: sla_upper(max_lct_id) = [ &
-    & 71.28134515611995_wp, 79.15244789062507_wp, 60.95868055555551_wp, &   ! 1-3
-    & 108.3470271114079_wp, 0._wp, 0._wp, &   ! 4-6
+    & 67.93377784952843_wp, 71.85600272791854_wp, 63.79884431401091_wp, &   ! 1-3
+    & 106.4120408257519_wp, 0._wp, 0._wp, &   ! 4-6
     & 0._wp, 0._wp, 64.69364743392471_wp, &   ! 7-9
-    & 91.32900833333336_wp, 121.4789133602352_wp, 88.21763080454095_wp, &   ! 10-12
+    & 91.47745416666666_wp, 120.4988486111614_wp, 82.72740632793503_wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
-    & 0._wp, 0._wp, 32.3334_wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
 
-  !------------------------------ Jmax25 ~ Vcmax25 constraint (95 % prediction interval) ------------------------------!
+  !---------------- Jmax25 = a + b Vcmax25, 95 % confidence interval: t s sqrt(1/W + (V - Vw)^2 / Sxx) ----------------!
   LOGICAL,  PARAMETER :: has_jv_constraint(max_lct_id) = [ &
     & .TRUE. , .TRUE. , .TRUE. , .TRUE. , .FALSE., .FALSE., &   ! 1-6
-    & .FALSE., .FALSE., .TRUE. , .TRUE. , .TRUE. , .FALSE., &   ! 7-12
+    & .FALSE., .FALSE., .FALSE., .FALSE., .TRUE. , .FALSE., &   ! 7-12
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., &   ! 13-18
     & .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE. ]   ! 19-24
   REAL(wp), PARAMETER :: jv_intercept(max_lct_id) = [ &
-    & 45.25889879043241_wp, 45.25889879043241_wp, 20.65816067404732_wp, &   ! 1-3
-    & 32.85235719187544_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 7.623259478946235_wp, &   ! 7-9
-    & 7.623259478946235_wp, 56.81274011540388_wp, 0._wp, &   ! 10-12
+    & 17.87304671918965_wp, 18.70992415341316_wp, 32.48282779576203_wp, &   ! 1-3
+    & 38.91858321372095_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, -76.55931157954257_wp, 0._wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
   REAL(wp), PARAMETER :: jv_slope(max_lct_id) = [ &
-    & 0.8646143127609888_wp, 0.8646143127609888_wp, 1.789236573781073_wp, &   ! 1-3
-    & 1.269745209871273_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 2.062374327615337_wp, &   ! 7-9
-    & 2.062374327615337_wp, 1.855105060605188_wp, 0._wp, &   ! 10-12
+    & 1.125757390041126_wp, 1.234139038529975_wp, 1.69288851212829_wp, &   ! 1-3
+    & 1.252978849096706_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, 3.014455281628512_wp, 0._wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
     & 0._wp, 0._wp, 0._wp ]   ! 22-24
-  REAL(wp), PARAMETER :: jv_halfwidth(max_lct_id) = [ &
-    & 65.39367679802368_wp, 65.39367679802368_wp, 85.76928970066835_wp, &   ! 1-3
-    & 61.29195258447776_wp, 0._wp, 0._wp, &   ! 4-6
-    & 0._wp, 0._wp, 100.1374661337129_wp, &   ! 7-9
-    & 100.1374661337129_wp, 85.87038700008657_wp, 0._wp, &   ! 10-12
+  REAL(wp), PARAMETER :: jv_t_s(max_lct_id) = [ &
+    & 30.8224813587535_wp, 59.43005447764674_wp, 117.6510884281517_wp, &   ! 1-3
+    & 132.6648417933358_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, 208.0170310190944_wp, 0._wp, &   ! 10-12
+    & 0._wp, 0._wp, 0._wp, &   ! 13-15
+    & 0._wp, 0._wp, 0._wp, &   ! 16-18
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp ]   ! 22-24
+  REAL(wp), PARAMETER :: jv_inv_w(max_lct_id) = [ &
+    & 0.0212123907555919_wp, 0.02939835701329015_wp, 0.01216904666114307_wp, &   ! 1-3
+    & 0.01072158827303688_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, 0.0216791477999037_wp, 0._wp, &   ! 10-12
+    & 0._wp, 0._wp, 0._wp, &   ! 13-15
+    & 0._wp, 0._wp, 0._wp, &   ! 16-18
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp ]   ! 22-24
+  REAL(wp), PARAMETER :: jv_vmean(max_lct_id) = [ &
+    & 52.30823593890563_wp, 81.6552952753792_wp, 53.32215087809054_wp, &   ! 1-3
+    & 63.73299165052104_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, 93.86806651222535_wp, 0._wp, &   ! 10-12
+    & 0._wp, 0._wp, 0._wp, &   ! 13-15
+    & 0._wp, 0._wp, 0._wp, &   ! 16-18
+    & 0._wp, 0._wp, 0._wp, &   ! 19-21
+    & 0._wp, 0._wp, 0._wp ]   ! 22-24
+  REAL(wp), PARAMETER :: jv_inv_sxx(max_lct_id) = [ &
+    & 2.937787992122675e-05_wp, 3.735029833044135e-05_wp, 1.966795432646996e-05_wp, &   ! 1-3
+    & 3.316494896695333e-05_wp, 0._wp, 0._wp, &   ! 4-6
+    & 0._wp, 0._wp, 0._wp, &   ! 7-9
+    & 0._wp, 5.347846451836339e-05_wp, 0._wp, &   ! 10-12
     & 0._wp, 0._wp, 0._wp, &   ! 13-15
     & 0._wp, 0._wp, 0._wp, &   ! 16-18
     & 0._wp, 0._wp, 0._wp, &   ! 19-21
@@ -477,7 +508,6 @@ CONTAINS
       & jmax_vcmax_ratio          !< Bounded Jmax25 to Vcmax25 ratio [-]
 
     REAL(wp) :: x(n_pred)         !< Predictors in the units of the fitted equations
-    REAL(wp) :: jv_centre         !< Jmax25 expected from Vcmax25 [umol m-2 s-1]
     ! ------------------------------------------------------------------------------------------------------ !
 
     vcmax25_raw      = 0._wp
@@ -512,14 +542,17 @@ CONTAINS
       jmax25_raw  = eval_model(jmax25_coef(:,lib_id), jmax25_int_i(lib_id), jmax25_int_j(lib_id), &
         &                      jmax25_int_c(lib_id), x)
       jmax25_pred = MIN(jmax25_upper(lib_id), MAX(jmax25_lower(lib_id), jmax25_raw))
-      ! Second constraint of Verheijen et al. (2013): Jmax25 stays inside the 95 % prediction
-      ! interval of the Jmax25-Vcmax25 relationship of paired observations of the PFT. The
-      ! PFT bounds are applied once more afterwards and take precedence.
-      IF (has_dynamic_vcmax25(lib_id) .AND. has_jv_constraint(lib_id)) THEN
-        jv_centre   = jv_intercept(lib_id) + jv_slope(lib_id) * vcmax25_pred
-        jmax25_pred = MIN(jv_centre + jv_halfwidth(lib_id), MAX(jv_centre - jv_halfwidth(lib_id), jmax25_pred))
-        jmax25_pred = MIN(jmax25_upper(lib_id), MAX(jmax25_lower(lib_id), jmax25_pred))
-      END IF
+    END IF
+
+    ! Second constraint of Verheijen et al. (2013, Sect. 2.3): the pair (Vcmax25, Jmax25) stays
+    ! inside the 95 % confidence interval of the regression Jmax25 = a + b Vcmax25 of the PFT;
+    ! a pair outside is moved to the nearest point of the interval border ("adjusted to the
+    ! confidence interval border, based on the shortest distance needed to reach the border").
+    ! Both traits move. The bounds are applied once more afterwards and take precedence.
+    IF (has_dynamic_vcmax25(lib_id) .AND. has_dynamic_jmax25(lib_id) .AND. has_jv_constraint(lib_id)) THEN
+      CALL project_on_jv_band(lib_id, vcmax25_pred, jmax25_pred)
+      vcmax25_pred = MIN(vcmax25_upper(lib_id), MAX(vcmax25_lower(lib_id), vcmax25_pred))
+      jmax25_pred  = MIN(jmax25_upper(lib_id),  MAX(jmax25_lower(lib_id),  jmax25_pred))
     END IF
 
     IF (has_dynamic_sla(lib_id)) THEN
@@ -533,6 +566,61 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_trait_diagnostics
+
+  !> Half-width of the 95 % confidence interval of the fitted line Jmax25 = a + b Vcmax25 at v:
+  !>   t(0.975, n-2) s sqrt(1/W + (v - Vw)^2 / Sxx)   (weighted least squares on community means)
+  PURE REAL(wp) FUNCTION jv_halfwidth(lib_id, v) RESULT(h)
+    INTEGER,  INTENT(in) :: lib_id
+    REAL(wp), INTENT(in) :: v
+    h = jv_t_s(lib_id) * SQRT(jv_inv_w(lib_id) + (v - jv_vmean(lib_id))**2 * jv_inv_sxx(lib_id))
+  END FUNCTION jv_halfwidth
+
+  !> Move (v, j) to the nearest point of the border of the confidence band when it lies outside.
+  !> The nearest border point lies within the vertical distance d0 of the point, so the search
+  !> covers v - d0 ... v + d0: 200 evenly spaced trial points, then 60 golden-section steps
+  !> around the best one. The squared distance is (v' - v)^2 + (a + b v' +- h(v') - j)^2.
+  PURE SUBROUTINE project_on_jv_band(lib_id, v, j)
+    INTEGER,  INTENT(in)    :: lib_id
+    REAL(wp), INTENT(inout) :: v, j
+    INTEGER,  PARAMETER :: n_trial = 200, n_golden = 60
+    REAL(wp), PARAMETER :: gr = 0.6180339887498949_wp
+    REAL(wp) :: dev, sgn, d0, step, vt, dbest, vbest, lo, hi, x1, x2, f1, f2
+    INTEGER  :: k
+    dev = j - (jv_intercept(lib_id) + jv_slope(lib_id) * v)
+    IF (ABS(dev) <= jv_halfwidth(lib_id, v)) RETURN
+    sgn = SIGN(1._wp, dev)
+    d0  = ABS(dev) - jv_halfwidth(lib_id, v)
+    step = 2._wp * d0 / REAL(n_trial, wp)
+    vbest = v
+    dbest = dist2(v)
+    DO k = 0, n_trial
+      vt = v - d0 + REAL(k, wp) * step
+      IF (dist2(vt) < dbest) THEN
+        dbest = dist2(vt)
+        vbest = vt
+      END IF
+    END DO
+    lo = vbest - step
+    hi = vbest + step
+    DO k = 1, n_golden
+      x1 = hi - gr * (hi - lo)
+      x2 = lo + gr * (hi - lo)
+      f1 = dist2(x1)
+      f2 = dist2(x2)
+      IF (f1 < f2) THEN
+        hi = x2
+      ELSE
+        lo = x1
+      END IF
+    END DO
+    v = 0.5_wp * (lo + hi)
+    j = jv_intercept(lib_id) + jv_slope(lib_id) * v + sgn * jv_halfwidth(lib_id, v)
+  CONTAINS
+    PURE REAL(wp) FUNCTION dist2(vv)
+      REAL(wp), INTENT(in) :: vv
+      dist2 = (vv - v)**2 + (jv_intercept(lib_id) + jv_slope(lib_id) * vv + sgn * jv_halfwidth(lib_id, vv) - j)**2
+    END FUNCTION dist2
+  END SUBROUTINE project_on_jv_band
 
   !> Evaluate c0 + sum_k c_k x_k + c_int x_i x_j (no interaction when int_i = 0)
   PURE REAL(wp) FUNCTION eval_model(c, int_i, int_j, int_c, x) RESULT(y)
