@@ -95,13 +95,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: soil_moist_prev_year_climbuf
     dsl4jsb_Real2D_onChunk :: nswr_prev_year_climbuf
 
-    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_raw
-    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
-    dsl4jsb_Real2D_onChunk :: pft13_jmax25_raw
-    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
-    dsl4jsb_Real2D_onChunk :: pft13_sla_raw
-    dsl4jsb_Real2D_onChunk :: pft13_sla_pred
-    dsl4jsb_Real2D_onChunk :: pft13_jmax_vcmax_ratio
+    dsl4jsb_Real2D_onChunk :: vcmax25_raw
+    dsl4jsb_Real2D_onChunk :: vcmax25_pred
+    dsl4jsb_Real2D_onChunk :: jmax25_raw
+    dsl4jsb_Real2D_onChunk :: jmax25_pred
+    dsl4jsb_Real2D_onChunk :: sla_raw
+    dsl4jsb_Real2D_onChunk :: sla_pred
+    dsl4jsb_Real2D_onChunk :: jmax_vcmax_ratio
 
     iblk = options%iblk
     ics  = options%ics
@@ -134,13 +134,13 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(TRAIT_)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_raw)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_raw)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_raw)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
-    dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax_vcmax_ratio)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, vcmax25_raw)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, vcmax25_pred)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, jmax25_raw)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, jmax25_pred)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, sla_raw)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, sla_pred)
+    dsl4jsb_Get_var2D_onChunk(TRAIT_, jmax_vcmax_ratio)
 
     climbuf => tile%parent_tile
     IF (TRIM(climbuf%name) /= 'veg') THEN
@@ -165,10 +165,10 @@ CONTAINS
       & reh_prev_year_climbuf,                          &
       & soil_moist_prev_year_climbuf,                   &
       & nswr_prev_year_climbuf,                         &
-      & pft13_vcmax25_raw, pft13_vcmax25_pred,         &
-      & pft13_jmax25_raw, pft13_jmax25_pred,           &
-      & pft13_sla_raw, pft13_sla_pred,                 &
-      & pft13_jmax_vcmax_ratio)
+      & vcmax25_raw, vcmax25_pred,         &
+      & jmax25_raw, jmax25_pred,           &
+      & sla_raw, sla_pred,                 &
+      & jmax_vcmax_ratio)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -195,13 +195,13 @@ CONTAINS
     dsl4jsb_Get_memory(TRAIT_)
     weighted_by_fract => tile%Get_aggregator('weighted_by_fract')
 
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_vcmax25_raw, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_vcmax25_pred, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_jmax25_raw, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_jmax25_pred, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_sla_raw, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_sla_pred, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TRAIT_, pft13_jmax_vcmax_ratio, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, vcmax25_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, vcmax25_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, jmax25_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, jmax25_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, sla_raw, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, sla_pred, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TRAIT_, jmax_vcmax_ratio, weighted_by_fract)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

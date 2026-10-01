@@ -22,7 +22,7 @@ The consuming processes (`mo_assimi_interface`, `mo_carbon_interface`, `mo_pheno
 - They replace specificLeafArea_C where SLA is dynamic.
 - A trait of 0 (the first year, or missing predictors) keeps the lctlib value.
 
-The memory variables keep their historical names `pft13_*_pred`, but they are now filled on every PFT tile.
+Every PFT tile has its own seven trait variables. Their output names put the tile first: `trait_<tile>_<variable>`, e.g. `trait_pft04_sla_pred`, `trait_pft13_vcmax25_pred`; `trait_veg_*` and `trait_box_*` are the fraction-weighted means of the child tiles. The variables are `vcmax25_raw`, `vcmax25_pred`, `jmax25_raw`, `jmax25_pred` (C4: PEPcase CO2 specificity, mmol m-2 s-1), `sla_raw`, `sla_pred` (m2 kg-1 leaf carbon) and `jmax_vcmax_ratio`; 0 means that the PFT has no climate relationship and keeps its lctlib value.
 
 ## Decisions and evidence
 

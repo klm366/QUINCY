@@ -1014,7 +1014,7 @@ CONTAINS
       c_humus_1,               &
       c_humus_2
 #ifndef __QUINCY_STANDALONE__
-    dsl4jsb_Real2D_onChunk :: pft13_sla_pred
+    dsl4jsb_Real2D_onChunk :: sla_pred
 #endif
 
     REAL(wp), ALLOCATABLE ::   &
@@ -1077,7 +1077,7 @@ CONTAINS
       IF (apply_dynamic_traits) apply_dynamic_traits = has_dynamic_sla(lib_id)
       IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, sla_pred)
       END IF
     END IF
 #endif
@@ -1530,8 +1530,8 @@ CONTAINS
             IF (apply_dynamic_traits) THEN
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
               DO ic=1,nc
-                IF (pft13_sla_pred(ic) > 0._wp) THEN
-                  specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
+                IF (sla_pred(ic) > 0._wp) THEN
+                  specificLeafArea_C_active(ic) = sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
                 ELSE
                   specificLeafArea_C_active(ic) = specificLeafArea_C_param
                 END IF

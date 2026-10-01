@@ -445,8 +445,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
-    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
-    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
+    dsl4jsb_Real2D_onChunk :: vcmax25_pred
+    dsl4jsb_Real2D_onChunk :: jmax25_pred
 
 
     ! Get local variables from options argument
@@ -483,8 +483,8 @@ CONTAINS
         & has_dynamic_vcmax25(lib_id) .AND. has_dynamic_jmax25(lib_id)
       IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, vcmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, jmax25_pred)
       END IF
     END IF
 
@@ -515,9 +515,9 @@ CONTAINS
     IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
-          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
-          ETransport_active(ic) = pft13_jmax25_pred(ic) * trait_jmax25_to_etransport
+        IF (vcmax25_pred(ic) > 0._wp .AND. jmax25_pred(ic) > 0._wp) THEN
+          CarboxRate_active(ic) = vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
+          ETransport_active(ic) = jmax25_pred(ic) * trait_jmax25_to_etransport
         ELSE
           CarboxRate_active(ic) = CarboxRate
           ETransport_active(ic) = ETransport
@@ -850,8 +850,8 @@ CONTAINS
                                                       ! Output only for the water limited case here
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
-    dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
-    dsl4jsb_Real2D_onChunk :: pft13_jmax25_pred
+    dsl4jsb_Real2D_onChunk :: vcmax25_pred
+    dsl4jsb_Real2D_onChunk :: jmax25_pred
     INTEGER :: lib_id
 
     ! Set local variables from options argument
@@ -891,8 +891,8 @@ CONTAINS
         & has_dynamic_vcmax25(lib_id) .AND. has_dynamic_jmax25(lib_id)
       IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_vcmax25_pred)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_jmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, vcmax25_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, jmax25_pred)
       END IF
     END IF
 
@@ -942,9 +942,9 @@ CONTAINS
     IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        IF (pft13_vcmax25_pred(ic) > 0._wp .AND. pft13_jmax25_pred(ic) > 0._wp) THEN
-          CarboxRate_active(ic) = pft13_vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
-          ETransport_active(ic) = pft13_jmax25_pred(ic) * trait_jmax25_to_etransport
+        IF (vcmax25_pred(ic) > 0._wp .AND. jmax25_pred(ic) > 0._wp) THEN
+          CarboxRate_active(ic) = vcmax25_pred(ic) * trait_vcmax25_to_carboxrate
+          ETransport_active(ic) = jmax25_pred(ic) * trait_jmax25_to_etransport
         ELSE
           CarboxRate_active(ic) = CarboxRate
           ETransport_active(ic) = ETransport

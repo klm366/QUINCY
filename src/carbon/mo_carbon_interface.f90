@@ -203,7 +203,7 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk ::  temp_15d_yDay_climbuf
     dsl4jsb_Real2D_onChunk ::  precip_15d_yDay_climbuf
-    dsl4jsb_Real2D_onChunk ::  pft13_sla_pred
+    dsl4jsb_Real2D_onChunk ::  sla_pred
 
     dsl4jsb_Real2D_onChunk ::  cconservation_calcCpools ! C conservation test: Deviation from conservation
 
@@ -370,7 +370,7 @@ CONTAINS
       IF (apply_dynamic_traits) apply_dynamic_traits = has_dynamic_sla(lib_id)
       IF (apply_dynamic_traits) THEN
         dsl4jsb_Get_memory(TRAIT_)
-        dsl4jsb_Get_var2D_onChunk(TRAIT_, pft13_sla_pred)
+        dsl4jsb_Get_var2D_onChunk(TRAIT_, sla_pred)
       END IF
     END IF
 
@@ -378,8 +378,8 @@ CONTAINS
     IF (apply_dynamic_traits) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        IF (pft13_sla_pred(ic) > 0._wp) THEN
-          specificLeafArea_C_active(ic) = pft13_sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
+        IF (sla_pred(ic) > 0._wp) THEN
+          specificLeafArea_C_active(ic) = sla_pred(ic) * trait_sla_to_specificleafarea_c(lib_id)
         ELSE
           specificLeafArea_C_active(ic) = lctlib_specificLeafArea_C
         END IF
