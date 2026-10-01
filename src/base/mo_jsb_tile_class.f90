@@ -112,7 +112,7 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
     INTEGER                               :: nr_of_cqts = 0                !< Number of conserved quantity types in use on the tile
-    TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< List of conserved quantities sort by type
+    TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< List of conserved quantities sorted by type (CQT)
     TYPE(t_jsb_lcc_proc_p),   ALLOCATABLE :: lcc_processes(:)              !< List of lcc structures indexed by proc id
     TYPE(t_lnd_bgcm_store),       POINTER :: bgcm_store          => NULL() !< The bgcm store collecting bgcms and their elements on this tile
     TYPE(t_jsb_memory_p),         POINTER :: mem(:)                        !< Memory for all processes on the tile

@@ -443,7 +443,7 @@ CONTAINS
   SUBROUTINE Set_options(this, current_datetime, dtime, alpha, iblk, ics, ice, nc, &
     &                    nsoil_e, nsoil_w, nsnow_e, npft)
 
-    USE mo_jsb_utils_iface, ONLY: assign_if_present
+    USE mo_fortran_tools,   ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
 
     CLASS(t_jsb_model),                  INTENT(inout) :: this
