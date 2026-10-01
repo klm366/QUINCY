@@ -396,10 +396,7 @@ downscaling in EBFM (needs ICON's orography as a static field), then the sub-gri
 
 * `NAMELIST_atm`: `coupling_mode_nml` `coupled_to_ebfm = .TRUE.` (atm2ebfm) and
   `coupled_to_ebfm_land = .TRUE.` (registers the `icon-land` component and defines the lice fields)
-* `NAMELIST_lnd`: `jsb_lice_nml` `active = .TRUE.`; optional `jsb_turb_nml` switches for the
-  turbulent exchange of the lice tile (all default off): `roughness_lice` (own z0m, e.g. 1e-3 m),
-  `l_rough_h_lice` (use the scalar roughness in the TMX exchange coefficients),
-  `l_katabatic_lice` (EBFM's bulk katabatic closure for the scalar exchange); usecase `jsbach_lite` or `jsbach_pfts`, both
+* `NAMELIST_lnd`: `jsb_lice_nml` `active = .TRUE.`; usecase `jsbach_lite` or `jsbach_pfts`, both
   with `use_tmx = .TRUE.` (the lice tile is part of both TMX usecases; the low-res test configs
   use `jsbach_lite`, the high-res R2B8-R2B9 config uses `jsbach_pfts`);
   `bc_land_frac.nc` must contain `fract_lice` (see above); `output_tiles = box, lice` for the tile values

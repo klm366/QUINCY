@@ -191,13 +191,13 @@ runoff through the land hydrology (HD) or as ice discharge through the ocean.
   z0h_lnd, turbtran via the laminar resistance rlam_heat - keep the momentum/scalar distinction,
   and the stability functions' own source, Zeng et al. 1998, prescribes a distinct z0t); at 10 m
   the neutral C_H is overestimated by 1.5x from z0h alone, ~1.8x incl. an ice-sheet z0m of
-  1e-3 m (measured: 1.6x in the mean exchange coefficient). Fixing z0m/z0h
-  (`roughness_lice`, `l_rough_h_lice`) halves the excess, and substituting EBFM's katabatic
-  closure for the scalar exchange (`l_katabatic_lice`) brings the ratio to ~1.7x (the remainder
-  is the 40 s instantaneous vs. 3 h mean evaluation and EBFM's dynamically fitted lapse rate).
-  All three are namelist switches, default off - which combination becomes the default for
-  production is an open decision, as is the general question which formulation is more
-  appropriate over Greenland's katabatic boundary layer.
+  1e-3 m (measured: 1.6x in the mean exchange coefficient). In tests, an ice-sheet z0m with a
+  separate z0h in the TMX exchange coefficients halved the excess, and EBFM's katabatic closure
+  for the scalar exchange brought the ratio to ~1.7x (the remainder is the 40 s instantaneous
+  vs. 3 h mean evaluation and EBFM's dynamically fitted lapse rate). These modifications are not
+  part of this coupling: they change the turbulent exchange over ice in general, need an
+  interface change in TMX, and will be proposed separately, together with the question which
+  formulation is more appropriate over Greenland's katabatic boundary layer.
 * **Static ice geometry in ICON-Land**: the lice tile fraction is fixed at initialisation (from
   Elmer's ice mask); EBFM's own ice mask is likewise frozen at its initialisation. Retreating or
   advancing ice margins are not yet reflected in the tile fractions (this requires ICON-Land's
