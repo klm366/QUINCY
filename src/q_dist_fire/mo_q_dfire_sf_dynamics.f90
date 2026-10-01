@@ -412,7 +412,7 @@ CONTAINS
                         burnable_area_ha, &
                         dead_fuel_fcl, cured_live_grass_fuel_fcl, &
                         live_grass_fuel_fcl, live_tree_fuel_fcl, & ! fuel
-                        sf_atm%t_air_min_c, sf_atm%t_air_max_c, sf_atm%precip_daily_mmd, sf_atm%wind_sf, & ! weather
+                        sf_atm, & ! weather
                         veg_cover_frac, &
                         nesterov_index, & ! dryness
                         fuel_moisture, & ! fuel properties
@@ -483,7 +483,7 @@ CONTAINS
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
                   dead_fuel, cured_live_grass_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
-                  t_air_min_c, t_air_max_c, precip_daily_mmd, wind_sf, & ! weather
+                  sf_atm, & ! weather
                   veg_cover_frac, & ! in
                   nesterov_index, & ! inout
                   fuel_moisture, & ! out
@@ -520,9 +520,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
 
-    REAL(wp), INTENT(in)  :: t_air_min_c(nc), t_air_max_c(nc)      !< [Celsius], [Celsius], todo: refactor to t_weather derive type
-    REAL(wp), INTENT(in)  :: precip_daily_mmd(nc)                  !< [mm d-1]
-    REAL(wp), INTENT(in)  :: wind_sf(nc)                           !< [m min-1]
+    TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
 
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
 
@@ -574,13 +572,13 @@ CONTAINS
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
     !> and own changes for QUINCY.
-    nesterov_index = calc_sf_nesterov_index(nc, t_air_max_c, t_air_min_c, &
-        precip_daily_mmd, nesterov_index, &
+    nesterov_index = calc_sf_nesterov_index(nc, sf_atm%t_air_max_c, sf_atm%t_air_min_c, &
+        sf_atm%precip_daily_mmd, nesterov_index, &
         o_tsfactor = (dtime / one_day), &
         mask= has_fire_conditions)
 
     !> Fuel moisture and ROS
-    u_f_wind = lctlib_fwd_wind_factor * wind_sf
+    u_f_wind = lctlib_fwd_wind_factor * sf_atm%wind_sf
     dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     tot_dead_fuel_grass = SUM(cured_live_grass_fuel(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
@@ -628,7 +626,7 @@ CONTAINS
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(nc, &
-                  lctlib_fwd_wind_factor, wind_sf, &
+                  lctlib_fwd_wind_factor, sf_atm%wind_sf, &
                   spitfire % fdi, &
                   veg_cover_frac, &
                   has_fire_conditions, &
