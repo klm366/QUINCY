@@ -288,7 +288,7 @@ for var in ${var_list}; do
       # default value
       usdaTaxDefaultVal=1
       ${cdoQ} -setmisstoc,${usdaTaxDefaultVal} ${quincyInputDataDir}/TAXOUSDA_10km.soilgrid.3600.1800.nc ${atmGridID}_${var}.tmp
-      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ${cdoQ} -remaplaf,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
       ;;
   # ----------------------
     TAXNWRB )
@@ -298,7 +298,7 @@ for var in ${var_list}; do
       # default value
       nwrbTaxDefaultVal=1
       ${cdoQ} -setmisstoc,${nwrbTaxDefaultVal} ${quincyInputDataDir}/TAXNWRB.soilgrid.3600.1800.nc ${atmGridID}_${var}.tmp
-      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ${cdoQ} -remaplaf,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
       ;;
   # ----------------------
     qmax_org )
