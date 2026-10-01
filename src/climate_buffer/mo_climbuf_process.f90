@@ -52,7 +52,11 @@ CONTAINS
     &                                     max_wind_of_day, max_wind_yDay, max_wind_4yr, &
     &                                     q_rel_air_14d, q_rel_air_14d_yDay, &
     &                                     temp_sum_year, time_sum_year, precip_sum_year, &
-    &                                     mat_prev_year, map_prev_year, max_mmtemp_prev_year)
+    &                                     mat_prev_year, map_prev_year, max_mmtemp_prev_year, &
+    &                                     q_rel_air_t, soil_moist, sw_net, &
+    &                                     rel_hum_sum_year, soil_moist_sum_year, sw_net_sum_year, &
+    &                                     time_sum_year_ext, min_mmtemp_prev_year, reh_prev_year, &
+    &                                     soil_moist_prev_year, nswr_prev_year)
 
     LOGICAL, INTENT(in) :: &
       & lstart,                 & !< This is the first time step in a simulation
@@ -69,7 +73,13 @@ CONTAINS
       & rain,                   & !< Liquid precipitation [kg m-2 s-1]
       & snow,                   & !< Solid precipitation [kg m-2 s-1]
       & wind_10m,               & !< 10m wind speed [m/s]
-      & q_rel_air                 !< Relative humidity [%]
+      & q_rel_air,              & !< Relative humidity [%]
+      ! Inputs of the four added annual predictors.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-10-01
+      & q_rel_air_t,            & !< Relative humidity of the air with respect to t_air [%]
+      & soil_moist,             & !< Volumetric soil water (liquid + ice) of the upper 1 m [m3 m-3]
+      & sw_net                    !< Net surface shortwave radiation [W m-2]
 
     REAL(wp), INTENT(inout) :: &
       & temp_sum_day,           & !< Current temperature sum of the day [K]
@@ -94,7 +104,15 @@ CONTAINS
       & precip_sum_year,        & !< Current annual precipitation accumulation [kg m-2]
       & mat_prev_year,          & !< Previous-year mean air temperature [K]
       & map_prev_year,          & !< Previous-year total precipitation [kg m-2]
-      & max_mmtemp_prev_year      !< Previous-year warmest monthly mean temperature [K]
+      & max_mmtemp_prev_year,   & !< Previous-year warmest monthly mean temperature [K]
+      & rel_hum_sum_year,       & !< Current annual integral of air relative humidity [% s]
+      & soil_moist_sum_year,    & !< Current annual integral of volumetric soil water [m3 m-3 s]
+      & sw_net_sum_year,        & !< Current annual integral of net surface shortwave radiation [J m-2]
+      & time_sum_year_ext,      & !< Current accumulated time of the three integrals above [s]
+      & min_mmtemp_prev_year,   & !< Previous-year coldest monthly mean temperature [K]
+      & reh_prev_year,          & !< Previous-year mean air relative humidity [%]
+      & soil_moist_prev_year,   & !< Previous-year mean volumetric soil water, 0-1 m [m3 m-3]
+      & nswr_prev_year            !< Previous-year mean net surface shortwave radiation [W m-2]
 
     ! Local variables
     REAL(wp) :: &
@@ -159,12 +177,28 @@ CONTAINS
         map_prev_year = precip_sum_year
         max_mmtemp_prev_year = max_mmtemp_of_yr
       END IF
+      ! Coldest monthly mean temperature: min_mmtemp_of_yr already holds December,
+      !   because the new_month branch above runs before this one.
+      ! Author: Dr. Sri Nandini-Weiß
+      ! Date: 2026-10-01
+      IF (min_mmtemp_of_yr < 999._wp) min_mmtemp_prev_year = min_mmtemp_of_yr
+      ! The three added means use their own time integral, so a restart file written
+      !   before these variables existed (integrals 0) never yields a mean of 0.
+      IF (time_sum_year_ext > 0._wp) THEN
+        reh_prev_year        = rel_hum_sum_year    / time_sum_year_ext
+        soil_moist_prev_year = soil_moist_sum_year / time_sum_year_ext
+        nswr_prev_year       = sw_net_sum_year     / time_sum_year_ext
+      END IF
     END IF
 
     IF (new_year) THEN
       temp_sum_year = 0._wp
       time_sum_year = 0._wp
       precip_sum_year = 0._wp
+      rel_hum_sum_year    = 0._wp
+      soil_moist_sum_year = 0._wp
+      sw_net_sum_year     = 0._wp
+      time_sum_year_ext   = 0._wp
       min_mmtemp_of_yr = 1000._wp
       max_mmtemp_of_yr = -1000._wp
     END IF
@@ -173,6 +207,10 @@ CONTAINS
     temp_sum_year = temp_sum_year + t_air * dtime
     time_sum_year = time_sum_year + dtime
     precip_sum_year = precip_sum_year + (rain + snow) * dtime
+    rel_hum_sum_year    = rel_hum_sum_year    + q_rel_air_t * dtime
+    soil_moist_sum_year = soil_moist_sum_year + soil_moist  * dtime
+    sw_net_sum_year     = sw_net_sum_year     + sw_net      * dtime
+    time_sum_year_ext   = time_sum_year_ext   + dtime
 
     !-- 15-day smoothing of temperature and precipitation (needed with yasso)
     !  ---------------------

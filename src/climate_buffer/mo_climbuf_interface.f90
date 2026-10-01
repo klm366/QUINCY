@@ -35,7 +35,7 @@ MODULE mo_climbuf_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, SEB_, CLIMBUF_
+  dsl4jsb_Use_processes A2L_, SEB_, CLIMBUF_, HYDRO_, RAD_
 
   ! Use of process configurations
   dsl4jsb_Use_config(CLIMBUF_)
@@ -43,6 +43,8 @@ MODULE mo_climbuf_interface
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CLIMBUF_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -105,6 +107,8 @@ CONTAINS
   SUBROUTINE update_climbuf(tile, options)
 
     USE mo_climbuf_process,   ONLY: calc_climbuf, get_relative_humidity_air
+    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid   ! added 2026-10-01 (soil layers of SoilMoist)
+    USE mo_jsb_grid,          ONLY: Get_vgrid
     USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
 
     ! Arguments
@@ -139,6 +143,22 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: &
       & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
+    ! Local fields of the four added annual predictors.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-10-01
+    REAL(wp), ALLOCATABLE :: &
+      & q_rel_air_t(:),      & !< Relative humidity of the air with respect to t_air [%]
+      & soil_moist(:),       & !< Volumetric soil water (liquid + ice) of the upper 1 m [m3 m-3]
+      & sw_net(:)              !< Net surface shortwave radiation [W m-2]
+    REAL(wp) :: &
+      & z_top,               & !< Upper boundary of a soil layer [m]
+      & z_soil,              & !< Thickness of the soil (above bedrock) of that layer inside 0-1 m [m]
+      & w_sum,               & !< Depth-weighted sum of volumetric soil water [m]
+      & d_sum                  !< Summed soil thickness inside 0-1 m [m]
+    REAL(wp), PARAMETER :: soil_moist_depth = 1._wp   !< Depth of the ERA5-Land predictor layer [m]
+    INTEGER :: is, nsoil
+    TYPE(t_jsb_vgrid), POINTER :: soil_w   !< Vertical grid of the soil water layers
+
     LOGICAL :: &
       & use_tmx                !< Use tmx scheme; needed as local variable on GPUs
 
@@ -149,6 +169,8 @@ CONTAINS
     dsl4jsb_Def_memory(CLIMBUF_)   !< Memory of the climate buffer process
     dsl4jsb_Def_memory(A2L_)       !< Memory for atmospheric variables for the land
     dsl4jsb_Def_memory(SEB_)       !< Memory of surface energy balance process
+    dsl4jsb_Def_memory(HYDRO_)     !< Memory of the hydrology process (soil water, added 2026-10-01)
+    dsl4jsb_Def_memory(RAD_)       !< Memory of the radiation process (net shortwave, added 2026-10-01)
 
     ! Declare pointers to variables in climbuf memory
     dsl4jsb_Real2D_onChunk :: temp_sum_day       !< Current temperature sum of the day [K]
@@ -174,6 +196,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: mat_prev_year      !< Previous-year mean air temperature [K]
     dsl4jsb_Real2D_onChunk :: map_prev_year      !< Previous-year total precipitation [kg m-2]
     dsl4jsb_Real2D_onChunk :: max_mmtemp_prev_year !< Previous-year warmest monthly mean temperature [K]
+    dsl4jsb_Real2D_onChunk :: rel_hum_sum_year     !< Current annual integral of air relative humidity [% s]
+    dsl4jsb_Real2D_onChunk :: soil_moist_sum_year  !< Current annual integral of volumetric soil water [m3 m-3 s]
+    dsl4jsb_Real2D_onChunk :: sw_net_sum_year      !< Current annual integral of net surface shortwave [J m-2]
+    dsl4jsb_Real2D_onChunk :: time_sum_year_ext    !< Current accumulated time of the three integrals [s]
+    dsl4jsb_Real2D_onChunk :: min_mmtemp_prev_year !< Previous-year coldest monthly mean temperature [K]
+    dsl4jsb_Real2D_onChunk :: reh_prev_year        !< Previous-year mean air relative humidity [%]
+    dsl4jsb_Real2D_onChunk :: soil_moist_prev_year !< Previous-year mean volumetric soil water 0-1 m [m3 m-3]
+    dsl4jsb_Real2D_onChunk :: nswr_prev_year       !< Previous-year mean net surface shortwave radiation [W m-2]
+    dsl4jsb_Real2D_onChunk :: sw_srf_net           !< Net surface shortwave radiation [W m-2]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl          !< Water content of soil layers [m]
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl          !< Ice content of soil layers [m]
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl        !< Soil thickness above bedrock in each layer [m]
 
     ! Declare pointers to variables in foreign memory
     dsl4jsb_Real2D_onChunk :: t_air              !< Near surface air temperature [K]
@@ -236,6 +270,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,mat_prev_year)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,map_prev_year)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_prev_year)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,rel_hum_sum_year)       ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,soil_moist_sum_year)    ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,sw_net_sum_year)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,time_sum_year_ext)      ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_prev_year)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,reh_prev_year)          ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,soil_moist_prev_year)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,nswr_prev_year)         ! inout
 
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
@@ -269,6 +311,50 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! ---- Inputs of the four added annual predictors (Author: Dr. Sri Nandini-Weiß, 2026-10-01)
+    ! Reh: relative humidity with respect to the AIR temperature t_air, as the station-based
+    !   CRU CL 2.0 humidity used in the regressions (New et al. 2002); q_rel_air above is
+    !   taken with respect to the surface temperature t_unfilt and is left unchanged.
+    ! SoilMoist: (liquid + ice) water per soil volume, averaged over 0-1 m and weighted by
+    !   the soil thickness of each layer inside 0-1 m, as the ERA5-Land predictor
+    !   (0.07 swvl1 + 0.21 swvl2 + 0.72 swvl3, layers 0-7, 7-28, 28-100 cm). Rock below
+    !   the soil depth is excluded. Cells without soil get 0 and are skipped by TRAIT.
+    ! NSWR: net surface shortwave radiation of the RAD process, as ERA5-Land ssr.
+    ! CLIMBUF runs before HYDRO and RAD in the task queue, so both inputs are those of the
+    !   previous time step; for an annual mean this shifts one step of 8760 or more.
+    ALLOCATE (q_rel_air_t(nc), soil_moist(nc), sw_net(nc))
+    DO ic = 1, nc
+      q_rel_air_t(ic) = get_relative_humidity_air(q_air(ic), t_air(ic), press_srf(ic), use_tmx)
+    END DO
+    soil_moist(:) = 0._wp
+    sw_net(:)     = 0._wp
+    IF (tile%Has_process_memory(RAD_)) THEN
+      dsl4jsb_Get_memory(RAD_)
+      dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! in
+      sw_net(:) = sw_srf_net(:)
+    END IF
+    IF (tile%contains_soil .AND. tile%Has_process_memory(HYDRO_)) THEN
+      dsl4jsb_Get_memory(HYDRO_)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)            ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)            ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)          ! in
+      soil_w => Get_vgrid('soil_depth_water')
+      nsoil  = soil_w%n_levels
+      DO ic = 1, nc
+        w_sum = 0._wp
+        d_sum = 0._wp
+        DO is = 1, nsoil
+          z_top  = soil_w%lbounds(is)
+          z_soil = MAX(0._wp, MIN(z_top + soil_depth_sl(ic,is), soil_moist_depth) - z_top)
+          IF (z_soil > 0._wp .AND. soil_depth_sl(ic,is) > 0._wp) THEN
+            w_sum = w_sum + (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)) / soil_depth_sl(ic,is) * z_soil
+            d_sum = d_sum + z_soil
+          END IF
+        END DO
+        IF (d_sum > 0._wp) soil_moist(ic) = w_sum / d_sum
+      END DO
+    END IF
+
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
       &               rain, snow, wind_10m, q_rel_air, seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
@@ -276,10 +362,15 @@ CONTAINS
       &               temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
       &               gdd_sum_year, gdd_prev_year, max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &               q_rel_air_14d, q_rel_air_14d_yDay, temp_sum_year, time_sum_year, precip_sum_year, &
-      &               mat_prev_year, map_prev_year, max_mmtemp_prev_year)
+      &               mat_prev_year, map_prev_year, max_mmtemp_prev_year, &
+      &               q_rel_air_t, soil_moist, sw_net, &
+      &               rel_hum_sum_year, soil_moist_sum_year, sw_net_sum_year, &
+      &               time_sum_year_ext, min_mmtemp_prev_year, reh_prev_year, &
+      &               soil_moist_prev_year, nswr_prev_year)
 
     !$ACC END DATA
     DEALLOCATE (q_rel_air)
+    DEALLOCATE (q_rel_air_t, soil_moist, sw_net)
 
   END SUBROUTINE update_climbuf
 
@@ -340,6 +431,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, mat_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, map_prev_year, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CLIMBUF_, max_mmtemp_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, rel_hum_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, soil_moist_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, sw_net_sum_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, time_sum_year_ext, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, min_mmtemp_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, reh_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, soil_moist_prev_year, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CLIMBUF_, nswr_prev_year, weighted_by_fract)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(TRIM(routine), 'Finished.')
 

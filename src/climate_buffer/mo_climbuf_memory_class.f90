@@ -72,7 +72,19 @@ MODULE mo_climbuf_memory_class
     & precip_sum_year,          & !< Current annual precipitation accumulation [kg m-2]
     & mat_prev_year,            & !< Previous-year mean air temperature [K]
     & map_prev_year,            & !< Previous-year total precipitation [kg m-2]
-    & max_mmtemp_prev_year        !< Previous-year warmest monthly mean temperature [K]
+    & max_mmtemp_prev_year,     & !< Previous-year warmest monthly mean temperature [K]
+    ! Four further previous-year predictors of the Verheijen et al. (2013) trait-climate
+    !   relationships (Table 3 of manuscript 1), so that TRAIT can evaluate all seven.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-10-01
+    & rel_hum_sum_year,         & !< Current annual integral of air relative humidity [% s]
+    & soil_moist_sum_year,      & !< Current annual integral of volumetric soil water, 0-1 m [m3 m-3 s]
+    & sw_net_sum_year,          & !< Current annual integral of net surface shortwave radiation [J m-2]
+    & time_sum_year_ext,        & !< Current accumulated time of the three integrals above [s]
+    & min_mmtemp_prev_year,     & !< Previous-year coldest monthly mean temperature [K]
+    & reh_prev_year,            & !< Previous-year mean air relative humidity [%]
+    & soil_moist_prev_year,     & !< Previous-year mean volumetric soil water, 0-1 m [m3 m-3]
+    & nswr_prev_year              !< Previous-year mean net surface shortwave radiation [W m-2]
 
   CONTAINS
     PROCEDURE :: Init => Init_climbuf_memory
@@ -302,6 +314,70 @@ CONTAINS
     ! The original CLIMBUF implementation is preserved in Git commit
     ! 3aec7fd132d4ef193169d78967b4d18a36a662fe.
 
+
+    ! Accumulators and previous-year values of the four added predictors. All are
+    !   restart variables, so an annual mean is never split by a restart.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-10-01
+    CALL mem%Add_var('rel_hum_sum_year', mem%rel_hum_sum_year,                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('rel_hum_sum_year', '% s', 'Current annual integral of air relative humidity'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('soil_moist_sum_year', mem%soil_moist_sum_year,                      &
+      & hgrid, surface,                                                                   &
+      & t_cf('soil_moist_sum_year', 'm3 m-3 s', 'Current annual integral of volumetric soil water 0-1 m'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('sw_net_sum_year', mem%sw_net_sum_year,                              &
+      & hgrid, surface,                                                                   &
+      & t_cf('sw_net_sum_year', 'J m-2', 'Current annual integral of net surface shortwave radiation'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('time_sum_year_ext', mem%time_sum_year_ext,                          &
+      & hgrid, surface,                                                                   &
+      & t_cf('time_sum_year_ext', 's', 'Accumulated time of the added annual integrals'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('min_mmtemp_prev_year', mem%min_mmtemp_prev_year,                    &
+      & hgrid, surface,                                                                   &
+      & t_cf('min_mmtemp_prev_year', 'K', 'Previous-year coldest monthly mean temperature'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('reh_prev_year', mem%reh_prev_year,                                  &
+      & hgrid, surface,                                                                   &
+      & t_cf('reh_prev_year', '%', 'Previous-year mean air relative humidity'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('soil_moist_prev_year', mem%soil_moist_prev_year,                    &
+      & hgrid, surface,                                                                   &
+      & t_cf('soil_moist_prev_year', 'm3 m-3', 'Previous-year mean volumetric soil water 0-1 m'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp)
+
+    CALL mem%Add_var('nswr_prev_year', mem%nswr_prev_year,                                &
+      & hgrid, surface,                                                                   &
+      & t_cf('nswr_prev_year', 'W m-2', 'Previous-year mean net surface shortwave radiation'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=0.0_wp)
   END SUBROUTINE Init_climbuf_memory
 
 #endif

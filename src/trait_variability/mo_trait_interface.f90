@@ -89,6 +89,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: mat_prev_year_climbuf
     dsl4jsb_Real2D_onChunk :: map_prev_year_climbuf
     dsl4jsb_Real2D_onChunk :: max_mmtemp_prev_year_climbuf
+    ! The four added previous-year predictors (Author: Dr. Sri Nandini-Weiß, 2026-10-01)
+    dsl4jsb_Real2D_onChunk :: min_mmtemp_prev_year_climbuf
+    dsl4jsb_Real2D_onChunk :: reh_prev_year_climbuf
+    dsl4jsb_Real2D_onChunk :: soil_moist_prev_year_climbuf
+    dsl4jsb_Real2D_onChunk :: nswr_prev_year_climbuf
 
     dsl4jsb_Real2D_onChunk :: pft13_vcmax25_raw
     dsl4jsb_Real2D_onChunk :: pft13_vcmax25_pred
@@ -146,12 +151,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, mat_prev_year, climbuf)
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, map_prev_year, climbuf)
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_mmtemp_prev_year, climbuf)
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, min_mmtemp_prev_year, climbuf)
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, reh_prev_year, climbuf)
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, soil_moist_prev_year, climbuf)
+    dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, nswr_prev_year, climbuf)
 
     CALL calc_trait_diagnostics(                        &
       & lib_id,                                         &
       & mat_prev_year_climbuf,                          &
       & map_prev_year_climbuf,                          &
+      & min_mmtemp_prev_year_climbuf,                   &
       & max_mmtemp_prev_year_climbuf,                   &
+      & reh_prev_year_climbuf,                          &
+      & soil_moist_prev_year_climbuf,                   &
+      & nswr_prev_year_climbuf,                         &
       & pft13_vcmax25_raw, pft13_vcmax25_pred,         &
       & pft13_jmax25_raw, pft13_jmax25_pred,           &
       & pft13_sla_raw, pft13_sla_pred,                 &
