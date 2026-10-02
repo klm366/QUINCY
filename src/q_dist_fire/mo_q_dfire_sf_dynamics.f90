@@ -138,7 +138,7 @@ CONTAINS
 
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
 
-    TYPE(t_sf_dynamics)                   :: sf_spitfire
+    TYPE(t_sf_dynamics)                   :: sf_dynamics
 
     INTEGER                               :: nr_of_children
 
@@ -410,31 +410,31 @@ CONTAINS
                         veg_cover_frac, & ! soil properties
                         nesterov_index, & ! dryness
                         fuel_moisture_all, &
-                        sf_spitfire, &
+                        sf_dynamics, &
                         mask=mask_is_tile_enabled)
 
     IF (dsl4jsb_Config(Q_DFIRE_SF_)%has_diagnostics) THEN
-      CALL run_diagnostics_at_tile(nc, iblk, burnable_area_ha, sf_spitfire)
+      CALL run_diagnostics_at_tile(nc, iblk, burnable_area_ha, sf_dynamics)
     ENDIF
 
-    dead_fuel_consumption_1hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1hr_idx)
-    dead_fuel_consumption_10hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
-    dead_fuel_consumption_100hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_100hr_idx)
-    dead_fuel_consumption_1000hr = sf_spitfire % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
+    dead_fuel_consumption_1hr = sf_dynamics % fc_dead_cls(:,:,df_sf_fc_1hr_idx)
+    dead_fuel_consumption_10hr = sf_dynamics % fc_dead_cls(:,:,df_sf_fc_10hr_idx)
+    dead_fuel_consumption_100hr = sf_dynamics % fc_dead_cls(:,:,df_sf_fc_100hr_idx)
+    dead_fuel_consumption_1000hr = sf_dynamics % fc_dead_cls(:,:,df_sf_fc_1000hr_idx)
 
     !< Ignitions into process memory
 
-    dead_frac_consumption = sf_spitfire % dead_frac_consump
-    i_surface = sf_spitfire % i_surface
-    mask_is_fire_intense_enough = logical2real(sf_spitfire % is_fire_intense_enough)
-    area_burned_fract = sf_spitfire % area_burned_fract
-    area_burned = sf_spitfire % area_burned
-    area_burned_fract_output = sf_spitfire % area_burned_fract / dtime !< to seconds
-    area_burned_output = sf_spitfire % area_burned / dtime !< to seconds
+    dead_frac_consumption = sf_dynamics % dead_frac_consump
+    i_surface = sf_dynamics % i_surface
+    mask_is_fire_intense_enough = logical2real(sf_dynamics % is_fire_intense_enough)
+    area_burned_fract = sf_dynamics % area_burned_fract
+    area_burned = sf_dynamics % area_burned
+    area_burned_fract_output = sf_dynamics % area_burned_fract / dtime !< to seconds
+    area_burned_output = sf_dynamics % area_burned / dtime !< to seconds
 
-    fdi = sf_spitfire % fdi ! todo: define as pointer
+    fdi = sf_dynamics % fdi ! todo: define as pointer
 
-    frac_consump_fcl = sf_spitfire % dead_frac_consump
+    frac_consump_fcl = sf_dynamics % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
 #endif
@@ -554,11 +554,11 @@ CONTAINS
       tot_live_fuel_tree = SUM(SUM(sf_fuel_load%live_tree_fuel_fcl, DIM=3), DIM=2)
 
       CALL calc_sf_dynamics_for_oberhagemann(nc, &
-          df_sf_sigma_dd_nr, & ! all dead fuel classes
-          df_sf_sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
-          df_sf_sigma_lv_nr, & ! live fuel classes
-          df_alphas_dead, &
-          df_sigmas_dead, df_sigmas_live, &
+          fuel_moisture%sigma_dd_nr, & ! all dead fuel classes
+          fuel_moisture%sigma_dd_ros_nr, & ! dead fuel classes involved in fire spread
+          fuel_moisture%sigma_lv_nr, & ! live fuel classes
+          fuel_moisture%alphas_dead, &
+          fuel_moisture%sigmas_dead, fuel_moisture%sigmas_live, &
           nesterov_index, &
           sf_ros % fbd, &
           fuel_moisture%moisture_extinction, &
