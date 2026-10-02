@@ -495,13 +495,9 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(nc)
 
     ! locals
-    REAL(wp)                :: w_oi(nc,df_sf_fc_spread_nr)      !< Dead fuel by spread fuel classes (litter only)  [g DM m-2]
-    REAL(wp), ALLOCATABLE   :: dry_lvg(:,:)                     !< Dry live grass, considered dead fuel [g DM m-2] (#nc,#livegrass fuel pools, #fuel classes)
-    REAL(wp)                :: tot_lvg_fuel(nc)                 !< Total livegrass fuel [g DM m-2]
     INTEGER                 :: ndeadpools
     LOGICAL                 :: has_dead_fuel(nc)                !< True = dead fuel
     LOGICAL                 :: has_fire_conditions(nc)          !< 1, 10, 100 and 1000 hours
-    REAL(wp)                :: tot_lvt_fuel(nc)                 !< Total amount of live tree fuel [g DM m-2]
 
     !< Thonicke related
     REAL(wp), ALLOCATABLE   :: dead_fuel_litter(:,:)            !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
@@ -511,8 +507,6 @@ CONTAINS
 
     !< ROS related
     REAL(wp)                :: u_f_wind(nc)                     !< Wind speed at vegetation cover [m min-1]
-
-    INTEGER                 :: i, j                             !< loop indices
 
     ndeadpools = SIZE(sf_fuel_load%dead_fuel_fcl, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
