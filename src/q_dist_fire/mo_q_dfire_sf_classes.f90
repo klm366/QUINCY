@@ -21,12 +21,13 @@ MODULE mo_q_dfire_sf_classes
 
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_q_dfire_sf_adaptor_class,  ONLY: sf_convert_units
+  USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort, &
-            t_sf_atm
+            t_sf_atm, t_sf_fuel_load
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -157,7 +158,24 @@ MODULE mo_q_dfire_sf_classes
   INTERFACE t_sf_mf
     MODULE PROCEDURE :: create_t_sf_mf
   END INTERFACE
-CONTAINS
+
+
+  !< Fuel load
+  TYPE :: t_sf_fuel_load
+    INTEGER :: nc
+    INTEGER :: nfcl
+    INTEGER :: nddpools, nlvpools
+    REAL(wp), ALLOCATABLE :: dead_fuel_fcl(:,:,:) !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: cured_live_grass_fuel_fcl(:,:,:) !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: live_grass_fuel_fcl(:,:,:) !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), ALLOCATABLE :: live_tree_fuel_fcl(:,:,:) !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+  END TYPE t_sf_fuel_load
+
+  INTERFACE t_sf_fuel_load
+    MODULE PROCEDURE :: create_sf_fuel_load
+  END INTERFACE
+
+  CONTAINS
 
 
   ! ======================================================================================================= !
@@ -413,5 +431,51 @@ CONTAINS
     lfmc % b = lctlib%q_lfmc_b
     lfmc % c = lctlib%q_lfmc_c
   END FUNCTION create_lfmc_from_lctlib
+
+
+  ! ======================================================================================================= !
+  !>
+  !> t_sf_fuel_load: initialize and rebuild fuel load
+  !>
+  FUNCTION create_sf_fuel_load(nc, ndd, nlv, nfcl, &
+                              dead_fuel_1hr, dead_fuel_10hr, dead_fuel_100hr, dead_fuel_1000hr, &
+                              live_tree_fuel_1hr, live_tree_fuel_10hr, live_tree_fuel_100hr, live_tree_fuel_1000hr, &
+                              live_grass_fuel_1hr, cured_live_grass_fuel_1hr) RESULT (sf_fuel_load)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: ndd, nlv !< number of dead/live pools
+    INTEGER, INTENT(in) :: nfcl !< number of fuel classes
+
+    REAL(wp), INTENT(in) :: dead_fuel_1hr(:,:), dead_fuel_10hr(:,:), dead_fuel_100hr(:,:), dead_fuel_1000hr(:,:) !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in) :: live_tree_fuel_1hr(:,:), live_tree_fuel_10hr(:,:), live_tree_fuel_100hr(:,:), live_tree_fuel_1000hr(:,:) !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in) :: live_grass_fuel_1hr(:,:) !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+    REAL(wp), INTENT(in) :: cured_live_grass_fuel_1hr(:,:) !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+
+    TYPE(t_sf_fuel_load) :: sf_fuel_load
+
+    sf_fuel_load%nc = nc
+    sf_fuel_load%nddpools = ndd
+    sf_fuel_load%nlvpools = nlv
+    sf_fuel_load%nfcl = nfcl
+
+    ALLOCATE(sf_fuel_load%dead_fuel_fcl(nc, ndd, nfcl))
+    ALLOCATE(sf_fuel_load%cured_live_grass_fuel_fcl(nc, ndd, nfcl))
+    ALLOCATE(sf_fuel_load%live_grass_fuel_fcl(nc, nlv, nfcl))
+    ALLOCATE(sf_fuel_load%live_tree_fuel_fcl(nc, nlv, nfcl))
+
+    sf_fuel_load%cured_live_grass_fuel_fcl = 0.0_wp
+    sf_fuel_load%live_grass_fuel_fcl = 0.0_wp
+
+    ! rebuild fuel variables
+    sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr ! dead fuel
+    sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr
+    sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr
+    sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr
+    sf_fuel_load%live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr ! live grass fuel
+    sf_fuel_load%cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = cured_live_grass_fuel_1hr ! cured live grass fuel
+    sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr ! live tree fuel
+    sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr
+    sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr
+    sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr
+  END FUNCTION create_sf_fuel_load
 #endif
 END MODULE mo_q_dfire_sf_classes

@@ -72,7 +72,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
   USE mo_q_dfire_sf_ros_thon_class,     ONLY: sf_calc_rate_of_spread_thon
   USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober, calc_live_me
-  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf, t_sf_atm
+  USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf, t_sf_atm, t_sf_fuel_load
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
 
@@ -134,15 +134,7 @@ CONTAINS
     TYPE(t_sf_atm)                        :: sf_atm                                       !< Atmosphere related variables / Weather
     TYPE(t_sf_ignitions)                  :: sf_ignitions                                 !< Ignition variables
     TYPE(t_sf_ros)                        :: sf_ros                                       !< Rate of spread
-
-    !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
-    !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: live_grass_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
-    !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: cured_live_grass_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr)
-    !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp)                              :: live_tree_fuel_fcl(options%nc,sf_fuel_live_fuel_nr,df_sf_fc_full_nr)
+    TYPE(t_sf_fuel_load)                  :: sf_fuel_load                                 !< Fuel load
 
     REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
 
@@ -347,22 +339,6 @@ CONTAINS
 
     no_children = tile%Get_no_of_children()
 
-    !< Init variables
-    live_grass_fuel_fcl = 0._wp
-    cured_live_grass_fuel_fcl = 0._wp
-
-    ! rebuild fuel variables
-    dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp ! dead fuel
-    dead_fuel_fcl(:,:,df_sf_fc_10hr_idx) = dead_fuel_10hr_dfp
-    dead_fuel_fcl(:,:,df_sf_fc_100hr_idx) = dead_fuel_100hr_dfp
-    dead_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = dead_fuel_1000hr_dfp
-    live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_grass_fuel_1hr_lfp ! live grass fuel
-    cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx) = cured_live_grass_fuel_1hr_dfp ! cured live grass fuel
-    live_tree_fuel_fcl(:,:,df_sf_fc_1hr_idx) = live_tree_fuel_1hr_lfp ! live tree fuel
-    live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr_lfp
-    live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr_lfp
-    live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr_lfp
-
     !< Init variables (set output variables to 0)
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
@@ -389,6 +365,12 @@ CONTAINS
     burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
+
+    sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
+                    dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
+                    live_tree_fuel_1hr_lfp, live_tree_fuel_10hr_lfp, live_tree_fuel_100hr_lfp, live_tree_fuel_1000hr_lfp, &
+                    live_grass_fuel_1hr_lfp, &
+                    cured_live_grass_fuel_1hr_dfp)
 
     sf_ros = t_sf_ros(nc, fuel_bulk_density, & ! in
                              ros_f, ros_b, & ! inout
@@ -420,8 +402,7 @@ CONTAINS
                         ab_moisture, & ! fuel moisture related
                         lvg_moisture, & ! fuel moisture related
                         burnable_area_ha, & ! soil properties
-                        dead_fuel_fcl, cured_live_grass_fuel_fcl, & ! t_sf_fuel_load
-                        live_grass_fuel_fcl, live_tree_fuel_fcl, & ! t_sf_fuel_load
+                        sf_fuel_load, &
                         sf_atm, & ! weather
                         sf_ros, & ! rate of spread
                         veg_cover_frac, & ! soil properties
@@ -474,7 +455,7 @@ CONTAINS
                   ab_moisture, &
                   lvg_moisture, &
                   grid_cell_area, & ! fuel properties
-                  dead_fuel, cured_live_grass_fuel, live_grass_fuel, live_tree_fuel, & ! fuels
+                  sf_fuel_load, &
                   sf_atm, & ! weather
                   sf_ros, & ! rate of spread -inout-
                   veg_cover_frac, & ! in
@@ -507,11 +488,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: grid_cell_area(nc)                    !< Gridcell area [ha]
 
-    REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)                      !< Dead fuel (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: cured_live_grass_fuel(:,:,:)          !< Cured live grass fuel -considered as dead- (#nc,#dead fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: live_grass_fuel(:,:,:)                !< Live grass fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), INTENT(in)  :: live_tree_fuel(:,:,:)                 !< Live tree fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-
+    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load               !< Fuel load
     TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
 
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
@@ -547,7 +524,7 @@ CONTAINS
 
     INTEGER                 :: i, j                             !< loop indices
 
-    ndeadpools = SIZE(dead_fuel, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
+    ndeadpools = SIZE(sf_fuel_load%dead_fuel_fcl, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
       mask_tile_enabled = mask
@@ -556,7 +533,7 @@ CONTAINS
     !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
     !< fire spread depends on dead fuel availability. If there is no dead fuel,
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
-    has_dead_fuel = sf_calc_has_any_fuel(dead_fuel(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
+    has_dead_fuel = sf_calc_has_any_fuel(sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
@@ -572,9 +549,9 @@ CONTAINS
 
     !> Fuel moisture and ROS
     u_f_wind = lctlib_fwd_wind_factor * sf_atm%wind_sf
-    dead_fuel_litter = SUM(dead_fuel(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
+    dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    tot_dead_fuel_grass = SUM(cured_live_grass_fuel(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
+    tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
@@ -592,7 +569,7 @@ CONTAINS
       ALLOCATE(fuel_moisture_ober)
       fuel_moisture_ober = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
 
-      tot_live_fuel_tree = SUM(SUM(live_tree_fuel, DIM=3), DIM=2)
+      tot_live_fuel_tree = SUM(SUM(sf_fuel_load%live_tree_fuel_fcl, DIM=3), DIM=2)
 
       CALL calc_sf_dynamics_for_oberhagemann(nc, &
           df_sf_sigma_dd_nr, & ! all dead fuel classes
@@ -668,7 +645,7 @@ CONTAINS
     !< See mo_q_dfire_sf_fuel_consumption_class.f90 for furter details.
     spitfire % fc_dead_cls = sf_calc_dead_fuel_consumption(spitfire % area_burned_fract, &
                                                       spitfire % dead_frac_consump, &
-                                                      dead_fuel, mask=has_fire_conditions)
+                                                      sf_fuel_load%dead_fuel_fcl, mask=has_fire_conditions)
 
     !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
     !< rate of spread and burned area fraction (Sec. 2.2.5).
