@@ -150,7 +150,7 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread_ober(nc, ndd, nlv, &
+  SUBROUTINE sf_calc_rate_of_spread_ober(nc, ndd, nlv, &
                                   sigmas_dd, sigmas_lv, &
                                   woi_dd, woi_lv, &
                                   mf_dd, mf_lv, &
@@ -158,7 +158,8 @@ CONTAINS
                                   fbd, &
                                   u_f_wind, &
                                   fm_weighted, &
-                                  mask) RESULT(ros)
+                                  mask, &
+                                  ros)
     INTEGER, INTENT(in) :: nc
     !< number of dead fuel classes (1h, 10hrs, 100 hrs, dry livegrass)
     !< number of live fuel classes (wet livegrass, woody)
@@ -171,7 +172,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
     REAL(wp), INTENT(out) :: fm_weighted(nc) !< Fuel moisture weighted over all fuel classes [%]
     LOGICAL, INTENT(in)  :: mask(nc)
-    TYPE(t_sf_ros)       :: ros !< Output: rate of spread [m min-1]
+    TYPE(t_sf_ros), INTENT(inout) :: ros !< Output: rate of spread [m min-1]
 
     INTEGER :: ic
     REAL(wp) :: u_forward(nc)
@@ -212,7 +213,6 @@ CONTAINS
     phi_s = 0._wp
     heat_source = 0._wp
     ros_forward = 0._wp
-    ros = t_sf_ros(nc)
     xi = 0._wp
 
     !< Corrections from Oberhagemann et al. (2025)
@@ -311,7 +311,7 @@ CONTAINS
     ros%mineral_damp_coeff = df_sf_mineral_damp_coeff
     fm_weighted = mf%total
 
-  END FUNCTION sf_calc_rate_of_spread_ober
+  END SUBROUTINE sf_calc_rate_of_spread_ober
 
 
   ! ======================================================================================================= !

@@ -30,6 +30,7 @@ MODULE mo_q_dfire_sf_classes
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
+  !< Atmosphere related variables
   TYPE :: t_sf_atm
     !< To spitfire units
     REAL(wp), ALLOCATABLE :: t_air_min_c(:) ! [C]

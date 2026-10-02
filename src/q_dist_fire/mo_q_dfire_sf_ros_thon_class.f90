@@ -60,8 +60,8 @@ CONTAINS
   !>
   !> Do the science
   !>
-  FUNCTION sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, u_f_wind, moist_extinction, fdi, &
-                                        w_oi, omega_o, mask) RESULT(ros)
+  SUBROUTINE sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, u_f_wind, moist_extinction, fdi, &
+                                        w_oi, omega_o, mask, ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
@@ -72,7 +72,7 @@ CONTAINS
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
     REAL(wp), INTENT(in)                 :: omega_o(nc)                 !< [0 to 1] (#nc)
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
-    TYPE(t_sf_ros)                       :: ros                         !< output [-]
+    TYPE(t_sf_ros), INTENT(INOUT)        :: ros                         !< output [-]
 
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp) :: beta(nc), beta_op(nc)
@@ -82,7 +82,6 @@ CONTAINS
 
     INTEGER :: inc
     ! ----------------------------------------------------------------------------------------------------- !
-    ros = t_sf_ros(nc)
     ros%mean_fire_area = 0._wp
 
     DO inc = 1, nc
@@ -122,7 +121,7 @@ CONTAINS
       END IF ! IF (mask(inc)) THEN
     ENDDO ! DO inc = 1, nc
 
-  END FUNCTION sf_calc_rate_of_spread_thon
+  END SUBROUTINE sf_calc_rate_of_spread_thon
 
 
   ! ======================================================================================================= !
