@@ -390,7 +390,15 @@ CONTAINS
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
-    sf_ros = t_sf_ros(nc)
+    sf_ros = t_sf_ros(nc, fuel_bulk_density, & ! in
+                             ros_f, ros_b, & ! inout
+                             distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
+                             reaction_intensity, prop_flux_ratio, &
+                             wind_factor, eff_heating_number, &
+                             preig_heat, &
+                             opt_react_velo, net_fuel_load, &
+                             moist_damp_coeff, mineral_damp_coeff)
+
     sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
     sf_ignitions = t_sf_ignitions(nc, df_sf_max_density_human_pop, ic_pop_dens, a_nd, a2l_lightning_events, &
                                   e_n_humans, e_n_lightning, e_n_ignitions)
@@ -403,7 +411,7 @@ CONTAINS
 
     CALL calc_sf_dynamics(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, & ! config
                         dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, & ! config
-                        fuel_bulk_density, fwd_wind_factor, & ! ros, ros
+                        fwd_wind_factor, & ! ros, ros
                         sf_ignitions, &
                         df_sf_calorific_heat_content, & ! ros
                         df_sf_isurface_extinc_th, & ! ros
@@ -445,25 +453,6 @@ CONTAINS
 
     ab_moisture_diag(:) =  ab_moisture(:)
 
-    ros_f = sf_ros % ros_forward
-    ros_b = sf_ros % ros_backwards
-
-    mean_fire_area = sf_ros % mean_fire_area
-    fire_duration = sf_ros % fire_duration
-    distance_travelled = sf_ros % distance_travelled
-    l2b_ratio = sf_ros % l2b_ratio
-
-    reaction_intensity(:) = sf_ros % reaction_intensity(:)
-    prop_flux_ratio(:) = sf_ros % prop_flux_ratio(:)
-    wind_factor(:) = sf_ros % wind_factor(:)
-    eff_heating_number(:) = sf_ros % eff_heating_number(:)
-    preig_heat(:) = sf_ros % pre_ign_heat(:)
-
-    opt_react_velo(:) = sf_ros % opt_react_velo(:)
-    net_fuel_load(:) = sf_ros % net_fuel_load(:)
-    moist_damp_coeff(:) = sf_ros % moist_damp_coeff(:)
-    mineral_damp_coeff(:) = sf_ros % mineral_damp_coeff(:)
-
     frac_consump_fcl = sf_spitfire % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
@@ -477,7 +466,7 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_dynamics(nc, nalphas, nfuelclasses, dtime, one_day, & ! in
                   config_ros_model_id, &
-                  lctlib_fuel_bulk_density, lctlib_fwd_wind_factor, &
+                  lctlib_fwd_wind_factor, &
                   sf_ignitions, &
                   const_calorific_heat_content, const_i_surface_thd, &
                   alphas, &
@@ -504,7 +493,6 @@ CONTAINS
 
     INTEGER, INTENT(in)   :: config_ros_model_id                   !< Select ROS implementation
 
-    REAL(wp), INTENT(in)  :: lctlib_fuel_bulk_density(nc)          !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(nc)            !< Forward wind factor [0 to 1]
 
     TYPE(t_sf_ignitions), INTENT(inout)  :: sf_ignitions
@@ -591,7 +579,7 @@ CONTAINS
 
       CALL calc_sf_dynamics_for_thonicke(nc, nalphas, df_sf_fc_spread_nr, &
                                     alphas, &
-                                    lctlib_fuel_bulk_density, &
+                                    sf_ros % fbd, &
                                     u_f_wind, &
                                     nesterov_index, ab_moisture, &
                                     moisture_extinction, &
@@ -613,7 +601,7 @@ CONTAINS
           df_alphas_dead, &
           df_sigmas_dead, df_sigmas_live, &
           nesterov_index, &
-          lctlib_fuel_bulk_density, &
+          sf_ros % fbd, &
           moisture_extinction, &
           u_f_wind, &
           dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)

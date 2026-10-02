@@ -46,25 +46,29 @@ MODULE mo_q_dfire_sf_classes
   !< Rate of spread characteristics type
   TYPE t_sf_ros
     INTEGER               :: nc
-    REAL(wp), ALLOCATABLE :: ros_forward(:)        !< Forward rate of spread of the fire [m min-1]
-    REAL(wp), ALLOCATABLE :: ros_backwards(:)      !< Backwards rate of spread of the fire [m min-1]
-    REAL(wp), ALLOCATABLE :: distance_travelled(:) !< Total distance travelled [m]
-    REAL(wp), ALLOCATABLE :: l2b_ratio(:)          !< length to breadth ratio [0 to 1]
-    REAL(wp), ALLOCATABLE :: fire_duration(:)      !< [min]
-    REAL(wp), ALLOCATABLE :: mean_fire_area(:)     !< [ha]
 
-    REAL(wp), ALLOCATABLE :: reaction_intensity(:) !< I_R: the energy release rate per unit area of fire front [kJ m-2 min-1]
-    REAL(wp), ALLOCATABLE :: prop_flux_ratio(:)    !< the proportion of IR that heats adjacent fuel particles to ignition [-]
-    REAL(wp), ALLOCATABLE :: wind_factor(:)        !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
-    REAL(wp), ALLOCATABLE :: fbd(:)                !< Weighted average across PFT for fuel bulk density [kg m-3]
-    REAL(wp), ALLOCATABLE :: eff_heating_number(:) !< the proportion of a fuel particle that is heated to ...
-                                                   !< the proportion of a fuel particle that is heated to [-]
-    REAL(wp), ALLOCATABLE :: pre_ign_heat(:)       !< the amount of heat required to ignite a given mass of fuel [kJ kg-1]
+    !< input
+    REAL(wp), POINTER :: fbd(:) => NULL()                !< Weighted average across PFT for fuel bulk density [kg m-3]
 
-    REAL(wp), ALLOCATABLE :: opt_react_velo(:)     !< Optimum reaction velocity [min-1]
-    REAL(wp), ALLOCATABLE :: net_fuel_load(:)      !< Amount of fuel after substraction of its mineral content [kg m-2]
-    REAL(wp), ALLOCATABLE :: moist_damp_coeff(:)   !< Moisture dampening coefficient [-]
-    REAL(wp), ALLOCATABLE :: mineral_damp_coeff(:) !< Mineral dampening coefficient [-]
+    !< outputs (intermediate)
+    REAL(wp), POINTER :: ros_forward(:) => NULL()        !< Forward rate of spread of the fire [m min-1]
+    REAL(wp), POINTER :: ros_backwards(:) => NULL()      !< Backwards rate of spread of the fire [m min-1]
+    REAL(wp), POINTER :: distance_travelled(:) => NULL() !< Total distance travelled [m]
+    REAL(wp), POINTER :: l2b_ratio(:) => NULL()          !< length to breadth ratio [0 to 1]
+    REAL(wp), POINTER :: fire_duration(:) => NULL()      !< [min]
+    REAL(wp), POINTER :: mean_fire_area(:) => NULL()     !< [ha]
+
+    REAL(wp), POINTER :: reaction_intensity(:) => NULL() !< I_R: the energy release rate per unit area of fire front [kJ m-2 min-1]
+    REAL(wp), POINTER :: prop_flux_ratio(:) => NULL()    !< the proportion of IR that heats adjacent fuel particles to ignition [-]
+    REAL(wp), POINTER :: wind_factor(:) => NULL()        !< wind_factor is a multiplier that accounts for the effect of wind in increasing the effective value of prop_flux_ratio[-]
+    REAL(wp), POINTER :: eff_heating_number(:) => NULL() !< the proportion of a fuel particle that is heated to ...
+                                                         !< the proportion of a fuel particle that is heated to [-]
+    REAL(wp), POINTER :: pre_ign_heat(:) => NULL()       !< the amount of heat required to ignite a given mass of fuel [kJ kg-1]
+
+    REAL(wp), POINTER :: opt_react_velo(:) => NULL()     !< Optimum reaction velocity [min-1]
+    REAL(wp), POINTER :: net_fuel_load(:) => NULL()      !< Amount of fuel after substraction of its mineral content [kg m-2]
+    REAL(wp), POINTER :: moist_damp_coeff(:) => NULL()   !< Moisture dampening coefficient [-]
+    REAL(wp), POINTER :: mineral_damp_coeff(:) => NULL() !< Mineral dampening coefficient [-]
   END TYPE t_sf_ros
 
   INTERFACE t_sf_ros
@@ -160,29 +164,54 @@ CONTAINS
   !>
   !> Initialize t_sf_ros
   !>
-  FUNCTION create_sf_ros_init(nc) RESULT(sf_ros)
-    INTEGER, INTENT(in)                  :: nc        !< Total number of gridcells
-    TYPE(t_sf_ros)                       :: sf_ros    !< output [-]
+  FUNCTION create_sf_ros_init(nc, fuel_bulk_density, &
+                             ros_forward, ros_backwards, &
+                             distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
+                             reaction_intensity, prop_flux_ratio, &
+                             wind_factor, eff_heating_number, &
+                             pre_ign_heat, &
+                             opt_react_velo, net_fuel_load, &
+                             moist_damp_coeff, mineral_damp_coeff) RESULT(sf_ros)
+    INTEGER, INTENT(in)                  :: nc                      !< Total number of gridcells
+    REAL(wp), POINTER, INTENT(in)        :: fuel_bulk_density(:)    !< Weighted average across PFT for fuel bulk density [kg m-3]
+    REAL(wp), POINTER, INTENT(inout)     :: ros_forward(:)          !<
+    REAL(wp), POINTER, INTENT(inout)     :: ros_backwards(:)        !<
+    REAL(wp), POINTER, INTENT(inout)     :: distance_travelled(:)   !<
+    REAL(wp), POINTER, INTENT(inout)     :: l2b_ratio(:)            !<
+    REAL(wp), POINTER, INTENT(inout)     :: fire_duration(:)        !<
+    REAL(wp), POINTER, INTENT(inout)     :: mean_fire_area(:)       !<
+
+    REAL(wp), POINTER, INTENT(inout)     :: reaction_intensity(:)   !<
+    REAL(wp), POINTER, INTENT(inout)     :: prop_flux_ratio(:)      !<
+    REAL(wp), POINTER, INTENT(inout)     :: wind_factor(:)          !<
+    REAL(wp), POINTER, INTENT(inout)     :: eff_heating_number(:)   !<
+    REAL(wp), POINTER, INTENT(inout)     :: pre_ign_heat(:)         !<
+    REAL(wp), POINTER, INTENT(inout)     :: opt_react_velo(:)       !<
+    REAL(wp), POINTER, INTENT(inout)     :: net_fuel_load(:)        !<
+    REAL(wp), POINTER, INTENT(inout)     :: moist_damp_coeff(:)     !<
+    REAL(wp), POINTER, INTENT(inout)     :: mineral_damp_coeff(:)   !<
+    TYPE(t_sf_ros)                       :: sf_ros                  !< output [-]
     ! ----------------------------------------------------------------------------------------------------- !
     sf_ros%nc = nc
-    ALLOCATE(sf_ros%ros_forward(nc))
-    ALLOCATE(sf_ros%ros_backwards(nc))
-    ALLOCATE(sf_ros%distance_travelled(nc))
-    ALLOCATE(sf_ros%l2b_ratio(nc))
-    ALLOCATE(sf_ros%fire_duration(nc))
-    ALLOCATE(sf_ros%mean_fire_area(nc))
+    sf_ros%fbd => fuel_bulk_density ! input
 
-    ALLOCATE(sf_ros%reaction_intensity(nc))
-    ALLOCATE(sf_ros%prop_flux_ratio(nc))
-    ALLOCATE(sf_ros%wind_factor(nc))
-    ALLOCATE(sf_ros%fbd(nc))
-    ALLOCATE(sf_ros%eff_heating_number(nc))
-    ALLOCATE(sf_ros%pre_ign_heat(nc))
+    ! outputs
+    sf_ros%ros_forward => ros_forward
+    sf_ros%ros_backwards => ros_backwards
+    sf_ros%distance_travelled => distance_travelled
+    sf_ros%l2b_ratio => l2b_ratio
+    sf_ros%fire_duration => fire_duration
+    sf_ros%mean_fire_area => mean_fire_area
 
-    ALLOCATE(sf_ros%opt_react_velo(nc))
-    ALLOCATE(sf_ros%net_fuel_load(nc))
-    ALLOCATE(sf_ros%moist_damp_coeff(nc))
-    ALLOCATE(sf_ros%mineral_damp_coeff(nc))
+    sf_ros%reaction_intensity => reaction_intensity
+    sf_ros%prop_flux_ratio => prop_flux_ratio
+    sf_ros%wind_factor => wind_factor
+    sf_ros%eff_heating_number => eff_heating_number
+    sf_ros%pre_ign_heat => pre_ign_heat
+    sf_ros%opt_react_velo => opt_react_velo
+    sf_ros%net_fuel_load => net_fuel_load
+    sf_ros%moist_damp_coeff => moist_damp_coeff
+    sf_ros%mineral_damp_coeff => mineral_damp_coeff
 
     sf_ros%ros_forward(:) = 0._wp
     sf_ros%ros_backwards(:) = 0._wp
@@ -194,7 +223,6 @@ CONTAINS
     sf_ros%reaction_intensity(:) = 0._wp
     sf_ros%prop_flux_ratio(:) = 0._wp
     sf_ros%wind_factor(:) = 0._wp
-    sf_ros%fbd(:) = 0._wp
     sf_ros%eff_heating_number(:) = 0._wp
     sf_ros%pre_ign_heat(:) = 0._wp
 
