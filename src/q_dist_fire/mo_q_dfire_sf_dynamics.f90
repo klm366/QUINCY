@@ -130,7 +130,7 @@ CONTAINS
 
     REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
-    TYPE(t_sf_mf)                         :: fuel_moisture_ober
+    TYPE(t_sf_mf)                         :: fuel_moisture_all
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_atm)                        :: sf_atm                                       !< Atmosphere related variables / Weather
     TYPE(t_sf_ignitions)                  :: sf_ignitions                                 !< Ignition variables
@@ -367,9 +367,7 @@ CONTAINS
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
 
-    IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-        fuel_moisture_ober = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr)
-    ENDIF
+    fuel_moisture_all = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, fuel_moisture)
 
     sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
                     dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
@@ -412,8 +410,8 @@ CONTAINS
                         sf_ros, & ! rate of spread
                         veg_cover_frac, & ! soil properties
                         nesterov_index, & ! dryness
-                        fuel_moisture, & ! fuel moisture  (thonicke)
-                        fuel_moisture_ober, & ! fuel moisture (oberhagemann)
+                        fuel_moisture_all % omegas_thon, & ! fuel moisture  (thonicke)
+                        fuel_moisture_all, & ! fuel moisture (oberhagemann)
                         sf_spitfire, &
                         mask=mask_is_tile_enabled)
 

@@ -148,7 +148,10 @@ MODULE mo_q_dfire_sf_classes
   END INTERFACE
 
   TYPE :: t_sf_mf !< fuel moisture
-    !< oberhagemann et al. (2025)
+
+    REAL(wp), POINTER :: omegas_thon(:,:) => NULL() !< Fuel moisture for Thonicke (#nc, #omega_nr (omega_o, omega_nl))
+
+    !< Fuel moisture for oberhagemann et al. (2025)
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
     !< Weighted fuel moisture
@@ -405,9 +408,13 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> t_sf_mf fuel moisture constructor (Oberhagemann only)
   !>
-  FUNCTION create_t_sf_mf(nc, ndd, nlv) RESULT (mf)
-    INTEGER, INTENT(in) :: nc, ndd, nlv
+  FUNCTION create_t_sf_mf(nc, ndd, nlv, omegas_thon) RESULT (mf)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: ndd, nlv !< Number of dead and live pools, Oberhagemann only
+    REAL(wp), POINTER :: omegas_thon(:,:) !< omega_o and omega_nl, Thonicke only
     TYPE(t_sf_mf) :: mf
+
+    mf%omegas_thon => omegas_thon
 
     ALLOCATE(mf%dead(nc,ndd))
     ALLOCATE(mf%live(nc,nlv))
