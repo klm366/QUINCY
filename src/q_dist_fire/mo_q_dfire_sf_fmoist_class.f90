@@ -185,14 +185,14 @@ CONTAINS
   !>  - Dead fuel classes (1, 10, 100 and 1000 hours) and dry cured grass
   !>  - Live fuel classes (woody-not yet implemented- and live grass)
   !>
-  FUNCTION calc_sf_fuel_moisture_for_oberhagemann(nc, ndd, nlitros, nlv, &
+  SUBROUTINE calc_sf_fuel_moisture_for_oberhagemann(nc, ndd, nlitros, nlv, &
                                         alphas_dd, &
                                         lvg_moisture, &
                                         dead_fuel_litter, &
                                         dead_fuel_grass, &
                                         nesterov_index, &
-                                        mask) &
-                                        RESULT (mf)
+                                        mask, &
+                                        mf)
     USE mo_q_dfire_sf_constants, ONLY: ix_1hr => df_sf_ix_sigma_dd_1hr, & !< dead fuel moisture indices
                                         ix_10hr => df_sf_ix_sigma_dd_10hr, &
                                         ix_100hr => df_sf_ix_sigma_dd_100hr, &
@@ -211,7 +211,7 @@ CONTAINS
     REAL(wp), INTENT(in)      :: dead_fuel_grass(nc)     !< dead fuel grass [g DM m-2] (#nc)
     REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
     LOGICAL, INTENT(in)       :: mask(nc)
-    TYPE(t_sf_mf) :: mf
+    TYPE(t_sf_mf), INTENT(inout) :: mf
 
     REAL(wp) :: dead_fuel(nc,4) !< [g DM m-2]
     REAL(wp) :: alphas_weighted_ros(nc) !<  [deg C-2]
@@ -219,7 +219,6 @@ CONTAINS
     REAL(wp) :: mf_10hr
     INTEGER :: ic
 
-    mf = t_sf_mf(nc, ndd, nlv)
     dead_fuel(:,ix_1hr:ix_100hr) = dead_fuel_litter
     dead_fuel(:,4)               = dead_fuel_grass
 
@@ -251,7 +250,7 @@ CONTAINS
     ENDDO
     mf%live(:,ix_lvg) = lvg_moisture
     mf%live(:,ix_wdy) = 0._wp !  For later, for shrubs
-  END FUNCTION calc_sf_fuel_moisture_for_oberhagemann
+  END SUBROUTINE calc_sf_fuel_moisture_for_oberhagemann
 
 
   ! ======================================================================================================= !
