@@ -74,6 +74,8 @@ CONTAINS
     & CO2_air,                &
     & co2_dC13,               & ! for optional use with quincy
     & co2_dC14,               & ! for optional use with quincy
+    & CH4_air,                &
+    & O2_air,                 &
     ! For lakes:
     & DEBUG_VAR,              &
     & drag_wtr,               &
@@ -88,7 +90,7 @@ CONTAINS
     & q_bcoef_ice             &
     & )
 
-    USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
+    USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2, molarMassCH4, molarMassO2
     USE mtime,                     ONLY: datetime
     USE mo_time_config,            ONLY: time_config
     USE mo_jsb_time,               ONLY: get_secs_of_day, get_year, is_newyear
@@ -103,7 +105,7 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,   &
-      & CO2_air, co2_dC13, co2_dC14,                                                                               &
+      & CO2_air, co2_dC13, co2_dC14, CH4_air, O2_air,                                                                         &
       & DEBUG_VAR, drag_wtr, drag_ice,                                                                             &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
@@ -147,6 +149,10 @@ CONTAINS
       & cos_zenith_angle_ptr,  &
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
+      & CH4_air_ptr,           &
+      & CH4_air_mol_ptr,       &
+      & O2_air_ptr,            &
+      & O2_air_mol_ptr,        &
       & DEBUG_VAR_ptr,         &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
@@ -270,6 +276,16 @@ CONTAINS
         CO2_mixing_ratio_C13_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C13)
         CO2_mixing_ratio_C14_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio_C14)
       END IF
+    END IF
+
+    IF (PRESENT(CH4_air)) THEN
+      CH4_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CH4_air)
+      CH4_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CH4_air_mol)
+    END IF
+
+    IF (PRESENT(O2_air)) THEN
+      O2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, O2_air)
+      O2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, O2_air_mol)
     END IF
 
     IF (tile_contains_lake) THEN
@@ -489,6 +505,24 @@ CONTAINS
         END IF
       END IF ! IF (model_scheme == MODEL_QUINCY) THEN
     END IF ! IF (PRESENT(CO2_air)) THEN
+
+    IF (PRESENT(CH4_air)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        CH4_air_ptr(i) = CH4_air(i)
+        ! Convert CH4 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+        CH4_air_mol_ptr(i) = CH4_air(i) * molarMassDryAir / molarMassCH4
+      END DO
+    END IF
+
+    IF (PRESENT(O2_air)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO i=1,nc
+        O2_air_ptr(i) = O2_air(i)
+        ! Convert O2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+        O2_air_mol_ptr(i) = O2_air(i) * molarMassDryAir / molarMassO2
+      END DO
+    END IF
 
     !> lakes
     !>

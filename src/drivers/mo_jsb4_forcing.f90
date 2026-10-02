@@ -32,7 +32,7 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc1, rdv
-  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amco2, amd, rvd1, molar_mass_N, molar_mass_P
+  USE mo_jsb_physical_constants, ONLY: grav, tmelt, rd, amd, amco2, amch4, amO2, rvd1, molar_mass_N, molar_mass_P
   USE mo_orbit_solar,            ONLY: inquire_declination
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -85,6 +85,8 @@ MODULE mo_jsb4_forcing
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
   REAL(wp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
   REAL(wp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
+  REAL(wp), PARAMETER :: molarMassCH4_kg = amch4 * 1.e-3_wp   ! 16.042e-3_wp    -  Mass of 1 mol CH4 in kg
+  REAL(wp), PARAMETER :: molarMassO2_kg = amO2 * 1.e-3_wp     ! 31.998e-3_wp    -  Mass of 1 mol O2 in kg
 
   REAL(wp), PARAMETER :: defHeightWind = -1._wp        ! -1: for ECHAM lowest layer values
   REAL(wp), PARAMETER :: defHeightHumidity = -1._wp    ! -1: for ECHAM lowest layer values
@@ -106,6 +108,8 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: shortwave_varname = 'shortwave'
   CHARACTER(len=*), PARAMETER :: longwave_varname = 'longwave'
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
+  CHARACTER(len=*), PARAMETER :: CH4_varname = 'CH4'
+  CHARACTER(len=*), PARAMETER :: O2_varname  = 'O2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
   ! ... c13 and c14 for QUINCY
   CHARACTER(len=*), PARAMETER :: C13_varname = 'C13'
@@ -124,7 +128,7 @@ MODULE mo_jsb4_forcing
   INTEGER,PARAMETER  :: SUBDAILY_ = 2
   INTEGER,PARAMETER  :: CONST_    = 3
   INTEGER,PARAMETER  :: TIMESTEP_ = 4
-  ! additional option for CO2
+  ! additional option for CO2 and CH4
   INTEGER,PARAMETER  :: GHG_SCENARIO_  = 5
 
   ! options controlling atmospheric humidity input data
@@ -153,6 +157,8 @@ MODULE mo_jsb4_forcing
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+    REAL(wp) :: conv_CH4_2_MassRatio           !! Factor for the conversion of CH4 input data to kg(CH4)/kg(dry air)
+    REAL(wp) :: conv_O2_2_MassRatio            !! Factor for the conversion of O2 input data to kg(O2)/kg(dry air)
     REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
@@ -191,6 +197,8 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: shortwave     !! incident shortwave radiation [W/m^2]
      TYPE(input_variable_type) :: longwave      !! incident longwave radiation [W/m^2]
      TYPE(input_variable_type) :: CO2_concentr  !! CO2-concentration [mol(CO2)/mol(air)], [kg(CO2)/kg(dry Air)] or [ppmv]
+     TYPE(input_variable_type) :: CH4_concentr  !! CH4-concentration [mol(CH4)/mol(air)], [kg(CH4)/kg(dry Air)] or [ppmv]
+     TYPE(input_variable_type) :: O2_concentr   !! O2-concentration [mol(O2)/mol(air)],   [kg(O2)/kg(dry Air)]  or [ppmv]
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
@@ -218,7 +226,7 @@ CONTAINS
     & current_datetime, next_datetime,                                                     &
     & elevation, sinlat, coslat, lon, evapo_act2pot_proc,                                  &
     & cos_zenith_angle,                                                                    &  ! in
-    & CO2_air,                                                                             &  ! out
+    & CO2_air, CH4_air, O2_air,                                                            &  ! out
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
     & co2_air_dc13, co2_air_Dc14                                                           )
@@ -239,6 +247,8 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
+    REAL(wp), INTENT(OUT) :: CH4_air(:,:)
+    REAL(wp), INTENT(OUT) :: O2_air(:,:)
     REAL(wp), INTENT(OUT) :: t_air(:,:)
     REAL(wp), INTENT(OUT) :: q_air(:,:)
     REAL(wp), INTENT(OUT) :: rain(:,:)
@@ -299,6 +309,8 @@ CONTAINS
     DO iblk = 1, nblks
       DO ic = 1, nproma
         CO2_air(ic, iblk)           = 0._wp
+        CH4_air(ic, iblk)           = 0._wp
+        O2_air(ic, iblk)            = 0._wp
         t_air(ic, iblk)             = 0._wp
         q_air(ic, iblk)             = 0._wp
         rain(ic, iblk)              = 0._wp
@@ -731,7 +743,7 @@ CONTAINS
 !$OMP END PARALLEL DO
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 8.0 CO2 concentration
+    !> 8.0a CO2 concentration
     !>
     CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
       & forcing_input(model_id)%CO2_concentr, CO2_air)
@@ -743,6 +755,42 @@ CONTAINS
     DO iblk = 1, nblks
       DO ic = 1, nproma
         CO2_air(ic, iblk) = CO2_air(ic, iblk) * forcing_options(model_id)%conv_CO2_2_MassRatio
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 8.0b CH4 concentration
+    !>
+    CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+      & forcing_input(model_id)%CH4_concentr, CH4_air)
+    !$ACC UPDATE DEVICE(CH4_air) ASYNC(1)
+
+    ! and convert to correct unit
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) COPYIN(forcing_options(model_id)) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        CH4_air(ic, iblk) = CH4_air(ic, iblk) * forcing_options(model_id)%conv_CH4_2_MassRatio
+      ENDDO
+    ENDDO
+    !$ACC END PARALLEL LOOP
+!$OMP END PARALLEL DO
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 8.0c O2 concentration
+    !>
+    CALL get_data_and_update_field(startblk, endblk, startidx, endidx, current_datetime, model_id, &
+      & forcing_input(model_id)%O2_concentr, O2_air)
+    !$ACC UPDATE DEVICE(O2_air) ASYNC(1)
+
+    ! and convert to correct unit
+!$OMP PARALLEL DO PRIVATE(ic, iblk)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) COPYIN(forcing_options(model_id)) ASYNC(1)
+    DO iblk = 1, nblks
+      DO ic = 1, nproma
+        O2_air(ic, iblk) = O2_air(ic, iblk) * forcing_options(model_id)%conv_O2_2_MassRatio
       ENDDO
     ENDDO
     !$ACC END PARALLEL LOOP
@@ -874,6 +922,22 @@ CONTAINS
     REAL(wp)               :: forcing_co2_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_co2_unit                 !! Unit of CO2 input (PPMV/MOL_PER_MOL/KG_PER_KG/'')
 
+    CHARACTER(NF90_MAX_NAME) :: forcing_ch4_file_prefix        !! Prefix for files with CH4 data (unit: mol(CH4)/mol(air)
+    !! or kg(CH4)/kg(air) or ppbv, depending on 'forcing_ch4_unit'
+    CHARACTER(len=128)     :: forcing_ch4_frequ                !! Frequency of CH4 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_ch4_const_ch4            !! Constant value for CH4-concentration (unit: mol(CH4)/mol(air) or
+    !! kg(CH4)/kg(air) or ppbv, depending on 'forcing_ch4_unit')
+    REAL(wp)               :: forcing_ch4_ocean                !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_ch4_unit                 !! Unit of CH4 input (PPBV/MOL_PER_MOL/KG_PER_KG/'')
+
+    CHARACTER(NF90_MAX_NAME) :: forcing_o2_file_prefix         !! Prefix for files with O2 data (unit: mol(O2)/mol(air)
+    !! or kg(O2)/kg(air) or %, depending on 'forcing_o2_unit'
+    CHARACTER(len=128)     :: forcing_o2_frequ                 !! Frequency of O2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
+    REAL(wp)               :: forcing_o2_const_o2              !! Constant value for O2-concentration (unit: mol(O2)/mol(air) or
+    !! kg(O2)/kg(air) or %, depending on 'forcing_o2_unit')
+    REAL(wp)               :: forcing_o2_ocean                 !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_o2_unit                  !! Unit of O2 input (%/MOL_PER_MOL/KG_PER_KG/'')
+
     CHARACTER(NF90_MAX_NAME) :: forcing_wind_file_prefix       !! Prefix for files with windspeed data
     CHARACTER(len=128)     :: forcing_wind_frequ               !! Frequency of windspeed forcing data (DAILY/CONST/TIMESTEP)
     REAL(wp)               :: forcing_wind_const_wspeed        !! Constant value for windspeed [m/s]
@@ -909,6 +973,8 @@ CONTAINS
       & forcing_sw_file_prefix, forcing_sw_frequ, forcing_sw_ocean, forcing_sw_unit,                                          &
       & forcing_lw_file_prefix, forcing_lw_frequ, forcing_lw_ocean, forcing_lw_unit,                                          &
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
+      & forcing_ch4_file_prefix, forcing_ch4_frequ, forcing_ch4_const_ch4, forcing_ch4_ocean, forcing_ch4_unit,               &
+      & forcing_o2_file_prefix, forcing_o2_frequ, forcing_o2_const_o2, forcing_o2_ocean, forcing_o2_unit,                   &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
       & forcing_qair_unit,                                                                                                    &
@@ -970,6 +1036,18 @@ CONTAINS
       forcing_co2_const_co2 = 3.67e-4_wp
       forcing_co2_unit = unspecified_exp_unit
       forcing_co2_ocean = 3.67e-4_wp
+
+      forcing_ch4_file_prefix = 'climate_'
+      forcing_ch4_frequ = 'DAILY'
+      forcing_ch4_const_ch4 = 1.885e-6_wp
+      forcing_ch4_unit = unspecified_exp_unit
+      forcing_ch4_ocean = 1.885e-6_wp
+
+      forcing_o2_file_prefix = 'climate_'
+      forcing_o2_frequ = 'DAILY'
+      forcing_o2_const_o2 = 20.946_wp
+      forcing_o2_unit = unspecified_exp_unit
+      forcing_o2_ocean = 20.946_wp
 
       forcing_wind_file_prefix = 'climate_'
       forcing_wind_frequ = 'DAILY'
@@ -1077,6 +1155,38 @@ CONTAINS
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options(model_id)%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
+      ! --- CH4 unit
+      SELECT CASE(TRIM(tolower(forcing_ch4_unit)))
+      CASE("ppbv","1.e-9")
+        CALL message(TRIM(routine),'CH4 forcing in ppbv')
+        forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg * 0.000000001_wp
+      CASE("mol_per_mol", "mol/mol")
+        CALL message(TRIM(routine),'CH4 forcing in mol(CH4)/mol(Dry Air)')
+        forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg
+      CASE("kg_per_kg", "kg/kg")
+        CALL message(TRIM(routine),'CH4 forcing in kg(CH4)/kg(Dry Air)')
+        forcing_options(model_id)%conv_CH4_2_MassRatio = 1.0_wp
+      CASE default
+        CALL message(TRIM(routine),'WARNING: "FORCING_CH4_UNIT" missing in namelist jsb_forcing_nml.')
+        CALL message(TRIM(routine),'Assumption: unit is mol(CH4)/mol(DryAir). Verify your settings!')
+        forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg
+      END SELECT
+      ! --- O2 unit
+      SELECT CASE(TRIM(tolower(forcing_o2_unit)))
+      CASE("%", "1.e-2")
+        CALL message(TRIM(routine),'O2 forcing in %')
+        forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg * 0.01_wp
+      CASE("mol_per_mol", "mol/mol")
+        CALL message(TRIM(routine),'O2 forcing in mol(O2)/mol(Dry Air)')
+        forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg
+      CASE("kg_per_kg", "kg/kg")
+        CALL message(TRIM(routine),'O2 forcing in kg(O2)/kg(Dry Air)')
+        forcing_options(model_id)%conv_O2_2_MassRatio = 1.0_wp
+      CASE default
+        CALL message(TRIM(routine),'WARNING: "FORCING_O2_UNIT" missing in namelist jsb_forcing_nml.')
+        CALL message(TRIM(routine),'Assumption: unit is mol(O2)/mol(DryAir). Verify your settings!')
+        forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg
+      END SELECT
       ! --- get dimensions of CO2 data
       IF (frequency_key_to_constant_val(CO2_varname, forcing_co2_frequ) == GHG_SCENARIO_) THEN
         input_file =  netcdf_open_input(TRIM(forcing_co2_file_prefix))
@@ -1087,6 +1197,27 @@ CONTAINS
         END IF
         CALL input_file%Close()
       END IF
+      ! --- get dimensions of CH4 data
+      IF (frequency_key_to_constant_val(CH4_varname, forcing_ch4_frequ) == GHG_SCENARIO_) THEN
+        input_file =  netcdf_open_input(TRIM(forcing_ch4_file_prefix))
+        IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
+          CALL message(TRIM(routine),'CH4 forcing set to a globally constant value')
+        ELSE
+          CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
+        END IF
+        CALL input_file%Close()
+      END IF
+      ! --- get dimensions of O2 data
+      IF (frequency_key_to_constant_val(O2_varname, forcing_o2_frequ) == GHG_SCENARIO_) THEN
+        input_file =  netcdf_open_input(TRIM(forcing_o2_file_prefix))
+        IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
+          CALL message(TRIM(routine),'O2 forcing set to a globally constant value')
+        ELSE
+          CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
+        END IF
+        CALL input_file%Close()
+      END IF
+      ! --- get dimensions of C13 data
       IF (frequency_key_to_constant_val(C13_varname, forcing_c13_frequ) == GHG_SCENARIO_) THEN
         input_file =  netcdf_open_input(TRIM(forcing_c13_file_prefix))
         IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
@@ -1096,6 +1227,7 @@ CONTAINS
         END IF
         CALL input_file%Close()
       END IF
+      ! --- get dimensions of C14 data
       IF (frequency_key_to_constant_val(C14_varname, forcing_c14_frequ) == GHG_SCENARIO_) THEN
         input_file =  netcdf_open_input(TRIM(forcing_c14_file_prefix))
         IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
@@ -1119,6 +1251,8 @@ CONTAINS
       CALL p_bcast(forcing_options(model_id)%precip_in_mm_per_day, p_io, mpi_comm)
       CALL p_bcast(forcing_options(model_id)%type_of_qair_forcing, p_io, mpi_comm)
       CALL p_bcast(forcing_options(model_id)%conv_CO2_2_MassRatio, p_io, mpi_comm)
+      CALL p_bcast(forcing_options(model_id)%conv_CH4_2_MassRatio, p_io, mpi_comm)
+      CALL p_bcast(forcing_options(model_id)%conv_O2_2_MassRatio, p_io, mpi_comm)
       CALL p_bcast(forcing_options(model_id)%heightWind, p_io, mpi_comm)
       CALL p_bcast(forcing_options(model_id)%heightHumidity, p_io, mpi_comm)
 
@@ -1151,6 +1285,18 @@ CONTAINS
       CALL p_bcast(forcing_co2_const_co2, p_io, mpi_comm)
       CALL p_bcast(forcing_co2_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_co2_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_ch4_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_ch4_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_ch4_const_ch4, p_io, mpi_comm)
+      CALL p_bcast(forcing_ch4_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_ch4_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_o2_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_o2_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_o2_const_o2, p_io, mpi_comm)
+      CALL p_bcast(forcing_o2_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_o2_unit, p_io, mpi_comm)
 
       CALL p_bcast(forcing_c13_file_prefix, p_io, mpi_comm)
       CALL p_bcast(forcing_c13_frequ, p_io, mpi_comm)
@@ -1213,6 +1359,12 @@ CONTAINS
     ! --- CO2
     CALL init_forcing_input_variable(CO2_varname, forcing_co2_frequ, forcing_co2_ocean, &
       & forcing_co2_file_prefix, forcing_co2_unit, forcing_co2_const_co2, forcing_input(model_id)%CO2_concentr)
+    ! --- CH4
+    CALL init_forcing_input_variable(CH4_varname, forcing_ch4_frequ, forcing_ch4_ocean, &
+      & forcing_ch4_file_prefix, forcing_ch4_unit, forcing_ch4_const_ch4, forcing_input(model_id)%CH4_concentr)
+    ! --- O2
+    CALL init_forcing_input_variable(O2_varname, forcing_o2_frequ, forcing_o2_ocean, &
+      & forcing_o2_file_prefix, forcing_o2_unit, forcing_o2_const_o2, forcing_input(model_id)%O2_concentr)
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input(model_id)%wind_speed)
@@ -1357,8 +1509,8 @@ CONTAINS
           CALL p_bcast(hlp_r, p_io, mpi_comm)
         ENDIF
         forcing_input_variable%data_read(:,:,1) = hlp_r(1)
-        WRITE (message_text,*) 'Global GHG scenario value: ', &
-          & forcing_input_variable%data_read(1,1,1)
+        WRITE (message_text,*) 'Global GHG scenario ', TRIM(forcing_input_variable%variable_name), ' value: ', &
+          & forcing_input_variable%data_read(1,1,1), '[', TRIM(forcing_input_variable%expectedUnit), ']'
         CALL message('----- ', message_text)
       ENDIF
 
@@ -1559,9 +1711,10 @@ CONTAINS
     CASE("timestep")
       frequency_key_to_constant_val = TIMESTEP_
     CASE default
-      ! Test for ghg scenario exception for CO2, C13 and C14
+      ! Test for ghg scenario exception for CO2, C13, C14, CH4
       IF (((variable_name == CO2_varname) .OR. (variable_name == C13_varname) .OR. &
-          & (variable_name == C14_varname)) .AND. (TRIM(tolower(forcing_frequ_keyword)) == "ghg_scenario")) THEN
+          & (variable_name == C14_varname) .OR. (variable_name == CH4_varname))    &
+          & .AND. (TRIM(tolower(forcing_frequ_keyword)) == "ghg_scenario")) THEN
         frequency_key_to_constant_val = GHG_SCENARIO_
       ELSE
         CALL finish(TRIM(routine), 'Please specify a valid reading frequency for the variable '//TRIM(variable_name))
@@ -1706,6 +1859,10 @@ CONTAINS
       IF (forcing_input(jg)%wind_speed%input_file%is_open) CALL forcing_input(jg)%wind_speed%input_file%Close()
 
       IF (forcing_input(jg)%CO2_concentr%input_file%is_open) CALL forcing_input(jg)%CO2_concentr%input_file%Close()
+
+      IF (forcing_input(jg)%CH4_concentr%input_file%is_open) CALL forcing_input(jg)%CH4_concentr%input_file%Close()
+
+      IF (forcing_input(jg)%O2_concentr%input_file%is_open) CALL forcing_input(jg)%O2_concentr%input_file%Close()
 
       IF (forcing_input(jg)%C13_concentr%input_file%is_open) CALL forcing_input(jg)%C13_concentr%input_file%Close()
 

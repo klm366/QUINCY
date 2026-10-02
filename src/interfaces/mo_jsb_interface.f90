@@ -113,6 +113,9 @@ CONTAINS
     & CO2_flux,         &
     ! OPTIONAL arguments
     & DEBUG_VAR,        &
+    ! For methane scheme
+    & CH4_air,          &
+    & O2_air,           &
     ! For QUINCY
     & nhx_deposition,         & !< in
     & noy_deposition,         & !< in
@@ -169,6 +172,9 @@ CONTAINS
       & CO2_air           (:)
     REAL(wp), INTENT(in), OPTIONAL :: &
       & DEBUG_VAR         (:), &
+      ! METHANE SCHEME
+      & CH4_air           (:), &
+      & O2_air            (:), &
       ! MODEL_QUINCY
       & nhx_deposition    (:), &
       & noy_deposition    (:), &
@@ -301,6 +307,9 @@ CONTAINS
         & pch                = pch(:),                &
         & cos_zenith_angle   = cos_zenith_angle(:),   &
         & CO2_air            = CO2_air(:),            &
+        ! Need to be implemented on atm side
+        ! & CH4_air            = CH4_air(:),            &
+        ! & O2_air             = O2_air(:),             &
         & DEBUG_VAR          = DEBUG_VAR,             &
         ! For lakes
         & drag_wtr           = drag_wtr,              &
@@ -409,6 +418,8 @@ CONTAINS
     & q_bcoef,          &
     & cos_zenith_angle, &
     & CO2_air,          &
+    & CH4_air,          &
+    & O2_air,           &
     & t_srf,            &
     & t_srf_rad,        &
     & t_srf_eff,        &
@@ -462,6 +473,9 @@ CONTAINS
       ! & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
+    REAL(wp), INTENT(in), OPTIONAL ::   &
+      & CH4_air           (:), &
+      & O2_air            (:)
     REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_srf             (:), &
       & t_srf_rad         (:), &
@@ -534,6 +548,9 @@ CONTAINS
       & q_bcoef            = q_bcoef(:),            &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:)             &
+      ! Need to be implemented on atm side
+      ! & CH4_air            = CH4_air(:),            &
+      ! & O2_air             = O2_air(:)              &
       & )
     NULLIFY(tile)
 
