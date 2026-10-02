@@ -113,7 +113,7 @@ MODULE mo_q_dfire_sf_constants
   ! Kg/m2/s to mm/day units conversion (precipitation)
   INTEGER, PARAMETER :: df_sk_units_kgm2s_to_mmday = 60*60*24         !<
 
-  ! Grams to Kilograms conversions
+  ! Grams to Kilograms conversions (in m-2)
   REAL(wp), PARAMETER :: df_sf_units_g_to_kg = 0.001                  !<
 
   ! Seconds to minutes conversions
