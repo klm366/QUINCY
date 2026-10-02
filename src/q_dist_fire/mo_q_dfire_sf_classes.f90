@@ -77,7 +77,6 @@ MODULE mo_q_dfire_sf_classes
   !<
   TYPE t_sf_dynamics
     REAL(wp), ALLOCATABLE :: fdi(:)                     !< fire danger index [0 to 1]
-    TYPE(t_sf_ros)        :: ros                        !< Rate of spread
 
     REAL(wp), ALLOCATABLE :: area_burned(:)             !< total area burned per unit area [ha ts-1]
     REAL(wp), ALLOCATABLE :: area_burned_fract(:)       !< fraction of area burned per unit area [0 to 1 ts-1]
@@ -250,7 +249,6 @@ CONTAINS
     ALLOCATE(sf_dynamics % is_fire_intense_enough(nc))
 
     sf_dynamics % fdi = 0._wp
-    sf_dynamics % ros = t_sf_ros(nc)
     sf_dynamics % area_burned = 0._wp
     sf_dynamics % area_burned_fract = 0._wp
     sf_dynamics % dead_frac_consump = 0._wp
