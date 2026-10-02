@@ -148,10 +148,24 @@ MODULE mo_q_dfire_sf_classes
   END INTERFACE
 
   TYPE :: t_sf_mf !< fuel moisture
+    REAL(wp), POINTER :: moisture_extinction(:) => NULL()
+    ! REAL(wp), ALLOCATABLE :: val(:) !< TODO, omega_o (thonicke) and val (oberhagemann) shared
 
-    REAL(wp), POINTER :: omegas_thon(:,:) => NULL() !< Fuel moisture for Thonicke (#nc, #omega_nr (omega_o, omega_nl))
+    !< Fuel moisture for Thonicke et al. (2010)
+    INTEGER :: nalphas
+    REAL(wp), ALLOCATABLE :: alphas(:) !< drying parameters
+    REAL(wp), POINTER :: ab_moisture(:) => NULL() !< Above ground relative soil moisture layer [-]
+    REAL(wp), POINTER :: omegas_thon(:,:) => NULL() !< 1 hr fuel moisture mixed with live grass(#nc)
+    !REAL(wp), ALLOCATABLE :: val(:) !< omega_o (mixed -1+lvg,10,100-) ! todo:
 
     !< Fuel moisture for oberhagemann et al. (2025)
+    INTEGER :: sigma_dd_nr
+    INTEGER :: sigma_dd_ros_nr
+    INTEGER :: sigma_lv_nr
+    REAL(wp), ALLOCATABLE :: alphas_dead(:) !<
+    REAL(wp), ALLOCATABLE :: sigmas_dead(:) !<
+    REAL(wp), ALLOCATABLE :: sigmas_live(:) !<
+    REAL(wp), POINTER :: lvg_moisture(:) => NULL() !< livegrass fuel moisture [30% to 250%]
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
     !< Weighted fuel moisture
@@ -159,7 +173,7 @@ MODULE mo_q_dfire_sf_classes
   END TYPE t_sf_mf
 
   INTERFACE t_sf_mf
-    MODULE PROCEDURE :: create_t_sf_mf
+    MODULE PROCEDURE :: create_t_sf_mf, create_new_sf_mf
   END INTERFACE
 
 
@@ -423,6 +437,53 @@ MODULE mo_q_dfire_sf_classes
     mf%live = 0._wp
     mf%val = 0._wp
   END FUNCTION create_t_sf_mf
+
+
+  FUNCTION create_new_sf_mf(nc, & ! core
+                            moisture_extinction, &  ! core
+                            nalphas_thon, alphas_thon, ab_moisture_thon, omegas_thon, &  ! thonicke only
+                            sigma_dd_nr, sigma_dd_ros_nr, sigma_lv_nr, alphas_dead, sigmas_dead, sigmas_live, lvg_moisture &  ! oberhagemann only
+                            ) RESULT (mf)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), POINTER, INTENT(in) :: moisture_extinction(:)
+
+    INTEGER, INTENT(in) :: nalphas_thon
+    REAL(wp), INTENT(in) :: alphas_thon(:)
+    REAL(wp), POINTER, INTENT(in) :: ab_moisture_thon(:)
+    REAL(wp), POINTER, INTENT(inout) :: omegas_thon(:,:) !< omega_o and omega_nl, Thonicke only
+
+    INTEGER, INTENT(in) :: sigma_dd_nr, sigma_dd_ros_nr, sigma_lv_nr
+    REAL(wp), INTENT(in) :: alphas_dead(:)
+    REAL(wp), INTENT(in) :: sigmas_dead(:), sigmas_live(:) !< Number of dead and live pools, Oberhagemann only
+    REAL(wp), POINTER, INTENT(in) :: lvg_moisture(:)
+
+    TYPE(t_sf_mf) :: mf
+
+    mf%moisture_extinction => moisture_extinction
+
+    ! Thonicke et al. (2010)
+    mf%nalphas = nalphas_thon
+    ALLOCATE(mf%alphas, source = alphas_thon)
+    mf%ab_moisture => ab_moisture_thon
+    mf%omegas_thon => omegas_thon
+
+    ! Oberhagemann et al. (2025)
+    mf%sigma_dd_nr = sigma_dd_nr
+    mf%sigma_lv_nr = sigma_lv_nr
+    mf%sigma_dd_ros_nr = sigma_dd_ros_nr
+
+    ALLOCATE(mf%alphas_dead, source = alphas_dead)
+    ALLOCATE(mf%sigmas_dead, source = sigmas_dead)
+    ALLOCATE(mf%sigmas_live, source = sigmas_live)
+    mf%lvg_moisture => lvg_moisture
+
+    ALLOCATE(mf%dead(nc, sigma_dd_nr))
+    ALLOCATE(mf%live(nc, sigma_lv_nr))
+    ALLOCATE(mf%val(nc))
+    mf%dead = 0._wp
+    mf%live = 0._wp
+    mf%val = 0._wp
+  END FUNCTION create_new_sf_mf
 
 
   ! ======================================================================================================= !

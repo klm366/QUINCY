@@ -128,7 +128,6 @@ CONTAINS
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
-    REAL(wp)                              :: ab_moisture(options%nc)                      !< top relative soil moisture layer [-]
 
     TYPE(t_sf_mf)                         :: fuel_moisture_all
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
@@ -344,7 +343,6 @@ CONTAINS
     ab_moisture_diag = 0._wp
     fuel_moisture = 0._wp
     i_surface = 0._wp
-    ab_moisture = 0._wp
     frac_consump_fcl = 0._wp
     area_burned_output = 0._wp
     area_burned_fract_output = 0._wp
@@ -366,8 +364,6 @@ CONTAINS
     burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
     mask_is_tile_enabled = (tile_fract > 0._wp)
 #endif
-
-    fuel_moisture_all = t_sf_mf(nc, df_sf_sigma_dd_nr, df_sf_sigma_lv_nr, fuel_moisture)
 
     sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
                     dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
@@ -391,19 +387,26 @@ CONTAINS
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
-    ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
+    ! todo: change to ab_moisture_diag
+    ab_moisture_diag = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
 
-    CALL calc_sf_dynamics(nc, df_sf_alpha_nr, df_sf_fc_full_nr, dtime, one_day, & ! config
+    fuel_moisture_all = t_sf_mf(nc, moisture_extinction, & ! core
+                                df_sf_alpha_nr, df_sf_alphas, ab_moisture_diag, fuel_moisture, & ! thonicke
+                                df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
+                                df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
+                                lvg_moisture)
+
+    CALL calc_sf_dynamics(nc, fuel_moisture_all%nalphas, df_sf_fc_full_nr, dtime, one_day, & ! config
                         dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, & ! config
                         fwd_wind_factor, & ! ros
                         sf_ignitions, &
                         df_sf_calorific_heat_content, & ! FDI
                         df_sf_isurface_extinc_th, & ! FDI
-                        df_sf_alphas, & ! fuel moisture related
-                        moisture_extinction, & ! fuel moisture related
-                        ab_moisture, & ! fuel moisture related
-                        lvg_moisture, & ! fuel moisture related
+                        fuel_moisture_all%alphas, &
+                        fuel_moisture_all%moisture_extinction, & ! fuel moisture related
+                        fuel_moisture_all%ab_moisture, & ! fuel moisture related
+                        fuel_moisture_all%lvg_moisture, & ! fuel moisture related
                         burnable_area_ha, & ! soil properties
                         sf_fuel_load, &
                         sf_atm, & ! weather
@@ -435,8 +438,6 @@ CONTAINS
     area_burned_output = sf_spitfire % area_burned / dtime !< to seconds
 
     fdi = sf_spitfire % fdi ! todo: define as pointer
-
-    ab_moisture_diag(:) =  ab_moisture(:)
 
     frac_consump_fcl = sf_spitfire % dead_frac_consump
 #ifdef __QUINCY_STANDALONE__
