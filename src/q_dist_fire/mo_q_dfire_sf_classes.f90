@@ -81,16 +81,14 @@ MODULE mo_q_dfire_sf_classes
   !< Move spitfire dynamics data from calc_sf_dynamics <-> update_q_dfire_sf_dynamics subroutines
   !<
   TYPE t_sf_dynamics
-    REAL(wp), ALLOCATABLE :: fdi(:)                     !< fire danger index [0 to 1]
+    REAL(wp), POINTER :: fdi(:) => NULL()                     !< fire danger index [0 to 1]
+    REAL(wp), POINTER :: area_burned(:) => NULL()             !< total area burned per unit area [ha ts-1]
+    REAL(wp), POINTER :: area_burned_fract(:) => NULL()       !< fraction of area burned per unit area [0 to 1 ts-1]
+    REAL(wp), POINTER :: dead_frac_consump(:,:) => NULL()     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
+    REAL(wp), POINTER :: i_surface(:) => NULL()               !< Fire intensity [kW m-1]
 
-    REAL(wp), ALLOCATABLE :: area_burned(:)             !< total area burned per unit area [ha ts-1]
-    REAL(wp), ALLOCATABLE :: area_burned_fract(:)       !< fraction of area burned per unit area [0 to 1 ts-1]
-
-    REAL(wp), ALLOCATABLE :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
-    REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)         !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE :: i_surface(:)               !< Fire intensity [kW m-1]
-
-    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)  !< mask, TRUE= fire intensity is strong enough to exist
+    REAL(wp), ALLOCATABLE :: fc_dead_cls(:,:,:)               !< dead fuel consumption (#nc, #dead pools, #fuels classes) [g DM m-2]
+    LOGICAL, ALLOCATABLE  :: is_fire_intense_enough(:)        !< mask, TRUE= fire intensity is strong enough to exist
   END TYPE t_sf_dynamics
 
   INTERFACE t_sf_dynamics
@@ -297,18 +295,30 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> t_sf_dynamics constructor: Allocate and initialize
   !>
-  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools) RESULT (sf_dynamics)
+  FUNCTION create_sf_dynamics(nc, nfuels, ndeadpools, &
+                              fdi, &
+                              area_burned, area_burned_fract, &
+                              dead_frac_consump, i_surface) &
+                              RESULT (sf_dynamics)
     INTEGER, INTENT(in) :: nc          !< #Gridcells
     INTEGER, INTENT(in) :: nfuels      !< # fuel classes
     INTEGER, INTENT(in) :: ndeadpools  !< # dead fuel pools
+
+    REAL(wp), POINTER, INTENT(in) :: fdi(:)                     !< fire danger index [0 to 1]
+    REAL(wp), POINTER, INTENT(in) :: area_burned(:)             !< total area burned per unit area [ha ts-1]
+    REAL(wp), POINTER, INTENT(in) :: area_burned_fract(:)       !< fraction of area burned per unit area [0 to 1 ts-1]
+    REAL(wp), POINTER, INTENT(in) :: dead_frac_consump(:,:)     !< Dead fraction of consumption (#nc, #fuel classes) [0 to 1]
+    REAL(wp), POINTER, INTENT(in) :: i_surface(:)               !< Fire intensity surface [kW m-1]
+
     TYPE(t_sf_dynamics) :: sf_dynamics !< Output
 
-    ALLOCATE(sf_dynamics % fdi(nc))
-    ALLOCATE(sf_dynamics % area_burned(nc))
-    ALLOCATE(sf_dynamics % area_burned_fract(nc))
-    ALLOCATE(sf_dynamics % dead_frac_consump(nc, nfuels))
+    sf_dynamics % fdi => fdi
+    sf_dynamics % area_burned => area_burned
+    sf_dynamics % area_burned_fract => area_burned_fract
+    sf_dynamics % dead_frac_consump => dead_frac_consump
+    sf_dynamics % i_surface => i_surface
+
     ALLOCATE(sf_dynamics % fc_dead_cls(nc, ndeadpools, nfuels)) ! spitfire dead fuel consumption (fuel classes)
-    ALLOCATE(sf_dynamics % i_surface(nc))
     ALLOCATE(sf_dynamics % is_fire_intense_enough(nc))
 
     sf_dynamics % fdi = 0._wp

@@ -397,6 +397,11 @@ CONTAINS
                                 df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
                                 lvg_moisture)
 
+    sf_dynamics = t_sf_dynamics(nc, df_sf_fc_full_nr, sf_fuel_dead_fuel_nr, &
+                                fdi, &
+                                area_burned, area_burned_fract, &
+                                dead_frac_consumption, i_surface)
+
     CALL calc_sf_dynamics(nc, df_sf_fc_full_nr, dtime, one_day, & ! config
                         dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, & ! config
                         fwd_wind_factor, & ! ros
@@ -424,17 +429,11 @@ CONTAINS
 
     !< Ignitions into process memory
 
-    dead_frac_consumption = sf_dynamics % dead_frac_consump
-    i_surface = sf_dynamics % i_surface
     mask_is_fire_intense_enough = logical2real(sf_dynamics % is_fire_intense_enough)
-    area_burned_fract = sf_dynamics % area_burned_fract
-    area_burned = sf_dynamics % area_burned
     area_burned_fract_output = sf_dynamics % area_burned_fract / dtime !< to seconds
     area_burned_output = sf_dynamics % area_burned / dtime !< to seconds
-
-    fdi = sf_dynamics % fdi ! todo: define as pointer
-
     frac_consump_fcl = sf_dynamics % dead_frac_consump
+
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
 #endif
@@ -489,7 +488,7 @@ CONTAINS
 
     TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture                  !< Fuel moisture
 
-    TYPE(t_sf_dynamics), INTENT(out)    :: spitfire                !< Spitfire outputs
+    TYPE(t_sf_dynamics), INTENT(inout)  :: spitfire                !< Spitfire dynamics
     LOGICAL, INTENT(in), OPTIONAL       :: mask(nc)                !< Gridcell can burn
 
     LOGICAL :: mask_tile_enabled(nc)
@@ -520,8 +519,6 @@ CONTAINS
     has_dead_fuel = sf_calc_has_any_fuel(sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
-
-    spitfire = t_sf_dynamics(nc, ndeadpools, sf_fuel_live_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
