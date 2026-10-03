@@ -16,7 +16,7 @@
 MODULE mo_alcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -92,7 +92,7 @@ CONTAINS
       & t_cf('cf_target_year', '', 'Target cover fractions read from forcing.'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & lrestart=.FALSE., initval_r=-0.1_wp)
+      & lrestart=.FALSE., initval_r=-0.1_lp)
 
     CALL mem%Add_var('cf_delta', mem%cf_delta,                                            &
       & hgrid, pft_vgrid,                                                                 &
@@ -100,7 +100,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=FULL,                                                                &
-      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_lp)
 
   END SUBROUTINE Init_alcc_memory
 

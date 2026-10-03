@@ -14,7 +14,7 @@
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message, finish
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_class,         ONLY: get_model
@@ -35,7 +35,7 @@ MODULE mo_seb_init
   PUBLIC :: seb_init
 
   TYPE t_seb_init_vars
-    REAL(wp), ALLOCATABLE :: skin_conductivity(:,:)
+    REAL(lp), ALLOCATABLE :: skin_conductivity(:,:)
   END TYPE
 
   TYPE(t_seb_init_vars) :: seb_init_vars
@@ -92,11 +92,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 #ifdef __QUINCY_STANDALONE__
-      F_pseudo_soil_temp = EXP(- MAX(eps8, timestep_in_days(forcing_options%forcing_hour)) / 10._wp)
+      F_pseudo_soil_temp = EXP(- MAX(eps8, timestep_in_days(forcing_options%forcing_hour)) / 10._lp)
 #else
       F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/pheno_param_jsbach%EG_SG%tau_pseudo_soil)
 #endif
-      N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
+      N_pseudo_soil_temp = 1._lp / (1._lp - F_pseudo_soil_temp)
 
       !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
     END IF
@@ -115,7 +115,7 @@ CONTAINS
     TYPE(t_input_file) :: input_file
     INTEGER :: nproma, nblks
 
-    REAL(wp), POINTER :: ptr(:,:)
+    REAL(lp), POINTER :: ptr(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_read_init_vars'
 
@@ -170,7 +170,7 @@ CONTAINS
 
     IF (dsl4jsb_Config(SEB_)%l_skin_temp) THEN
       IF (tile%is_land .OR. model%config%use_tmx) THEN
-        dsl4jsb_var2D_onDomain(SEB_, skin_conductivity) = 40.0_wp   ! estimated from icon-land input file
+        dsl4jsb_var2D_onDomain(SEB_, skin_conductivity) = 40.0_lp   ! estimated from icon-land input file
       END IF
     END IF
 
@@ -216,7 +216,7 @@ CONTAINS
     ! dsl4jsb_Def_config(SEB_)
     !dsl4jsb_Def_memory(SEB_)
 
-    !REAL(wp), POINTER :: &
+    !REAL(lp), POINTER :: &
     !  & ptr_2D(:,  :)       !< temporary pointer
 
     !TYPE(t_input_file) :: input_file
