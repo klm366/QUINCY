@@ -511,12 +511,8 @@ CONTAINS
 
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
-      CALL calc_sf_dynamics_for_thonicke(sf_config%nc, & ! in
-                                    sf_config % nfcl_ros, &
-                                    sf_ros % fbd, &
-                                    sf_ros % u_f_wind, &
+      CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
                                     nesterov_index, &
-                                    sf_fuel_load % dead_fuel_litter, sf_fuel_load % tot_dead_fuel_grass, &
                                     sf_fuel_moisture, & ! inout
                                     spitfire % fdi, & !< outputs
                                     sf_ros, &
@@ -594,11 +590,8 @@ CONTAINS
   !>
   !> Calculate spitfire thonicke's implementation
   !>
-  SUBROUTINE calc_sf_dynamics_for_thonicke(nc,  nspread, & ! in
-                                    fuel_bulk_density, &
-                                    u_f_wind, &
+  SUBROUTINE calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, & ! in
                                     nesterov_index, &
-                                    dead_fuel_litter, tot_dead_fuel_grass, &
                                     sf_mf, & ! inout
                                     fdi, & ! out
                                     ros, &
@@ -609,20 +602,15 @@ CONTAINS
                                       ix_100hr => df_sf_fc_100hr_idx, &
                                      ix_1000hr => df_sf_fc_1000hr_idx
 
-    INTEGER, INTENT(in)         :: nc, nspread
-    REAL(wp), INTENT(in)        :: fuel_bulk_density(:)   !< Fuel bulk density [kg m-3]
-    REAL(wp), INTENT(in)        :: u_f_wind(:)            !< Wind speed at vegetation cover [m min-1]
+    TYPE(t_sf_config), INTENT(in) :: sf_config
+    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in)        :: nesterov_index(:)      !< [deg C2]
-    REAL(wp), INTENT(in)        :: dead_fuel_litter(:,:)  !< Dead fuel litter [g DM m-2] (#nc,#fuel classes)
-    REAL(wp), INTENT(in)        :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
-
     TYPE(t_sf_mf), INTENT(inout):: sf_mf
-
     REAL(wp), INTENT(out)       :: fdi(:)                 !< Fire dange index [%]
     TYPE(t_sf_ros), INTENT(inout) :: ros
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)              !< True: gridcell is enabled
 
-    LOGICAL :: has_fire_conditions(nc)
+    LOGICAL :: has_fire_conditions(sf_config%nc)
 
     fdi = 0._wp
     sf_mf % omegas_thon = 0._wp
@@ -630,10 +618,10 @@ CONTAINS
     IF (PRESENT(mask)) has_fire_conditions = mask
 
     !< Compute fuel moisture (omega_o, omega_nl)
-    sf_mf % omegas_thon = calc_sf_fuel_moisture_for_thonicke(nc, sf_mf % nalphas, nspread, sf_mf % alphas, &
+    sf_mf % omegas_thon = calc_sf_fuel_moisture_for_thonicke(sf_config % nc, sf_mf % nalphas, sf_config % nfcl_ros, sf_mf % alphas, &
                                           nesterov_index, sf_mf % ab_moisture, &
-                                          dead_fuel_litter, &
-                                          tot_dead_fuel_grass)
+                                          sf_fuel_load % dead_fuel_litter, &
+                                          sf_fuel_load % tot_dead_fuel_grass)
 
     ASSOCIATE(w_o => sf_mf % omegas_thon(:,df_sf_omega_o_idx), w_nl => sf_mf % omegas_thon(:,df_sf_omega_nl_idx))
       sf_mf % fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
@@ -643,15 +631,15 @@ CONTAINS
     END ASSOCIATE
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    CALL calc_fire_danger_index(nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
+    CALL calc_fire_danger_index(sf_config % nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
 
     !< It accounts for 1, 10 and 100 hours fuel classes
     has_fire_conditions = has_fire_conditions .AND. (fdi > 1.e-6_wp)
 
-    CALL sf_calc_rate_of_spread_thon(nc, nspread, & ! in
-                      fuel_bulk_density, &
-                      u_f_wind, sf_mf % moisture_extinction, &
-                      dead_fuel_litter * df_sf_units_g_to_kg, &
+    CALL sf_calc_rate_of_spread_thon(sf_config % nc, sf_config % nfcl_ros, & ! in
+                      ros % fbd, &
+                      ros % u_f_wind, sf_mf % moisture_extinction, &
+                      sf_fuel_load % dead_fuel_litter * df_sf_units_g_to_kg, &
                       sf_mf % omegas_thon(:,df_sf_omega_o_idx), &
                       has_fire_conditions, &
                       ros) ! inout
