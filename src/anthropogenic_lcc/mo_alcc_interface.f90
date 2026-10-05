@@ -544,15 +544,17 @@ CONTAINS
 
         ! Assure some conditions:
         ! (1) transition rates <= from_cf_sum, i.e. that the transition does not remove more area than
-        !     currently available in all tiles that loose area for this transition.
-        !     - Because the lost area for each tile is calculated as
-        !       transition_rate * initial_area / from_cf_sum,
-        !       this also ensures that the lost area does not exceed the initial area in each tile.
+        !     currently available in all tiles that lose area for this transition.
         ! (2) transition_rate + to_cf_sum <= 1,
         !     i.e. that the transition does not add more area than available in the vegetated grid box
+        ! (3) If none of the to-tiles has either current or potential area, the transition cannot be
+        !     realised at all in this cell; without this the lost area would not be matched by any gain.
         DO ic = 1, nc
           transition_rate(ic, idx) = MIN(transition_rate(ic, idx), from_cf_sum(ic))
           transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
+          IF (to_cf_sum(ic) <= 0.0_wp .AND. to_potential_sum(ic) <= 0.0_wp) THEN
+            transition_rate(ic, idx) = 0.0_wp
+          END IF
         END DO
 
       END SELECT
