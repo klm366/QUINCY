@@ -367,6 +367,7 @@ CONTAINS
 #endif
 
     sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
+                                  df_sf_fc_1hr_idx, df_sf_fc_100hr_idx, ixs_sf_dead_litter_fuel_pools, &
                     dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
                     live_tree_fuel_1hr_lfp, live_tree_fuel_10hr_lfp, live_tree_fuel_100hr_lfp, live_tree_fuel_1000hr_lfp, &
                     live_grass_fuel_1hr_lfp, &
@@ -493,9 +494,7 @@ CONTAINS
     !< According to Thonicke et al. (2010), which is based on Rothermel et al.,
     !< fire spread depends on dead fuel availability. If there is no dead fuel,
     !< then fire cannot spread and we stop the calculation. The same applies if FDI is low.
-    has_dead_fuel = sf_calc_has_any_fuel(sf_fuel_load%dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx))
-    !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
+    has_fire_conditions = mask_tile_enabled .AND. sf_fuel_load%has_dead_fuel
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)
@@ -509,9 +508,7 @@ CONTAINS
     !
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     sf_ros % u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
-    dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
-    !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx), DIM=2) ! 2 = fuel classes
+
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(sf_config%nc, & ! in
@@ -519,22 +516,20 @@ CONTAINS
                                     sf_ros % fbd, &
                                     sf_ros % u_f_wind, &
                                     nesterov_index, &
-                                    dead_fuel_litter, tot_dead_fuel_grass, &
+                                    sf_fuel_load % dead_fuel_litter, sf_fuel_load % tot_dead_fuel_grass, &
                                     fuel_moisture, & ! inout
                                     spitfire % fdi, & !< outputs
                                     sf_ros, &
                                     mask=has_fire_conditions) !< optional
     ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
 
-      tot_live_fuel_tree = SUM(SUM(sf_fuel_load%live_tree_fuel_fcl, DIM=3), DIM=2)
-
       CALL calc_sf_dynamics_for_oberhagemann(sf_config%nc, &
           nesterov_index, &
           sf_ros % fbd, &
           sf_ros % u_f_wind, &
-          dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
-          tot_dead_fuel_grass, & ! (#nc) 1 hour only
-          tot_live_fuel_tree, & ! total live fuel tree (#nc)
+          sf_fuel_load % dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
+          sf_fuel_load % tot_dead_fuel_grass, & ! (#nc) 1 hour only
+          sf_fuel_load % tot_live_fuel_tree, & ! total live fuel tree (#nc)
           fuel_moisture, & ! inout
           spitfire % fdi, & ! out
           sf_ros, &
@@ -566,7 +561,6 @@ CONTAINS
                           spitfire % area_burned, &  !< out
                           spitfire % area_burned_fract, & !< out
                           mask=has_fire_conditions) !< in, optional
-
 
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
     !< extracted from equations B1, B4, B5 and B6)

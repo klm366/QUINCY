@@ -22,6 +22,7 @@ MODULE mo_q_dfire_sf_classes
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
   USE mo_q_dfire_sf_adaptor_class,  ONLY: sf_convert_units
   USE mo_q_dfire_sf_constants,  ONLY: df_sf_fc_1hr_idx, df_sf_fc_10hr_idx, df_sf_fc_100hr_idx, df_sf_fc_1000hr_idx !< fuel classes indices
+  USE mo_q_dfire_sf_fuel_class,   ONLY: sf_calc_has_any_fuel
 
   IMPLICIT NONE
 
@@ -190,6 +191,12 @@ MODULE mo_q_dfire_sf_classes
     REAL(wp), ALLOCATABLE :: cured_live_grass_fuel_fcl(:,:,:) !< cured live grass fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), ALLOCATABLE :: live_grass_fuel_fcl(:,:,:) !< live grass fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), ALLOCATABLE :: live_tree_fuel_fcl(:,:,:) !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
+
+    !< derived
+    LOGICAL, ALLOCATABLE :: has_dead_fuel(:)
+    REAL(wp), ALLOCATABLE :: dead_fuel_litter(:,:) !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
+    REAL(wp), ALLOCATABLE :: tot_dead_fuel_grass(:) !< Total dead fuel grass [g DM m-2] (#nc)
+    REAL(wp), ALLOCATABLE :: tot_live_fuel_tree(:) !< Total live fuel tree [g DM m-2] (#nc), Oberhagemnn only
   END TYPE t_sf_fuel_load
 
   INTERFACE t_sf_fuel_load
@@ -534,12 +541,16 @@ MODULE mo_q_dfire_sf_classes
   !> t_sf_fuel_load: initialize and rebuild fuel load
   !>
   FUNCTION create_sf_fuel_load(nc, ndd, nlv, nfcl, &
+                              ix_1hr, ix_100hr, ixs_dead_fuel_pools, &
                               dead_fuel_1hr, dead_fuel_10hr, dead_fuel_100hr, dead_fuel_1000hr, &
                               live_tree_fuel_1hr, live_tree_fuel_10hr, live_tree_fuel_100hr, live_tree_fuel_1000hr, &
                               live_grass_fuel_1hr, cured_live_grass_fuel_1hr) RESULT (sf_fuel_load)
     INTEGER, INTENT(in) :: nc
     INTEGER, INTENT(in) :: ndd, nlv !< number of dead/live pools
     INTEGER, INTENT(in) :: nfcl !< number of fuel classes
+
+    INTEGER, INTENT(in) :: ix_1hr, ix_100hr !< fuel classes indices
+    INTEGER, INTENT(in) :: ixs_dead_fuel_pools(:) !< dead fuel pool indices
 
     REAL(wp), INTENT(in) :: dead_fuel_1hr(:,:), dead_fuel_10hr(:,:), dead_fuel_100hr(:,:), dead_fuel_1000hr(:,:) !< dead fuel (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     REAL(wp), INTENT(in) :: live_tree_fuel_1hr(:,:), live_tree_fuel_10hr(:,:), live_tree_fuel_100hr(:,:), live_tree_fuel_1000hr(:,:) !< live tree fuel (#nc, #live fuel pools, #fuel classes) [g DM m-2]
@@ -572,6 +583,13 @@ MODULE mo_q_dfire_sf_classes
     sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_10hr_idx) = live_tree_fuel_10hr
     sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr
     sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr
+
+    !< derived
+    sf_fuel_load % has_dead_fuel = sf_calc_has_any_fuel(sf_fuel_load%dead_fuel_fcl(:,:,ix_1hr:ix_100hr))
+    sf_fuel_load % dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_dead_fuel_pools,ix_1hr:ix_100hr), DIM=2) !< 2= fuel pools index, litter pools only
+    !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
+    sf_fuel_load % tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
+    sf_fuel_load % tot_live_fuel_tree = SUM(SUM(sf_fuel_load%live_tree_fuel_fcl, DIM=3), DIM=2)
   END FUNCTION create_sf_fuel_load
 
 
