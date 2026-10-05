@@ -409,14 +409,14 @@ CONTAINS
                             dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, &
                             df_sf_calorific_heat_content, df_sf_isurface_extinc_th)
 
-    CALL calc_sf_dynamics(sf_config, &
-                        fwd_wind_factor, & ! ros
-                        sf_ignitions, &
+    CALL calc_sf_dynamics(sf_config, & ! in...
+                        fwd_wind_factor, & !
                         burnable_area_ha, & ! soil properties
-                        sf_fuel_load, &
-                        sf_atm, & ! weather
-                        sf_ros, & ! rate of spread
                         veg_cover_frac, & ! soil properties
+                        sf_atm, & ! weather
+                        sf_fuel_load, &
+                        sf_ignitions, & ! inout...
+                        sf_ros, & ! rate of spread
                         nesterov_index, & ! dryness
                         fuel_moisture_all, &
                         sf_dynamics, &
@@ -450,33 +450,28 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_dynamics(sf_config, &
                   lctlib_fwd_wind_factor, &
-                  sf_ignitions, &
                   grid_cell_area, & ! fuel properties
-                  sf_fuel_load, &
-                  sf_atm, & ! weather
-                  sf_ros, & ! rate of spread -inout-
                   veg_cover_frac, & ! in
+                  sf_atm, & ! in
+                  sf_fuel_load, & ! in
+                  sf_ignitions, & ! inout
+                  sf_ros, & ! inout
                   nesterov_index, & ! inout
                   fuel_moisture, & ! inout
-                  spitfire, & ! out
-                  mask)
+                  spitfire, & ! inout
+                  mask) ! in
 
     TYPE(t_sf_config), INTENT(in) :: sf_config
     REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(sf_config%nc)            !< Forward wind factor [0 to 1]
+    REAL(wp), INTENT(in)  :: grid_cell_area(sf_config%nc)                    !< Gridcell area [ha]
+    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
+    TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
+    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load               !< Fuel load
 
     TYPE(t_sf_ignitions), INTENT(inout)  :: sf_ignitions
-    REAL(wp), INTENT(in)  :: grid_cell_area(sf_config%nc)                    !< Gridcell area [ha]
-
-    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load               !< Fuel load
-    TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
-
-    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
-
     TYPE(t_sf_ros), INTENT(inout) :: sf_ros                        !< Rate of spread
     REAL(wp), INTENT(INOUT) :: nesterov_index(sf_config%nc)                  !< Dryness index [Celsius^2]
-
     TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture                  !< Fuel moisture
-
     TYPE(t_sf_dynamics), INTENT(inout)  :: spitfire                !< Spitfire dynamics
     LOGICAL, INTENT(in), OPTIONAL       :: mask(sf_config%nc)                !< Gridcell can burn
 
@@ -525,7 +520,7 @@ CONTAINS
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(sf_config%nc, & ! in
-                                    df_sf_fc_spread_nr, &
+                                    sf_config % nfcl_ros, &
                                     sf_ros % fbd, &
                                     u_f_wind, &
                                     nesterov_index, &
