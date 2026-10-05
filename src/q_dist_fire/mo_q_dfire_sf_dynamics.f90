@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: wrap_calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann
+  USE mo_q_dfire_sf_fmoist_class, ONLY: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann
   USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -656,19 +656,8 @@ CONTAINS
     REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
-    CALL calc_sf_fuel_moisture_for_oberhagemann(sf_config % nc, &
-                      fuel_moisture % sigma_dd_nr, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
-                      nlitros, & ! 3=1, 10 and 100 hours
-                      fuel_moisture % sigma_lv_nr, &
-                      fuel_moisture % alphas_dead, &
-                      fuel_moisture % lvg_moisture, &
-                      sf_fuel_load % dead_fuel_litter, &
-                      sf_fuel_load % tot_dead_fuel_grass, &
-                      nesterov_index, &
-                      mask, &
-                      fuel_moisture)
 
-    fuel_moisture % fuel_moisture_for_fc = fuel_moisture%dead
+    CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
 
     woi_dd = 0._wp
     woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg

@@ -35,7 +35,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   PRIVATE
   PUBLIC :: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann, &
             calc_mflg_ober
-  PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke
+  PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
@@ -204,6 +204,35 @@ CONTAINS
     omega = exp(-alpha * nesterov_index)
   END FUNCTION calc_omega
 
+
+  ! ======================================================================================================= !
+  !>
+  !> wrap_calc_sf_fuel_moisture_for_thonicke
+  !>   Infraestructure <-> science
+  !>
+  SUBROUTINE wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_sigma_dd_ros_litter_nr
+
+    TYPE(t_sf_config), INTENT(in)           :: sf_config
+    REAL(wp), INTENT(in)                    :: nesterov_index(:)
+    TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
+    TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture
+    LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
+
+    CALL calc_sf_fuel_moisture_for_oberhagemann(sf_config % nc, &
+                      sf_fuel_moisture % sigma_dd_nr, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
+                      df_sf_sigma_dd_ros_litter_nr, & ! 3=1, 10 and 100 hours
+                      sf_fuel_moisture % sigma_lv_nr, &
+                      sf_fuel_moisture % alphas_dead, &
+                      sf_fuel_moisture % lvg_moisture, &
+                      sf_fuel_load % dead_fuel_litter, &
+                      sf_fuel_load % tot_dead_fuel_grass, &
+                      nesterov_index, &
+                      mask, &
+                      sf_fuel_moisture)
+
+    sf_fuel_moisture % fuel_moisture_for_fc = sf_fuel_moisture%dead
+  END SUBROUTINE wrap_calc_sf_fuel_moisture_for_oberhagemann
 
   ! ======================================================================================================= !
   !>
