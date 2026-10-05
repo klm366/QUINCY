@@ -286,28 +286,28 @@ CONTAINS
 !      & t_cf('N_pseudo_temp', 'K', 'Normalization for computing pseudo-15-day mean air temperature'),    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
 !      & prefix, suffix,                                                                                &
-!      & lrestart=.FALSE., initval_r=0.0_wp )
+!      & lrestart=.FALSE., initval_r=0.0_lp )
 !
 !    CALL mem%Add_var('f_pseudo_temp', mem%F_pseudo_temp,                                             &
 !      & hgrid, surface,                                                                              &
 !      & t_cf('F_pseudo_temp', '-', 'Exponential factor used for updating the pseudo-15-day mean temperature'),    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
 !      & prefix, suffix,                                                                                &
-!      & lrestart=.FALSE., initval_r=0.0_wp )
+!      & lrestart=.FALSE., initval_r=0.0_lp )
 !
 !    CALL mem%Add_var('n_pseudo_precip', mem%N_pseudo_precip,                                         &
 !      & hgrid, surface,                                                                              &
 !      & t_cf('N_pseudo_precip', 'Kg m-2 s-1', 'Normalization for computing pseudo-15-day mean precipitation rate'),  &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
 !      & prefix, suffix,                                                                                &
-!      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+!      & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 !
 !    CALL mem%Add_var('f_pseudo_precip', mem%F_pseudo_precip,                                         &
 !      & hgrid, surface,                                                                              &
 !      & t_cf('F_pseudo_precip', '-', 'Exponential factor used for updating the pseudo-15-day mean precip'),    &
 !      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
 !      & prefix, suffix,                                                                                &
-!      & lrestart=.FALSE., initval_r=0.0_wp )
+!      & lrestart=.FALSE., initval_r=0.0_lp )
 
     ! Carbon variables on canopy area
     CALL mem%Add_var('c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                             &
@@ -536,14 +536,12 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
-
     CALL mem%Add_var('gpp_ann_sum', mem%GPP_ann_sum,                                     &
       & hgrid, surface,                                                                  &
       & t_cf('GPP_ann_sum', 'mol(C) m-2(canopy) s-1', 'Used to accumulate GPP over a year.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('soil_respiration', mem%soil_respiration,                   &
       & hgrid, surface,                                                          &
@@ -551,7 +549,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
       & prefix, suffix,                                                          &
         & output_level=BASIC,                                                        &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     IF (dsl4jsb_Config(CH4_)%active) THEN
       CALL mem%Add_var('soil_respiration_anoxic', mem%soil_respiration_anoxic,   &
@@ -559,7 +557,7 @@ CONTAINS
         & t_cf('soil_respiration_anoxic', 'mol m-2(canopy) s-1', 'Soil respiration from anoxic soils.'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL mem%Add_var('soil_respiration_oxic', mem%soil_respiration_oxic,       &
         & hgrid, surface,                                                        &
@@ -567,7 +565,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                        &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
     ENDIF
 
     CALL mem%Add_var('npp_flux_correction', mem%NPP_flux_correction,                                 &
@@ -627,7 +625,7 @@ CONTAINS
       & t_cf('GPP_prev_year', 'mol(C) m-2 yr-1', 'Total GPP of the previous year.'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                       &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('root_exudates', mem%root_exudates,                   &
       & hgrid, surface,                                                    &
@@ -927,7 +925,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & output_level=BASIC,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL mem%Add_var('soil_respiration_anoxic_ta', mem%soil_respiration_anoxic_ta, &
         & hgrid, surface,                                                            &
@@ -935,7 +933,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & output_level=BASIC,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL mem%Add_var('acrotelm_height_ag', mem%acrotelm_height_ag,                 &
         & hgrid, surface,                                                            &
@@ -943,7 +941,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & output_level=BASIC,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
       CALL mem%Add_var('acrotelm_height_bg', mem%acrotelm_height_bg,                 &
         & hgrid, surface,                                                            &
@@ -951,7 +949,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & output_level=BASIC,                                                        &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     ENDIF
 

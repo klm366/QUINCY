@@ -14,7 +14,7 @@
 !>
 
 MODULE mo_debug_stw
-  USE mo_kind,           ONLY: wp
+  USE mo_kind,           ONLY: lp
   USE mo_util_string,    ONLY: int2string, logical2string, real2string
   USE mo_mpi,            ONLY: p_barrier, p_sum, p_global_sum, p_pe
   USE mo_exception,      ONLY: message
@@ -69,7 +69,7 @@ CONTAINS
   END FUNCTION dati2s
 
   LOGICAL FUNCTION isnan(r)
-    REAL(wp), INTENT(in) :: r
+    REAL(lp), INTENT(in) :: r
 
     isnan = r /= r
 
@@ -77,7 +77,7 @@ CONTAINS
 
   LOGICAL FUNCTION anynan(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     INTEGER :: i
 
@@ -91,7 +91,7 @@ CONTAINS
 
   INTEGER FUNCTION nnan(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     INTEGER :: i, nn
 
@@ -104,7 +104,7 @@ CONTAINS
   END FUNCTION nnan
 
   LOGICAL FUNCTION isinf(r)
-    REAL(wp), INTENT(in) :: r
+    REAL(lp), INTENT(in) :: r
 
     isinf = ABS(r)>HUGE(r)
 
@@ -112,7 +112,7 @@ CONTAINS
 
   LOGICAL FUNCTION anyinf(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     INTEGER :: i
 
@@ -126,7 +126,7 @@ CONTAINS
 
   INTEGER FUNCTION ninf(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     INTEGER :: i, nn
 
@@ -139,7 +139,7 @@ CONTAINS
   END FUNCTION ninf
 
   LOGICAL FUNCTION isbad(r)
-    REAL(wp), INTENT(in) :: r
+    REAL(lp), INTENT(in) :: r
 
     isbad = isinf(r) .OR. isnan(r)
 
@@ -147,7 +147,7 @@ CONTAINS
 
   LOGICAL FUNCTION anybad(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     anybad = anyinf(n,r) .OR. anynan(n,r)
 
@@ -155,7 +155,7 @@ CONTAINS
 
   INTEGER FUNCTION nbad(n,r)
     INTEGER,  INTENT(in) :: n
-    REAL(wp), INTENT(in) :: r(*)
+    REAL(lp), INTENT(in) :: r(*)
 
     nbad = ninf(n,r) + nnan(n,r)
 
@@ -203,7 +203,7 @@ CONTAINS
 
   FUNCTION r2s0(x, sep, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: r2s0
-    REAL(wp), INTENT(in) :: x
+    REAL(lp), INTENT(in) :: x
     CHARACTER(len=1), INTENT(in), OPTIONAL :: sep
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
 
@@ -221,7 +221,7 @@ CONTAINS
 
   FUNCTION r2s1(x, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: r2s1
-    REAL(wp), INTENT(in) :: x(:)
+    REAL(lp), INTENT(in) :: x(:)
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
 
     CHARACTER(len=:), ALLOCATABLE :: tmp1, tmp2

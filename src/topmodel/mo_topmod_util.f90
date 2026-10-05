@@ -25,30 +25,30 @@
 MODULE mo_top_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,          ONLY: wp
+  USE mo_kind,          ONLY: lp
   USE mo_exception,     ONLY: finish, message
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: gamm_p, gamm_inv_p, gamm_q, gamm_ln
   PUBLIC :: time_relaxation
-  PUBLIC :: interpol_reset, interpol_done, interpol_new, interpol_update, wp, t_interp_var, t_interp_var_p
+  PUBLIC :: interpol_reset, interpol_done, interpol_new, interpol_update, lp, t_interp_var, t_interp_var_p
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_top_util'
 
   TYPE t_interp_var
-    REAL(wp), POINTER :: curr(:)                 ! Current value of the interpolation
-    REAL(wp), POINTER :: a(:), b(:), c(:)        ! Coefficents for quadratic polynomias
-    REAL(wp), POINTER :: excess(:)               ! Current excess area
-    REAL(wp), POINTER :: excess_max(:)           ! Maximum of excess area
-    REAL(wp), POINTER :: add(:)                  ! Area to add to current interpolation
+    REAL(lp), POINTER :: curr(:)                 ! Current value of the interpolation
+    REAL(lp), POINTER :: a(:), b(:), c(:)        ! Coefficents for quadratic polynomias
+    REAL(lp), POINTER :: excess(:)               ! Current excess area
+    REAL(lp), POINTER :: excess_max(:)           ! Maximum of excess area
+    REAL(lp), POINTER :: add(:)                  ! Area to add to current interpolation
     INTEGER,  POINTER :: flg(:)                  ! Bitwise flags for points to update "add" as well as modified endpoints:
                                                  !   1 : add should be updated
                                                  !   2 : first endpoint has been modified
                                                  !   4 : second endpoint has been modified
-    REAL(wp)          :: valid_range(2)          ! Lower and upper boundaries for output
-    REAL(wp)          :: frac_use_full           ! Fraction of valid_range for which the base value should be used
-    REAL(wp)          :: dt                      ! Time between interpolation time steps
+    REAL(lp)          :: valid_range(2)          ! Lower and upper boundaries for output
+    REAL(lp)          :: frac_use_full           ! Fraction of valid_range for which the base value should be used
+    REAL(lp)          :: dt                      ! Time between interpolation time steps
     INTEGER           :: nintrp                  ! Number of total interpolation time steps
     INTEGER           :: xcurr                   ! Number of current interpolation time step
     LOGICAL           :: ext_var                 ! Is var field allocated externally?
@@ -69,10 +69,10 @@ CONTAINS
     TYPE(t_interp_var),           POINTER :: interpol_reset
     INTEGER,                   INTENT(in) :: n
     TYPE(t_interp_var), OPTIONAL, POINTER :: intrp
-    REAL(wp),           OPTIONAL, POINTER :: var(:)
+    REAL(lp),           OPTIONAL, POINTER :: var(:)
 
     TYPE(t_interp_var), POINTER :: res
-    REAL(wp) :: tmp
+    REAL(lp) :: tmp
     INTEGER :: i
 
     NULLIFY(res)
@@ -86,8 +86,8 @@ CONTAINS
       NULLIFY(res%curr,res%a,res%b,res%c,res%excess,res%excess_max,res%add,res%flg)
     ENDIF
     res%valid_range   = (/-HUGE(tmp),HUGE(tmp)/)
-    res%frac_use_full = -1._wp
-    res%dt            = 0._wp
+    res%frac_use_full = -1._lp
+    res%dt            = 0._lp
     res%nintrp        = 0
     res%xcurr         = 0
     res%ext_var = .FALSE.
@@ -120,9 +120,9 @@ CONTAINS
       ENDDO
     ENDIF
     DO i=1,n
-      res%excess    (i) = 0._wp
-      res%excess_max(i) = 0._wp
-      res%add       (i) = 0._wp
+      res%excess    (i) = 0._lp
+      res%excess_max(i) = 0._lp
+      res%add       (i) = 0._lp
     ENDDO
 
     interpol_reset => res
@@ -161,16 +161,16 @@ CONTAINS
   FUNCTION interpol_new(dt,nintrp,y1,y2,y3,valid_range,frac_use_full,intrp,var)
   !$acc routine seq
     TYPE(t_interp_var),              POINTER :: interpol_new
-    REAL(wp),                     INTENT(in) :: dt
+    REAL(lp),                     INTENT(in) :: dt
     INTEGER,                      INTENT(in) :: nintrp
-    REAL(wp),                     INTENT(in) :: y1(:), y2(:), y3(:)
-    REAL(wp),           OPTIONAL, INTENT(in) :: valid_range(2)
-    REAL(wp),           OPTIONAL, INTENT(in) :: frac_use_full
+    REAL(lp),                     INTENT(in) :: y1(:), y2(:), y3(:)
+    REAL(lp),           OPTIONAL, INTENT(in) :: valid_range(2)
+    REAL(lp),           OPTIONAL, INTENT(in) :: frac_use_full
     TYPE(t_interp_var), OPTIONAL,    POINTER :: intrp
-    REAL(wp),           OPTIONAL,    POINTER :: var(:)
+    REAL(lp),           OPTIONAL,    POINTER :: var(:)
 
     TYPE(t_interp_var), POINTER :: res
-    REAL(wp) :: ys, ye, dx, dy, span
+    REAL(lp) :: ys, ye, dx, dy, span
     INTEGER :: i, n, flgs
 
     ! flgs: Bitwise
@@ -191,11 +191,11 @@ CONTAINS
     span = res%valid_range(2) - res%valid_range(1)
 
     DO i=1,n
-      ys = (y1(i)+y2(i))/2.0_wp
-      ye = (y2(i)+y3(i))/2.0_wp
+      ys = (y1(i)+y2(i))/2.0_lp
+      ye = (y2(i)+y3(i))/2.0_lp
 
       flgs = 0
-      IF (frac_use_full >= 0._wp) THEN
+      IF (frac_use_full >= 0._lp) THEN
         IF (((y1(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs, 1)
         IF (((y2(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs, 4)
         IF (((y3(i)-res%valid_range(1))/span) <= frac_use_full) flgs = IOR(flgs,16)
@@ -216,9 +216,9 @@ CONTAINS
       ENDIF
 
       dy = ye - ys
-      dx = REAL(nintrp,wp)
+      dx = REAL(nintrp,lp)
 
-      res%b(i) = 6._wp * (y2(i) - ys - dy/3._wp) / dx
+      res%b(i) = 6._lp * (y2(i) - ys - dy/3._lp) / dx
       res%a(i) = (dy - res%b(i) * dx) / (dx * dx)
       res%c(i) = ys
 
@@ -236,34 +236,34 @@ CONTAINS
   !$acc routine seq
     TYPE(t_interp_var), POINTER :: intrp
 
-    REAL(wp) :: x, y, tmp, su
+    REAL(lp) :: x, y, tmp, su
     INTEGER :: i, n, nleft
 
     IF (intrp%xcurr >= intrp%nintrp) RETURN
 
     intrp%xcurr = intrp%xcurr + 1
-    x = REAL(intrp%xcurr,wp)*intrp%dt
+    x = REAL(intrp%xcurr,lp)*intrp%dt
     nleft = intrp%nintrp - intrp%xcurr
     n = SIZE(intrp%a)
-    su = 0._wp
+    su = 0._lp
     DO i=1,n
       y = intrp%a(i)*x*x + intrp%b(i)*x + intrp%c(i) ! + intrp%add(i)
       su = su + y
       intrp%excess(i) = intrp%excess(i) - intrp%add(i) * intrp%dt
       tmp = y - intrp%valid_range(1)
-      IF (tmp < 0._wp) THEN
+      IF (tmp < 0._lp) THEN
         intrp%excess(i) = intrp%excess(i) + tmp * intrp%dt
         y = intrp%valid_range(1)
       ENDIF
       tmp = y - intrp%valid_range(2)
-      IF (tmp > 0._wp) THEN
+      IF (tmp > 0._lp) THEN
         intrp%excess(i) = intrp%excess(i) + tmp * intrp%dt
         y = intrp%valid_range(2)
       ENDIF
       IF ((ABS(intrp%excess(i)) == intrp%excess_max(i)) .AND. (intrp%excess_max(i) > 0)) intrp%flg(i) = IOR(intrp%flg(i),1)
       IF (intrp%excess_max(i) < ABS(intrp%excess(i))) &
           intrp%excess_max(i) = ABS(intrp%excess(i))
-      IF (IAND(intrp%flg(i),1)/=0) intrp%add(i) = intrp%excess(i)/intrp%dt/REAL(nleft,wp)*2._wp
+      IF (IAND(intrp%flg(i),1)/=0) intrp%add(i) = intrp%excess(i)/intrp%dt/REAL(nleft,lp)*2._lp
       intrp%curr(i) = y
     ENDDO
 
@@ -280,27 +280,27 @@ CONTAINS
 #endif
   SUBROUTINE time_relaxation(inst,relax,dt,t_relax,nstep,linit)
   !$acc routine seq
-    REAL(wp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
-    REAL(wp),           INTENT(inout) :: relax   ! Mean value to update [?]
-    REAL(wp), OPTIONAL, INTENT(in)    :: dt      ! Time step between updates [s]
-    REAL(wp), OPTIONAL, INTENT(in)    :: t_relax ! E-fold time of the relaxation [s]
-    REAL(wp), OPTIONAL, INTENT(in)    :: nstep   ! Number of update steps in the e-fold time
+    REAL(lp),           INTENT(in)    :: inst    ! Instantaneous value to include in relaxation [?]
+    REAL(lp),           INTENT(inout) :: relax   ! Mean value to update [?]
+    REAL(lp), OPTIONAL, INTENT(in)    :: dt      ! Time step between updates [s]
+    REAL(lp), OPTIONAL, INTENT(in)    :: t_relax ! E-fold time of the relaxation [s]
+    REAL(lp), OPTIONAL, INTENT(in)    :: nstep   ! Number of update steps in the e-fold time
     LOGICAL,  OPTIONAL, INTENT(in)    :: linit   ! Initialize averages if linit=.TRUE.
 
-    REAL(wp) :: n
+    REAL(lp) :: n
 
     IF (PRESENT(nstep)) THEN
       n = nstep
     ELSE IF (PRESENT(dt) .AND. PRESENT(t_relax)) THEN
       n = t_relax / dt
     ELSE
-      n = 1._wp ! relax = inst
+      n = 1._lp ! relax = inst
     ENDIF
     IF (PRESENT(linit)) THEN
-      IF (linit) n = 1._wp ! relax = inst => initialize averaging
+      IF (linit) n = 1._lp ! relax = inst => initialize averaging
     ENDIF
 
-    relax = (relax * (n - 1._wp) + inst) / n
+    relax = (relax * (n - 1._lp) + inst) / n
 
   END SUBROUTINE time_relaxation
 
@@ -314,15 +314,15 @@ CONTAINS
 #endif
   FUNCTION gamm_p(a,x)
   !$acc routine seq
-    REAL(wp), INTENT(in) :: a, x
-    REAL(wp)             :: gamm_p
+    REAL(lp), INTENT(in) :: a, x
+    REAL(lp)             :: gamm_p
     !   USES gcf, gser
-    REAL(wp)             :: gammcf, gamser, gln
+    REAL(lp)             :: gammcf, gamser, gln
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':gamm_p'
 
-!    IF (x < 0._wp .OR. a < 0._wp) CALL finish(routine,'bad arguments: '//real2string(x)//' '//real2string(a))
-    IF (x < a+1._wp) THEN
+!    IF (x < 0._lp .OR. a < 0._lp) CALL finish(routine,'bad arguments: '//real2string(x)//' '//real2string(a))
+    IF (x < a+1._lp) THEN
     !    Use the series representation.
       CALL gser(gamser,a,x,gln)
       gamm_p = gamser
@@ -342,63 +342,63 @@ CONTAINS
   FUNCTION gamm_inv_p(p, a)
   !$acc routine seq
 
-    REAL(wp), INTENT(IN) :: p, a
-    REAL(wp)             :: gamm_inv_p
+    REAL(lp), INTENT(IN) :: p, a
+    REAL(lp)             :: gamm_inv_p
 
     INTEGER              :: j
-    REAL(wp)             :: x, err, t, u, pp, lna1, afac, a1, gln
-    REAL(wp), PARAMETER  :: EPS = 1.e-8_wp
+    REAL(lp)             :: x, err, t, u, pp, lna1, afac, a1, gln
+    REAL(lp), PARAMETER  :: EPS = 1.e-8_lp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':gamm_inv_p'
 
     a1 = a-1
     gln = gamm_ln(a)
 
-!    IF (a <= 0._wp) CALL finish(routine,'a must be pos in gamm_inv_p')
-    IF (p >= 1._wp) THEN
-      gamm_inv_p = MAX(100._wp,a + 100._wp*sqrt(a))
+!    IF (a <= 0._lp) CALL finish(routine,'a must be pos in gamm_inv_p')
+    IF (p >= 1._lp) THEN
+      gamm_inv_p = MAX(100._lp,a + 100._lp*sqrt(a))
       RETURN
     END IF
-    IF (p <= 0._wp) THEN
-      gamm_inv_p = 0.0_wp
+    IF (p <= 0._lp) THEN
+      gamm_inv_p = 0.0_lp
       RETURN
     END IF
-    IF (a > 1._wp) THEN
+    IF (a > 1._lp) THEN
       lna1 = LOG(a1)
-      afac = EXP(a1*(lna1-1._wp)-gln)
-      IF (p < 0.5_wp) THEN
+      afac = EXP(a1*(lna1-1._lp)-gln)
+      IF (p < 0.5_lp) THEN
         pp=p
       ELSE
-        pp = 1._wp-p
+        pp = 1._lp-p
       END IF
       t = SQRT(-2.*LOG(pp))
-      x = (2.30753_wp+t*0.27061_wp)/(1._wp+t*(0.99229_wp+t*0.04481_wp)) - t
+      x = (2.30753_lp+t*0.27061_lp)/(1._lp+t*(0.99229_lp+t*0.04481_lp)) - t
       IF (p < 0.5) x = -x
-      x = MAX(1.e-3_wp, a*(1._wp-1._wp/(9._wp*a)-x/(3._wp*SQRT(a)))**3._wp)
+      x = MAX(1.e-3_lp, a*(1._lp-1._lp/(9._lp*a)-x/(3._lp*SQRT(a)))**3._lp)
     ELSE
-      t = 1.0_wp - a*(0.253_wp+a*0.12_wp);
+      t = 1.0_lp - a*(0.253_lp+a*0.12_lp);
       IF (p < t) THEN
-        x = (p/t)**(1._wp/a)
+        x = (p/t)**(1._lp/a)
       ELSE
-        x = 1._wp-LOG(1._wp-(p-t)/(1._wp-t))
+        x = 1._lp-LOG(1._lp-(p-t)/(1._lp-t))
       END IF
     END IF
     DO j=1,12
-      IF (x <= 0.0_wp) THEN
-        gamm_inv_p = 0.0_wp
+      IF (x <= 0.0_lp) THEN
+        gamm_inv_p = 0.0_lp
         RETURN
       END IF
       err = gamm_p(a,x) - p
-      IF (a > 1._wp) THEN
+      IF (a > 1._lp) THEN
         t = afac*EXP(-(x-a1)+a1*(LOG(x)-lna1))
       ELSE
         t = EXP(-x+a1*LOG(x)-gln)
       END IF
       u = err/t
-      t = u/(1._wp-0.5_wp*MIN(1._wp,u*((a-1._wp)/x - 1._wp)))
+      t = u/(1._lp-0.5_lp*MIN(1._lp,u*((a-1._lp)/x - 1._lp)))
       x = x - t
-      IF (x <= 0._wp) THEN
-        x = 0.5_wp*(x + t)
+      IF (x <= 0._lp) THEN
+        x = 0.5_lp*(x + t)
       END IF
       IF (ABS(t) < EPS*x ) EXIT
     ENDDO
@@ -413,15 +413,15 @@ CONTAINS
 #endif
   FUNCTION gamm_q(a,x)
   !$acc routine seq
-    REAL(wp), INTENT(in) :: a,x
-    REAL(wp) :: gamm_q
+    REAL(lp), INTENT(in) :: a,x
+    REAL(lp) :: gamm_q
     ! USES gcf,gser
-    REAL(wp) :: gammcf,gamser,gln
+    REAL(lp) :: gammcf,gamser,gln
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':gamm_q'
 
-!    IF (x < 0._wp .OR. a < 0._wp) CALL finish(routine,'bad arguments')
-    IF (x < a+1._wp) THEN
+!    IF (x < 0._lp .OR. a < 0._lp) CALL finish(routine,'bad arguments')
+    IF (x < a+1._lp) THEN
     !    Use the series representation
       CALL gser(gamser,a,x,gln)
       gamm_q = 1.-gamser
@@ -442,28 +442,28 @@ CONTAINS
 #endif
   SUBROUTINE gser(gamser,a,x,gln)
   !$acc routine seq
-    REAL(wp), INTENT(inout) :: gamser, gln
-    REAL(wp), INTENT(in)    :: a, x
+    REAL(lp), INTENT(inout) :: gamser, gln
+    REAL(lp), INTENT(in)    :: a, x
 
     INTEGER,  PARAMETER     :: ITMAX = 100
-    REAL(wp), PARAMETER     :: EPS = 3.e-7_wp
+    REAL(lp), PARAMETER     :: EPS = 3.e-7_lp
     !   USES topmod_gammln
     INTEGER  :: n
-    REAL(wp) :: ap,del,total
+    REAL(lp) :: ap,del,total
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':gser'
 
     gln = gamm_ln(a)
-    IF (x <= 0._wp) THEN
-!      IF (x < 0._wp) CALL finish(routine,'x < 0 in topmod_gser')
-      gamser = 0._wp
+    IF (x <= 0._lp) THEN
+!      IF (x < 0._lp) CALL finish(routine,'x < 0 in topmod_gser')
+      gamser = 0._lp
       RETURN
     END IF
     ap = a
-    total = 1._wp/a
+    total = 1._lp/a
     del = total
     DO n = 1,ITMAX
-      ap = ap + 1._wp
+      ap = ap + 1._lp
       del = del * x / ap
       total = total + del
       IF (ABS(del) < ABS(total)*EPS) EXIT
@@ -483,15 +483,15 @@ CONTAINS
 #endif
   !$acc routine seq
   SUBROUTINE gcf(gammcf,a,x,gln)
-    REAL(wp), INTENT(inout) :: gammcf, gln
-    REAL(wp), INTENT(in)    :: a,x
+    REAL(lp), INTENT(inout) :: gammcf, gln
+    REAL(lp), INTENT(in)    :: a,x
 
-    REAL(wp), PARAMETER     :: EPS = 3.e-7
-    REAL(wp), PARAMETER     :: FPMIN = 1.e-30
+    REAL(lp), PARAMETER     :: EPS = 3.e-7
+    REAL(lp), PARAMETER     :: FPMIN = 1.e-30
     INTEGER,  PARAMETER     :: ITMAX = 100
     !   USES topmod_gammln
     INTEGER  :: i
-    REAL(wp) :: an, b, c, d, del, h
+    REAL(lp) :: an, b, c, d, del, h
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':gcf'
 
@@ -529,24 +529,24 @@ CONTAINS
 #endif
   FUNCTION gamm_ln(xx)
   !$acc routine seq
-    REAL(wp), INTENT(in) :: xx
-    REAL(wp)             :: gamm_ln
+    REAL(lp), INTENT(in) :: xx
+    REAL(lp)             :: gamm_ln
     ! Returns the value ln[Gamma(xx )] for xx > 0.
 
     INTEGER        :: j
-    REAL(wp)       :: ser,tmp,x,y
-    REAL(wp), PARAMETER :: cof(6) = (/76.18009172947146_wp,-86.50532032941677_wp, &
-    24.01409824083091_wp,-1.231739572450155_wp,0.1208650973866179e-2_wp, &
-    -0.5395239384953e-5_wp/)
-    REAL(wp), PARAMETER :: stp = 2.5066282746310005_wp
+    REAL(lp)       :: ser,tmp,x,y
+    REAL(lp), PARAMETER :: cof(6) = (/76.18009172947146_lp,-86.50532032941677_lp, &
+    24.01409824083091_lp,-1.231739572450155_lp,0.1208650973866179e-2_lp, &
+    -0.5395239384953e-5_lp/)
+    REAL(lp), PARAMETER :: stp = 2.5066282746310005_lp
 
     x = xx
     y = x
-    tmp = x + 5.5_wp
-    tmp = (x + 0.5_wp) * LOG(tmp) - tmp
-    ser = 1.000000000190015_wp
+    tmp = x + 5.5_lp
+    tmp = (x + 0.5_lp) * LOG(tmp) - tmp
+    ser = 1.000000000190015_lp
     DO j = 1,6
-      y = y + 1._wp
+      y = y + 1._lp
       ser = ser + cof(j) / y
     END DO
     gamm_ln = tmp + LOG(stp * ser / x)

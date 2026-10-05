@@ -24,7 +24,7 @@
 MODULE mo_megan_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -85,7 +85,7 @@ CONTAINS
 
     dsl4jsb_Def_config(MEGAN_)
 
-!    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
+!    REAL(lp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
 !    TYPE(t_input_file) :: input_file
 
@@ -146,33 +146,33 @@ CONTAINS
     dsl4jsb_memory(MEGAN_)%iso%longname  = 'isoprene'
     dsl4jsb_memory(MEGAN_)%iso%shortname = 'C5H8'
     dsl4jsb_memory(MEGAN_)%iso%class    = 1
-    dsl4jsb_memory(MEGAN_)%iso%mweight  = 68.12_wp
+    dsl4jsb_memory(MEGAN_)%iso%mweight  = 68.12_lp
     dsl4jsb_memory(MEGAN_)%iso%cnumber  = 5
     dsl4jsb_memory(MEGAN_)%iso%cafac    = 2
-    dsl4jsb_memory(MEGAN_)%iso%beta     = 0._wp
-    dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._wp
+    dsl4jsb_memory(MEGAN_)%iso%beta     = 0._lp
+    dsl4jsb_memory(MEGAN_)%iso%ldf      = 1._lp
     dsl4jsb_memory(MEGAN_)%iso%scale    = dsl4jsb_Config(MEGAN_)%scale_iso
 
     ! --- carbon monoxide ---
     dsl4jsb_memory(MEGAN_)%CO%longname  = 'carbon monoxide'
     dsl4jsb_memory(MEGAN_)%CO%shortname = 'CO'
     dsl4jsb_memory(MEGAN_)%CO%class    = 16
-    dsl4jsb_memory(MEGAN_)%CO%mweight  = 28.01_wp
+    dsl4jsb_memory(MEGAN_)%CO%mweight  = 28.01_lp
     dsl4jsb_memory(MEGAN_)%CO%cnumber  = 1
     dsl4jsb_memory(MEGAN_)%CO%cafac    = 1
     dsl4jsb_memory(MEGAN_)%CO%beta     = dsl4jsb_Config(MEGAN_)%beta_CO
-    dsl4jsb_memory(MEGAN_)%CO%ldf      = 1._wp
+    dsl4jsb_memory(MEGAN_)%CO%ldf      = 1._lp
     dsl4jsb_memory(MEGAN_)%CO%scale    = dsl4jsb_Config(MEGAN_)%scale_CO
 
     ! --- nitricoxide ---
     dsl4jsb_memory(MEGAN_)%NO%longname  = 'nitricoxide'
     dsl4jsb_memory(MEGAN_)%NO%shortname = 'NO'
     dsl4jsb_memory(MEGAN_)%NO%class    = 17
-    dsl4jsb_memory(MEGAN_)%NO%mweight  = 30.01_wp
+    dsl4jsb_memory(MEGAN_)%NO%mweight  = 30.01_lp
     dsl4jsb_memory(MEGAN_)%NO%cnumber  = 0
     dsl4jsb_memory(MEGAN_)%NO%cafac    = 1
     dsl4jsb_memory(MEGAN_)%NO%beta     = dsl4jsb_Config(MEGAN_)%beta_NO
-    dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._wp
+    dsl4jsb_memory(MEGAN_)%NO%ldf      = 0._lp
     dsl4jsb_memory(MEGAN_)%NO%scale    = dsl4jsb_Config(MEGAN_)%scale_NO
 
     IF (ASSOCIATED(tile%parent_tile)) THEN
@@ -182,9 +182,9 @@ CONTAINS
         dsl4jsb_memory(MEGAN_)%NO%ef  = dsl4jsb_Lctlib_param(em_fac_NO)
       ELSE
         ! This are not valid values, but just the one from pft01
-        dsl4jsb_memory(MEGAN_)%iso%ef = 10000._wp
-        dsl4jsb_memory(MEGAN_)%CO%ef  = 1000._wp
-        dsl4jsb_memory(MEGAN_)%NO%ef  = 5._wp
+        dsl4jsb_memory(MEGAN_)%iso%ef = 10000._lp
+        dsl4jsb_memory(MEGAN_)%CO%ef  = 1000._lp
+        dsl4jsb_memory(MEGAN_)%NO%ef  = 5._lp
       ENDIF
     END IF
 

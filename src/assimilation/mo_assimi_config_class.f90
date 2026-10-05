@@ -31,7 +31,7 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: init_running_means ! initialize npp buffer for NLCC process
     INTEGER                 :: ncanopy            ! number of canopy layers for the assimi process
                                                   ! R: could be different for other processes e.g. for radiation
-    REAL(wp), ALLOCATABLE   :: canopy_bound_lai(:)
+    REAL(lp), ALLOCATABLE   :: canopy_bound_lai(:)
   CONTAINS
     PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config

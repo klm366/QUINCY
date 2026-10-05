@@ -28,7 +28,7 @@ MODULE mo_ch4_config_class
 
   USE mo_exception,         ONLY: message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_io_netcdf,     ONLY: t_input_file
   USE mo_jsb_time,          ONLY: t_datetime, get_time_start, get_date_components
@@ -47,8 +47,8 @@ MODULE mo_ch4_config_class
 
   TYPE :: t_ch4_source_config
     TYPE (t_ch4_source_config), POINTER :: next
-    REAL(wp), POINTER                   :: dta(:,:)    ! Data to currently add to total emissions (nproma,nblks) [kg(CH4) m-2 s-1]
-    REAL(wp), POINTER                   :: buf(:,:,:)  ! Read buffer (since no routine for reading 1 ts is available)
+    REAL(lp), POINTER                   :: dta(:,:)    ! Data to currently add to total emissions (nproma,nblks) [kg(CH4) m-2 s-1]
+    REAL(lp), POINTER                   :: buf(:,:,:)  ! Read buffer (since no routine for reading 1 ts is available)
     LOGICAL                             :: dta_alloc   ! dta is not refering to a model var and should be deallocated manually
     TYPE (t_multi_file),        POINTER :: ifile       ! File to read data from
     INTEGER                             :: crec        ! Current record to read
@@ -57,7 +57,7 @@ MODULE mo_ch4_config_class
     INTEGER             :: isource                     ! 0: none, 1: monthly climatology, 2: monthly time series, 3: interactive
     CHARACTER(len=128)  :: name_file                   ! Name of file to read data from (if isource == 1 or 2)
     CHARACTER(len=128)  :: name_var                    ! Name of variable in file to read data from (if isource == 1 or 2)
-    REAL(wp)            :: fac                         ! Multiplicative factor for emission
+    REAL(lp)            :: fac                         ! Multiplicative factor for emission
   END TYPE t_ch4_source_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_ch4_config
@@ -66,24 +66,24 @@ MODULE mo_ch4_config_class
     CHARACTER(len=32) ::  O2_varname                   ! Variable name of  O2 in netcdf file for  O2_source == 2
     LOGICAL           :: dbg_process
     LOGICAL           :: has_peatland_tile             ! Is one of the tiles specific for peatlands?
-    REAL(wp)          :: frac_CH4_anox_mineral         ! [-] fraction of anerobically decomposed carbon that becomes CH4 for mineral soils
-    REAL(wp)          :: frac_CH4_anox_organic         ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
-    REAL(wp)          :: tile_threshold                ! tile size cutoff for CH4 calculations (0 - 0.01 resonable)
-    REAL(wp)          :: meth_q10                      ! Q10 for CH4:CO2 ratio
-    REAL(wp)          :: oxid_q10                      ! Q10 for CH4 oxidation
-    REAL(wp)          :: co2_conc                      ! Atmospheric concentration of CO2 [mol m-3]
-    REAL(wp)          :: ch4_conc                      ! Atmospheric concentration of CH4 [mol m-3]
-    REAL(wp)          ::  o2_conc                      ! Atmospheric concentration of  O2 [mol m-3]
-    REAL(wp)          :: co2_scale                     ! Manual unit rescale factor for read timeseries of co2
-    REAL(wp)          :: ch4_scale                     ! Manual unit rescale factor for read timeseries of ch4
-    REAL(wp)          ::  o2_scale                     ! Manual unit rescale factor for read timeseries of o2
-    REAL(wp)          :: scale_termite                 ! scale termite CH4 output
-    REAL(wp)          :: scale_herbivore               ! scale herbivore CH4 output
-    REAL(wp)          :: scale_oxid_dry                ! scale CH4 oxidation dry part
-    REAL(wp)          :: scale_oxid_wet                ! scale CH4 oxidation wet part
-    REAL(wp)          :: implicit_contrib              ! contribution from implicit part of Crank-Nicolson diffusion equation
-    REAL(wp)          :: frac_inun_min                 ! Threshold for tile fraction to be considered for methane processes
-    REAL(wp)          :: polar_anoxic_fac              ! Multiply polar anoxic respiration by this factor
+    REAL(lp)          :: frac_CH4_anox_mineral         ! [-] fraction of anerobically decomposed carbon that becomes CH4 for mineral soils
+    REAL(lp)          :: frac_CH4_anox_organic         ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
+    REAL(lp)          :: tile_threshold                ! tile size cutoff for CH4 calculations (0 - 0.01 resonable)
+    REAL(lp)          :: meth_q10                      ! Q10 for CH4:CO2 ratio
+    REAL(lp)          :: oxid_q10                      ! Q10 for CH4 oxidation
+    REAL(lp)          :: co2_conc                      ! Atmospheric concentration of CO2 [mol m-3]
+    REAL(lp)          :: ch4_conc                      ! Atmospheric concentration of CH4 [mol m-3]
+    REAL(lp)          ::  o2_conc                      ! Atmospheric concentration of  O2 [mol m-3]
+    REAL(lp)          :: co2_scale                     ! Manual unit rescale factor for read timeseries of co2
+    REAL(lp)          :: ch4_scale                     ! Manual unit rescale factor for read timeseries of ch4
+    REAL(lp)          ::  o2_scale                     ! Manual unit rescale factor for read timeseries of o2
+    REAL(lp)          :: scale_termite                 ! scale termite CH4 output
+    REAL(lp)          :: scale_herbivore               ! scale herbivore CH4 output
+    REAL(lp)          :: scale_oxid_dry                ! scale CH4 oxidation dry part
+    REAL(lp)          :: scale_oxid_wet                ! scale CH4 oxidation wet part
+    REAL(lp)          :: implicit_contrib              ! contribution from implicit part of Crank-Nicolson diffusion equation
+    REAL(lp)          :: frac_inun_min                 ! Threshold for tile fraction to be considered for methane processes
+    REAL(lp)          :: polar_anoxic_fac              ! Multiply polar anoxic respiration by this factor
     LOGICAL           :: do_fire                       ! determine fire CH4 emissions
     LOGICAL           :: do_termite                    ! determine termite CH4 emissions
     LOGICAL           :: do_herbivore                  ! determine herbivory CH4 emissions
@@ -107,7 +107,7 @@ MODULE mo_ch4_config_class
   END TYPE t_ch4_config
 
   CHARACTER(len=*), PARAMETER :: interactives =    'wetland,deposition,termites,herbivores,wildfire'
-  REAL(wp),         PARAMETER :: interfac(*)  =(/-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3/)
+  REAL(lp),         PARAMETER :: interfac(*)  =(/-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3,-16.043e-3/)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_ch4_config_class'
 
@@ -119,17 +119,17 @@ CONTAINS
 
     TYPE(t_specie_const), INTENT(in)    :: specie
     INTEGER,              INTENT(in)    :: source
-    REAL(wp),             INTENT(in)    :: mul
-    REAL(wp),             INTENT(in)    :: mmr
-    REAL(wp),             INTENT(in)    :: vmr
-    REAL(wp),             INTENT(inout) :: conc
+    REAL(lp),             INTENT(in)    :: mul
+    REAL(lp),             INTENT(in)    :: mmr
+    REAL(lp),             INTENT(in)    :: vmr
+    REAL(lp),             INTENT(inout) :: conc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':methane_GHG_atm_proc_and_msg'
 
     ! Process units of CH4, CO2 and O2
     SELECT CASE (source)
       CASE (1) ! Constant from namelist: Convert from whatever specified
-        IF (conc >= 0._wp) conc = conc * mul
+        IF (conc >= 0._lp) conc = conc * mul
         CALL convert_2_mol_m3(specie,mmr*mul,vmr*mul,conc)
         CALL message(routine,'Atmospheric value of '//TRIM(specie%specie_name)//' is constant at vmr: '// &
                              real2string(concentration_mol_m3_2_vmr(specie,conc)))
@@ -164,7 +164,7 @@ CONTAINS
     CHARACTER(len=128)          :: name_var
     INTEGER                     :: isource
     INTEGER                     :: year_start
-    REAL(wp)                    :: fac
+    REAL(lp)                    :: fac
 
     NAMELIST /jsb_methane_source_nml/ &
       name_source,                    &
@@ -182,30 +182,30 @@ CONTAINS
     CHARACTER(len=32)           ::  O2_varname
     LOGICAL                     :: dbg_process
     LOGICAL                     :: has_peatland_tile         ! Is one of the tiles specific for peatlands?
-    REAL(wp)                    :: frac_CH4_anox_mineral     ! [-] fraction of anerobically decomposed carbon that becomes CH4 for mineral soils
-    REAL(wp)                    :: frac_CH4_anox_organic     ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
-    REAL(wp)                    :: tile_threshold            ! [-] tile size cutoff for CH4 calculations (0 - 0.01 resonable)
-    REAL(wp)                    :: meth_q10                  ! Q10 for CH4:CO2 ratio
-    REAL(wp)                    :: oxid_q10                  ! Q10 for CH4 oxidation
-    REAL(wp)                    :: co2_vmr                   ! VMR of CO2 [m3 m-3]
-    REAL(wp)                    :: ch4_vmr                   ! VMR of CH4 [m3 m-3]
-    REAL(wp)                    ::  O2_vmr                   ! VMR of O2  [m3 m-3]
-    REAL(wp)                    :: co2_mmr                   ! MMR of CO2 [kg kg-1]
-    REAL(wp)                    :: ch4_mmr                   ! MMR of CH4 [kg kg-1]
-    REAL(wp)                    ::  O2_mmr                   ! VMR of O2  [m3 m-3]
-    REAL(wp)                    :: co2_conc                  ! Concentration of CO2 [mol m-3]
-    REAL(wp)                    :: ch4_conc                  ! Concentration of CH4 [mol m-3]
-    REAL(wp)                    ::  O2_conc                  ! Concentration of  O2 [m3 m-3]
-    REAL(wp)                    :: co2_scale                 ! Manual unit rescale factor for read timeseries of co2
-    REAL(wp)                    :: ch4_scale                 ! Manual unit rescale factor for read timeseries of ch4
-    REAL(wp)                    ::  o2_scale                 ! Manual unit rescale factor for read timeseries of o2
-    REAL(wp)                    :: scale_termite             ! scale termite CH4 output
-    REAL(wp)                    :: scale_herbivore           ! scale herbivore CH4 output
-    REAL(wp)                    :: scale_oxid_dry            ! scale CH4 oxidation dry part
-    REAL(wp)                    :: scale_oxid_wet            ! scale CH4 oxidation wet part
-    REAL(wp)                    :: implicit_contrib          ! contr from implicit part of Crank-Nicolson diffusion equation
-    REAL(wp)                    :: frac_inun_min             ! Threshold for tile fraction to be considered for methane processes
-    REAL(wp)                    :: polar_anoxic_fac          ! Multiply pole-near anoxic respiration by this factor
+    REAL(lp)                    :: frac_CH4_anox_mineral     ! [-] fraction of anerobically decomposed carbon that becomes CH4 for mineral soils
+    REAL(lp)                    :: frac_CH4_anox_organic     ! [-] fraction of anerobically decomposed carbon that becomes CH4 for organic soils
+    REAL(lp)                    :: tile_threshold            ! [-] tile size cutoff for CH4 calculations (0 - 0.01 resonable)
+    REAL(lp)                    :: meth_q10                  ! Q10 for CH4:CO2 ratio
+    REAL(lp)                    :: oxid_q10                  ! Q10 for CH4 oxidation
+    REAL(lp)                    :: co2_vmr                   ! VMR of CO2 [m3 m-3]
+    REAL(lp)                    :: ch4_vmr                   ! VMR of CH4 [m3 m-3]
+    REAL(lp)                    ::  O2_vmr                   ! VMR of O2  [m3 m-3]
+    REAL(lp)                    :: co2_mmr                   ! MMR of CO2 [kg kg-1]
+    REAL(lp)                    :: ch4_mmr                   ! MMR of CH4 [kg kg-1]
+    REAL(lp)                    ::  O2_mmr                   ! VMR of O2  [m3 m-3]
+    REAL(lp)                    :: co2_conc                  ! Concentration of CO2 [mol m-3]
+    REAL(lp)                    :: ch4_conc                  ! Concentration of CH4 [mol m-3]
+    REAL(lp)                    ::  O2_conc                  ! Concentration of  O2 [m3 m-3]
+    REAL(lp)                    :: co2_scale                 ! Manual unit rescale factor for read timeseries of co2
+    REAL(lp)                    :: ch4_scale                 ! Manual unit rescale factor for read timeseries of ch4
+    REAL(lp)                    ::  o2_scale                 ! Manual unit rescale factor for read timeseries of o2
+    REAL(lp)                    :: scale_termite             ! scale termite CH4 output
+    REAL(lp)                    :: scale_herbivore           ! scale herbivore CH4 output
+    REAL(lp)                    :: scale_oxid_dry            ! scale CH4 oxidation dry part
+    REAL(lp)                    :: scale_oxid_wet            ! scale CH4 oxidation wet part
+    REAL(lp)                    :: implicit_contrib          ! contr from implicit part of Crank-Nicolson diffusion equation
+    REAL(lp)                    :: frac_inun_min             ! Threshold for tile fraction to be considered for methane processes
+    REAL(lp)                    :: polar_anoxic_fac          ! Multiply pole-near anoxic respiration by this factor
     LOGICAL                     :: do_fire                   ! determine fire CH4 emissions
     LOGICAL                     :: do_termite                ! determine termite CH4 emissions
     LOGICAL                     :: do_herbivore              ! determine herbivory CH4 emissions
@@ -275,33 +275,33 @@ CONTAINS
      O2_varname            = 'O2'
     dbg_process            = .FALSE.
     has_peatland_tile      = .FALSE.
-    frac_CH4_anox_mineral  =    0.1_wp
-    frac_CH4_anox_organic  =    0.1_wp
-    tile_threshold         =    0.0_wp
-    meth_q10               =    1.0_wp
-    oxid_q10               =    1.9_wp
-    CO2_vmr                =  400._wp
-    CH4_vmr                = 1885._wp
-     O2_vmr                =   20.946_wp
-    CO2_mmr                =   -1.0_wp    ! Impossible value to determine specification
-    CH4_mmr                =   -1.0_wp    ! Impossible value to determine specification
-     O2_mmr                =   -1.0_wp    ! Impossible value to determine specification
-    CO2_conc               =   -1.0_wp    ! Impossible value to determine specification
-    CH4_conc               =   -1.0_wp    ! Impossible value to determine specification
-     O2_conc               =   -1.0_wp    ! Impossible value to determine specification
-    CH4_scale              =    1.e-9_wp  ! Default unit is ppbv
-    CO2_scale              =    1.e-6_wp  ! Default unit is ppmv
-     O2_scale              =    1.e-2_wp  ! Default unit is vol%
+    frac_CH4_anox_mineral  =    0.1_lp
+    frac_CH4_anox_organic  =    0.1_lp
+    tile_threshold         =    0.0_lp
+    meth_q10               =    1.0_lp
+    oxid_q10               =    1.9_lp
+    CO2_vmr                =  400._lp
+    CH4_vmr                = 1885._lp
+     O2_vmr                =   20.946_lp
+    CO2_mmr                =   -1.0_lp    ! Impossible value to determine specification
+    CH4_mmr                =   -1.0_lp    ! Impossible value to determine specification
+     O2_mmr                =   -1.0_lp    ! Impossible value to determine specification
+    CO2_conc               =   -1.0_lp    ! Impossible value to determine specification
+    CH4_conc               =   -1.0_lp    ! Impossible value to determine specification
+     O2_conc               =   -1.0_lp    ! Impossible value to determine specification
+    CH4_scale              =    1.e-9_lp  ! Default unit is ppbv
+    CO2_scale              =    1.e-6_lp  ! Default unit is ppmv
+     O2_scale              =    1.e-2_lp  ! Default unit is vol%
     CH4_source             =    1
     CO2_source             =    1
      O2_source             =    1
-    scale_termite          =    1.0_wp
-    scale_herbivore        =    1.0_wp
-    scale_oxid_dry         =    1.0_wp
-    scale_oxid_wet         =    1.0_wp
-    implicit_contrib       =    0.5_wp
-    frac_inun_min          =    1.e-3_wp
-    polar_anoxic_fac       =    1.0_wp
+    scale_termite          =    1.0_lp
+    scale_herbivore        =    1.0_lp
+    scale_oxid_dry         =    1.0_lp
+    scale_oxid_wet         =    1.0_lp
+    implicit_contrib       =    0.5_lp
+    frac_inun_min          =    1.e-3_lp
+    polar_anoxic_fac       =    1.0_lp
     minimum_no_layers      =    3
     nstep_per_day          =    2
     nstep_diffusion        =    1
@@ -331,7 +331,7 @@ CONTAINS
           name_var = ''
           isource = 0 ! Default is "source switched off"
           year_start = -1 ! Use current year
-          fac = 1._wp
+          fac = 1._lp
 
           ! Read namelist
           READ(nml_unit, jsb_methane_source_nml)
@@ -485,16 +485,16 @@ CONTAINS
       config%ch4_conc = CH4_conc
       config%co2_conc = CO2_conc
       config%o2_conc  = O2_conc
-      IF (scale_termite /= 1.0_wp) THEN
+      IF (scale_termite /= 1.0_lp) THEN
         CALL message(routine,'Scaling termite CH4 production by '//real2string(scale_termite))
       END IF
-      IF (scale_herbivore /= 1.0_wp) THEN
+      IF (scale_herbivore /= 1.0_lp) THEN
         CALL message(routine,'Scaling herbivore CH4 production by '//real2string(scale_herbivore))
       END IF
-      IF (scale_oxid_dry /= 1.0_wp) THEN
+      IF (scale_oxid_dry /= 1.0_lp) THEN
         CALL message(routine,'Scaling dry CH4 oxidation by '//real2string(scale_oxid_dry))
       END IF
-      IF (scale_oxid_wet /= 1.0_wp) THEN
+      IF (scale_oxid_wet /= 1.0_lp) THEN
         CALL message(routine,'Scaling wet CH4 oxidation by '//real2string(scale_oxid_wet))
       END IF
       CALL message(routine,'Preparing emissions for atmosphere '//logical2string(atm_couple))

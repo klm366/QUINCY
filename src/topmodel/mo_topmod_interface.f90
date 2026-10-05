@@ -24,7 +24,7 @@
 MODULE mo_top_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message, finish, message_text
   USE mo_jsb_control,            ONLY: debug_on
   USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -185,25 +185,25 @@ CONTAINS
 
     ! Pointers to non-variables
     !
-    REAL(wp), POINTER :: lat(:)
-    REAL(wp), POINTER :: cti_mean(:)
-    REAL(wp), POINTER :: cti_basin(:)
-    REAL(wp), POINTER :: cti_openwater(:)
-    REAL(wp), POINTER :: cti_phi(:)
-    REAL(wp), POINTER :: cti_chi(:)
-    REAL(wp), POINTER :: cti_mu(:)
+    REAL(lp), POINTER :: lat(:)
+    REAL(lp), POINTER :: cti_mean(:)
+    REAL(lp), POINTER :: cti_basin(:)
+    REAL(lp), POINTER :: cti_openwater(:)
+    REAL(lp), POINTER :: cti_phi(:)
+    REAL(lp), POINTER :: cti_chi(:)
+    REAL(lp), POINTER :: cti_mu(:)
 
     CLASS(t_jsb_tile_abstract), POINTER :: ptr_tile
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
     TYPE(t_interp_var), POINTER :: interp
-    REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
-    REAL(wp) :: water_table_t, frac_liquid_top_t
+    REAL(lp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
+    REAL(lp) :: water_table_t, frac_liquid_top_t
     LOGICAL,  POINTER :: PE_mask(:)
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
     INTEGER  :: year, month, day, summer_state, ylen, mlen, nstep, step, stepm, stepp
-    REAL(wp) :: dtime
+    REAL(lp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_topmodel'
 
@@ -319,7 +319,7 @@ CONTAINS
           CALL update_peat_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                                       &
             &                      lnew_year,lnew_month,lnew_day,                                                  &
             &                      mlen,ylen,tspd,                                                                 &
-            &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                                  &
+            &                      REAL(dsl4jsb_Config(TOP_)%years_long_term,lp),                                  &
             &                      dsl4jsb_Config(TOP_)%relaxation_time*tspd,                                      &
             &                      rain(ic),snow (ic),  precip_sum_day(ic),precip_mean_day (ic), precip_relax(ic), &
             &                      aet (ic),               aet_sum_day(ic),   aet_mean_day (ic),    aet_relax(ic), &
@@ -361,17 +361,17 @@ CONTAINS
             IF (stepp >  nstep) stepp = nstep
         END SELECT
         interp => dsl4jsb_memory(TOP_)%interp_frac_inun(iblk)%p
-        IF (.NOT. ASSOCIATED(interpol_new(1._wp,mlen,frac_inun_presc(:,stepm), &
+        IF (.NOT. ASSOCIATED(interpol_new(1._lp,mlen,frac_inun_presc(:,stepm), &
                                                      frac_inun_presc(:,step),  &
                                                      frac_inun_presc(:,stepp), &
-                             (/0._wp,1._wp/),0.1_wp,interp))) THEN
+                             (/0._lp,1._lp/),0.1_lp,interp))) THEN
           CALL finish(routine,'Error initializing interpolation')
         ENDIF
         IF (ASSOCIATED(dsl4jsb_memory(TOP_)%wt_inun_presc)) THEN
           wt_inun_presc   => dsl4jsb_memory(TOP_)%wt_inun_presc(ics:ice,iblk,:)
           !$acc enter data attach (wt_inun_presc)
           !$acc update device (wt_inun_presc)
-          IF (.NOT. ASSOCIATED(interpol_new(1._wp,mlen,wt_inun_presc(:,stepm), &
+          IF (.NOT. ASSOCIATED(interpol_new(1._lp,mlen,wt_inun_presc(:,stepm), &
                                                        wt_inun_presc(:,step),  &
                                                        wt_inun_presc(:,stepp), &
                                intrp=dsl4jsb_memory(TOP_)%interp_wt_inun(iblk)%p))) THEN
@@ -396,10 +396,10 @@ CONTAINS
         ENDDO
       ELSE
         DO ic = 1, nc
-          IF (frac_inun(ic) > 0._wp) THEN
-            wt_inun(ic) = 0.25_wp
+          IF (frac_inun(ic) > 0._lp) THEN
+            wt_inun(ic) = 0.25_lp
           ELSE
-            wt_inun(ic) = 0._wp
+            wt_inun(ic) = 0._lp
           ENDIF
         ENDDO
       ENDIF
@@ -461,11 +461,11 @@ CONTAINS
       ! Initializations
       !$acc parallel loop gang vector
       DO ic = 1, nc
-        water_table      (ic  ) = 0._wp
-        frac_liquid_top  (ic  ) = 0._wp
-        frac_inun        (ic  ) = 0._wp
-        wt_inun          (ic  ) = 0._wp
-        frac_inun_uncorr (ic  ) = 0._wp
+        water_table      (ic  ) = 0._lp
+        frac_liquid_top  (ic  ) = 0._lp
+        frac_inun        (ic  ) = 0._lp
+        wt_inun          (ic  ) = 0._lp
+        frac_inun_uncorr (ic  ) = 0._lp
       ENDDO
       !$acc end parallel loop
 
@@ -499,15 +499,15 @@ CONTAINS
         !$acc parallel loop gang vector
         DO ic = 1, nc
           frac_liquid_top_uncorr(ic) =            frac_liquid_top(ic)
-          frac_liquid_top       (ic) = MAX(0.1_wp,frac_liquid_top(ic))
+          frac_liquid_top       (ic) = MAX(0.1_lp,frac_liquid_top(ic))
         ENDDO
         !$acc end parallel loop
         !$acc parallel loop gang vector
         DO ic = 1, nc
-          IF (aet_relax(ic) > 0._wp) THEN
+          IF (aet_relax(ic) > 0._lp) THEN
             PE_mask(ic) = (precip_relax(ic) / aet_relax(ic)) > dsl4jsb_Config(TOP_)%wetland_threshold
           ELSE
-            PE_mask(ic) = precip_relax(ic) > 0._wp
+            PE_mask(ic) = precip_relax(ic) > 0._lp
           ENDIF
         ENDDO
         !$acc end parallel loop
@@ -537,7 +537,7 @@ CONTAINS
             & wt_inun(ic) &
           )
 
-          frac_inun(ic) = MIN(1._wp,MAX(0._wp,frac_inun(ic) * dsl4jsb_Config(TOP_)%scale_inun))
+          frac_inun(ic) = MIN(1._lp,MAX(0._lp,frac_inun(ic) * dsl4jsb_Config(TOP_)%scale_inun))
 
           IF (lstart) frac_inun_pre(ic) = frac_inun(ic)
 
@@ -574,7 +574,7 @@ CONTAINS
           CALL update_topmodel_runmean(lstart,dsl4jsb_Config(TOP_)%init_runmean,                         &
             &                          lnew_year,lnew_month,lnew_day,                                    &
             &                          mlen,ylen,tspd,summer_state,                                      &
-            &                          REAL(dsl4jsb_Config(TOP_)%years_long_term,wp),                    &
+            &                          REAL(dsl4jsb_Config(TOP_)%years_long_term,lp),                    &
             &                          lat(ic)>dsl4jsb_Config(TOP_)%lat_const_wetland_type,              &
             &                          frac_inun(ic), frac_inun_sum_month(ic), frac_inun_mean_month(ic), &
             &                          frac_inun_min_year(ic), frac_inun_min_lt(ic),                     &

@@ -25,7 +25,7 @@ MODULE mo_top_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_util,              ONLY: real2string, int2string, logical2string
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -37,15 +37,15 @@ MODULE mo_top_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_top_config
     LOGICAL           :: dbg_process            ! Debug topmodel processes and tasks
-    REAL(wp)          :: efold                  ! topmodel efolding depth
-    REAL(wp)          :: wt_min                 ! minimum water table required for inundation
-    REAL(wp)          :: wt_max                 ! maximum water table for inundation (larger is considered lake/river)
-    REAL(wp)          :: cti_min                ! minimum mean CTI value to consider grid cell
-    REAL(wp)          :: cti_max                ! maximum CTI for inundation (larger is considered lake/river)
-    REAL(wp)          :: cti_min_flooding       ! minimum CTI for floodability
-    REAL(wp)          :: saturation_threshold   ! threshold above which soil layer is assumed saturated
-    REAL(wp)          :: relaxation_time        ! time scale for relaxation of aet and precip [d]
-    REAL(wp)          :: wetland_threshold      ! Minimum for relaxed P/E allowing wetlands []
+    REAL(lp)          :: efold                  ! topmodel efolding depth
+    REAL(lp)          :: wt_min                 ! minimum water table required for inundation
+    REAL(lp)          :: wt_max                 ! maximum water table for inundation (larger is considered lake/river)
+    REAL(lp)          :: cti_min                ! minimum mean CTI value to consider grid cell
+    REAL(lp)          :: cti_max                ! maximum CTI for inundation (larger is considered lake/river)
+    REAL(lp)          :: cti_min_flooding       ! minimum CTI for floodability
+    REAL(lp)          :: saturation_threshold   ! threshold above which soil layer is assumed saturated
+    REAL(lp)          :: relaxation_time        ! time scale for relaxation of aet and precip [d]
+    REAL(lp)          :: wetland_threshold      ! Minimum for relaxed P/E allowing wetlands []
     LOGICAL           :: init_runmean           ! initialise the running means
     LOGICAL           :: use_cti_basin          ! use basin mean CTI index in inundated area calc.
     LOGICAL           :: use_openwater          ! use open water fraction to limit inundated fraction
@@ -53,8 +53,8 @@ MODULE mo_top_config_class
     LOGICAL           :: use_cti_max            ! use cti_max to limit inundated fraction
     LOGICAL           :: use_cti_flood          ! use cti_min_flooding to limit inundated fraction
     LOGICAL           :: use_crop_wetlands      ! allow wetlands to form on crops
-    REAL(wp)          :: peat_runoff_exp        ! exponent in peat runoff equation
-    REAL(wp)          :: peat_runoff_fac        ! factor in peat runoff equation
+    REAL(lp)          :: peat_runoff_exp        ! exponent in peat runoff equation
+    REAL(lp)          :: peat_runoff_fac        ! factor in peat runoff equation
     INTEGER           :: inun_mode              ! prescribe inundation status:
                                                 !   0 : interactive inundation
                                                 !   1 : climatological prescribed inundation
@@ -63,12 +63,12 @@ MODULE mo_top_config_class
                                                 !  +8 : Start interpolation using field 2 (internal use only)
     LOGICAL           :: lpeat                  ! do peat calculations
     LOGICAL           :: ltime_means            ! determine time means
-    REAL(wp)          :: lat_const_wetland_type ! Latitude separating types of calculations for permanent wetland
+    REAL(lp)          :: lat_const_wetland_type ! Latitude separating types of calculations for permanent wetland
     INTEGER           :: month_summer_start     ! Starting #month for summer specific calculations
     INTEGER           :: month_summer_end       ! Ending #month for summer specific calculations
     INTEGER           :: years_long_term        ! #years to include in long term means
-    REAL(wp)          :: soil_depth_min         ! Minimum soil depth to deterimine water table and inundation [m]
-    REAL(wp)          :: scale_inun             ! Scale inundated fraction with this number []
+    REAL(lp)          :: soil_depth_min         ! Minimum soil depth to deterimine water table and inundation [m]
+    REAL(lp)          :: scale_inun             ! Scale inundated fraction with this number []
     INTEGER           :: step_offset            ! File offset for inundated fraction from files (internal use only)
   CONTAINS
     PROCEDURE :: Init => Init_topmodel_config
@@ -88,15 +88,15 @@ CONTAINS
     ! Namelist variables
     LOGICAL                     :: active
     LOGICAL                     :: dbg_process
-    REAL(wp)                    :: efold
-    REAL(wp)                    :: wt_min
-    REAL(wp)                    :: wt_max
-    REAL(wp)                    :: cti_min
-    REAL(wp)                    :: cti_max
-    REAL(wp)                    :: cti_min_flooding
-    REAL(wp)                    :: saturation_threshold
-    REAL(wp)                    :: relaxation_time
-    REAL(wp)                    :: wetland_threshold
+    REAL(lp)                    :: efold
+    REAL(lp)                    :: wt_min
+    REAL(lp)                    :: wt_max
+    REAL(lp)                    :: cti_min
+    REAL(lp)                    :: cti_max
+    REAL(lp)                    :: cti_min_flooding
+    REAL(lp)                    :: saturation_threshold
+    REAL(lp)                    :: relaxation_time
+    REAL(lp)                    :: wetland_threshold
     LOGICAL                     :: init_runmean
     LOGICAL                     :: use_cti_basin
     LOGICAL                     :: use_openwater
@@ -104,17 +104,17 @@ CONTAINS
     LOGICAL                     :: use_cti_max
     LOGICAL                     :: use_cti_flood
     LOGICAL                     :: use_crop_wetlands
-    REAL(wp)                    :: peat_runoff_exp
-    REAL(wp)                    :: peat_runoff_fac
+    REAL(lp)                    :: peat_runoff_exp
+    REAL(lp)                    :: peat_runoff_fac
     INTEGER                     :: inun_mode
     LOGICAL                     :: lpeat
     LOGICAL                     :: ltime_means
-    REAL(wp)                    :: lat_const_wetland_type
+    REAL(lp)                    :: lat_const_wetland_type
     INTEGER                     :: month_summer_start
     INTEGER                     :: month_summer_end
     INTEGER                     :: years_long_term
-    REAL(wp)                    :: soil_depth_min
-    REAL(wp)                    :: scale_inun
+    REAL(lp)                    :: soil_depth_min
+    REAL(lp)                    :: scale_inun
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_topmodel_nml/                      &
@@ -136,7 +136,7 @@ CONTAINS
     ! Locals
     INTEGER :: nml_handler, nml_unit, istat, i
     TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER :: ptr_1D(:)
+    REAL(lp), POINTER :: ptr_1D(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_topmodel_config'
 
@@ -145,32 +145,32 @@ CONTAINS
     ! Set defaults
     active                 = .FALSE.
     dbg_process            = .FALSE.
-    cti_min                =   5.0_wp
-    cti_max                =  35.0_wp
-    cti_min_flooding       =   9.0_wp
-    wt_min                 =   0._wp
-    wt_max                 =   0.5_wp
-    efold                  =   2.0_wp
-    saturation_threshold   =   0.95_wp
-    relaxation_time        = 365.2425_wp
-    wetland_threshold      =   1.0_wp
+    cti_min                =   5.0_lp
+    cti_max                =  35.0_lp
+    cti_min_flooding       =   9.0_lp
+    wt_min                 =   0._lp
+    wt_max                 =   0.5_lp
+    efold                  =   2.0_lp
+    saturation_threshold   =   0.95_lp
+    relaxation_time        = 365.2425_lp
+    wetland_threshold      =   1.0_lp
     init_runmean           = .FALSE.
     use_cti_basin          = .FALSE.
     use_openwater          = .FALSE.
     use_wt_max             = .FALSE.
     use_cti_max            = .FALSE.
     use_crop_wetlands      = .TRUE.
-    peat_runoff_exp        =  20.0_wp
-    peat_runoff_fac        =   1.e-2_wp
+    peat_runoff_exp        =  20.0_lp
+    peat_runoff_fac        =   1.e-2_lp
     inun_mode              =   0
     lpeat                  = .FALSE.
     ltime_means            = .FALSE.
-    lat_const_wetland_type =  40._wp
+    lat_const_wetland_type =  40._lp
     years_long_term        =   5
     month_summer_start     =   6 ! Summer starts in June
     month_summer_end       =   9 ! Summer ends in September
-    soil_depth_min         =   0.11_wp
-    scale_inun             =   1._wp
+    soil_depth_min         =   0.11_lp
+    scale_inun             =   1._lp
     ic_filename            = 'ic_land_soil.nc'
     bc_filename            = 'bc_land_soil.nc'
 

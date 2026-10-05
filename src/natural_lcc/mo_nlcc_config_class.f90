@@ -32,7 +32,7 @@ MODULE mo_nlcc_config_class
       & init_running_means, &
       & init_nlcc,          &
       & climbuf_only
-    REAL(wp)             :: &
+    REAL(lp)             :: &
       & accelerate_nlcc
 
    CONTAINS

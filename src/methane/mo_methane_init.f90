@@ -24,7 +24,7 @@
 MODULE mo_methane_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -103,10 +103,10 @@ CONTAINS
     TYPE(t_input_file),   INTENT(inout) :: input_file
     INTEGER,              INTENT(in)    :: source
     CHARACTER(len=*),     INTENT(in)    :: varname
-    REAL(wp),             INTENT(in)    :: fyears(:)
+    REAL(lp),             INTENT(in)    :: fyears(:)
     INTEGER,              INTENT(in)    :: year_start
     INTEGER,              INTENT(in)    :: year_end
-    REAL(wp),             INTENT(in)    :: GHG_scale
+    REAL(lp),             INTENT(in)    :: GHG_scale
     TYPE(t_specie_const), INTENT(in)    :: GAS
     TYPE(t_timeseries),   INTENT(inout) :: ts
 
@@ -114,7 +114,7 @@ CONTAINS
 
     INTEGER :: i, nc_id, ndim
     INTEGER :: ind_start(1), ind_end(1), istart(7), isize(7)
-    REAL(wp) :: tmp
+    REAL(lp) :: tmp
 
     IF (my_process_is_stdio()) THEN
       ind_start = MINLOC(ABS(INT(fyears)-year_start))
@@ -191,7 +191,7 @@ CONTAINS
     INTEGER :: istart(7), isize(7), ndim
     INTEGER :: nc_id
     LOGICAL :: lfile_source
-    REAL(wp), POINTER :: fyears(:)
+    REAL(lp), POINTER :: fyears(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':methane_read_init_vars'
 
@@ -332,9 +332,9 @@ CONTAINS
       CALL message(TRIM(routine), 'Initializing methane memory for tile '//TRIM(tile%name))
 
     ! Determine dz for soil layer midpoints
-    dsl4jsb_memory(CH4_)%layer_midpoint_dz(1) = layer%dz(1) * 0.5_wp
+    dsl4jsb_memory(CH4_)%layer_midpoint_dz(1) = layer%dz(1) * 0.5_lp
     DO i=2,layer%n_levels
-      dsl4jsb_memory(CH4_)%layer_midpoint_dz(i) = (layer%dz(i) + layer%dz(i-1)) * 0.5_wp
+      dsl4jsb_memory(CH4_)%layer_midpoint_dz(i) = (layer%dz(i) + layer%dz(i-1)) * 0.5_lp
     ENDDO
     !$acc update device(dsl4jsb_memory(CH4_)%layer_midpoint_dz)
 
@@ -344,7 +344,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(CH4_, root_dist_sl)
     DO j=1,nblks
       DO i=1,nproma
-        mxlay_above_rock(i,j) = REAL(find_bedrock_layer(layer%n_levels,layer%ubounds(:),soil_depth(i,j)),wp)
+        mxlay_above_rock(i,j) = REAL(find_bedrock_layer(layer%n_levels,layer%ubounds(:),soil_depth(i,j)),lp)
       ENDDO
     ENDDO
     !$acc update device(mxlay_above_rock)
@@ -356,13 +356,13 @@ CONTAINS
       IF (TRIM(tile%parent_tile%name(:3)) == 'veg') THEN
         DO j=1,nblks
           DO i=1,nproma
-             CALL determine_root_dist(INT(mxlay_above_rock(i,j)+0.5_wp),layer%dz(:),layer%ubounds(:), &
+             CALL determine_root_dist(INT(mxlay_above_rock(i,j)+0.5_lp),layer%dz(:),layer%ubounds(:), &
                &                      dsl4jsb_Lctlib_param(root_dist_beta),                           &
                &                      root_dist_sl(i,:,j))
           ENDDO
         ENDDO
       ELSE
-        root_dist_sl(:,:,:) = 0._wp
+        root_dist_sl(:,:,:) = 0._lp
       ENDIF
     END IF
     !$acc update device(root_dist_sl)

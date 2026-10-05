@@ -24,7 +24,7 @@
 MODULE mo_megan_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -54,13 +54,13 @@ MODULE mo_megan_memory_class
     INTEGER                :: class           ! MEGAN compound class (1..20)
     INTEGER                :: id_tr           ! index of compound tracer in tracer list
     INTEGER                :: id_sp           ! index of compound species in species list
-    REAL(wp)               :: mweight         ! molecular weight
+    REAL(lp)               :: mweight         ! molecular weight
     INTEGER                :: cnumber         ! carbon number
-    REAL(wp)               :: beta            ! temperature adjustment factor (2012 paper, Table 4)
-    REAL(wp)               :: ldf             ! light-dependent fraction (2012 paper, Table 4)
+    REAL(lp)               :: beta            ! temperature adjustment factor (2012 paper, Table 4)
+    REAL(lp)               :: ldf             ! light-dependent fraction (2012 paper, Table 4)
     INTEGER                :: cafac           ! relative emission rates for leaf age (2012 paper, Table 4)
-    REAL(wp)               :: ef              ! PFT specific emission factor  standard conditions
-    REAL(wp)               :: scale           ! Emission factor scaling
+    REAL(lp)               :: ef              ! PFT specific emission factor  standard conditions
+    REAL(lp)               :: scale           ! Emission factor scaling
 
     ! 2D Fields
     TYPE(t_jsb_var_real2d) ::              &
@@ -70,7 +70,7 @@ MODULE mo_megan_memory_class
   END TYPE t_megan_specie
 
   TYPE t_megan_ptrs
-    REAL(wp), DIMENSION(:), POINTER ::     &
+    REAL(lp), DIMENSION(:), POINTER ::     &
       & total_out,                         &  ! Emission [g m-2 s-1]
       & gamma_age,                         &
       & gamma_temp
@@ -157,7 +157,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_pfd', mem%gamma_pfd,                            &
       & hgrid, surface,                                                      &
@@ -166,7 +166,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_co2', mem%gamma_co2,                            &
       & hgrid, surface,                                                      &
@@ -175,7 +175,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'gamma_sm', mem%gamma_sm,                              &
       & hgrid, surface,                                                      &
@@ -184,7 +184,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'temp_relax_short', mem%temp_relax_short,              &
       & hgrid, surface,                                                      &
@@ -193,7 +193,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'lai_relax_short', mem%lai_relax_short,                &
       & hgrid, surface,                                                      &
@@ -202,7 +202,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'lai_relax_long', mem%lai_relax_long,                  &
       & hgrid, surface,                                                      &
@@ -211,7 +211,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'pfd_relax_short', mem%pfd_relax_short,                &
       & hgrid, surface,                                                      &
@@ -220,7 +220,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'pfd_relax_long', mem%pfd_relax_long,                  &
       & hgrid, surface,                                                      &
@@ -229,7 +229,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
 !    IF (dsl4jsb_Config(TOP_)%lpeat) THEN
 
@@ -261,8 +261,8 @@ CONTAINS
       surface       => Get_vgrid('surface')
 
       specie%shortname = TRIM(specie_name)
-      specie%scale = 0._wp
-      specie%beta  = 0._wp
+      specie%scale = 0._lp
+      specie%beta  = 0._lp
 
       CALL mem%Add_var( specie_name//'_total_out', specie%total_out,           &
         & hgrid, surface,                                                      &
@@ -270,7 +270,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       IF (uother) THEN
         CALL mem%Add_var( specie_name//'_gamma_age', specie%gamma_age,           &
@@ -279,7 +279,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = FULL, l_aggregate_all=.FALSE.,                        &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( specie_name//'_gamma_temp', specie%gamma_temp,         &
           & hgrid, surface,                                                      &
@@ -287,7 +287,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = FULL, l_aggregate_all=.FALSE.,                        &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
       ENDIF
 
     END SUBROUTINE Init_megan_specie

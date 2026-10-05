@@ -24,7 +24,7 @@
 MODULE mo_methane_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp, i4
+  USE mo_kind,                   ONLY: lp, i4
   USE mo_exception,              ONLY: message, finish, message_text
   USE mo_jsb_control,            ONLY: debug_on
   USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -93,8 +93,8 @@ MODULE mo_methane_interface
   CHARACTER(len=*), PARAMETER :: modname = 'mo_methane_interface'
 
   ! StW: These variables are shared between tiles - not very nice! Reconsider!
-  REAL(wp), POINTER, SAVE :: frac_non_crop(:,:) => NULL()
-  REAL(wp), POINTER, SAVE :: sum_non_crop (:,:) => NULL()
+  REAL(lp), POINTER, SAVE :: frac_non_crop(:,:) => NULL()
+  REAL(lp), POINTER, SAVE :: sum_non_crop (:,:) => NULL()
 
 CONTAINS
 
@@ -143,15 +143,15 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
     DO ic = 1, nc
-      specie%diff_out   (ic) = 0._wp
-      specie%prod_out   (ic) = 0._wp
-      specie%plant_out  (ic) = 0._wp
-      specie%oxid_out   (ic) = 0._wp
-      specie%in_out     (ic) = 0._wp
-      specie%total_out  (ic) = 0._wp
-      specie%total_final(ic) = 0._wp
+      specie%diff_out   (ic) = 0._lp
+      specie%prod_out   (ic) = 0._lp
+      specie%plant_out  (ic) = 0._lp
+      specie%oxid_out   (ic) = 0._lp
+      specie%in_out     (ic) = 0._lp
+      specie%total_out  (ic) = 0._lp
+      specie%total_final(ic) = 0._lp
 !      IF (ASSOCIATED(specie%other_out)) THEN
-!        specie%other_out(ic)   = 0._wp
+!        specie%other_out(ic)   = 0._lp
 !      ENDIF
     ENDDO
     !$ACC END PARALLEL LOOP
@@ -159,16 +159,16 @@ CONTAINS
       IF (dbg) THEN
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
         DO ic = 1, nc
-          specie%test2d(ic)       = 0._wp
+          specie%test2d(ic)       = 0._lp
         ENDDO
         !$ACC END PARALLEL LOOP
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(2) COLLAPSE(2) GANG VECTOR
         DO is = 1, nsoil
           DO ic = 1, nc
-            specie%prod_out_sl (ic,is) = 0._wp
-            specie%plant_out_sl(ic,is) = 0._wp
-            specie%oxid_out_sl (ic,is) = 0._wp
-!            specie%test3d(ic,is)       = 0._wp
+            specie%prod_out_sl (ic,is) = 0._lp
+            specie%plant_out_sl(ic,is) = 0._lp
+            specie%oxid_out_sl (ic,is) = 0._lp
+!            specie%test3d(ic,is)       = 0._lp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -180,22 +180,22 @@ CONTAINS
 
   SUBROUTINE update_chem_specie(dt,nly,i,frac,specie,diff,act_sl,prod_sl,plant_sl,oxid_sl,dbg,other_sl,to_other_i)
 
-    REAL(wp),           INTENT(in)    :: dt
+    REAL(lp),           INTENT(in)    :: dt
     INTEGER,            INTENT(in)    :: nly
     INTEGER,            INTENT(in)    :: i
-    REAL(wp),           INTENT(in)    :: frac
+    REAL(lp),           INTENT(in)    :: frac
     TYPE (t_chem_ptrs), INTENT(inout) :: specie
-    REAL(wp),           INTENT(in)    :: diff
-    REAL(wp),           INTENT(in)    :: act_sl(:)
-    REAL(wp),           INTENT(in)    :: prod_sl(:)
-    REAL(wp),           INTENT(in)    :: plant_sl(:)
-    REAL(wp),           INTENT(in)    :: oxid_sl(:)
+    REAL(lp),           INTENT(in)    :: diff
+    REAL(lp),           INTENT(in)    :: act_sl(:)
+    REAL(lp),           INTENT(in)    :: prod_sl(:)
+    REAL(lp),           INTENT(in)    :: plant_sl(:)
+    REAL(lp),           INTENT(in)    :: oxid_sl(:)
     LOGICAL,  OPTIONAL, INTENT(in)    :: dbg
-    REAL(wp), OPTIONAL, INTENT(in)    :: other_sl(:)
+    REAL(lp), OPTIONAL, INTENT(in)    :: other_sl(:)
     INTEGER,  OPTIONAL, INTENT(in)    :: to_other_i
 
     INTEGER  :: j
-    REAL(wp) :: mul
+    REAL(lp) :: mul
 
     mul = frac / dt
 
@@ -212,8 +212,8 @@ CONTAINS
         IF (to_other_i /= 0) specie%total_out(i) = specie%total_out(i) + specie%other_out(i)
       ENDIF
     ENDIF
-    specie%in_out   (i) = MAX(0._wp,specie%total_out(i))
-    specie%total_out(i) = MIN(0._wp,specie%total_out(i))
+    specie%in_out   (i) = MAX(0._lp,specie%total_out(i))
+    specie%total_out(i) = MIN(0._lp,specie%total_out(i))
     IF (PRESENT(dbg)) THEN
       IF (dbg) THEN
         DO j = 1, nly
@@ -234,10 +234,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_specie_const),       INTENT(in)    :: GAS
     INTEGER,                    INTENT(in)    :: source
-    REAL(wp),                   INTENT(in)    :: atm_conc(:)
-    REAL(wp),                   INTENT(in)    :: nml_conc
+    REAL(lp),                   INTENT(in)    :: atm_conc(:)
+    REAL(lp),                   INTENT(in)    :: nml_conc
     TYPE(t_timeseries),         INTENT(in)    :: GHG_atm
-    REAL(wp),                   INTENT(inout) :: dst(:)
+    REAL(lp),                   INTENT(inout) :: dst(:)
     LOGICAL,                    INTENT(in)    :: dbg
 
     LOGICAL :: lstart, lrestart, lyear, lupdate
@@ -252,7 +252,7 @@ CONTAINS
     lupdate = .FALSE.
     SELECT CASE (src)
       CASE (1) ! Constant from namelist - just copy if not already done
-        IF (ABS(dst(1)-nml_conc) > 1.e-10_wp) THEN ! Only need to do this once
+        IF (ABS(dst(1)-nml_conc) > 1.e-10_lp) THEN ! Only need to do this once
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
           DO ic = 1, nc
             dst(ic) = nml_conc
@@ -386,44 +386,44 @@ CONTAINS
 
     ! Pointers to allocated non-variables
     !
-    REAL(wp), CONTIGUOUS, POINTER :: OxicDecompCarbon(:)
-    REAL(wp), CONTIGUOUS, POINTER :: AnoxDecompCarbon(:)
-    REAL(wp), CONTIGUOUS, POINTER :: water_table(:)
-    REAL(wp), CONTIGUOUS, POINTER :: tiller_area_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: frac_tile(:), frac_tile_abs(:), frac1(:), tile_fac(:)
-    REAL(wp), CONTIGUOUS, POINTER :: D_CH4(:), D_CO2(:), D_O2(:), D_used(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_dry_sl(:), CO2_dry_sl(:), O2_dry_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_wet_sl(:), CO2_wet_sl(:), O2_wet_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_plant_sl(:), CO2_plant_sl(:), O2_plant_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_prod_sl(:), CO2_prod_sl(:), O2_prod_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_oxid_sl(:), CO2_oxid_sl(:), O2_oxid_sl(:)
-!    REAL(wp), CONTIGUOUS, POINTER :: CH4_excess_sl(:), CO2_excess_sl(:), O2_excess_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_ebul_sl(:), O2_other_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: relative_moist_sl(:), relative_ice_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: relative_porevol_sl(:), relative_pore_air_sl(:), relative_pore_moist_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: dens2conc_sl(:), conc2dens_sl(:)
-    REAL(wp), CONTIGUOUS, POINTER :: CH4_act(:), CO2_act(:), O2_act(:)
+    REAL(lp), CONTIGUOUS, POINTER :: OxicDecompCarbon(:)
+    REAL(lp), CONTIGUOUS, POINTER :: AnoxDecompCarbon(:)
+    REAL(lp), CONTIGUOUS, POINTER :: water_table(:)
+    REAL(lp), CONTIGUOUS, POINTER :: tiller_area_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: frac_tile(:), frac_tile_abs(:), frac1(:), tile_fac(:)
+    REAL(lp), CONTIGUOUS, POINTER :: D_CH4(:), D_CO2(:), D_O2(:), D_used(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_dry_sl(:), CO2_dry_sl(:), O2_dry_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_wet_sl(:), CO2_wet_sl(:), O2_wet_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_plant_sl(:), CO2_plant_sl(:), O2_plant_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_prod_sl(:), CO2_prod_sl(:), O2_prod_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_oxid_sl(:), CO2_oxid_sl(:), O2_oxid_sl(:)
+!    REAL(lp), CONTIGUOUS, POINTER :: CH4_excess_sl(:), CO2_excess_sl(:), O2_excess_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_ebul_sl(:), O2_other_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: relative_moist_sl(:), relative_ice_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: relative_porevol_sl(:), relative_pore_air_sl(:), relative_pore_moist_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: dens2conc_sl(:), conc2dens_sl(:)
+    REAL(lp), CONTIGUOUS, POINTER :: CH4_act(:), CO2_act(:), O2_act(:)
     ! Pointers for assignment
-    REAL(wp), CONTIGUOUS, POINTER :: GDD(:)
+    REAL(lp), CONTIGUOUS, POINTER :: GDD(:)
 
     TYPE(t_datetime), POINTER :: time_next
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
-    REAL(wp) :: stored_C_sum
+    REAL(lp) :: stored_C_sum
     LOGICAL  :: lnew_day, lstart, lrestart, labs_tile_calc
     INTEGER  :: year, hour, minute, sec
     LOGICAL  :: is_veg, is_wet, is_peat, compute_flag, l_stop, l_GPP_dep
     LOGICAL  :: lissue, lissue_tst, dbg, lmsg
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, lt, ic, is, iy
     INTEGER  :: iWetness, iWetness_st, iWetness_en
-    REAL(wp) :: dt
-    REAL(wp) :: acro_height, frac_inun_loc, frac
-    REAL(wp) :: D_CH4_surface, D_CO2_surface, D_O2_surface
-    REAL(wp) :: CH4_Prod, CO2_Prod, O2_Prod, CH4_prod_ratio
-    REAL(wp) :: CH4_diff, CO2_diff, O2_diff
+    REAL(lp) :: dt
+    REAL(lp) :: acro_height, frac_inun_loc, frac
+    REAL(lp) :: D_CH4_surface, D_CO2_surface, D_O2_surface
+    REAL(lp) :: CH4_Prod, CO2_Prod, O2_Prod, CH4_prod_ratio
+    REAL(lp) :: CH4_diff, CO2_diff, O2_diff
     INTEGER  :: mxlay_above_wt, mxlay_acrotelm, nly
 
-    REAL(wp), TARGET :: empty(options%nc)
+    REAL(lp), TARGET :: empty(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_methane'
 
@@ -455,7 +455,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
-    dt    = 86400._wp / REAL(dsl4jsb_Config(CH4_)%nstep_per_day,wp)
+    dt    = 86400._lp / REAL(dsl4jsb_Config(CH4_)%nstep_per_day,lp)
     tspd  = timesteps_per_day(dt)
     dbg   = dsl4jsb_Config(CH4_)%dbg_process .AND. .NOT. ASSOCIATED(tile%get_prev_sibling_tile()) .AND. (iblk==1)
 
@@ -509,8 +509,8 @@ CONTAINS
       !$ACC ENTER DATA ATTACH(frac_non_crop,sum_non_crop)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
       DO ic = 1, nc
-        frac_non_crop(ic,:) = 0._wp
-        sum_non_crop (ic,:) = 0._wp
+        frac_non_crop(ic,:) = 0._lp
+        sum_non_crop (ic,:) = 0._lp
       ENDDO
       !$ACC END PARALLEL LOOP
       !$ACC WAIT(1)
@@ -810,24 +810,24 @@ CONTAINS
         compute_flag = .TRUE.
         IF (nly < dsl4jsb_Config(CH4_)%minimum_no_layers) THEN
           compute_flag = .FALSE.
-          CH4_out_net(ic) = 0._wp
+          CH4_out_net(ic) = 0._lp
           CO2_out_net(ic) = -(OxicDecompCarbon(ic) + AnoxDecompCarbon(ic)) / dt
         ENDIF
 
         IF (frac_tile(ic) < dsl4jsb_Config(CH4_)%tile_threshold) THEN
           compute_flag = .FALSE.
-          CH4_out_net(ic) = 0._wp
+          CH4_out_net(ic) = 0._lp
           CO2_out_net(ic) = -(OxicDecompCarbon(ic) + AnoxDecompCarbon(ic)) / dt
 
           ! flush stored C out and reset to ensure conservation
-          stored_C_sum = 0._wp
-          IF (frac_inun_pre(ic) < 1._wp) THEN
+          stored_C_sum = 0._lp
+          IF (frac_inun_pre(ic) < 1._lp) THEN
             stored_C_sum = stored_C_sum + &
                            (SUM(CO2_dry%dens_sl(ic,1:nly)) +   &
                             SUM(CH4_dry%dens_sl(ic,1:nly))) *  &
-                            (1._wp - frac_inun_pre(ic))
+                            (1._lp - frac_inun_pre(ic))
           END IF
-          IF (frac_inun_pre(ic) > 0._wp) THEN
+          IF (frac_inun_pre(ic) > 0._lp) THEN
             stored_C_sum = stored_C_sum + &
                            (SUM(CO2_wet%dens_sl(ic,1:nly)) +   &
                             SUM(CH4_wet%dens_sl(ic,1:nly))) *  &
@@ -838,12 +838,12 @@ CONTAINS
 
           ! TODO: Some smart acc-directives here?
           DO is=1,nly
-            CO2_dry%dens_sl(ic,1:nly) = 0._wp
-            CO2_wet%dens_sl(ic,1:nly) = 0._wp
-            CH4_dry%dens_sl(ic,1:nly) = 0._wp
-            CH4_wet%dens_sl(ic,1:nly) = 0._wp
-            O2_dry%dens_sl (ic,1:nly) = 0._wp
-            O2_wet%dens_sl (ic,1:nly) = 0._wp
+            CO2_dry%dens_sl(ic,1:nly) = 0._lp
+            CO2_wet%dens_sl(ic,1:nly) = 0._lp
+            CH4_dry%dens_sl(ic,1:nly) = 0._lp
+            CH4_wet%dens_sl(ic,1:nly) = 0._lp
+            O2_dry%dens_sl (ic,1:nly) = 0._lp
+            O2_wet%dens_sl (ic,1:nly) = 0._lp
           ENDDO
         ENDIF
 
@@ -860,8 +860,8 @@ CONTAINS
           ! setup for wetness loop:
           ! For mineral soil ignore wet fraction, if inundated fraction too small (inun_frac_loc = 0)
           ! for organic soil or completely flooded grid cell ignore dry fraction
-          iWetness_en = 1; IF (frac_inun_loc > 0._wp) iWetness_en = 2
-          iWetness_st = 2; IF (frac_inun_loc < 1._wp) iWetness_st = 1
+          iWetness_en = 1; IF (frac_inun_loc > 0._lp) iWetness_en = 2
+          iWetness_st = 2; IF (frac_inun_loc < 1._lp) iWetness_st = 1
 
           ! wetness loop: iWetness = 1 -> dry part of tile, iWetness = 2 -> wet part
           DO iWetness = iWetness_st, iWetness_en
@@ -869,20 +869,20 @@ CONTAINS
             is_Wet = iWetness == 2
 
             DO is = 1, nsoil
-              O2_other_sl  (is) = 0._wp
-              CH4_ebul_sl  (is) = 0._wp
-              CH4_prod_sl  (is) = 0._wp
-              CH4_plant_sl (is) = 0._wp
-              CH4_oxid_sl  (is) = 0._wp
-              CO2_prod_sl  (is) = 0._wp
-              CO2_plant_sl (is) = 0._wp
-              CO2_oxid_sl  (is) = 0._wp
-              O2_prod_sl   (is) = 0._wp
-              O2_plant_sl  (is) = 0._wp
-              O2_oxid_sl   (is) = 0._wp
-!              CH4_excess_sl(is) = 0._wp
-!              CO2_excess_sl(is) = 0._wp
-!              O2_excess_sl (is) = 0._wp
+              O2_other_sl  (is) = 0._lp
+              CH4_ebul_sl  (is) = 0._lp
+              CH4_prod_sl  (is) = 0._lp
+              CH4_plant_sl (is) = 0._lp
+              CH4_oxid_sl  (is) = 0._lp
+              CO2_prod_sl  (is) = 0._lp
+              CO2_plant_sl (is) = 0._lp
+              CO2_oxid_sl  (is) = 0._lp
+              O2_prod_sl   (is) = 0._lp
+              O2_plant_sl  (is) = 0._lp
+              O2_oxid_sl   (is) = 0._lp
+!              CH4_excess_sl(is) = 0._lp
+!              CO2_excess_sl(is) = 0._lp
+!              O2_excess_sl (is) = 0._lp
             ENDDO
 
             ! Select correct state variables and save initial state (StW: latter only for debug?)
@@ -909,13 +909,13 @@ CONTAINS
             ! set up soil column
 
             ! set up acrotelm height (= 0 for mineral soil)
-            acro_height = 0._wp
+            acro_height = 0._lp
             IF (is_peat) THEN
               acro_height = acrotelm_height_ag(ic)+acrotelm_height_bg(ic)
             END IF
 
             CALL soil_column_setup(dsl4jsb_Config(SSE_)%l_freeze, is_peat, is_Wet, nly,                &
-                                   soil_w%dz(:), (soil_w%lbounds(:)+soil_w%ubounds(:))*0.5_wp,         &
+                                   soil_w%dz(:), (soil_w%lbounds(:)+soil_w%ubounds(:))*0.5_lp,         &
                                    soil_w%ubounds(:), soil_depth(ic), vol_porosity(ic),                &
                                    water_table(ic), acro_height, wtr_soil_sl(ic,:), ice_soil_sl(ic,:), &
                                    relative_moist_sl(:), relative_ice_sl(:), relative_porevol_sl(:),   &
@@ -1014,7 +1014,7 @@ CONTAINS
             ! Fill global memory for output (fluxes in s-1)
             IF (is_Wet) THEN
               IF (dbg) THEN
-                CH4_wet%test2d(ic) = REAL(mxlay_above_wt,wp)
+                CH4_wet%test2d(ic) = REAL(mxlay_above_wt,lp)
                 DO is = 1, nsoil
 !                  CH4_wet%test3d(ic,is) = D_CH4(is)
                   CO2_wet%test3d(ic,is) = D_CO2(is)
@@ -1029,14 +1029,14 @@ CONTAINS
               CH4_prod_ratio_out_wet(ic) = CH4_prod_ratio
             ELSE
               IF (dbg) THEN
-                CH4_dry%test2d(ic  ) = REAL(mxlay_above_wt,wp)
+                CH4_dry%test2d(ic  ) = REAL(mxlay_above_wt,lp)
                 DO is = 1, nsoil
                   CH4_dry%test3d(ic,is) = D_CH4(is)
                   CO2_dry%test3d(ic,is) = D_CO2(is)
                    O2_dry%test3d(ic,is) = D_O2(is)
                 ENDDO
               ENDIF
-              frac = 1._wp-frac_inun_loc
+              frac = 1._lp-frac_inun_loc
               CALL update_chem_specie(dt,nly,ic,frac,CH4_dry,CH4_diff,CH4_act,CH4_prod_sl,CH4_plant_sl,CH4_oxid_sl,dbg)
               CALL update_chem_specie(dt,nly,ic,frac,CO2_dry,CO2_diff,CO2_act,CO2_prod_sl,CO2_plant_sl,CO2_oxid_sl,dbg)
               CALL update_chem_specie(dt,nly,ic,frac, O2_dry, O2_diff, O2_act, O2_prod_sl, O2_plant_sl, O2_oxid_sl,dbg,O2_other_sl)
@@ -1044,11 +1044,11 @@ CONTAINS
 
             ! Peatlands updates densities differently
             IF (is_peat) THEN
-              frac_inun_pre  (ic)   = 1._wp
+              frac_inun_pre  (ic)   = 1._lp
               DO is = 1, nsoil
-                CH4_dry%dens_sl(ic,is) = 0._wp
-                CO2_dry%dens_sl(ic,is) = 0._wp
-                 O2_dry%dens_sl(ic,is) = 0._wp
+                CH4_dry%dens_sl(ic,is) = 0._lp
+                CO2_dry%dens_sl(ic,is) = 0._lp
+                 O2_dry%dens_sl(ic,is) = 0._lp
                 CH4_wet%dens_sl(ic,is) = CH4_act(is)
                 CO2_wet%dens_sl(ic,is) = CO2_act(is)
                  O2_wet%dens_sl(ic,is) =  O2_act(is)
@@ -1061,15 +1061,15 @@ CONTAINS
 
         ENDIF ! Compute flag
 
-!        CH4_tot%out          (ic) = CH4_dry%out          (ic) * (1._wp-frac_inun_loc) + CH4_wet%out          (ic) * frac_inun_loc
-!        CH4_tot%prod_out     (ic) = CH4_dry%prod_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%prod_out     (ic) * frac_inun_loc
-!        CH4_tot%oxid_out     (ic) = CH4_dry%oxid_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%oxid_out     (ic) * frac_inun_loc
-!        CH4_tot%diff_out     (ic) = CH4_dry%diff_out     (ic) * (1._wp-frac_inun_loc) + CH4_wet%diff_out     (ic) * frac_inun_loc
+!        CH4_tot%out          (ic) = CH4_dry%out          (ic) * (1._lp-frac_inun_loc) + CH4_wet%out          (ic) * frac_inun_loc
+!        CH4_tot%prod_out     (ic) = CH4_dry%prod_out     (ic) * (1._lp-frac_inun_loc) + CH4_wet%prod_out     (ic) * frac_inun_loc
+!        CH4_tot%oxid_out     (ic) = CH4_dry%oxid_out     (ic) * (1._lp-frac_inun_loc) + CH4_wet%oxid_out     (ic) * frac_inun_loc
+!        CH4_tot%diff_out     (ic) = CH4_dry%diff_out     (ic) * (1._lp-frac_inun_loc) + CH4_wet%diff_out     (ic) * frac_inun_loc
 !        CH4_tot%other_out    (ic) =                                                    CH4_wet%other_out    (ic) * frac_inun_loc
-!        CH4_tot%plant_out    (ic) = CH4_dry%plant_out    (ic) * (1._wp-frac_inun_loc) + CH4_wet%plant_out    (ic) * frac_inun_loc
-!        CH4_tot%total_out    (ic) = CH4_dry%total_out    (ic) * (1._wp-frac_inun_loc) + CH4_wet%total_out    (ic) * frac_inun_loc
-!        CH4_tot%total_initial(ic) = CH4_dry%total_initial(ic) * (1._wp-frac_inun_loc) + CH4_wet%total_initial(ic) * frac_inun_loc
-!        CH4_tot%total_final  (ic) = CH4_dry%total_final  (ic) * (1._wp-frac_inun_loc) + CH4_wet%total_final  (ic) * frac_inun_loc
+!        CH4_tot%plant_out    (ic) = CH4_dry%plant_out    (ic) * (1._lp-frac_inun_loc) + CH4_wet%plant_out    (ic) * frac_inun_loc
+!        CH4_tot%total_out    (ic) = CH4_dry%total_out    (ic) * (1._lp-frac_inun_loc) + CH4_wet%total_out    (ic) * frac_inun_loc
+!        CH4_tot%total_initial(ic) = CH4_dry%total_initial(ic) * (1._lp-frac_inun_loc) + CH4_wet%total_initial(ic) * frac_inun_loc
+!        CH4_tot%total_final  (ic) = CH4_dry%total_final  (ic) * (1._lp-frac_inun_loc) + CH4_wet%total_final  (ic) * frac_inun_loc
 
       ENDDO ! ic = landpoints
       !$ACC END PARALLEL LOOP
@@ -1090,10 +1090,10 @@ CONTAINS
       ! TODO, StW: The way the termite CH4 emissions are calculated for crops depends on the processing order of the tiles.
       ! Currently it only gives expected results if crop tiles are processed last.
       ! This is unsatisfactory and should be somehow replaced!>!
-      IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp_20yr(1) < 1000._wp)) THEN
+      IF ((dsl4jsb_Config(CH4_)%do_termite) .AND. (min_mmtemp_20yr(1) < 1000._lp)) THEN
 
         l_GPP_dep = dsl4jsb_Lctlib_param(PhenologyType)==3 .OR. dsl4jsb_Lctlib_param(C4flag) ! Crops are separate anyway
-        IF (GDD_prev_year(1) < 0._wp) THEN
+        IF (GDD_prev_year(1) < 0._lp) THEN
           GDD => GDD_sum      ! 1st year: Use sum during current year up to now
         ELSE
           GDD => GDD_prev_year ! Any other year: Use sum of previous year
@@ -1110,8 +1110,8 @@ CONTAINS
         IF (.NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(2) GANG VECTOR
           DO ic = ics, ice
-            frac_non_crop(ic,iblk) = 0._wp
-            sum_non_crop (ic,iblk) = 0._wp
+            frac_non_crop(ic,iblk) = 0._lp
+            sum_non_crop (ic,iblk) = 0._lp
           ENDDO
           !$ACC END PARALLEL LOOP
         ENDIF
@@ -1146,8 +1146,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CH4_, ch4_2_atm)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
       DO ic=1,nc
-        ch4_2_atm(ic) = 0._wp
-        frac1(ic) = 1._wp
+        ch4_2_atm(ic) = 0._lp
+        frac1(ic) = 1._lp
       ENDDO
       !$ACC END PARALLEL LOOP
       labs_tile_calc = .FALSE.
@@ -1194,7 +1194,7 @@ CONTAINS
                   CALL curr_tile%Get_fraction(ics,ice,iblk,frac_tile)
                   !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(3) GANG VECTOR
                   DO ic=1,nc
-                    frac_tile_abs(ic) = 1._wp - frac_tile(ic)
+                    frac_tile_abs(ic) = 1._lp - frac_tile(ic)
                   ENDDO
                   !$ACC END PARALLEL LOOP
                   !$ACC WAIT(3)
@@ -1221,9 +1221,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CH4_, iso_2_atm)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
       DO ic = 1, nc
-        co_2_atm (ic) = 0_wp
-        no_2_atm (ic) = 0_wp
-        iso_2_atm(ic) = 0_wp
+        co_2_atm (ic) = 0_lp
+        no_2_atm (ic) = 0_lp
+        iso_2_atm(ic) = 0_lp
       ENDDO
       !$ACC END PARALLEL LOOP
 
@@ -1246,9 +1246,9 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
         DO ic = 1, nc
-          co_2_atm(ic)  = (co_2_atm(ic)  + co%total_out(ic) *1e-3) / 28.01_wp * 12.01_wp    ![(k)g(CO) m-2 s-1] to [kg(C) m-2 s-1]
-          no_2_atm(ic)  = (no_2_atm(ic)  + no%total_out(ic) *1e-3) / 30.01_wp * 14.01_wp    ![(k)g(NO) m-2 s-1] to [kg(N) m-2 s-1]
-          iso_2_atm(ic) = (iso_2_atm(ic) + iso%total_out(ic)*1e-3) / 68.12_wp*12.01_wp*5._wp![(k)g(iso) m-2 s-1]-> [kg(C) m-2 s-1]
+          co_2_atm(ic)  = (co_2_atm(ic)  + co%total_out(ic) *1e-3) / 28.01_lp * 12.01_lp    ![(k)g(CO) m-2 s-1] to [kg(C) m-2 s-1]
+          no_2_atm(ic)  = (no_2_atm(ic)  + no%total_out(ic) *1e-3) / 30.01_lp * 14.01_lp    ![(k)g(NO) m-2 s-1] to [kg(N) m-2 s-1]
+          iso_2_atm(ic) = (iso_2_atm(ic) + iso%total_out(ic)*1e-3) / 68.12_lp*12.01_lp*5._lp![(k)g(iso) m-2 s-1]-> [kg(C) m-2 s-1]
         ENDDO
         !$ACC END PARALLEL LOOP
       ENDIF
@@ -1326,7 +1326,7 @@ CONTAINS
     SUBROUTINE read_new_ch4_source_field(src)
       TYPE (t_ch4_source_config), POINTER :: src
 
-      REAL(wp), POINTER :: tmp(:,:,:)
+      REAL(lp), POINTER :: tmp(:,:,:)
 
       CALL message(routine,'Reading '//trim(src%name_source)//' from rec. '//TRIM(i2s(ABS(src%crec)))// &
               ' of '//trim(src%name_var)//''//trim(src%name_file))

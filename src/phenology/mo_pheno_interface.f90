@@ -270,7 +270,7 @@ CONTAINS
 
     ! Local variables
     LOGICAL :: l_newday, l_newyear
-    REAL(wp) :: timestep  ! Timestep in days
+    REAL(lp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(lp) :: MaxLAI
     REAL(lp) :: LAI_negligible_tmp
@@ -674,7 +674,7 @@ CONTAINS
 
     ! Calculate GDD for methane process
     IF (dsl4jsb_Config(CH4_)%active) THEN
-      CALL calc_GDD(l_newyear,l_newday,5._wp,      & ! in
+      CALL calc_GDD(l_newyear,l_newday,5._lp,      & ! in
                   & previous_day_temp_mean(:),     & ! in
                   & GDD_prev_year(:),              & ! inout
                   & GDD_sum(:))                      ! inout

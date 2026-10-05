@@ -24,7 +24,7 @@
 MODULE mo_megan_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message, finish, message_text
   USE mo_jsb_control,            ONLY: debug_on
   USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -175,13 +175,13 @@ CONTAINS
     LOGICAL  :: lstart, lrestart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, ic
     INTEGER  :: year, month, summer_state, ylen, mlen
-    REAL(wp) :: dtime
+    REAL(lp) :: dtime
 
     !    Parameters
-    REAL(wp), PARAMETER :: Wm2_pfd = 4.766_wp          ! factor to convert W to umol s-1
-    REAL(wp), PARAMETER :: rho_iso = 0.96_wp           ! MEGAN model parameter
-    REAL(wp), PARAMETER :: cce = 1.00_wp               ! MEGAN canopy model factor - not yet used
-    REAL(wp), PARAMETER :: unit_scale = 1.e-6_wp / 3600._wp ! Scaling from [ug h-1] to [g s-1]
+    REAL(lp), PARAMETER :: Wm2_pfd = 4.766_lp          ! factor to convert W to umol s-1
+    REAL(lp), PARAMETER :: rho_iso = 0.96_lp           ! MEGAN model parameter
+    REAL(lp), PARAMETER :: cce = 1.00_lp               ! MEGAN canopy model factor - not yet used
+    REAL(lp), PARAMETER :: unit_scale = 1.e-6_lp / 3600._lp ! Scaling from [ug h-1] to [g s-1]
 
     !--- local variables ---
 
@@ -292,14 +292,14 @@ CONTAINS
       CALL calc_gamma_age(isos%cafac, lai_relax_short(ic), lai_relax_long(ic), temp_relax_short(ic), iso%gamma_age(ic))
       CALL calc_gamma_temp_iso(t_air(ic), temp_relax_short(ic), iso%gamma_temp(ic))
       iso%total_out(ic) = isos%ef * gamma_lai(ic) * iso%gamma_temp(ic) * iso%gamma_age(ic) * gamma_CO2(ic) * gamma_sm(ic) * &
-                          (1._wp - isos%ldf + isos%ldf * gamma_pfd(ic)) * unit_scale
+                          (1._lp - isos%ldf + isos%ldf * gamma_pfd(ic)) * unit_scale
       ! CO
       CALL calc_gamma_age(COs%cafac, lai_relax_short(ic), lai_relax_long(ic), temp_relax_short(ic), CO%gamma_age(ic))
       CALL calc_gamma_temp_other(t_air(ic), COs%beta, CO%gamma_temp(ic))
       CO%total_out(ic) = COs%ef * gamma_lai(ic) * CO%gamma_temp(ic) * CO%gamma_age(ic) * &
-                         (1._wp - COs%ldf + COs%ldf * gamma_pfd(ic)) * unit_scale
+                         (1._lp - COs%ldf + COs%ldf * gamma_pfd(ic)) * unit_scale
       ! NO
-      NO%total_out(ic) = NOs%ef * gamma_lai(ic) * (1._wp - NOs%ldf + NOs%ldf * gamma_pfd(ic)) * unit_scale
+      NO%total_out(ic) = NOs%ef * gamma_lai(ic) * (1._lp - NOs%ldf + NOs%ldf * gamma_pfd(ic)) * unit_scale
     ENDDO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

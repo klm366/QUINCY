@@ -24,7 +24,7 @@
 MODULE mo_methane_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_methane_constants,      ONLY: T_ref, t_specie_const
   USE mo_jsb_physical_constants, ONLY: p_sealevel => p0sl_bg, argas, molarMassDryAir, tmelt
   USE mo_exception,              ONLY: finish, message, message_text !, em_warn
@@ -56,7 +56,7 @@ CONTAINS
   INTEGER FUNCTION find_layer(depth, nsoil, midpoints)
   !$acc routine seq
     INTEGER,  INTENT(in)  :: nsoil
-    REAL(wp), INTENT(in)  :: depth, midpoints(nsoil)
+    REAL(lp), INTENT(in)  :: depth, midpoints(nsoil)
 
     ! locals
     CHARACTER(len=*), PARAMETER :: routine = modname//':find_layer'
@@ -85,8 +85,8 @@ CONTAINS
   INTEGER FUNCTION find_bedrock_layer(nsoil, layer_bound, soil_depth)
   !$acc routine seq
     INTEGER,                    INTENT(in)  :: nsoil
-    REAL(wp), DIMENSION(nsoil), INTENT(in)  :: layer_bound
-    REAL(wp),                   INTENT(in)  :: soil_depth
+    REAL(lp), DIMENSION(nsoil), INTENT(in)  :: layer_bound
+    REAL(lp),                   INTENT(in)  :: soil_depth
 
     ! locals
     CHARACTER(len=*), PARAMETER :: routine = modname//':find_bedrock_layer'
@@ -98,7 +98,7 @@ CONTAINS
       IF(layer_bound(iLayer-1) >= soil_depth) THEN
         bedrock_layer = iLayer - 1
       ELSE
-        IF ((soil_depth - layer_bound(iLayer-1)) < 1.e-3_wp) THEN
+        IF ((soil_depth - layer_bound(iLayer-1)) < 1.e-3_lp) THEN
           bedrock_layer = bedrock_layer - 1
         END IF
       END IF
@@ -115,18 +115,18 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
+  REAL(lp) FUNCTION dissolved_gas(GAS, Tsoil, GAS_dens, dens2conc)
   !$acc routine seq
     TYPE (t_specie_const),  INTENT(in)  :: GAS       ! Type with constants for specific gas
-    REAL(wp),               INTENT(in)  :: Tsoil     ! Soil temperature in layer [K]
-    REAL(wp),               INTENT(in)  :: GAS_dens  ! GAS density in ice free pore space of layer [mol]
-    REAL(wp),               INTENT(in)  :: dens2conc ! conversion factor from density to concentration []
+    REAL(lp),               INTENT(in)  :: Tsoil     ! Soil temperature in layer [K]
+    REAL(lp),               INTENT(in)  :: GAS_dens  ! GAS density in ice free pore space of layer [mol]
+    REAL(lp),               INTENT(in)  :: dens2conc ! conversion factor from density to concentration []
 
     ! locals
     CHARACTER(len=*), PARAMETER :: routine = modname//':dissolved_gas'
-    REAL(wp) :: GAS_concentration ! concentration of GAS in layer [mol m-3]
-    REAL(wp) :: kHCC              ! Henry coefficient relating aqueous to gaseous concentration []
-    REAL(wp) :: GAS_conc_diss     ! concentration of GAS dissolved in water [mol m-3]
+    REAL(lp) :: GAS_concentration ! concentration of GAS in layer [mol m-3]
+    REAL(lp) :: kHCC              ! Henry coefficient relating aqueous to gaseous concentration []
+    REAL(lp) :: GAS_conc_diss     ! concentration of GAS dissolved in water [mol m-3]
 
     GAS_concentration = GAS_dens * dens2conc
 
@@ -147,19 +147,19 @@ CONTAINS
 !#ifndef _OPENACC
   PURE &
 !#endif
-  REAL(wp) FUNCTION determine_henry_cc(GAS, temp)
+  REAL(lp) FUNCTION determine_henry_cc(GAS, temp)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS            ! Structure with constanst for a specific gass
-    REAL(wp),              INTENT(in) :: temp           ! Soil temperature in layer [K]
+    REAL(lp),              INTENT(in) :: temp           ! Soil temperature in layer [K]
 
     ! Parameters
     CHARACTER(len=*), PARAMETER :: routine = modname//':determine_Henry_cc'
-    REAL(wp), PARAMETER :: atm = 1._wp / p_sealevel  ! [atm/Pa] conversion factor for converting Pa in atm
-    REAL(wp), PARAMETER :: r_gas_atm_l = argas * atm * 1000._wp  ! gas constant in [atm*l/K/mol]
+    REAL(lp), PARAMETER :: atm = 1._lp / p_sealevel  ! [atm/Pa] conversion factor for converting Pa in atm
+    REAL(lp), PARAMETER :: r_gas_atm_l = argas * atm * 1000._lp  ! gas constant in [atm*l/K/mol]
 
     ! locals
-    REAL(wp)                          :: henry_coeff_inv ! Henry's T dependent coefficient, inverted
-    REAL(wp)                          :: henry_coeff     ! non-inverted Henry coefficient
+    REAL(lp)                          :: henry_coeff_inv ! Henry's T dependent coefficient, inverted
+    REAL(lp)                          :: henry_coeff     ! non-inverted Henry coefficient
 
     ! Calculate concentration of GAS in equilibrium with the
     ! atmosphere using Henry's law
@@ -169,8 +169,8 @@ CONTAINS
     ! -------------------------------------------------------
 
     henry_coeff_inv = GAS%henry_k_inv * EXP(-GAS%henry_const * &
-                      (1.0_wp / temp - 1.0_wp / (tmelt + 25._wp)))
-    henry_coeff = 1._wp / henry_coeff_inv
+                      (1.0_lp / temp - 1.0_lp / (tmelt + 25._lp)))
+    henry_coeff = 1._lp / henry_coeff_inv
 
     ! Henry's law: kHCC = ca/cg -> ca = kHCC * cg
     ! ca: aqueous concentration cg: gaseous concentration
@@ -185,10 +185,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
+  REAL(lp) FUNCTION concentration_mol_m3_2_vmr(GAS,GAS_conc)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_conc ! Gas concentration [mol m-3]
+    REAL(lp),              INTENT(in) :: GAS_conc ! Gas concentration [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_vmr'
     concentration_mol_m3_2_vmr = GAS_conc * (argas * T_ref / p_sealevel)
   END FUNCTION concentration_mol_m3_2_vmr
@@ -200,10 +200,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
+  REAL(lp) FUNCTION concentration_vmr_2_mol_m3(GAS,GAS_vmr)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas [m3 m-3]
+    REAL(lp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas [m3 m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mol_m3'
     ! from ideal gas law: PV = nRT <=> V/n = RT/P <=> n = V/(RT/P)
     ! volume mixing ratio is molar mixing ratio (1 mol gas = constant volume, independent of gas)
@@ -219,10 +219,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
+  REAL(lp) FUNCTION concentration_mol_m3_2_mmr(GAS, GAS_conc)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS      ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_conc ! Concentration of gas [mol m-3]
+    REAL(lp),              INTENT(in) :: GAS_conc ! Concentration of gas [mol m-3]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mol_m3_2_mmr'
     concentration_mol_m3_2_mmr = GAS_conc / (molarMassDryAir/GAS%molarMass_kg) * (argas * T_ref / p_sealevel)
   END FUNCTION concentration_mol_m3_2_mmr
@@ -234,10 +234,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
+  REAL(lp) FUNCTION concentration_mmr_2_mol_m3(GAS, GAS_mmr)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas
+    REAL(lp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_mol_m3'
     ! from ideal gas law: PV = nRT <=> V/n = RT/P
     ! volume mixing ratio is molar mixing ratio (1 mol gas = constant volume, independent of gas)
@@ -252,10 +252,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
+  REAL(lp) FUNCTION concentration_vmr_2_mmr(GAS, GAS_vmr)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas
+    REAL(lp),              INTENT(in) :: GAS_vmr ! Volume mixing ratio of gas
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_vmr_2_mmr'
     concentration_vmr_2_mmr = concentration_mol_m3_2_mmr(GAS,concentration_vmr_2_mol_m3(GAS,GAS_vmr))
   END FUNCTION concentration_vmr_2_mmr
@@ -267,10 +267,10 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  REAL(wp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
+  REAL(lp) FUNCTION concentration_mmr_2_vmr(GAS, GAS_mmr)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in) :: GAS     ! Type with constants specific for the gas
-    REAL(wp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas [kg kg-1]
+    REAL(lp),              INTENT(in) :: GAS_mmr ! Mass mixing ratio of gas [kg kg-1]
     CHARACTER(len=*), PARAMETER :: routine = modname//':concentration_mmr_2_vmr'
     concentration_mmr_2_vmr = concentration_mol_m3_2_vmr(GAS,concentration_mmr_2_mol_m3(GAS,GAS_mmr))
   END FUNCTION concentration_mmr_2_vmr
@@ -285,9 +285,9 @@ CONTAINS
   INTEGER FUNCTION which_valid(GAS,mmr,vmr,conc)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in)  :: GAS
-    REAL(wp), OPTIONAL,    INTENT(in)  :: mmr
-    REAL(wp), OPTIONAL,    INTENT(in)  :: vmr
-    REAL(wp), OPTIONAL,    INTENT(in)  :: conc
+    REAL(lp), OPTIONAL,    INTENT(in)  :: mmr
+    REAL(lp), OPTIONAL,    INTENT(in)  :: vmr
+    REAL(lp), OPTIONAL,    INTENT(in)  :: conc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':which_valid'
     INTEGER n, which
@@ -296,19 +296,19 @@ CONTAINS
     n = 0
     which = 0
     IF (PRESENT(mmr)) THEN
-      IF (mmr  >= 0._wp) THEN
+      IF (mmr  >= 0._lp) THEN
         n = n + 1
         which = 1
       ENDIF
     ENDIF
     IF (PRESENT(vmr)) THEN
-      IF (vmr  >= 0._wp) THEN
+      IF (vmr  >= 0._lp) THEN
         n = n + 1
         which = 2
       ENDIF
     ENDIF
     IF (PRESENT(conc)) THEN
-      IF (conc >= 0._wp) THEN
+      IF (conc >= 0._lp) THEN
         n = n + 1
         which = 3
       ENDIF
@@ -328,9 +328,9 @@ CONTAINS
   SUBROUTINE convert_2_mmr(GAS,mmr,vmr,conc)
   !$acc routine seq
     TYPE (t_specie_const),  INTENT(in)    :: GAS
-    REAL(wp),     OPTIONAL, INTENT(inout) :: mmr
-    REAL(wp),     OPTIONAL, INTENT(in)    :: vmr
-    REAL(wp),     OPTIONAL, INTENT(in)    :: conc
+    REAL(lp),     OPTIONAL, INTENT(inout) :: mmr
+    REAL(lp),     OPTIONAL, INTENT(in)    :: vmr
+    REAL(lp),     OPTIONAL, INTENT(in)    :: conc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':convert_2_mmr'
     INTEGER :: which
@@ -358,9 +358,9 @@ CONTAINS
   SUBROUTINE convert_2_vmr(GAS,mmr,vmr,conc)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in)    :: GAS
-    REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
-    REAL(wp), OPTIONAL,    INTENT(inout) :: vmr
-    REAL(wp), OPTIONAL,    INTENT(in)    :: conc
+    REAL(lp), OPTIONAL,    INTENT(in)    :: mmr
+    REAL(lp), OPTIONAL,    INTENT(inout) :: vmr
+    REAL(lp), OPTIONAL,    INTENT(in)    :: conc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':convert_2_vmr'
     INTEGER :: which
@@ -388,9 +388,9 @@ CONTAINS
   SUBROUTINE convert_2_mol_m3(GAS,mmr,vmr,conc)
   !$acc routine seq
     TYPE (t_specie_const), INTENT(in)    :: GAS
-    REAL(wp), OPTIONAL,    INTENT(in)    :: mmr
-    REAL(wp), OPTIONAL,    INTENT(in)    :: vmr
-    REAL(wp), OPTIONAL,    INTENT(inout) :: conc
+    REAL(lp), OPTIONAL,    INTENT(in)    :: mmr
+    REAL(lp), OPTIONAL,    INTENT(in)    :: vmr
+    REAL(lp), OPTIONAL,    INTENT(inout) :: conc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':convert_2_mol_m3'
     INTEGER :: which
@@ -422,19 +422,19 @@ CONTAINS
     USE mo_methane_constants,      ONLY: t_specie_const
 
     TYPE (t_specie_const), INTENT(in)  :: GAS     ! Constants for relevante GAS
-    REAL(wp),              INTENT(in)  :: TK      ! Temperature to calculate diffusivities for [K]
-    REAL(wp), OPTIONAL,    INTENT(out) :: D_air   ! Diffusivity of gas in air [m2 s-1]
-    REAL(wp), OPTIONAL,    INTENT(out) :: D_water ! Diffusivity of gas in air [m2 s-1]
+    REAL(lp),              INTENT(in)  :: TK      ! Temperature to calculate diffusivities for [K]
+    REAL(lp), OPTIONAL,    INTENT(out) :: D_air   ! Diffusivity of gas in air [m2 s-1]
+    REAL(lp), OPTIONAL,    INTENT(out) :: D_water ! Diffusivity of gas in air [m2 s-1]
 
-    REAL(wp) :: T
+    REAL(lp) :: T
 
     T = TK - tmelt ! Convert to degC
 
     ! Constants are in [cm2 s-1]. convert to [m2 s-1] on the fly
     IF (PRESENT(D_air)) &
-      D_air   = (GAS%D_air_0   + GAS%D_air_1   * T)                                             * 1.e-4_wp
+      D_air   = (GAS%D_air_0   + GAS%D_air_1   * T)                                             * 1.e-4_lp
     IF (PRESENT(D_water)) &
-      D_water = (GAS%D_water_0 + GAS%D_water_1 * T + GAS%D_water_2 * T * T) * GAS%D_water_scale * 1.e-4_wp
+      D_water = (GAS%D_water_0 + GAS%D_water_1 * T + GAS%D_water_2 * T * T) * GAS%D_water_scale * 1.e-4_lp
 
   END SUBROUTINE calc_diffusivity
 
@@ -448,9 +448,9 @@ CONTAINS
 #endif
   SUBROUTINE add_surface_layer(src,dst,surf)
   !$acc routine seq
-    REAL(wp),           INTENT(in)  :: src(:)
-    REAL(wp),           INTENT(out) :: dst(:)
-    REAL(wp), OPTIONAL, INTENT(in)  :: surf
+    REAL(lp),           INTENT(in)  :: src(:)
+    REAL(lp),           INTENT(out) :: dst(:)
+    REAL(lp), OPTIONAL, INTENT(in)  :: surf
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':add_surface_layer'
     INTEGER :: is
@@ -478,20 +478,20 @@ CONTAINS
 
   !$acc routine seq
     INTEGER,  INTENT(in)    :: nstep              ! #diffusion timesteps per model timestep
-    REAL(wp), INTENT(in)    :: dt                 ! Model time step [s]
+    REAL(lp), INTENT(in)    :: dt                 ! Model time step [s]
     INTEGER,  INTENT(in)    :: mxlay_above_rock   ! layer number above bedrock
     INTEGER,  INTENT(in)    :: mxlay_above_wt     ! layer number above water table
-    REAL(wp), INTENT(in)    :: implicit_contrib   ! Implicit contribution for Crank-Nicholson
-    REAL(wp), INTENT(in)    :: surf_GAS_conc      ! GAS concentration at surface [mol m-3]
-    REAL(wp), INTENT(in)    :: GAS_source(:)      ! GAS source / sink in layer [mol m-2 ts-1]
-    REAL(wp), INTENT(in)    :: kHCC(:)            ! Henry coefficient relating aqueous to gaseous concentration
-    REAL(wp), INTENT(in)    :: diff_coeff(:)      ! Layer diffusion coefficients  [m2 s-1]
-    REAL(wp), INTENT(in)    :: diff_coeff_surf    ! surface diffusion coefficient [m2 s-1]
-    REAL(wp), INTENT(in)    :: layer_thick(:)     ! Layer thickness [m]
-    REAL(wp), INTENT(in)    :: dens2conc(:)       ! conversion factor from density to concentration []
-    REAL(wp), INTENT(in)    :: conc2dens(:)       ! conversion factor from concentration to density []
-    REAL(wp), INTENT(inout) :: GAS_dens(:)        ! GAS density in layer [mol m-2]
-    REAL(wp), INTENT(out)   :: surf_GAS_flux      ! GAS flux through surface [mol m-2 ts-1]
+    REAL(lp), INTENT(in)    :: implicit_contrib   ! Implicit contribution for Crank-Nicholson
+    REAL(lp), INTENT(in)    :: surf_GAS_conc      ! GAS concentration at surface [mol m-3]
+    REAL(lp), INTENT(in)    :: GAS_source(:)      ! GAS source / sink in layer [mol m-2 ts-1]
+    REAL(lp), INTENT(in)    :: kHCC(:)            ! Henry coefficient relating aqueous to gaseous concentration
+    REAL(lp), INTENT(in)    :: diff_coeff(:)      ! Layer diffusion coefficients  [m2 s-1]
+    REAL(lp), INTENT(in)    :: diff_coeff_surf    ! surface diffusion coefficient [m2 s-1]
+    REAL(lp), INTENT(in)    :: layer_thick(:)     ! Layer thickness [m]
+    REAL(lp), INTENT(in)    :: dens2conc(:)       ! conversion factor from density to concentration []
+    REAL(lp), INTENT(in)    :: conc2dens(:)       ! conversion factor from concentration to density []
+    REAL(lp), INTENT(inout) :: GAS_dens(:)        ! GAS density in layer [mol m-2]
+    REAL(lp), INTENT(out)   :: surf_GAS_flux      ! GAS flux through surface [mol m-2 ts-1]
     LOGICAL,  INTENT(out), OPTIONAL :: lissue     ! Error message issued from matrix solver
 
     ! locals
@@ -505,29 +505,29 @@ CONTAINS
     ! layer counters
     INTEGER  :: outside_layer, iLayer, num_iLayers
     INTEGER  :: iStep
-    REAL(wp) :: nStep_fac
+    REAL(lp) :: nStep_fac
     LOGICAL  :: lissue_tst, lissue_loc
 
     ! local vectors of concentrations, cofficients, depths -- one element longer to consider surface state as well
-    REAL(wp) :: GAS_conc        (mxlay_above_rock+1)            ! GAS concentration [mol m-3]
-    REAL(wp) :: src_GAS_conc_dts(mxlay_above_rock+1)            ! source GAS concentration [mol m-3]
-    REAL(wp) :: kHCC_loc        (mxlay_above_rock+1)            ! Henry coefficient [-]
-    REAL(wp) :: diff_coeff_loc  (mxlay_above_rock+1)            ! diffusivity [m2 s-1]
-    REAL(wp) :: dz              (mxlay_above_rock+1)            ! layer thickness [m]
+    REAL(lp) :: GAS_conc        (mxlay_above_rock+1)            ! GAS concentration [mol m-3]
+    REAL(lp) :: src_GAS_conc_dts(mxlay_above_rock+1)            ! source GAS concentration [mol m-3]
+    REAL(lp) :: kHCC_loc        (mxlay_above_rock+1)            ! Henry coefficient [-]
+    REAL(lp) :: diff_coeff_loc  (mxlay_above_rock+1)            ! diffusivity [m2 s-1]
+    REAL(lp) :: dz              (mxlay_above_rock+1)            ! layer thickness [m]
 
     ! bookkeeping (all [mol m-2])
-    REAL(wp) :: tot_dens_initial      ! total GAS density in soil column before diffusion
-    REAL(wp) :: tot_dens_final        ! total GAS density in soil column after diffusion
-    REAL(wp) :: tot_dens_source       ! total GAS density in soil column from sources and sinks
-    REAL(wp) :: delta_time
+    REAL(lp) :: tot_dens_initial      ! total GAS density in soil column before diffusion
+    REAL(lp) :: tot_dens_final        ! total GAS density in soil column after diffusion
+    REAL(lp) :: tot_dens_source       ! total GAS density in soil column from sources and sinks
+    REAL(lp) :: delta_time
 
-    nStep_fac = REAL(nstep,wp)
+    nStep_fac = REAL(nstep,lp)
     ! initialisation
     num_iLayers = mxlay_above_rock + 1
 
     ! concentration / density conversions
     CALL add_surface_layer(GAS_dens(:)   * dens2conc(:),     GAS_conc,     surf_GAS_conc)
-    CALL add_surface_layer(GAS_source(:) * dens2conc(:), src_GAS_conc_dts, 0._wp)
+    CALL add_surface_layer(GAS_source(:) * dens2conc(:), src_GAS_conc_dts, 0._lp)
 
     ! totals for balance checks
     tot_dens_initial = SUM(GAS_dens  (1:mxlay_above_rock))
@@ -549,7 +549,7 @@ CONTAINS
 
     ! final balance and output flux
     ! negative densities might be possible --> reset to zero, difference will be added to surface flux
-    GAS_dens(1:mxlay_above_rock) = MAX(0._wp,GAS_conc(2:mxlay_above_rock+1) * conc2dens(1:mxlay_above_rock))
+    GAS_dens(1:mxlay_above_rock) = MAX(0._lp,GAS_conc(2:mxlay_above_rock+1) * conc2dens(1:mxlay_above_rock))
 
     tot_dens_final = SUM(GAS_dens(1:mxlay_above_rock))
     surf_GAS_flux = tot_dens_final - (tot_dens_initial + tot_dens_source)
@@ -573,13 +573,13 @@ CONTAINS
   !$acc routine seq
     INTEGER , INTENT(in)    :: num_iLayers      ! no. of internal layers
     INTEGER,  INTENT(in)    :: mxlay_above_wt   ! (outside) layer number above water table
-    REAL(wp), INTENT(in)    :: implicit_contrib ! implicit contribution to Crank-Nicolson integration
-    REAL(wp), INTENT(in)    :: src_GAS_conc(:)  ! source GAS concentration in layer [mol m-3]
-    REAL(wp), INTENT(in)    :: kHCC(:)          ! dimensionless Henry coefficient relating aqueous to gaseous concentration
-    REAL(wp), INTENT(in)    :: diff_coeff(:)    ! Layer diffusion coefficients [m2 s-1]
-    REAL(wp), INTENT(in)    :: dz(:)            ! Layer thickness [m]
-    REAL(wp), INTENT(in)    :: delta_time       ! time step length [s]
-    REAL(wp), INTENT(inout) :: GAS_conc(:)      ! GAS concentration in layer [mol m-3]
+    REAL(lp), INTENT(in)    :: implicit_contrib ! implicit contribution to Crank-Nicolson integration
+    REAL(lp), INTENT(in)    :: src_GAS_conc(:)  ! source GAS concentration in layer [mol m-3]
+    REAL(lp), INTENT(in)    :: kHCC(:)          ! dimensionless Henry coefficient relating aqueous to gaseous concentration
+    REAL(lp), INTENT(in)    :: diff_coeff(:)    ! Layer diffusion coefficients [m2 s-1]
+    REAL(lp), INTENT(in)    :: dz(:)            ! Layer thickness [m]
+    REAL(lp), INTENT(in)    :: delta_time       ! time step length [s]
+    REAL(lp), INTENT(inout) :: GAS_conc(:)      ! GAS concentration in layer [mol m-3]
     LOGICAL, INTENT(out), OPTIONAL :: lissue ! Error message from matrix solver issued
 
     ! locals
@@ -595,24 +595,24 @@ CONTAINS
     INTEGER :: outside_layer, iLayer
 
     ! Diffusion constants averaged over adjacent layers.
-    REAL(wp) :: D_below, D_above
+    REAL(lp) :: D_below, D_above
 
     ! Layer-dependent weighting factors in Crank-Nicholson scheme.
-    REAL(wp) :: dz_factor, W_below, W_above
-    REAL(wp) :: dz_here, dz_above, dz_below
-    REAL(wp) :: C_here, C_above, C_below
+    REAL(lp) :: dz_factor, W_below, W_above
+    REAL(lp) :: dz_here, dz_above, dz_below
+    REAL(lp) :: C_here, C_above, C_below
 
     ! diagonal, left and right subdiagonals for Crank-Nicholson matrix
-    REAL(wp), DIMENSION(num_iLayers) :: left
-    REAL(wp), DIMENSION(num_iLayers) :: diag
-    REAL(wp), DIMENSION(num_iLayers) :: right
+    REAL(lp), DIMENSION(num_iLayers) :: left
+    REAL(lp), DIMENSION(num_iLayers) :: diag
+    REAL(lp), DIMENSION(num_iLayers) :: right
 
     ! Right hand side vector for Crank-Nicholson scheme equations
     ! This is overwritten with solution by dgtsv tridiagonal solver
-    REAL(wp), DIMENSION(num_iLayers) :: rhs
+    REAL(lp), DIMENSION(num_iLayers) :: rhs
 
     ! bookkeeping
-    REAL(wp)                                    :: correction       ! correction from inaccuracies of CN-scheme [mol m-2]
+    REAL(lp)                                    :: correction       ! correction from inaccuracies of CN-scheme [mol m-2]
     INTEGER                                     :: info             ! dgtsv status variable
     LOGICAL                                     :: consider_aqueous ! switch to consider aqueous concentrations at interface
 
@@ -631,8 +631,8 @@ CONTAINS
       dz_here = dz(iLayer)
       C_here = GAS_conc(iLayer)
       IF (iLayer == 1) THEN
-        dz_above = 0._wp
-        C_above = 0._wp
+        dz_above = 0._lp
+        C_above = 0._lp
       ELSE
         dz_above = dz(iLayer-1)
         C_above = GAS_conc(iLayer-1)
@@ -642,8 +642,8 @@ CONTAINS
         END IF
       END IF
       IF (iLayer == num_iLayers) THEN
-        dz_below = 0._wp
-        C_below = 0._wp
+        dz_below = 0._lp
+        C_below = 0._lp
       ELSE
         dz_below = dz(iLayer+1)
         C_below = GAS_conc(iLayer+1)
@@ -652,7 +652,7 @@ CONTAINS
       ! Determine diffusion coefficients to the layers above and below the current layer.
       IF (iLayer == 1) THEN
         ! upwards diffusivity in uppermost layer is zero
-        D_above = 0._wp
+        D_above = 0._lp
       ELSE
         ! for the layers below, upwards diffusivity is the weighted mean of the layer
         ! diffusivity in layer and layer above
@@ -667,7 +667,7 @@ CONTAINS
       IF (iLayer == num_iLayers) THEN
         ! downwards diffusivity in the bottom layer is set to zero
         ! to impose no flux boundary condition
-        D_below = 0._wp
+        D_below = 0._lp
       ELSE
         ! for the layers above, downwards diffusivity is the weighted mean of the
         ! diffusivity in the layer and the layer below
@@ -681,22 +681,22 @@ CONTAINS
       END IF
 
       ! Calculate layer-dependent weighting factors.
-      dz_factor = 0.25_wp * (dz_below + 2._wp * dz_here + dz_above)
-      W_below = D_below * (delta_time / dz_factor) * (2._wp / (dz_below + dz_here))
-      W_above = D_above * (delta_time / dz_factor) * (2._wp / (dz_here + dz_above))
+      dz_factor = 0.25_lp * (dz_below + 2._lp * dz_here + dz_above)
+      W_below = D_below * (delta_time / dz_factor) * (2._lp / (dz_below + dz_here))
+      W_above = D_above * (delta_time / dz_factor) * (2._lp / (dz_here + dz_above))
 
       ! boundary conditions for surface and bottom layers: no flux through top / bottom
       IF (iLayer == 1) THEN
-        W_above = 0._wp
+        W_above = 0._lp
       END IF
       IF (iLayer == num_iLayers) THEN
-        W_below = 0._wp
+        W_below = 0._lp
       END IF
 
       ! Fill in matrix diagonal and off-diagonal elements.
-      diag(iLayer) = 1.0_wp + (implicit_contrib * (W_below + W_above))
+      diag(iLayer) = 1.0_lp + (implicit_contrib * (W_below + W_above))
       IF ((outside_layer == mxlay_above_wt) .AND. consider_aqueous) THEN
-        diag(iLayer) = 1.0_wp + (implicit_contrib * (W_below*kHCC(iLayer) + W_above))
+        diag(iLayer) = 1.0_lp + (implicit_contrib * (W_below*kHCC(iLayer) + W_above))
       END IF
       left(iLayer) = -implicit_contrib * W_above
       IF ((outside_layer == mxlay_above_wt + 1) .AND. consider_aqueous) THEN
@@ -705,21 +705,21 @@ CONTAINS
       right(iLayer) = -implicit_contrib * W_below
 
       ! Calculate right hand side vector values.
-      rhs(iLayer) = (1.0_wp - (1.0_wp - implicit_contrib)*(W_below + W_above)) * C_here + &
-                    (1.0_wp - implicit_contrib)*W_below*C_below +                         &
-                    (1.0_wp - implicit_contrib)*W_above*C_above +                         &
+      rhs(iLayer) = (1.0_lp - (1.0_lp - implicit_contrib)*(W_below + W_above)) * C_here + &
+                    (1.0_lp - implicit_contrib)*W_below*C_below +                         &
+                    (1.0_lp - implicit_contrib)*W_above*C_above +                         &
                      src_GAS_conc(iLayer)
       IF ((outside_layer == mxlay_above_wt) .AND. consider_aqueous) THEN
-        rhs(iLayer) = (1.0_wp - (1.0_wp - implicit_contrib)*((W_below*kHCC(iLayer)) + W_above))*C_here + &
-                      (1.0_wp - implicit_contrib)*W_below*C_below +                       &
-                      (1.0_wp - implicit_contrib)*W_above*C_above +                       &
+        rhs(iLayer) = (1.0_lp - (1.0_lp - implicit_contrib)*((W_below*kHCC(iLayer)) + W_above))*C_here + &
+                      (1.0_lp - implicit_contrib)*W_below*C_below +                       &
+                      (1.0_lp - implicit_contrib)*W_above*C_above +                       &
                        src_GAS_conc(iLayer)
       END IF
     END DO
 
     ! Semi-implicit case -- whenever implicit_contrib > 0.1,
     ! fully explicit case is solced already ( = rhs)
-    IF (implicit_contrib >= 0.1_wp) THEN
+    IF (implicit_contrib >= 0.1_lp) THEN
       !------------------------------------------------------------
       ! solve tridiagonal system using dgtsv from NETLIB
       CALL dgtsv(num_iLayers, 1, left(2:num_iLayers), diag, &

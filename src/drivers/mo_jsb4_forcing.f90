@@ -83,10 +83,10 @@ MODULE mo_jsb4_forcing
   REAL(lp), PARAMETER :: conv_prec_day = 1._lp/86400._lp ! copied from jsbach3 - mo_jsbalone_forcing
                                                          ! Conversion factor for precipitation in [mm/day] to [kg/m^2/s]:
                                                          ! 1 mm/day is equivalent to 1 kg /86400 s / m^2
-  REAL(wp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_wp  !  28.970e-3_wp   -  Mass of 1 mol of dry air in kg
-  REAL(wp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_wp   ! 44.0095e-3_wp   -  Mass of 1 mol CO2 in kg
-  REAL(wp), PARAMETER :: molarMassCH4_kg = amch4 * 1.e-3_wp   ! 16.042e-3_wp    -  Mass of 1 mol CH4 in kg
-  REAL(wp), PARAMETER :: molarMassO2_kg = amO2 * 1.e-3_wp     ! 31.998e-3_wp    -  Mass of 1 mol O2 in kg
+  REAL(lp), PARAMETER :: molarMassDryAir_kg = amd * 1.e-3_lp  !  28.970e-3_lp   -  Mass of 1 mol of dry air in kg
+  REAL(lp), PARAMETER :: molarMassCO2_kg = amco2 * 1.e-3_lp   ! 44.0095e-3_lp   -  Mass of 1 mol CO2 in kg
+  REAL(lp), PARAMETER :: molarMassCH4_kg = amch4 * 1.e-3_lp   ! 16.042e-3_lp    -  Mass of 1 mol CH4 in kg
+  REAL(lp), PARAMETER :: molarMassO2_kg = amO2 * 1.e-3_lp     ! 31.998e-3_lp    -  Mass of 1 mol O2 in kg
 
   REAL(lp), PARAMETER :: defHeightWind = -1._lp        ! -1: for ECHAM lowest layer values
   REAL(lp), PARAMETER :: defHeightHumidity = -1._lp    ! -1: for ECHAM lowest layer values
@@ -156,11 +156,11 @@ MODULE mo_jsb4_forcing
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
-    REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
-    REAL(wp) :: conv_CH4_2_MassRatio           !! Factor for the conversion of CH4 input data to kg(CH4)/kg(dry air)
-    REAL(wp) :: conv_O2_2_MassRatio            !! Factor for the conversion of O2 input data to kg(O2)/kg(dry air)
-    REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
-    REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
+    REAL(lp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+    REAL(lp) :: conv_CH4_2_MassRatio           !! Factor for the conversion of CH4 input data to kg(CH4)/kg(dry air)
+    REAL(lp) :: conv_O2_2_MassRatio            !! Factor for the conversion of O2 input data to kg(O2)/kg(dry air)
+    REAL(lp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
+    REAL(lp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
 
@@ -241,29 +241,29 @@ CONTAINS
     INTEGER,  INTENT(IN)  :: endidx(:)
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
-    REAL(wp), INTENT(IN)  :: elevation(:,:)
-    REAL(wp), INTENT(IN)  :: sinlat(:,:)
-    REAL(wp), INTENT(IN)  :: coslat(:,:)
-    REAL(wp), INTENT(IN)  :: lon(:,:)
-    REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
-    REAL(wp), INTENT(OUT) :: CO2_air(:,:)
-    REAL(wp), INTENT(OUT) :: CH4_air(:,:)
-    REAL(wp), INTENT(OUT) :: O2_air(:,:)
-    REAL(wp), INTENT(OUT) :: t_air(:,:)
-    REAL(wp), INTENT(OUT) :: q_air(:,:)
-    REAL(wp), INTENT(OUT) :: rain(:,:)
-    REAL(wp), INTENT(OUT) :: snow(:,:)
-    REAL(wp), INTENT(OUT) :: wind_air(:,:)
-    REAL(wp), INTENT(OUT) :: wind_10m(:,:)
-    REAL(wp), INTENT(OUT) :: lw_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swvis_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swnir_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: swpar_srf_down(:,:)
-    REAL(wp), INTENT(OUT) :: fract_par_diffuse(:,:)
-    REAL(wp), INTENT(OUT) :: press_srf(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_dc13(:,:)
-    REAL(wp), INTENT(OUT), OPTIONAL :: co2_air_Dc14(:,:)
+    REAL(lp), INTENT(IN)  :: elevation(:,:)
+    REAL(lp), INTENT(IN)  :: sinlat(:,:)
+    REAL(lp), INTENT(IN)  :: coslat(:,:)
+    REAL(lp), INTENT(IN)  :: lon(:,:)
+    REAL(lp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
+    REAL(lp), INTENT(IN)  :: cos_zenith_angle(:,:)
+    REAL(lp), INTENT(OUT) :: CO2_air(:,:)
+    REAL(lp), INTENT(OUT) :: CH4_air(:,:)
+    REAL(lp), INTENT(OUT) :: O2_air(:,:)
+    REAL(lp), INTENT(OUT) :: t_air(:,:)
+    REAL(lp), INTENT(OUT) :: q_air(:,:)
+    REAL(lp), INTENT(OUT) :: rain(:,:)
+    REAL(lp), INTENT(OUT) :: snow(:,:)
+    REAL(lp), INTENT(OUT) :: wind_air(:,:)
+    REAL(lp), INTENT(OUT) :: wind_10m(:,:)
+    REAL(lp), INTENT(OUT) :: lw_srf_down(:,:)
+    REAL(lp), INTENT(OUT) :: swvis_srf_down(:,:)
+    REAL(lp), INTENT(OUT) :: swnir_srf_down(:,:)
+    REAL(lp), INTENT(OUT) :: swpar_srf_down(:,:)
+    REAL(lp), INTENT(OUT) :: fract_par_diffuse(:,:)
+    REAL(lp), INTENT(OUT) :: press_srf(:,:)
+    REAL(lp), INTENT(OUT), OPTIONAL :: co2_air_dc13(:,:)
+    REAL(lp), INTENT(OUT), OPTIONAL :: co2_air_Dc14(:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)              :: hlp_r
     INTEGER               :: nproma, iblk, nblks, ics, ice, ic, it
@@ -309,21 +309,21 @@ CONTAINS
     !$ACC LOOP GANG VECTOR COLLAPSE(2)
     DO iblk = 1, nblks
       DO ic = 1, nproma
-        CO2_air(ic, iblk)           = 0._wp
-        CH4_air(ic, iblk)           = 0._wp
-        O2_air(ic, iblk)            = 0._wp
-        t_air(ic, iblk)             = 0._wp
-        q_air(ic, iblk)             = 0._wp
-        rain(ic, iblk)              = 0._wp
-        snow(ic, iblk)              = 0._wp
-        wind_air(ic, iblk)          = 0._wp
-        wind_10m(ic, iblk)          = 0._wp
-        lw_srf_down(ic, iblk)       = 0._wp
-        swvis_srf_down(ic, iblk)    = 0._wp
-        swnir_srf_down(ic, iblk)    = 0._wp
-        swpar_srf_down(ic, iblk)    = 0._wp
-        fract_par_diffuse(ic, iblk) = 0._wp
-        press_srf(ic, iblk)         = 0._wp
+        CO2_air(ic, iblk)           = 0._lp
+        CH4_air(ic, iblk)           = 0._lp
+        O2_air(ic, iblk)            = 0._lp
+        t_air(ic, iblk)             = 0._lp
+        q_air(ic, iblk)             = 0._lp
+        rain(ic, iblk)              = 0._lp
+        snow(ic, iblk)              = 0._lp
+        wind_air(ic, iblk)          = 0._lp
+        wind_10m(ic, iblk)          = 0._lp
+        lw_srf_down(ic, iblk)       = 0._lp
+        swvis_srf_down(ic, iblk)    = 0._lp
+        swnir_srf_down(ic, iblk)    = 0._lp
+        swpar_srf_down(ic, iblk)    = 0._lp
+        fract_par_diffuse(ic, iblk) = 0._lp
+        press_srf(ic, iblk)         = 0._lp
       END DO
     END DO
     !$ACC END PARALLEL
@@ -926,17 +926,17 @@ CONTAINS
     CHARACTER(NF90_MAX_NAME) :: forcing_ch4_file_prefix        !! Prefix for files with CH4 data (unit: mol(CH4)/mol(air)
     !! or kg(CH4)/kg(air) or ppbv, depending on 'forcing_ch4_unit'
     CHARACTER(len=128)     :: forcing_ch4_frequ                !! Frequency of CH4 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_ch4_const_ch4            !! Constant value for CH4-concentration (unit: mol(CH4)/mol(air) or
+    REAL(lp)               :: forcing_ch4_const_ch4            !! Constant value for CH4-concentration (unit: mol(CH4)/mol(air) or
     !! kg(CH4)/kg(air) or ppbv, depending on 'forcing_ch4_unit')
-    REAL(wp)               :: forcing_ch4_ocean                !! Constant value for ocean cells
+    REAL(lp)               :: forcing_ch4_ocean                !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_ch4_unit                 !! Unit of CH4 input (PPBV/MOL_PER_MOL/KG_PER_KG/'')
 
     CHARACTER(NF90_MAX_NAME) :: forcing_o2_file_prefix         !! Prefix for files with O2 data (unit: mol(O2)/mol(air)
     !! or kg(O2)/kg(air) or %, depending on 'forcing_o2_unit'
     CHARACTER(len=128)     :: forcing_o2_frequ                 !! Frequency of O2 forcing data (DAILY/CONST/TIMESTEP/GHG_SCENARIO)
-    REAL(wp)               :: forcing_o2_const_o2              !! Constant value for O2-concentration (unit: mol(O2)/mol(air) or
+    REAL(lp)               :: forcing_o2_const_o2              !! Constant value for O2-concentration (unit: mol(O2)/mol(air) or
     !! kg(O2)/kg(air) or %, depending on 'forcing_o2_unit')
-    REAL(wp)               :: forcing_o2_ocean                 !! Constant value for ocean cells
+    REAL(lp)               :: forcing_o2_ocean                 !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_o2_unit                  !! Unit of O2 input (%/MOL_PER_MOL/KG_PER_KG/'')
 
     CHARACTER(NF90_MAX_NAME) :: forcing_wind_file_prefix       !! Prefix for files with windspeed data
@@ -1040,15 +1040,15 @@ CONTAINS
 
       forcing_ch4_file_prefix = 'climate_'
       forcing_ch4_frequ = 'DAILY'
-      forcing_ch4_const_ch4 = 1.885e-6_wp
+      forcing_ch4_const_ch4 = 1.885e-6_lp
       forcing_ch4_unit = unspecified_exp_unit
-      forcing_ch4_ocean = 1.885e-6_wp
+      forcing_ch4_ocean = 1.885e-6_lp
 
       forcing_o2_file_prefix = 'climate_'
       forcing_o2_frequ = 'DAILY'
-      forcing_o2_const_o2 = 20.946_wp
+      forcing_o2_const_o2 = 20.946_lp
       forcing_o2_unit = unspecified_exp_unit
-      forcing_o2_ocean = 20.946_wp
+      forcing_o2_ocean = 20.946_lp
 
       forcing_wind_file_prefix = 'climate_'
       forcing_wind_frequ = 'DAILY'
@@ -1160,13 +1160,13 @@ CONTAINS
       SELECT CASE(TRIM(tolower(forcing_ch4_unit)))
       CASE("ppbv","1.e-9")
         CALL message(TRIM(routine),'CH4 forcing in ppbv')
-        forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg * 0.000000001_wp
+        forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg * 0.000000001_lp
       CASE("mol_per_mol", "mol/mol")
         CALL message(TRIM(routine),'CH4 forcing in mol(CH4)/mol(Dry Air)')
         forcing_options(model_id)%conv_CH4_2_MassRatio = molarMassCH4_kg / molarMassDryAir_kg
       CASE("kg_per_kg", "kg/kg")
         CALL message(TRIM(routine),'CH4 forcing in kg(CH4)/kg(Dry Air)')
-        forcing_options(model_id)%conv_CH4_2_MassRatio = 1.0_wp
+        forcing_options(model_id)%conv_CH4_2_MassRatio = 1.0_lp
       CASE default
         CALL message(TRIM(routine),'WARNING: "FORCING_CH4_UNIT" missing in namelist jsb_forcing_nml.')
         CALL message(TRIM(routine),'Assumption: unit is mol(CH4)/mol(DryAir). Verify your settings!')
@@ -1176,13 +1176,13 @@ CONTAINS
       SELECT CASE(TRIM(tolower(forcing_o2_unit)))
       CASE("%", "1.e-2")
         CALL message(TRIM(routine),'O2 forcing in %')
-        forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg * 0.01_wp
+        forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg * 0.01_lp
       CASE("mol_per_mol", "mol/mol")
         CALL message(TRIM(routine),'O2 forcing in mol(O2)/mol(Dry Air)')
         forcing_options(model_id)%conv_O2_2_MassRatio = molarMassO2_kg / molarMassDryAir_kg
       CASE("kg_per_kg", "kg/kg")
         CALL message(TRIM(routine),'O2 forcing in kg(O2)/kg(Dry Air)')
-        forcing_options(model_id)%conv_O2_2_MassRatio = 1.0_wp
+        forcing_options(model_id)%conv_O2_2_MassRatio = 1.0_lp
       CASE default
         CALL message(TRIM(routine),'WARNING: "FORCING_O2_UNIT" missing in namelist jsb_forcing_nml.')
         CALL message(TRIM(routine),'Assumption: unit is mol(O2)/mol(DryAir). Verify your settings!')

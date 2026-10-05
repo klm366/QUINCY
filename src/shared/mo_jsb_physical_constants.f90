@@ -32,14 +32,11 @@ MODULE mo_jsb_physical_constants
     & dens_snow          = rhos,       & !< Density of snow                                          [kg/m3] (300.0_lp)
     & dens_snow_min      = 50._lp        !< Minimum density of snow (for fresh snow)                 [kg/m3]
 
-    & dens_snow          = rhos,       & !< Density of snow                                          [kg/m3] (300.0_wp)
-    & dens_snow_min      = 50._wp        !< Minimum density of snow (for fresh snow)                 [kg/m3]
-
-  REAL(wp), PARAMETER :: &
-    molarMassDryAir = amd   * 1.e-3_wp, & !< Mass [kg] per amount of substance [mol] of dry air (28.970e-3_wp)
-    molarMassCO2    = amco2 * 1.e-3_wp, & !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_wp)
-    molarMassCH4    = amch4 * 1.e-3_wp, & !< Mass [kg] per amount of substance [mol] of CH4 (16.043e-3_wp)
-    molarMassO2     = amo2  * 1.e-3_wp    !< Mass [kg] per amount of substance [mol] of O2 (31.9988e-3_wp)
+  REAL(lp), PARAMETER :: &
+    molarMassDryAir = amd   * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of dry air (28.970e-3_lp)
+    molarMassCO2    = amco2 * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_lp)
+    molarMassCH4    = amch4 * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of CH4 (16.043e-3_lp)
+    molarMassO2     = amo2  * 1.e-3_lp    !< Mass [kg] per amount of substance [mol] of O2 (31.9988e-3_lp)
   !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2, molarMassCH4, molarMassO2)
 
   REAL(lp), PARAMETER :: von_karman = 0.4_lp    !< von Karmann constant for evaporation

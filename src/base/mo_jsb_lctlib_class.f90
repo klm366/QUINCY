@@ -146,15 +146,15 @@ MODULE mo_jsb_lctlib_class
     REAL(lp) :: WoodLitterSize       !< Yasso: size of the litter
 
     ! --- Parameters used by the megan emission scheme ---------------------------------------------------------------------------
-    REAL(wp) :: em_fac_iso           !< Emission factors for plant produced isoprene
-    REAL(wp) :: em_fac_CO            !< Emission factors for plant produced carbonmonoxide
-    REAL(wp) :: em_fac_NO            !< Emission factors for plant produced nitricoxide
+    REAL(lp) :: em_fac_iso           !< Emission factors for plant produced isoprene
+    REAL(lp) :: em_fac_CO            !< Emission factors for plant produced carbonmonoxide
+    REAL(lp) :: em_fac_NO            !< Emission factors for plant produced nitricoxide
 
     ! --- Other parameters --------------------------------------------------------------------------------------------------------
     REAL(lp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
-    REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
-    REAL(wp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
+    REAL(lp) :: StemArea             !< Area of stems and branches of woody plants
+    REAL(lp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
 
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
     INTEGER  :: growthform

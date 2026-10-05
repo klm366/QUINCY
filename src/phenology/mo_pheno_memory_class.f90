@@ -231,7 +231,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       IF (((dsl4jsb_Config(HYDRO_)%l_organic .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap)) .OR. &
         &   dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
@@ -262,7 +262,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
-          & initval_r = -1.0_wp) ! Secure that uninitialized values are not used
+          & initval_r = -1.0_lp) ! Secure that uninitialized values are not used
 
         CALL mem%Add_var('GDD_sum', mem%GDD_sum, &
           & hgrid, surface, &
@@ -273,7 +273,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
       ENDIF
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN

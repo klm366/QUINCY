@@ -40,28 +40,28 @@ MODULE mo_carbon_constants
   !$ACC DECLARE COPYIN(molarMassC_kg)
   REAL(lp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_lp     !< 44.0095e-3_lp -  Mass of 1 mol CO2 in kg
   !$ACC DECLARE COPYIN(molarMassCO2_kg)
-  REAL(wp), PARAMETER :: FireFracWood2Atmos      =     0.2_wp           !< Fraction of wood carbon emitted to the atm by fire.
+  REAL(lp), PARAMETER :: FireFracWood2Atmos      =     0.2_lp           !< Fraction of wood carbon emitted to the atm by fire.
                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
   !$ACC DECLARE COPYIN(FireFracWood2Atmos)
-  REAL(wp), PARAMETER :: fract_wood_aboveGround  =     0.7_wp           !< Fraction of C above ground in wood pool
+  REAL(lp), PARAMETER :: fract_wood_aboveGround  =     0.7_lp           !< Fraction of C above ground in wood pool
   !$ACC DECLARE COPYIN(fract_wood_aboveGround)
-  REAL(wp), PARAMETER :: fract_green_aboveGround =     0.5_wp           !< Fraction of C above ground in green pool
+  REAL(lp), PARAMETER :: fract_green_aboveGround =     0.5_lp           !< Fraction of C above ground in green pool
   !$ACC DECLARE COPYIN(fract_green_aboveGround)
   REAL(lp), PARAMETER :: sec_per_day             = 86400._lp            !< seconds per day
   !$ACC DECLARE COPYIN(sec_per_day)
-  REAL(wp), PARAMETER :: days_per_year           =   365.25_wp
+  REAL(lp), PARAMETER :: days_per_year           =   365.25_lp
   !$ACC DECLARE COPYIN(days_per_year)
   REAL(lp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
 
   !   parameters for Yasso peat
-  REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on
+  REAL(lp), parameter :: rho_YCpool_acro          = 3.5e4_lp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on
                                                                        ! Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
                                                                        !  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
-  REAL(wp), parameter :: rho_YCpool_cato          = 9.1e4_wp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on
+  REAL(lp), parameter :: rho_YCpool_cato          = 9.1e4_lp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on
                                                                        ! Clymo (1983); Turunen (2002)
-  REAL(wp), parameter :: Cfrac_YCpool_acro        = 0.50_wp           ! C fraction in acrotelm peat Malmer and Wallen (2004)
-  REAL(wp), parameter :: Cfrac_YCpool_cato        = 0.52_wp           ! Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_acro        = 0.50_lp           ! C fraction in acrotelm peat Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_cato        = 0.52_lp           ! Malmer and Wallen (2004)
 
   ! Definitions for lcc
 

@@ -23,7 +23,7 @@
 
 MODULE mo_megan_process
 #ifndef __NO_JSBACH__
-USE mo_kind, only: wp
+USE mo_kind, only: lp
 
 PUBLIC calc_gamma_pfd, calc_gamma_temp_iso, calc_gamma_temp_other, calc_gamma_age, calc_gamma_sm, calc_gamma_co2
 PUBLIC update_megan_runmean
@@ -75,11 +75,11 @@ CONTAINS
 !------------------------------------------------------------------------------------------------
   PURE SUBROUTINE calc_gamma_lai(lai, gamma)
     ! ----- leaf area index adjustment
-    REAL(wp), INTENT(in)  :: lai
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: lai
+    REAL(lp), INTENT(out) :: gamma
 
     ! ### assumes that LAI is zero where not valid ! ###
-    gamma = (0.49_wp * lai) / SQRT(1.0_wp + 0.2_wp * (lai**2._wp))
+    gamma = (0.49_lp * lai) / SQRT(1.0_lp + 0.2_lp * (lai**2._lp))
 
   END SUBROUTINE calc_gamma_lai
 
@@ -112,36 +112,36 @@ CONTAINS
     !             Ptoa = 3000 + 99*cos[2*3.14-( DOY-10)/365 )]
     !           where DOY = day of year
 
-    REAL(wp), INTENT(in)  :: zenith
-    REAL(wp), INTENT(in)  :: pfd, tpfd, avg_pfd
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: zenith
+    REAL(lp), INTENT(in)  :: pfd, tpfd, avg_pfd
+    REAL(lp), INTENT(out) :: gamma
 
-    REAL(wp)              :: sinbeta, PHI
-    REAL(wp)              :: AAA
+    REAL(lp)              :: sinbeta, PHI
+    REAL(lp)              :: AAA
 
-    REAL(wp), PARAMETER :: conv_pfd = 4.766_wp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
+    REAL(lp), PARAMETER :: conv_pfd = 4.766_lp          ! factor to convert avg_pfd in W/m2 to umol/m2/s
 
     ! ### assumes zenith angle in degrees
-    IF (zenith < 1.0e-10_wp) THEN   !zenith = SIN(solar angle)
-      gamma = 0.0_wp
+    IF (zenith < 1.0e-10_lp) THEN   !zenith = SIN(solar angle)
+      gamma = 0.0_lp
     ELSE
 
       !  ### PFD and PFD at the top of the atmosphere are adjusted for solar angle
-      IF(tpfd <= 0.0_wp) THEN
-        PHI = 0.0_wp
-      ELSEIF(tpfd > 0.0_wp) THEN
+      IF(tpfd <= 0.0_lp) THEN
+        PHI = 0.0_lp
+      ELSEIF(tpfd > 0.0_lp) THEN
         PHI = pfd/tpfd
       ENDIF
 
-      BBB = 1._wp + 0.0005_wp * (avg_pfd*conv_pfd - 400._wp)
+      BBB = 1._lp + 0.0005_lp * (avg_pfd*conv_pfd - 400._lp)
 
-      AAA = ( 2.46_wp * BBB * PHI ) - (0.9_wp * PHI**2._wp)
+      AAA = ( 2.46_lp * BBB * PHI ) - (0.9_lp * PHI**2._lp)
 
       gamma = zenith * AAA
     ENDIF
 
-    IF ((ASIN(zenith) * rad2deg < 1.0_wp) .AND. (gamma > 0.1_wp)) THEN
-      gamma = 0.0_wp
+    IF ((ASIN(zenith) * rad2deg < 1.0_lp) .AND. (gamma > 0.1_lp)) THEN
+      gamma = 0.0_lp
     ENDIF
 
   END SUBROUTINE calc_gamma_pfd
@@ -166,21 +166,21 @@ CONTAINS
 
     USE mo_physical_constants,          ONLY: argas
 
-    REAL(wp), INTENT(in)  :: temp, temp_relax ! current and average air temperature
+    REAL(lp), INTENT(in)  :: temp, temp_relax ! current and average air temperature
                                               ! at canopy level (original: "hourly" instead of current)
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(out) :: gamma
 
-    REAL(wp), PARAMETER   :: CT1 = 80._wp, CT2 = 200._wp
-    REAL(wp), PARAMETER   :: invR = 1.E3_wp/argas          ! (1/R) expressed in (mol K / kJ)
-    REAL(wp)              :: Eopt, Topt, X
-    REAL(wp)              :: AAA, BBB
+    REAL(lp), PARAMETER   :: CT1 = 80._lp, CT2 = 200._lp
+    REAL(lp), PARAMETER   :: invR = 1.E3_lp/argas          ! (1/R) expressed in (mol K / kJ)
+    REAL(lp)              :: Eopt, Topt, X
+    REAL(lp)              :: AAA, BBB
 
-    Eopt = 1.75_wp * EXP(0.08_wp * (temp_relax - 297.0_wp))
-    Topt = 313.0_wp +    (0.6_wp * (temp_relax - 297.0_wp))
-    X = ((1.0_wp / Topt) - (1.0_wp / temp)) * invR
+    Eopt = 1.75_lp * EXP(0.08_lp * (temp_relax - 297.0_lp))
+    Topt = 313.0_lp +    (0.6_lp * (temp_relax - 297.0_lp))
+    X = ((1.0_lp / Topt) - (1.0_lp / temp)) * invR
 
     AAA = Eopt * CT2 * EXP(CT1 * X)
-    BBB = (CT2 - CT1 * (1.0_wp - EXP(CT2 * X)))
+    BBB = (CT2 - CT1 * (1.0_lp - EXP(CT2 * X)))
 
     gamma = AAA / BBB
 
@@ -194,11 +194,11 @@ CONTAINS
     !           where BETA   = temperature dependent parameter
     !                 Ts     = standard temperature (normally 303K, 30C)
 
-    REAL(wp), INTENT(in)  :: temp         ! current canopy level air temperature
-    REAL(wp), INTENT(in)  :: beta         ! species dependent parameter
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: temp         ! current canopy level air temperature
+    REAL(lp), INTENT(in)  :: beta         ! species dependent parameter
+    REAL(lp), INTENT(out) :: gamma
 
-    REAL(wp), PARAMETER   :: Ts = 303._wp
+    REAL(lp), PARAMETER   :: Ts = 303._lp
 
     gamma = EXP(beta * (temp - Ts))
 
@@ -275,9 +275,9 @@ CONTAINS
     IMPLICIT NONE
 
     INTEGER,  INTENT(in)  :: kclass      ! compound class
-    REAL(wp), INTENT(in)  :: lai, laip   ! LAI of current and previous month
-    REAL(wp), INTENT(in)  :: tempd       ! daily average above canopy temperature
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: lai, laip   ! LAI of current and previous month
+    REAL(lp), INTENT(in)  :: tempd       ! daily average above canopy temperature
+    REAL(lp), INTENT(out) :: gamma
 
 
 !    INTEGER, PARAMETER    :: NCLASS = 6          ! constant,isoprene,monoterpenes,sesquiterpenes,MBO,methanol
@@ -285,89 +285,89 @@ CONTAINS
 !    INTEGER, PARAMETER    :: NAGE = 4            ! new, grown, mature, old
 
 !     ! Fortran 90/95 reference: For 2D matrices, values are listed column wise.
-!     REAL(wp), PARAMETER   :: afac(NCLASS, NAGE) = &
-!                             RESHAPE(SOURCE = (/  1.0_wp,  0.05_wp,  2.0_wp,   0.4_wp,   0.05_wp,  3.5_wp,     &
-!                                                  1.0_wp,  0.6_wp,   1.8_wp,   0.6_wp,   0.6_wp,   3.0_wp,     &
-!                                                  1.0_wp,  1.25_wp,  1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,     &
-!                                                  1.0_wp,  1.0_wp,   1.05_wp,  0.95_wp,  0.9_wp,   1.2_wp /),  &
-! !                                                  1.0_wp,  1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,   1.0_wp,     &
-! !                                                  1.0_wp,  0.9_wp,   1.05_wp,  0.95_wp,  0.9_wp,   1.2_wp /),  &
+!     REAL(lp), PARAMETER   :: afac(NCLASS, NAGE) = &
+!                             RESHAPE(SOURCE = (/  1.0_lp,  0.05_lp,  2.0_lp,   0.4_lp,   0.05_lp,  3.5_lp,     &
+!                                                  1.0_lp,  0.6_lp,   1.8_lp,   0.6_lp,   0.6_lp,   3.0_lp,     &
+!                                                  1.0_lp,  1.25_lp,  1.0_lp,   1.0_lp,   1.0_lp,   1.0_lp,     &
+!                                                  1.0_lp,  1.0_lp,   1.05_lp,  0.95_lp,  0.9_lp,   1.2_lp /),  &
+! !                                                  1.0_lp,  1.0_lp,   1.0_lp,   1.0_lp,   1.0_lp,   1.0_lp,     &
+! !                                                  1.0_lp,  0.9_lp,   1.05_lp,  0.95_lp,  0.9_lp,   1.2_lp /),  &
 !                                     SHAPE = (/NCLASS, NAGE/))
-    REAL(wp), PARAMETER   :: dt = 30._wp  ! original time step in MEGAN [days] (set to TSTLEN = 30.)
+    REAL(lp), PARAMETER   :: dt = 30._lp  ! original time step in MEGAN [days] (set to TSTLEN = 30.)
                                           ! ### this is unclear! See formulae for fnew and fmat below
 
-    REAL(wp)              :: Fnew, Fgro, Fmat, Fold     ! fraction of new, grown, mature and aged leafs
-    REAL(wp)              :: Anew, Agro, Amat, Aold
+    REAL(lp)              :: Fnew, Fgro, Fmat, Fold     ! fraction of new, grown, mature and aged leafs
+    REAL(lp)              :: Anew, Agro, Amat, Aold
 
-    REAL(wp)              :: dti         ! number of days between budbreak
+    REAL(lp)              :: dti         ! number of days between budbreak
                                          ! and the induction of emission
-    REAL(wp)              :: dtm         ! number of days between budbreak
+    REAL(lp)              :: dtm         ! number of days between budbreak
                                          ! and the initiation of peak
                                          ! emissions rates
-    REAL(wp)              :: fac_lai     ! Relation between previous and current lai
+    REAL(lp)              :: fac_lai     ! Relation between previous and current lai
 
     !  This way of assigning parameters is less elegant, but secure...
     IF (kclass == 2) THEN
-      Anew = 0.05_wp
-      Agro = 0.6_wp
-      Amat = 1.125_wp
-      Aold = 1.0_wp
+      Anew = 0.05_lp
+      Agro = 0.6_lp
+      Amat = 1.125_lp
+      Aold = 1.0_lp
     ELSE
-      Anew = 1.0_wp
-      Agro = 1.0_wp
-      Amat = 1.0_wp
-      Aold = 1.0_wp
+      Anew = 1.0_lp
+      Agro = 1.0_lp
+      Amat = 1.0_lp
+      Aold = 1.0_lp
     END IF
 
     ! TODO: This code may break if either lai or laip is == 0
     ! Good enough fix? Needs to be checked!
-    IF (lai > 1.0e-10_wp) THEN
+    IF (lai > 1.0e-10_lp) THEN
       fac_lai = laip / lai
     ELSE
-      fac_lai = 1.0_wp
+      fac_lai = 1.0_lp
     ENDIF
 
     !...  Calculate foliage fraction
     IF (laip == lai) THEN      ! mature state
-      Fnew = 0.0_wp
-      Fgro = 0.1_wp
-      Fmat = 0.8_wp
-      Fold = 0.1_wp
+      Fnew = 0.0_lp
+      Fgro = 0.1_lp
+      Fmat = 0.8_lp
+      Fold = 0.1_lp
 
     ELSEIF (laip > lai) THEN  ! senescing state
-      Fnew = 0.0_wp
-      Fgro = 0.0_wp
+      Fnew = 0.0_lp
+      Fgro = 0.0_lp
       Fold = (laip - lai) / laip
-      Fmat = 1.0_wp - Fold
+      Fmat = 1.0_lp - Fold
 
     ELSE ! laip < lai
       !  Calculate ti and tm
-      IF (tempd <= 303.0_wp) THEN
-        dti = 5.0_wp + 0.7_wp*(300._wp - tempd)
-      ELSEIF (tempd > 303.0_wp) THEN
-        dti = 2.9_wp
+      IF (tempd <= 303.0_lp) THEN
+        dti = 5.0_lp + 0.7_lp*(300._lp - tempd)
+      ELSEIF (tempd > 303.0_lp) THEN
+        dti = 2.9_lp
       ENDIF
-      dtm = 2.3_wp*dti
+      dtm = 2.3_lp*dti
 
       !      Calculate Fnew and Fmat, then Fgro and Fold
       ! ### questionable algorithm! This seems to implicitly assume that time step for lai and "t" is the same (= 1 month)!
       ! ### also: if t <= tm (by definition tm>ti) then there will never be grown leaves, because Fnew+Fmat = 1
       !      Fnew
       IF (dt <= dti) THEN
-        Fnew = 1.0_wp - fac_lai
+        Fnew = 1.0_lp - fac_lai
       ELSEIF (dt > dti) THEN
-        Fnew = (dti / dt) * (1.0_wp - fac_lai)
+        Fnew = (dti / dt) * (1.0_lp - fac_lai)
       ENDIF
 
       ! Fmat
       IF (dt <= dtm) THEN
         Fmat = fac_lai
       ELSEIF (dt > dtm) THEN
-        Fmat = fac_lai + ((dt - dtm) / dt) * (1._wp - fac_lai)
+        Fmat = fac_lai + ((dt - dtm) / dt) * (1._lp - fac_lai)
       ENDIF
 
-      Fgro = 1.0_wp - Fnew - Fmat
-      Fold = 0.0_wp
+      Fgro = 1.0_lp - Fnew - Fmat
+      Fold = 0.0_lp
     ENDIF
 
     !...  Calculate GAMMA_A
@@ -393,25 +393,25 @@ CONTAINS
   !>       DSM1 = 0.04 empirical parameter (from Pegoraro et al., 2004; modified in MEGANv2.1)
   !>       SM1 = WP + DSM1
   !----------------------------------------------------------------------------------------------
-    REAL(wp), INTENT(in)  :: soilm
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: soilm
+    REAL(lp), INTENT(out) :: gamma
 
-    REAL(wp), PARAMETER :: delta1 = 0.06_wp
+    REAL(lp), PARAMETER :: delta1 = 0.06_lp
 
-    REAL(wp) :: wiltp
-    REAL(wp) :: soilm1
+    REAL(lp) :: wiltp
+    REAL(lp) :: soilm1
 
-    wiltp = 0.35_wp
+    wiltp = 0.35_lp
     soilm1 = wiltp + delta1
 
 
     IF (soilm > soilm1) THEN
-      gamma = 1._wp
+      gamma = 1._lp
     ELSE
       gamma = (soilm - wiltp) / delta1
     ENDIF
     IF (soilm < wiltp) THEN
-      gamma = 0._wp
+      gamma = 0._lp
     ENDIF
 
   END SUBROUTINE calc_gamma_sm
@@ -421,19 +421,19 @@ CONTAINS
     USE mo_methane_constants, ONLY: CO2_consts
     USE mo_methane_util,      ONLY: concentration_mmr_2_vmr
 
-    REAL(wp), INTENT(in)  :: co2            ! CO2 mmr
-    REAL(wp), INTENT(out) :: gamma
+    REAL(lp), INTENT(in)  :: co2            ! CO2 mmr
+    REAL(lp), INTENT(out) :: gamma
 
-    REAL(wp), PARAMETER :: Ismax =   1.344_wp
-    REAL(wp), PARAMETER :: h     =   1.4614_wp
-    REAL(wp), PARAMETER :: Cstar = 585.0_wp
+    REAL(lp), PARAMETER :: Ismax =   1.344_lp
+    REAL(lp), PARAMETER :: h     =   1.4614_lp
+    REAL(lp), PARAMETER :: Cstar = 585.0_lp
 
-    REAL(wp) :: Ci
-    REAL(wp) :: CO2_ppm
+    REAL(lp) :: Ci
+    REAL(lp) :: CO2_ppm
 
     CO2_ppm = concentration_mmr_2_vmr(CO2_consts, co2) * 1.e6 ! conversion of mass mixing ratio to volume
                                                               ! mixing ratio and then ppmv
-    Ci = 0.7_wp * CO2_ppm
+    Ci = 0.7_lp * CO2_ppm
     gamma = Ismax - ((Ismax * Ci**h) / (Cstar**h + Ci**h))
 
   END SUBROUTINE calc_gamma_co2
@@ -445,19 +445,19 @@ CONTAINS
     &                                            pfd,  pfd_relax_short, pfd_relax_long)
     USE mo_top_util, ONLY: time_relaxation
     LOGICAL,  INTENT(in)    :: linit            ! Initialize means?
-    REAL(wp), INTENT(in)    :: dt               ! Time step for which instantaneous data are assumed valid [s]
-    REAL(wp), INTENT(in)    :: t_short          ! E-fold time for short term averages [s]
-    REAL(wp), INTENT(in)    :: t_long           ! E-fold time for long  term averages [s]
-    REAL(wp), INTENT(in)    :: temp             ! Instantaneous temperature [K]
-    REAL(wp), INTENT(in)    :: lai              ! Instantaneous LAI
-    REAL(wp), INTENT(in)    :: pfd              ! Instantaneous pfd
-    REAL(wp), INTENT(inout) :: temp_relax_short ! Short term mean of temp
-    REAL(wp), INTENT(inout) :: lai_relax_short  ! Short term mean of LAI
-    REAL(wp), INTENT(inout) :: pfd_relax_short  ! Short term mean of pfd
-    REAL(wp), INTENT(inout) :: lai_relax_long   ! Long  term mean of LAI
-    REAL(wp), INTENT(inout) :: pfd_relax_long   ! Long  term mean of pfd
+    REAL(lp), INTENT(in)    :: dt               ! Time step for which instantaneous data are assumed valid [s]
+    REAL(lp), INTENT(in)    :: t_short          ! E-fold time for short term averages [s]
+    REAL(lp), INTENT(in)    :: t_long           ! E-fold time for long  term averages [s]
+    REAL(lp), INTENT(in)    :: temp             ! Instantaneous temperature [K]
+    REAL(lp), INTENT(in)    :: lai              ! Instantaneous LAI
+    REAL(lp), INTENT(in)    :: pfd              ! Instantaneous pfd
+    REAL(lp), INTENT(inout) :: temp_relax_short ! Short term mean of temp
+    REAL(lp), INTENT(inout) :: lai_relax_short  ! Short term mean of LAI
+    REAL(lp), INTENT(inout) :: pfd_relax_short  ! Short term mean of pfd
+    REAL(lp), INTENT(inout) :: lai_relax_long   ! Long  term mean of LAI
+    REAL(lp), INTENT(inout) :: pfd_relax_long   ! Long  term mean of pfd
 
-    REAL(wp) :: nstep_short, nstep_long ! #time steps for short and long averages respectively (ideally integer numbers)
+    REAL(lp) :: nstep_short, nstep_long ! #time steps for short and long averages respectively (ideally integer numbers)
 
     nstep_short = t_short / dt
     nstep_long  = t_long  / dt

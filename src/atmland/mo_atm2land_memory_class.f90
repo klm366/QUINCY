@@ -41,7 +41,7 @@ MODULE mo_a2l_memory_class
       & CH4_air_mol         , &
       & O2_air              , &
       & O2_air_mol          , &
-      & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._wp
+      & CO2_mixing_ratio    , & !< surface air CO2 mixing ratio [ppmv]   >> mo_atmland_interface: CO2_mixing_ratio = CO2_air_mol * 1000000._lp
       & CO2_mixing_ratio_C13, & !< surface air 13CO2 mixing ratio [ppmv]
       & CO2_mixing_ratio_C14    !< surface air 14CO2 mixing ratio [scaled]
 
@@ -187,7 +187,7 @@ CONTAINS
       & t_cf('CH4_air', '[kg(CH4)/kg(air)]', 'CH4 mass mixing ratio of lowest atmosphere level'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
-      & lrestart=.FALSE., initval_r=1.043E-9_wp ) ! TS: I just freely choosed this value. Corresponds to 1885 ppb:
+      & lrestart=.FALSE., initval_r=1.043E-9_lp ) ! TS: I just freely choosed this value. Corresponds to 1885 ppb:
                                                 !   CH4:16.043 g/mol; dry air: 28.97 g/mol
                                                 !   1885 ppb => 1.043*10^-9
 
@@ -197,14 +197,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
-      & lrestart=.FALSE., initval_r=1.885E-6_wp ) ! TS: I just choosed this value for 1885 ppb
+      & lrestart=.FALSE., initval_r=1.885E-6_lp ) ! TS: I just choosed this value for 1885 ppb
 
     CALL mem%Add_var( 'o2_air', mem%O2_air,                                                      &
       & hgrid, surface,                                                                            &
       & t_cf('O2_air', '[kg(O2)/kg(air)]', 'O2 mass mixing ratio of lowest atmosphere level'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
-      & lrestart=.FALSE., initval_r=0.2316_wp ) ! TS: I just freely choosed this value. Corresponds to 20.946%:
+      & lrestart=.FALSE., initval_r=0.2316_lp ) ! TS: I just freely choosed this value. Corresponds to 20.946%:
                                                 !   O2:31.998 g/mol; dry air: 28.97 g/mol
                                                 !   20.946% => 0.2316
 
@@ -214,7 +214,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & output_level=BASIC, &
-      & lrestart=.FALSE., initval_r=0.20946_wp ) ! TS: I just choosed this value for 20.946%
+      & lrestart=.FALSE., initval_r=0.20946_lp ) ! TS: I just choosed this value for 20.946%
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &

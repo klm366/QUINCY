@@ -791,18 +791,18 @@ MODULE mo_pheno_process
                                     & GDD_prev_year, GDD_sum)   ! <- inout
 
      LOGICAL,  INTENT(in)    :: is_newyear, is_newday
-     REAL(wp), INTENT(in)    :: GDD_base_temp
-     REAL(wp), INTENT(in)    :: previous_day_temp_mean
-     REAL(wp), INTENT(inout) :: GDD_prev_year
-     REAL(wp), INTENT(inout) :: GDD_sum
+     REAL(lp), INTENT(in)    :: GDD_base_temp
+     REAL(lp), INTENT(in)    :: previous_day_temp_mean
+     REAL(lp), INTENT(inout) :: GDD_prev_year
+     REAL(lp), INTENT(inout) :: GDD_sum
 
      IF (is_newyear) THEN
        GDD_prev_year = GDD_sum
-       GDD_sum = 0._wp
+       GDD_sum = 0._lp
      ENDIF
 
      IF (is_newday) THEN
-       GDD_sum = GDD_sum + MAX(0._wp, previous_day_temp_mean - GDD_base_temp)
+       GDD_sum = GDD_sum + MAX(0._lp, previous_day_temp_mean - GDD_base_temp)
      ENDIF
 
    END SUBROUTINE calc_GDD

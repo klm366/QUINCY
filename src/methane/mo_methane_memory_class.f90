@@ -24,7 +24,7 @@
 MODULE mo_ch4_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -78,13 +78,13 @@ MODULE mo_ch4_memory_class
   END TYPE t_chem_specie
 
   TYPE t_timeseries
-    REAL(wp), POINTER :: atm_vmr(:)
+    REAL(lp), POINTER :: atm_vmr(:)
     INTEGER           :: atm_year_min
     INTEGER           :: atm_year_max
   END TYPE t_timeseries
 
   TYPE t_chem_ptrs
-    REAL(wp), DIMENSION(:), POINTER ::     &
+    REAL(lp), DIMENSION(:), POINTER ::     &
       & prod_out,                          &
       & oxid_out,                          &
       & diff_out,                          &
@@ -95,20 +95,20 @@ MODULE mo_ch4_memory_class
       & total_out,                         &
       & total_initial,                     & ! StW: Initial for ts or run? In latter case ic?
       & total_final
-    REAL(wp), DIMENSION(:), POINTER ::     &
+    REAL(lp), DIMENSION(:), POINTER ::     &
       test2d
 
     ! Per layer
-    REAL(wp), DIMENSION(:,:), POINTER ::   &
+    REAL(lp), DIMENSION(:,:), POINTER ::   &
       & dens_sl                              ! Current layer density [mol m-2]
 
     ! Debug per layer
-    REAL(wp), DIMENSION(:,:), POINTER ::   &
+    REAL(lp), DIMENSION(:,:), POINTER ::   &
       & prod_out_sl,            &
       & oxid_out_sl,            &
       & other_out_sl,           & ! Ebulition or "other"
       & plant_out_sl
-    REAL(wp), DIMENSION(:,:), POINTER ::   &
+    REAL(lp), DIMENSION(:,:), POINTER ::   &
       test3d
 
     CHARACTER(len=8) :: specie_name
@@ -167,7 +167,7 @@ MODULE mo_ch4_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & root_dist_sl
 
-    REAL(wp), POINTER ::                &
+    REAL(lp), POINTER ::                &
       & layer_midpoint_dz(:) => NULL()
 
   CONTAINS
@@ -245,7 +245,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
-      & initval_r=7.706281e-5_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
+      & initval_r=7.706281e-5_lp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
     CALL mem%Add_var( 'CO2_conc', mem%CO2_conc,                              &
       & hgrid, surface,                                                      &
@@ -253,7 +253,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
-      & initval_r=1.6349598227e-2_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=1.6349598227e-2_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'O2_conc', mem%O2_conc,                                &
       & hgrid, surface,                                                      &
@@ -261,7 +261,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.FALSE.,                        &
-      & initval_r=1.6349598227e-2_wp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
+      & initval_r=1.6349598227e-2_lp, isteptype=TSTEP_CONSTANT ) ! May be variable in future
 
     CALL mem%Add_var( 'mxlay_above_rock', mem%mxlay_above_rock,              &
       & hgrid, surface,                                                      &
@@ -269,7 +269,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'tillers', mem%tillers,                                &
       & hgrid, surface,                                                      &
@@ -277,7 +277,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.TRUE.,         & ! .FALSE.?
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'CH4_prod_ratio_out_wet', mem%CH4_prod_ratio_out_wet,  &
       & hgrid, surface,                                                      &
@@ -285,7 +285,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'CH4_out_net', mem%CH4_out_net,                        &
       & hgrid, surface,                                                      &
@@ -293,7 +293,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.TRUE.,                         &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'CO2_out_net', mem%CO2_out_net,                        &
       & hgrid, surface,                                                      &
@@ -301,7 +301,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = FULL, l_aggregate_all=.TRUE.,                         &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     IF (dsl4jsb_Config(CH4_)%do_fire) THEN
       CALL mem%Add_var( 'CH4_out_fire', mem%CH4_out_fire,                      &
@@ -310,7 +310,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'fire_em_NO', mem%fire_em_NO,                          &
         & hgrid, surface,                                                      &
@@ -318,7 +318,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'fire_em_CO', mem%fire_em_CO,                          &
         & hgrid, surface,                                                      &
@@ -326,7 +326,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'fire_em_iso', mem%fire_em_iso,                        &
         & hgrid, surface,                                                      &
@@ -334,7 +334,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
     ENDIF
 
     IF (dsl4jsb_Config(CH4_)%do_termite) THEN
@@ -344,7 +344,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'termite_biomass', mem%termite_biomass,                &
         & hgrid, surface,                                                      &
@@ -352,7 +352,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
     ENDIF
 
     IF (dsl4jsb_Config(CH4_)%do_herbivore) THEN
@@ -362,7 +362,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
     ENDIF
 
     IF (dsl4jsb_Config(CH4_)%atm_couple) THEN
@@ -372,7 +372,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'co_2_atm', mem%co_2_atm,                              &
         & hgrid, surface,                                                      &
@@ -380,7 +380,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
         & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'no_2_atm', mem%no_2_atm,                              &
         & hgrid, surface,                                                      &
@@ -388,7 +388,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
         & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'iso_2_atm', mem%iso_2_atm,                            &
         & hgrid, surface,                                                      &
@@ -396,7 +396,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .TRUE., lrestart_cont = .TRUE.,           &
         & output_level =default_output_level, l_aggregate_all=.TRUE.,                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     ENDIF
 
@@ -406,7 +406,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix, lrestart = .FALSE.,                                  &
       & output_level = default_output_level, l_aggregate_all=.FALSE.,        &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT ) ! By dynamic roots: TSTEP_INSTANT
+      & initval_r=0.0_lp, isteptype=TSTEP_CONSTANT ) ! By dynamic roots: TSTEP_INSTANT
 
   CONTAINS
 
@@ -443,7 +443,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_oxid_out', specie%oxid_out,             &
         & hgrid, surface,                                                      &
@@ -451,7 +451,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_diff_out', specie%diff_out,             &
         & hgrid, surface,                                                      &
@@ -459,7 +459,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_plant_out', specie%plant_out,           &
         & hgrid, surface,                                                      &
@@ -467,7 +467,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level,                                 &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_in_out', specie%in_out,                 &
         & hgrid, surface,                                                      &
@@ -475,7 +475,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level,                                 &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
 !      CALL mem%Add_var( specie_name//'_excess_transp', specie%excess,          &
 !        & hgrid, surface,                                                      &
@@ -484,7 +484,7 @@ CONTAINS
 !        & prefix, suffix, lrestart = .FALSE.,                                  &
 !        & output_level = FULL, l_aggregate_all=.TRUE.,                         &
 !        & lrestart = .FALSE.,                                                  &
-!        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+!        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
 
@@ -494,7 +494,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( specie_name//'_oxid_out_sl', specie%oxid_out_sl,       &
           & hgrid, layer,                                                        &
@@ -502,7 +502,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( specie_name//'_plant_out_sl', specie%plant_out_sl,     &
           & hgrid, layer,                                                        &
@@ -510,7 +510,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( specie_name//'_test3d', specie%test3d,                 &
           & hgrid, layer,                                                        &
@@ -518,7 +518,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( specie_name//'_test2d', specie%test2d,                 &
           & hgrid, surface,                                                      &
@@ -526,7 +526,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level,                                 &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       ENDIF
 
@@ -542,7 +542,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
           & prefix, suffix, lrestart = .FALSE.,                                  &
           & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         IF (dsl4jsb_Config(CH4_)%dbg_process) THEN
           CALL mem%Add_var( TRIM(str)//'_sl', specie%other_out_sl,                 &
@@ -551,7 +551,7 @@ CONTAINS
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
             & prefix, suffix, lrestart = .FALSE.,                                  &
             & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-            & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+            & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
         ENDIF
       ENDIF
 
@@ -561,7 +561,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_total_initial', specie%total_initial,   &
         & hgrid, surface,                                                      &
@@ -569,7 +569,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = FULL, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_total_final', specie%total_final,       &
         & hgrid, surface,                                                      &
@@ -577,7 +577,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix, lrestart = .FALSE.,                                  &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( specie_name//'_sl', specie%dens_sl,                    &
         & hgrid, layer,                                                        &
@@ -585,7 +585,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level = default_output_level, l_aggregate_all=.TRUE.,         &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     END SUBROUTINE Init_chem_specie
 

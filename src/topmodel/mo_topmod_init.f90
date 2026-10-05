@@ -24,7 +24,7 @@
 MODULE mo_top_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -49,7 +49,7 @@ INCLUDE 'netcdf.inc'
   PUBLIC :: topmodel_init
 
   TYPE t_top_init_vars
-    REAL(wp), POINTER ::                  &
+    REAL(lp), POINTER ::                  &
       & cti_mean       (:,:)   => NULL(), &
       & cti_mu         (:,:)   => NULL(), &
       & cti_phi        (:,:)   => NULL(), &
@@ -118,7 +118,7 @@ CONTAINS
 
     dsl4jsb_Def_config(TOP_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
+    REAL(lp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< temporary pointers
 
     TYPE(t_input_file) :: input_file
 
@@ -129,8 +129,8 @@ CONTAINS
     INTEGER :: ntime
     INTEGER :: syear, eyear, smonth, emonth, idst, irec, stat, varid
     INTEGER :: srec(2)
-    REAL(wp), POINTER :: rtime(:)
-    REAL(wp) :: ttime(2)
+    REAL(lp), POINTER :: rtime(:)
+    REAL(lp) :: ttime(2)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':topmodel_read_init_vars'
 
@@ -195,8 +195,8 @@ CONTAINS
         CALL p_bcast(rtime,p_io,mpi_comm)
         CALL get_date_components(time_config%tc_startdate,YEAR=syear, MONTH=smonth)
         CALL get_date_components(time_config%tc_stopdate,YEAR=eyear, MONTH=emonth)
-        ttime = (/REAL(syear,wp)*10000._wp+REAL(smonth,wp)*100._wp+01._wp, & ! This is for CDO "Absolute dates" only
-                  REAL(eyear,wp)*10000._wp+REAL(emonth,wp)*100._wp+01._wp/)
+        ttime = (/REAL(syear,lp)*10000._lp+REAL(smonth,lp)*100._lp+01._lp, & ! This is for CDO "Absolute dates" only
+                  REAL(eyear,lp)*10000._lp+REAL(emonth,lp)*100._lp+01._lp/)
         CALL message(routine,'Times read: '//r2s(rtime(1))//'-'//r2s(rtime(ntime)))
         CALL message(routine,'Times modl: '//r2s(ttime(1))//'-'//r2s(ttime(2)))
         ! TODO: Need some test for time limits not overlapping

@@ -172,24 +172,24 @@ CONTAINS
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
-    REAL(wp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
-    REAL(wp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
-    REAL(wp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
-    REAL(wp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
-    REAL(wp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
-    REAL(wp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
-    REAL(wp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_LeafLit_coef_humus
-    REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
-    REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_WoodLit_coef_humus
-    REAL(wp)                     :: frac_inun_min
-    REAL(wp)                     :: dtime
-    REAL(wp), POINTER            :: lat(:)
-    REAL(wp), allocatable        :: precip_total(:)
-    REAL(wp), DIMENSION(options%nc) :: MaxLai
-    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
-    REAL(wp), DIMENSION(options%nc) :: cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos
+    REAL(lp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
+    REAL(lp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
+    REAL(lp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
+    REAL(lp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
+    REAL(lp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
+    REAL(lp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
+    REAL(lp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
+    REAL(lp)                     :: lctlib_LeafLit_coef_humus
+    REAL(lp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
+    REAL(lp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
+    REAL(lp)                     :: lctlib_WoodLit_coef_humus
+    REAL(lp)                     :: frac_inun_min
+    REAL(lp)                     :: dtime
+    REAL(lp), POINTER            :: lat(:)
+    REAL(lp), allocatable        :: precip_total(:)
+    REAL(lp), DIMENSION(options%nc) :: MaxLai
+    REAL(lp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(lp), DIMENSION(options%nc) :: cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos
     LOGICAL                         :: is_crop
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
 
@@ -889,7 +889,7 @@ CONTAINS
     IF (new_year) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        GPP_prev_year_ta(ic) = GPP_ann_sum(ic) / 365._wp
+        GPP_prev_year_ta(ic) = GPP_ann_sum(ic) / 365._lp
         GPP_ann_sum(ic) = GPP_yDayMean_ta(ic)
       ENDDO
       !$ACC END PARALLEL LOOP
@@ -1484,33 +1484,19 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
-
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
-
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
-
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration_anoxic(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_anoxic(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
 
     dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(CARBON_)

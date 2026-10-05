@@ -24,7 +24,7 @@
 MODULE mo_top_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -82,7 +82,7 @@ MODULE mo_top_memory_class
       & peat_water_table,     &                ! peatland water table height [m]
       & frac_permanent_wetland                 ! fraction of tile with permanent wetland []
 
-    REAL(wp), POINTER ::                  &
+    REAL(lp), POINTER ::                  &
       & cti_mean       (:,:)   => NULL(), &
       & cti_mu         (:,:)   => NULL(), &
       & cti_phi        (:,:)   => NULL(), &
@@ -184,7 +184,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_inun', mem%frac_inun,                            &
       & hgrid, surface,                                                      &
@@ -193,7 +193,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_inun_pre', mem%frac_inun_pre,                    &
       & hgrid, surface,                                                      &
@@ -202,7 +202,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = FULL, l_aggregate_all = .TRUE.,                       &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'wt_inun', mem%wt_inun,                                &
       & hgrid, surface,                                                      &
@@ -211,7 +211,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_inun_uncorr', mem%frac_inun_uncorr,              &
       & hgrid, surface,                                                      &
@@ -220,7 +220,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_liquid_top', mem%frac_liquid_top,                &
       & hgrid, surface,                                                      &
@@ -229,7 +229,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
       & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     CALL mem%Add_var( 'frac_liquid_top_uncorr', mem%frac_liquid_top_uncorr,  &
       & hgrid, surface,                                                      &
@@ -238,7 +238,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
       CALL mem%Add_var( 'frac_inun_min_year', mem%frac_inun_min_year,          &
@@ -248,7 +248,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=1000.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=1000.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_summ_year', mem%frac_inun_summ_year,        &
         & hgrid, surface,                                                      &
@@ -257,7 +257,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = FULL, l_aggregate_all = .TRUE.,                       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_sum_month', mem%frac_inun_sum_month,        &
         & hgrid, surface,                                                      &
@@ -266,7 +266,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = FULL, l_aggregate_all = .TRUE.,                       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_mean_month', mem%frac_inun_mean_month,      &
         & hgrid, surface,                                                      &
@@ -275,7 +275,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_min_lt', mem%frac_inun_min_lt,              &
         & hgrid, surface,                                                      &
@@ -284,7 +284,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_inun_summ_lt', mem%frac_inun_summ_lt,            &
         & hgrid, surface,                                                      &
@@ -293,7 +293,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'wt_inun_min_year', mem%wt_inun_min_year,              &
         & hgrid, surface,                                                      &
@@ -302,7 +302,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=1000.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=1000.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'wt_inun_sum_month', mem%wt_inun_sum_month,            &
         & hgrid, surface,                                                      &
@@ -311,7 +311,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'wt_inun_mean_month', mem%wt_inun_mean_month,          &
         & hgrid, surface,                                                      &
@@ -320,7 +320,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'wt_inun_min_lt', mem%wt_inun_min_lt,                  &
         & hgrid, surface,                                                      &
@@ -329,7 +329,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'frac_permanent_wetland', mem%frac_permanent_wetland,  &
         & hgrid, surface,                                                      &
@@ -338,7 +338,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
     ENDIF
 
@@ -351,7 +351,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'precip_mean_day', mem%precip_mean_day,                &
         & hgrid, surface,                                                      &
@@ -360,7 +360,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'precip_relax', mem%precip_relax,                      &
         & hgrid, surface,                                                      &
@@ -369,7 +369,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'aet', mem%aet,                                        &
         & hgrid, surface,                                                      &
@@ -378,7 +378,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'aet_relax', mem%aet_relax,                            &
         & hgrid, surface,                                                      &
@@ -387,7 +387,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE., lrestart_cont=.TRUE.,                               &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'peat_water_flux', mem%peat_water_flux,                &
         & hgrid, surface,                                                      &
@@ -396,7 +396,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level = default_output_level, l_aggregate_all = .TRUE.,       &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'peat_water_volume', mem%peat_water_volume,            &
         & hgrid, surface,                                                      &
@@ -405,7 +405,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.246_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.246_lp, isteptype=TSTEP_INSTANT )
 
       CALL mem%Add_var( 'peat_water_table', mem%peat_water_table,              &
         & hgrid, surface,                                                      &
@@ -414,7 +414,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-        & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+        & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
 
@@ -425,7 +425,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'aet_mean_day', mem%aet_mean_day,                      &
           & hgrid, surface,                                                      &
@@ -434,7 +434,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'poaet_mean_day', mem%poaet_mean_day,                  &
           & hgrid, surface,                                                      &
@@ -443,7 +443,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'poaet_sum_year', mem%poaet_sum_year,                  &
           & hgrid, surface,                                                      &
@@ -452,7 +452,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = FULL, l_aggregate_all = .FALSE.,                      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'poaet_mean_year', mem%poaet_mean_year,                &
           & hgrid, surface,                                                      &
@@ -461,7 +461,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
         CALL mem%Add_var( 'poaet_lt', mem%poaet_lt,                              &
           & hgrid, surface,                                                      &
@@ -470,7 +470,7 @@ CONTAINS
           & prefix, suffix,                                                      &
           & lrestart=.TRUE.,                                                     &
           & output_level = default_output_level, l_aggregate_all = .FALSE.,      &
-          & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+          & initval_r=0.0_lp, isteptype=TSTEP_INSTANT )
 
       ENDIF
 

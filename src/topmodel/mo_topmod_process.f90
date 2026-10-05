@@ -24,7 +24,7 @@
 MODULE mo_top_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,     ONLY: wp
+  USE mo_kind,     ONLY: lp
   USE mo_top_util, ONLY: gamm_p, gamm_inv_p
 
   IMPLICIT NONE
@@ -54,23 +54,23 @@ CONTAINS
   !$acc routine seq
 
     ! Interface parameters
-    REAL(wp), INTENT(in)  :: tmelt                  ! Melting point of water [K]
-    REAL(wp), INTENT(in)  :: temp_air               ! Air temperature [K]
-    REAL(wp), INTENT(in)  :: net_radiation          ! Net surface radiation [W m-2]
-    REAL(wp), INTENT(out) :: aet                    ! Equilibrium evapotranspiration flux [kg m-2 s-1]
+    REAL(lp), INTENT(in)  :: tmelt                  ! Melting point of water [K]
+    REAL(lp), INTENT(in)  :: temp_air               ! Air temperature [K]
+    REAL(lp), INTENT(in)  :: net_radiation          ! Net surface radiation [W m-2]
+    REAL(lp), INTENT(out) :: aet                    ! Equilibrium evapotranspiration flux [kg m-2 s-1]
 
     ! Locals
-    REAL(wp) :: t_c, t_ref, gamma, lambda, s
+    REAL(lp) :: t_c, t_ref, gamma, lambda, s
 
-    aet = 0._wp;
-    IF (net_radiation > 0._wp) THEN
+    aet = 0._lp;
+    IF (net_radiation > 0._lp) THEN
       t_c   = temp_air - tmelt                      ! convert temperature to Celsius
-      t_ref = t_c + 237.3_wp
+      t_ref = t_c + 237.3_lp
 
-      gamma = (65.05_wp + t_c * 0.064_wp)           ! psychrometer constant [Pa/K], adjusted for temperature
-      lambda = (2.495e6_wp - t_c * 2380._wp)        ! latent heat of vaporization of water [J/kg], adjusted for temperature
+      gamma = (65.05_lp + t_c * 0.064_lp)           ! psychrometer constant [Pa/K], adjusted for temperature
+      lambda = (2.495e6_lp - t_c * 2380._lp)        ! latent heat of vaporization of water [J/kg], adjusted for temperature
 
-      s = 2.503e6_wp * EXP(17.269_wp * t_c/t_ref)/(t_ref*t_ref) ! saturated vapour pressure
+      s = 2.503e6_lp * EXP(17.269_lp * t_c/t_ref)/(t_ref*t_ref) ! saturated vapour pressure
 
       aet = ((s/(s+gamma))/lambda) * net_radiation  ! equilibrium evapotranspiration
 
@@ -98,34 +98,34 @@ CONTAINS
 
     ! Interface parameters
     INTEGER,  INTENT(in)    :: tspd                    ! Time steps per day
-    REAL(wp), INTENT(in)    :: delta_time              ! Time step [s]
-    REAL(wp), INTENT(in)    :: peat_runoff_fac
-    REAL(wp), INTENT(in)    :: peat_runoff_exp
-    REAL(wp), INTENT(in)    :: precipitation           ! Total precipitation [m/s]
-    REAL(wp), INTENT(in)    :: frac_liquid_water       ! Fraction of total water liquid (from last timestep)
-    REAL(wp), INTENT(in)    :: frac_snow               ! Fraction of tile covered with snow
-    REAL(wp), INTENT(in)    :: melt                    ! Flux of melting snow [kg m-2 s-1]
-    REAL(wp), INTENT(in)    :: aet                     !
-    REAL(wp), INTENT(inout) :: peat_water_volume       ! Volume of water in peat [m]
-    REAL(wp), INTENT(inout) :: peat_water_table        ! Height of water table [m]
-    REAL(wp), INTENT(inout) :: peat_water_balance      ! Rate change of peat water [kg m-2 s-1]
+    REAL(lp), INTENT(in)    :: delta_time              ! Time step [s]
+    REAL(lp), INTENT(in)    :: peat_runoff_fac
+    REAL(lp), INTENT(in)    :: peat_runoff_exp
+    REAL(lp), INTENT(in)    :: precipitation           ! Total precipitation [m/s]
+    REAL(lp), INTENT(in)    :: frac_liquid_water       ! Fraction of total water liquid (from last timestep)
+    REAL(lp), INTENT(in)    :: frac_snow               ! Fraction of tile covered with snow
+    REAL(lp), INTENT(in)    :: melt                    ! Flux of melting snow [kg m-2 s-1]
+    REAL(lp), INTENT(in)    :: aet                     !
+    REAL(lp), INTENT(inout) :: peat_water_volume       ! Volume of water in peat [m]
+    REAL(lp), INTENT(inout) :: peat_water_table        ! Height of water table [m]
+    REAL(lp), INTENT(inout) :: peat_water_balance      ! Rate change of peat water [kg m-2 s-1]
 
     ! Parameters
-    REAL(wp), PARAMETER :: acro_por = 0.9_wp - 0.08_wp     ! acrotelm_por - Fgas
-    REAL(wp), PARAMETER :: minvtot = 0.25_wp               ! minimum water content at surface [mm3 mm-3]
-    REAL(wp), PARAMETER :: max_h_acro = 0.3_wp             ! Wania's z1
-    REAL(wp), PARAMETER :: zmin = 0.1_wp
-    REAL(wp), PARAMETER :: max_wt_height = 0.02_wp         ! Wania's maxh (previously 0.1_wp)
-    REAL(wp), PARAMETER :: az = (acro_por - minvtot)/zmin
-    REAL(wp), PARAMETER :: eff_porespace = 0.9_wp - minvtot
-!     REAL(wp), PARAMETER :: loc_peat_runoff_exp = 10._wp
-!     REAL(wp), PARAMETER :: loc_peat_runoff_fac = 1.e-4_wp
+    REAL(lp), PARAMETER :: acro_por = 0.9_lp - 0.08_lp     ! acrotelm_por - Fgas
+    REAL(lp), PARAMETER :: minvtot = 0.25_lp               ! minimum water content at surface [mm3 mm-3]
+    REAL(lp), PARAMETER :: max_h_acro = 0.3_lp             ! Wania's z1
+    REAL(lp), PARAMETER :: zmin = 0.1_lp
+    REAL(lp), PARAMETER :: max_wt_height = 0.02_lp         ! Wania's maxh (previously 0.1_lp)
+    REAL(lp), PARAMETER :: az = (acro_por - minvtot)/zmin
+    REAL(lp), PARAMETER :: eff_porespace = 0.9_lp - minvtot
+!     REAL(lp), PARAMETER :: loc_peat_runoff_exp = 10._lp
+!     REAL(lp), PARAMETER :: loc_peat_runoff_fac = 1.e-4_lp
 
     ! Locals
-    REAL(wp) :: runoff                                 ! runoff in m/timestep
-    REAL(wp) :: aet_modifier
+    REAL(lp) :: runoff                                 ! runoff in m/timestep
+    REAL(lp) :: aet_modifier
 
-    runoff = 0._wp
+    runoff = 0._lp
 
     IF (peat_water_volume > max_h_acro * eff_porespace) THEN
       peat_water_table = peat_water_volume - max_h_acro * eff_porespace ! wt = Vol above surface
@@ -138,17 +138,17 @@ CONTAINS
 
 ! StW: Are we using the right peat_runoff_{exp,fac}'s here
 !     runoff = runoff + loc_peat_runoff_fac / tspd * EXP(peat_water_volume * loc_peat_runoff_exp)
-!     IF (frac_snow < 0.8_wp) THEN
+!     IF (frac_snow < 0.8_lp) THEN
 !       runoff = runoff + peat_runoff_fac / tspd * EXP(peat_water_table * peat_runoff_exp)
 !     ENDIF
     runoff = runoff + frac_liquid_water * peat_runoff_fac / tspd * EXP(peat_water_table * peat_runoff_exp)
 
     ! determine water balance: use modified aet for evap, assume than only non-snow-covered ground is in connection with atmosphere
-!     aet_modifier = 1.02_wp + 0.75_wp * peat_water_table
-    aet_modifier = MAX(0._wp,(1.02_wp + 0.15_wp * TAN(peat_water_table)/(0.7_wp*max_h_acro)))
+!     aet_modifier = 1.02_lp + 0.75_lp * peat_water_table
+    aet_modifier = MAX(0._lp,(1.02_lp + 0.15_lp * TAN(peat_water_table)/(0.7_lp*max_h_acro)))
 
-    peat_water_balance = (1._wp - frac_snow) * (precipitation - aet * aet_modifier) + melt - runoff * 1000._wp / delta_time
-    peat_water_volume  = MAX(0._wp,peat_water_volume + peat_water_balance / 1000._wp * delta_time)
+    peat_water_balance = (1._lp - frac_snow) * (precipitation - aet * aet_modifier) + melt - runoff * 1000._lp / delta_time
+    peat_water_volume  = MAX(0._lp,peat_water_volume + peat_water_balance / 1000._lp * delta_time)
 
   END SUBROUTINE update_water_balance_peatland
 
@@ -173,36 +173,36 @@ CONTAINS
 
     ! Parameters
     LOGICAL,  INTENT(in)    :: with_permafrost      ! Soil may contain frozen water?
-    REAL(wp), INTENT(in)    :: tmelt                ! Melting point of water [K]
-    REAL(wp), INTENT(in)    :: soil_depth           ! Total depth of soil [m]
-    REAL(wp), INTENT(in)    :: soil_depth_min       ! Minimum total depth of soil for point to be considered [m]
-    REAL(wp), INTENT(in)    :: dz_sl(:)             ! Thickness of individual soil layers [m]
-    REAL(wp), INTENT(in)    :: lower_bound_sl(:)    ! Depth of lower boundary of individual soil layers [m]
-    REAL(wp), INTENT(in)    :: saturation_threshold ! Threshold for fully saturated soil layer []
-    REAL(wp), INTENT(in)    :: field_capacity       ! Field capacity of soil []
+    REAL(lp), INTENT(in)    :: tmelt                ! Melting point of water [K]
+    REAL(lp), INTENT(in)    :: soil_depth           ! Total depth of soil [m]
+    REAL(lp), INTENT(in)    :: soil_depth_min       ! Minimum total depth of soil for point to be considered [m]
+    REAL(lp), INTENT(in)    :: dz_sl(:)             ! Thickness of individual soil layers [m]
+    REAL(lp), INTENT(in)    :: lower_bound_sl(:)    ! Depth of lower boundary of individual soil layers [m]
+    REAL(lp), INTENT(in)    :: saturation_threshold ! Threshold for fully saturated soil layer []
+    REAL(lp), INTENT(in)    :: field_capacity       ! Field capacity of soil []
     ! Input variables
-    REAL(wp), INTENT(in)    :: t_soil_sl(:)         ! Temperature of each soil layer [K]
-    REAL(wp), INTENT(in)    :: wtr_soil_sl(:)       ! Column of liquid water in each soil layer [m]
-    REAL(wp), INTENT(in)    :: ice_soil_sl(:)       ! Column of frozen water in each soil layer [m]
+    REAL(lp), INTENT(in)    :: t_soil_sl(:)         ! Temperature of each soil layer [K]
+    REAL(lp), INTENT(in)    :: wtr_soil_sl(:)       ! Column of liquid water in each soil layer [m]
+    REAL(lp), INTENT(in)    :: ice_soil_sl(:)       ! Column of frozen water in each soil layer [m]
     ! Output variables
-    REAL(wp), INTENT(out)   :: water_table          ! Height of water table [m]
-    REAL(wp), INTENT(out)   :: frac_liquid_top      ! fraction of liquid water in top <=0.5m (full layers) []
+    REAL(lp), INTENT(out)   :: water_table          ! Height of water table [m]
+    REAL(lp), INTENT(out)   :: frac_liquid_top      ! fraction of liquid water in top <=0.5m (full layers) []
 
     ! Local variables
-    REAL(wp) :: weq
-    REAL(wp) :: saturation
-    REAL(wp) :: dz                          ! Thickness of current layer
-    REAL(wp) :: local_depth
-    REAL(wp) :: frac_liquid
+    REAL(lp) :: weq
+    REAL(lp) :: saturation
+    REAL(lp) :: dz                          ! Thickness of current layer
+    REAL(lp) :: local_depth
+    REAL(lp) :: frac_liquid
     LOGICAL :: layer_below_saturated, layer_below_unfrozen
     INTEGER :: nsoil, isoil
 
     nsoil = SIZE(dz_sl)
     layer_below_saturated =  .TRUE.
     layer_below_unfrozen  = .FALSE.
-    local_depth = 0._wp
+    local_depth = 0._lp
     water_table = -MIN(lower_bound_sl(nsoil),soil_depth)
-    frac_liquid_top    = 0._wp
+    frac_liquid_top    = 0._lp
     DO isoil = nsoil,1,-1
       ! StW: Cmp with JSB3 version: glaciers and lakes should not appear on this tile so we can just start calc.
 
@@ -213,27 +213,27 @@ CONTAINS
       IF (lower_bound_sl(isoil) > soil_depth) dz = soil_depth - lower_bound_sl(MAX(1,isoil-1))
 
       ! Absolute and relative water content (liquid and frozen) in layer isoil
-      frac_liquid = 1._wp
+      frac_liquid = 1._lp
       weq = wtr_soil_sl(isoil)
       IF (with_permafrost) weq = weq + ice_soil_sl(isoil)
-      IF (weq > 0._wp) THEN
+      IF (weq > 0._lp) THEN
         IF (with_permafrost) THEN
           frac_liquid = wtr_soil_sl(isoil) / weq
         ELSE
           ! Piecewise linear function, 0 for T < ~0.5 degC, increasing to 1 between ~-0.5 degC and 0.5 degC and 1 afterwards
-          frac_liquid = MAX(0._wp, MIN(1._wp, (t_soil_sl(isoil) - (tmelt-0.5_wp))))
+          frac_liquid = MAX(0._lp, MIN(1._lp, (t_soil_sl(isoil) - (tmelt-0.5_lp))))
         ENDIF
       ENDIF
 
       ! Sum for avg. liquid frac in upper 0.5 m
-      IF (lower_bound_sl(isoil) <= 0.5_wp) THEN
+      IF (lower_bound_sl(isoil) <= 0.5_lp) THEN
         frac_liquid_top = frac_liquid_top + frac_liquid * dz
         local_depth = local_depth + dz
       ENDIF
 
       ! Water table for grids with sufficient soil_depth
       IF (soil_depth > soil_depth_min) THEN
-        saturation = MAX(0._wp, MIN(1._wp, weq / dz / field_capacity))
+        saturation = MAX(0._lp, MIN(1._lp, weq / dz / field_capacity))
         IF (layer_below_saturated) THEN
           IF ((t_soil_sl(isoil) < tmelt) .AND. .NOT. layer_below_unfrozen) THEN
             water_table = water_table + dz
@@ -254,7 +254,7 @@ CONTAINS
     IF (local_depth > 0) THEN
       frac_liquid_top = frac_liquid_top / local_depth
     ELSE
-      frac_liquid_top = 0._wp
+      frac_liquid_top = 0._lp
     ENDIF
 
   END SUBROUTINE update_water_table
@@ -282,44 +282,44 @@ CONTAINS
 
     ! Interface parameters
     !  Constants
-    REAL(wp), INTENT(in)    :: soil_depth_min
+    REAL(lp), INTENT(in)    :: soil_depth_min
     LOGICAL,  INTENT(in)    :: use_cti_basin
     LOGICAL,  INTENT(in)    :: use_cti_flood
     LOGICAL,  INTENT(in)    :: use_cti_max
     LOGICAL,  INTENT(in)    :: use_wt_max
     LOGICAL,  INTENT(in)    :: use_openwater
-    REAL(wp), INTENT(in)    :: cti_min
-    REAL(wp), INTENT(in)    :: cti_max
-    REAL(wp), INTENT(in)    :: cti_min_flooding
-    REAL(wp), INTENT(in)    :: efold
-    REAL(wp), INTENT(in)    :: wt_min
-    REAL(wp), INTENT(in)    :: wt_max
-    REAL(wp), INTENT(in)    :: soil_depth
-    REAL(wp), INTENT(in)    :: cti_mean
-    REAL(wp), INTENT(in)    :: cti_basin
-    REAL(wp), INTENT(in)    :: cti_openwater
-    REAL(wp), INTENT(in)    :: cti_phi
-    REAL(wp), INTENT(in)    :: cti_mu
-    REAL(wp), INTENT(in)    :: cti_chi
+    REAL(lp), INTENT(in)    :: cti_min
+    REAL(lp), INTENT(in)    :: cti_max
+    REAL(lp), INTENT(in)    :: cti_min_flooding
+    REAL(lp), INTENT(in)    :: efold
+    REAL(lp), INTENT(in)    :: wt_min
+    REAL(lp), INTENT(in)    :: wt_max
+    REAL(lp), INTENT(in)    :: soil_depth
+    REAL(lp), INTENT(in)    :: cti_mean
+    REAL(lp), INTENT(in)    :: cti_basin
+    REAL(lp), INTENT(in)    :: cti_openwater
+    REAL(lp), INTENT(in)    :: cti_phi
+    REAL(lp), INTENT(in)    :: cti_mu
+    REAL(lp), INTENT(in)    :: cti_chi
     !  Topmodel variables
     LOGICAL,  INTENT(in)    :: mask
-    REAL(wp), INTENT(in)    :: water_table
-    REAL(wp), INTENT(in)    :: frac_liquid_water
-    REAL(wp), INTENT(inout) :: frac_inun
-    REAL(wp), INTENT(inout) :: frac_inun_uncorr
-    REAL(wp), INTENT(inout) :: wt_inun
+    REAL(lp), INTENT(in)    :: water_table
+    REAL(lp), INTENT(in)    :: frac_liquid_water
+    REAL(lp), INTENT(inout) :: frac_inun
+    REAL(lp), INTENT(inout) :: frac_inun_uncorr
+    REAL(lp), INTENT(inout) :: wt_inun
 
     ! Parameters
-    REAL(wp), PARAMETER :: water_table_threshold = 0.95_wp
+    REAL(lp), PARAMETER :: water_table_threshold = 0.95_lp
 
     ! Locals
-    REAL(wp) :: cti_min_eff, cti_max_eff, cti_ref, cti_loc, cti_tmp
-    REAL(wp) :: frac_wetland, wt_inun_loc
-    REAL(wp) :: p_loc, p_min, p_max
+    REAL(lp) :: cti_min_eff, cti_max_eff, cti_ref, cti_loc, cti_tmp
+    REAL(lp) :: frac_wetland, wt_inun_loc
+    REAL(lp) :: p_loc, p_min, p_max
 
-    frac_inun        = 0._wp
-    frac_inun_uncorr = 0._wp
-    wt_inun          = 0._wp
+    frac_inun        = 0._lp
+    frac_inun_uncorr = 0._lp
+    wt_inun          = 0._lp
 
     IF ((cti_mean > cti_min) .AND. (water_table > -water_table_threshold * soil_depth) .AND. mask) THEN
 
@@ -339,10 +339,10 @@ CONTAINS
         cti_min_eff = MAX(cti_min_eff,cti_min_flooding)
       ENDIF
 
-      p_min = 1._wp
-      p_max = 1._wp
+      p_min = 1._lp
+      p_max = 1._lp
       IF (cti_phi /= cti_phi) THEN ! IsNaN(cti_phi)
-        frac_wetland = 0._wp
+        frac_wetland = 0._lp
       ELSE
         IF (cti_min_eff >= cti_mu) THEN
           p_min = gamm_p(cti_phi, (cti_min_eff-cti_mu)/cti_chi)
@@ -353,17 +353,17 @@ CONTAINS
       ENDIF
 
       IF (use_openwater) THEN
-        p_max = 1._wp - cti_openwater
+        p_max = 1._lp - cti_openwater
       ENDIF
 
-      frac_wetland = MAX(0._wp,p_max - p_min)
+      frac_wetland = MAX(0._lp,p_max - p_min)
 
-      wt_inun_loc = 0._wp
-      IF (frac_wetland > 0._wp) THEN
-        p_loc = p_min + 0.5_wp * frac_wetland
+      wt_inun_loc = 0._lp
+      IF (frac_wetland > 0._lp) THEN
+        p_loc = p_min + 0.5_lp * frac_wetland
         cti_tmp = gamm_inv_p(p_loc, cti_phi)
         cti_loc = cti_tmp * cti_chi + cti_mu
-        wt_inun_loc = water_table + 1._wp/efold * (cti_loc - cti_ref)
+        wt_inun_loc = water_table + 1._lp/efold * (cti_loc - cti_ref)
       ENDIF
 
       IF (soil_depth > soil_depth_min) THEN
@@ -407,23 +407,23 @@ CONTAINS
     INTEGER,  INTENT(in)    :: tspd                      ! Time steps per day
     INTEGER,  INTENT(in)    :: summer_state              ! Length of summer [months] (>0) when avg. is to be performed
                                                          ! 0: summer month, -1 : non-summer month
-    REAL(wp), INTENT(in)    :: nyear_lt                  ! efolding time for long term averages [years]
+    REAL(lp), INTENT(in)    :: nyear_lt                  ! efolding time for long term averages [years]
     LOGICAL,  INTENT(in)    :: larctic                   ! This is an "Arctic" point: i.e. lat > lat_const_wetland_type
     ! Various sums/averages/mimimums derived from the instant inundated fraction. All unit []
-    REAL(wp), INTENT(in)    :: frac_inun                 ! Instant inundated fraction
-    REAL(wp), INTENT(inout) :: frac_inun_sum_month       ! Intramonthly sum
-    REAL(wp), INTENT(inout) :: frac_inun_mean_month      ! Monthly average
-    REAL(wp), INTENT(inout) :: frac_inun_min_year        ! Minimum of monthly averages in current year
-    REAL(wp), INTENT(inout) :: frac_inun_min_lt          ! Multiyear average of minimum monthly average with each year
-    REAL(wp), INTENT(inout) :: frac_inun_summ_year       ! Sum/average of summer months monthly averages
-    REAL(wp), INTENT(inout) :: frac_inun_summ_lt         ! Multiyear average of summer average of monthly averages
-    REAL(wp), INTENT(inout) :: frac_permanent_wetland    ! Fraction considered permanently inundated
+    REAL(lp), INTENT(in)    :: frac_inun                 ! Instant inundated fraction
+    REAL(lp), INTENT(inout) :: frac_inun_sum_month       ! Intramonthly sum
+    REAL(lp), INTENT(inout) :: frac_inun_mean_month      ! Monthly average
+    REAL(lp), INTENT(inout) :: frac_inun_min_year        ! Minimum of monthly averages in current year
+    REAL(lp), INTENT(inout) :: frac_inun_min_lt          ! Multiyear average of minimum monthly average with each year
+    REAL(lp), INTENT(inout) :: frac_inun_summ_year       ! Sum/average of summer months monthly averages
+    REAL(lp), INTENT(inout) :: frac_inun_summ_lt         ! Multiyear average of summer average of monthly averages
+    REAL(lp), INTENT(inout) :: frac_permanent_wetland    ! Fraction considered permanently inundated
     ! Various sum/averages/minimums derived from the instant water table of the inundated fraction. All unit [m]
-    REAL(wp), INTENT(in)    :: wt_inun                   ! Instant water table of the inundated fraction
-    REAL(wp), INTENT(inout) :: wt_inun_sum_month         ! Intramonthly sum
-    REAL(wp), INTENT(inout) :: wt_inun_mean_month        ! Monthly average
-    REAL(wp), INTENT(inout) :: wt_inun_min_year          ! Minimum of monthly averages in current year
-    REAL(wp), INTENT(inout) :: wt_inun_min_lt            ! Multiyear average of minimum of monthly averages
+    REAL(lp), INTENT(in)    :: wt_inun                   ! Instant water table of the inundated fraction
+    REAL(lp), INTENT(inout) :: wt_inun_sum_month         ! Intramonthly sum
+    REAL(lp), INTENT(inout) :: wt_inun_mean_month        ! Monthly average
+    REAL(lp), INTENT(inout) :: wt_inun_min_year          ! Minimum of monthly averages in current year
+    REAL(lp), INTENT(inout) :: wt_inun_min_lt            ! Multiyear average of minimum of monthly averages
 
     IF (lday) THEN
 
@@ -432,19 +432,19 @@ CONTAINS
         IF (lyear) THEN
 
           ! Reset yearly values
-          frac_inun_summ_year =    0._wp
-          frac_inun_min_year  = 1000._wp
-          wt_inun_min_year    = 1000._wp
+          frac_inun_summ_year =    0._lp
+          frac_inun_min_year  = 1000._lp
+          wt_inun_min_year    = 1000._lp
 
         ENDIF ! lyear
 
         ! frac_inun: Monthly average of inundated fraction
         frac_inun_mean_month = frac_inun_sum_month / (mlen * tspd)
-        frac_inun_sum_month  = 0._wp
+        frac_inun_sum_month  = 0._lp
 
         ! wt_inun: Monthly average water table height of inundated fraction
         wt_inun_mean_month = wt_inun_sum_month / (mlen * tspd)
-        wt_inun_sum_month  = 0._wp
+        wt_inun_sum_month  = 0._lp
 
         ! frac_inun_min_year: Minimum monthly inundated fraction within a year
         frac_inun_min_year = MIN(frac_inun_min_year,frac_inun_mean_month)
@@ -511,27 +511,27 @@ CONTAINS
     INTEGER,  INTENT(in)    :: mlen                            ! Length of month of previous timestep [days] (by lmonth only)
     INTEGER,  INTENT(in)    :: ylen                            ! Length of year of previous timestep [days] (by lyear only)
     INTEGER,  INTENT(in)    :: tspd                            ! Time steps per day
-    REAL(wp), INTENT(in)    :: nyear_lt                        ! efolding time for long term averages [years]
-    REAL(wp), INTENT(in)    :: nstep_relaxation                ! #efolding steps for precipitation and aet averages
-    REAL(wp), INTENT(in)    :: rain, snow                      ! Rain and snow [kg m-2 s-1] (from A2L_)
-    REAL(wp), INTENT(inout) :: precip_sum_day, precip_mean_day ! Daily sum/mean of total precipitation [kg m-2 s-1]
-    REAL(wp), INTENT(inout) :: precip_relax                    ! Efolded average of precipitation [kg m-2 s-1]
-    REAL(wp), INTENT(in)    :: aet                             ! Potential evapotranspiration [kg m-2 s-1]
-    REAL(wp), INTENT(inout) :: aet_sum_day,  aet_mean_day      ! Daily sum/mean of potential evapotranspiration [kg m-2 s-1]
-    REAL(wp), INTENT(inout) :: aet_relax                       ! Efolded average of aet [kg m-2 s-1]
-    REAL(wp), INTENT(inout) :: poaet_mean_day                  ! Daily mean of precip/potential evapotranspiration []
-    REAL(wp), INTENT(inout) :: poaet_sum_year, poaet_mean_year ! Yearly sum/mean of daily mean precip/pot evapotranspiration []
-    REAL(wp), INTENT(inout) :: poaet_lt                        ! Long term mean of year mean of poaet []
+    REAL(lp), INTENT(in)    :: nyear_lt                        ! efolding time for long term averages [years]
+    REAL(lp), INTENT(in)    :: nstep_relaxation                ! #efolding steps for precipitation and aet averages
+    REAL(lp), INTENT(in)    :: rain, snow                      ! Rain and snow [kg m-2 s-1] (from A2L_)
+    REAL(lp), INTENT(inout) :: precip_sum_day, precip_mean_day ! Daily sum/mean of total precipitation [kg m-2 s-1]
+    REAL(lp), INTENT(inout) :: precip_relax                    ! Efolded average of precipitation [kg m-2 s-1]
+    REAL(lp), INTENT(in)    :: aet                             ! Potential evapotranspiration [kg m-2 s-1]
+    REAL(lp), INTENT(inout) :: aet_sum_day,  aet_mean_day      ! Daily sum/mean of potential evapotranspiration [kg m-2 s-1]
+    REAL(lp), INTENT(inout) :: aet_relax                       ! Efolded average of aet [kg m-2 s-1]
+    REAL(lp), INTENT(inout) :: poaet_mean_day                  ! Daily mean of precip/potential evapotranspiration []
+    REAL(lp), INTENT(inout) :: poaet_sum_year, poaet_mean_year ! Yearly sum/mean of daily mean precip/pot evapotranspiration []
+    REAL(lp), INTENT(inout) :: poaet_lt                        ! Long term mean of year mean of poaet []
 
     IF (lday) THEN
       precip_mean_day = precip_sum_day / tspd
-      precip_sum_day  = 0._wp
+      precip_sum_day  = 0._lp
 
       aet_mean_day = aet_sum_day / tspd
-      aet_sum_day  = 0._wp
+      aet_sum_day  = 0._lp
 
       ! Set threshold: minimum aet_mean allowed is 0.01 -> to fix problems at very cold temperatures
-      poaet_mean_day = precip_mean_day / MAX(aet_mean_day,1.e-8_wp)
+      poaet_mean_day = precip_mean_day / MAX(aet_mean_day,1.e-8_lp)
 
       poaet_sum_year = poaet_sum_year + poaet_mean_day
 
@@ -540,13 +540,13 @@ CONTAINS
         IF (lyear) THEN
 
           poaet_mean_year = poaet_sum_year / ylen
-          poaet_sum_year  = 0._wp
+          poaet_sum_year  = 0._lp
 
           ! Sensible initial values
           IF (lfirst_year) THEN
             poaet_lt = poaet_mean_year
           ELSE
-            poaet_lt = (poaet_lt * (nyear_lt - 1._wp) + poaet_mean_year) / nyear_lt
+            poaet_lt = (poaet_lt * (nyear_lt - 1._lp) + poaet_mean_year) / nyear_lt
           ENDIF
 
         ENDIF ! lyear
@@ -558,8 +558,8 @@ CONTAINS
     aet_sum_day    = aet_sum_day + aet
 
     ! Update efolded averages
-    aet_relax    = (   aet_relax * (nstep_relaxation - 1._wp) + aet        ) / nstep_relaxation
-    precip_relax = (precip_relax * (nstep_relaxation - 1._wp) + rain + snow) / nstep_relaxation
+    aet_relax    = (   aet_relax * (nstep_relaxation - 1._lp) + aet        ) / nstep_relaxation
+    precip_relax = (precip_relax * (nstep_relaxation - 1._lp) + rain + snow) / nstep_relaxation
 
   END SUBROUTINE update_peat_runmean
 
@@ -578,15 +578,15 @@ CONTAINS
   !$acc routine seq
 
     ! Interface parameters
-    REAL(wp), INTENT(in)  :: frac_inun_clim            ! Climatological frac_inun
-    REAL(wp), INTENT(out) :: frac_inun                 ! Actual frac_inun
-    REAL(wp), INTENT(out) :: wt_inun                   ! Actual wt_inun
+    REAL(lp), INTENT(in)  :: frac_inun_clim            ! Climatological frac_inun
+    REAL(lp), INTENT(out) :: frac_inun                 ! Actual frac_inun
+    REAL(lp), INTENT(out) :: wt_inun                   ! Actual wt_inun
 
     frac_inun = frac_inun_clim
-    IF (frac_inun_clim > 0._wp) THEN
-      wt_inun = 0.25_wp
+    IF (frac_inun_clim > 0._lp) THEN
+      wt_inun = 0.25_lp
     ELSE
-      wt_inun = 0.00_wp
+      wt_inun = 0.00_lp
     ENDIF
 
   END SUBROUTINE get_climatological_inun

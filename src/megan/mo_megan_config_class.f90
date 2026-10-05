@@ -26,7 +26,7 @@ MODULE mo_megan_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_util,              ONLY: r2s => real2string, i2s => int2string, l2s => logical2string
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -38,13 +38,13 @@ MODULE mo_megan_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_megan_config
     LOGICAL  :: dbg_process          ! Debug topmodel processes and tasks
-    REAL(wp) :: scale_iso            ! Emission factor scaling, isoprene
-    REAL(wp) :: scale_co             ! Emission factor scaling, carbon monoxide
-    REAL(wp) :: scale_no             ! Emission factor scaling, nitric oxide
-    REAL(wp) :: beta_co              ! Temperature adjustment factor, carbon monoxide
-    REAL(wp) :: beta_no              ! Temperature adjustment factor, nitric oxide
-    REAL(wp) :: relax_short          ! Relaxation time for short relaxation [s]
-    REAL(wp) :: relax_long           ! Relaxation time for long relaxation [s]
+    REAL(lp) :: scale_iso            ! Emission factor scaling, isoprene
+    REAL(lp) :: scale_co             ! Emission factor scaling, carbon monoxide
+    REAL(lp) :: scale_no             ! Emission factor scaling, nitric oxide
+    REAL(lp) :: beta_co              ! Temperature adjustment factor, carbon monoxide
+    REAL(lp) :: beta_no              ! Temperature adjustment factor, nitric oxide
+    REAL(lp) :: relax_short          ! Relaxation time for short relaxation [s]
+    REAL(lp) :: relax_long           ! Relaxation time for long relaxation [s]
   CONTAINS
     PROCEDURE :: Init => Init_megan_config
   END TYPE t_megan_config
@@ -63,15 +63,15 @@ CONTAINS
     ! Namelist variables
     LOGICAL                     :: active
     LOGICAL                     :: dbg_process
-    REAL(wp)                    :: scale_ISO
-    REAL(wp)                    :: scale_CO
-    REAL(wp)                    :: scale_NO
-    REAL(wp)                    :: beta_CO
-    REAL(wp)                    :: beta_NO
-    REAL(wp)                    :: relax_short_s ! unit [s]
-    REAL(wp)                    :: relax_long_s  ! unit [s]
-    REAL(wp)                    :: relax_short   ! unit [d]
-    REAL(wp)                    :: relax_long    ! unit [d]
+    REAL(lp)                    :: scale_ISO
+    REAL(lp)                    :: scale_CO
+    REAL(lp)                    :: scale_NO
+    REAL(lp)                    :: beta_CO
+    REAL(lp)                    :: beta_NO
+    REAL(lp)                    :: relax_short_s ! unit [s]
+    REAL(lp)                    :: relax_long_s  ! unit [s]
+    REAL(lp)                    :: relax_short   ! unit [d]
+    REAL(lp)                    :: relax_long    ! unit [d]
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
 
     NAMELIST /jsb_megan_nml/                         &
@@ -96,17 +96,17 @@ CONTAINS
     ic_filename          = 'ic_land_soil.nc'
     bc_filename          = 'bc_land_soil.nc'
     !---emission factor scaling
-    scale_ISO            = 0.589_wp             ! isoprene
-    scale_CO             = 0.863_wp             ! carbon monoxide
-    scale_NO             = 2.174_wp             ! nitric oxide
+    scale_ISO            = 0.589_lp             ! isoprene
+    scale_CO             = 0.863_lp             ! carbon monoxide
+    scale_NO             = 2.174_lp             ! nitric oxide
     !---temperature adjustment factor
-    beta_CO              = 0.08_wp              ! carbon monoxide
-    beta_NO              = 0.11_wp              ! nitric oxide
+    beta_CO              = 0.08_lp              ! carbon monoxide
+    beta_NO              = 0.11_lp              ! nitric oxide
     ! Relaxation times (doubly defined)
-    relax_short_s        = -1._wp               ! Impossible value to indicate unused
-    relax_long_s         = -1._wp               ! Impossible value to indicate unused
-    relax_short          =  1._wp               ! "Short" is by default 1 day
-    relax_long           = 30._wp               ! "Long" is by default 30 days
+    relax_short_s        = -1._lp               ! Impossible value to indicate unused
+    relax_long_s         = -1._lp               ! Impossible value to indicate unused
+    relax_short          =  1._lp               ! "Short" is by default 1 day
+    relax_long           = 30._lp               ! "Long" is by default 30 days
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -124,15 +124,15 @@ CONTAINS
     config%scale_NO     = scale_NO
     config%beta_CO      = beta_CO
     config%beta_NO      = beta_NO
-    IF (relax_short_s > 0._wp) THEN
+    IF (relax_short_s > 0._lp) THEN
       config%relax_short = relax_short_s
     ELSE
-      config%relax_short = relax_short * 86400._wp
+      config%relax_short = relax_short * 86400._lp
     ENDIF
-    IF (relax_long_s > 0._wp) THEN
+    IF (relax_long_s > 0._lp) THEN
       config%relax_long = relax_long_s
     ELSE
-      config%relax_long = relax_long * 86400._wp
+      config%relax_long = relax_long * 86400._lp
     ENDIF
 
     ! Tests and messsages
