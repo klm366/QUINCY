@@ -50,6 +50,7 @@ MODULE mo_q_dfire_sf_classes
 
     !< input
     REAL(wp), POINTER :: fbd(:) => NULL()                !< Weighted average across PFT for fuel bulk density [kg m-3]
+    REAL(wp), POINTER :: fwd_wind_factor(:) => NULL()    !< Forward wind factor [-]
 
     !< outputs (intermediate)
     REAL(wp), POINTER :: ros_forward(:) => NULL()        !< Forward rate of spread of the fire [m min-1]
@@ -219,7 +220,7 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> Initialize t_sf_ros
   !>
-  FUNCTION create_sf_ros_init(nc, fuel_bulk_density, &
+  FUNCTION create_sf_ros_init(nc, fwd_wind_factor, fuel_bulk_density, &
                              ros_forward, ros_backwards, &
                              distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
                              reaction_intensity, prop_flux_ratio, &
@@ -228,6 +229,7 @@ MODULE mo_q_dfire_sf_classes
                              opt_react_velo, net_fuel_load, &
                              moist_damp_coeff, mineral_damp_coeff) RESULT(sf_ros)
     INTEGER, INTENT(in)                  :: nc                      !< Total number of gridcells
+    REAL(wp), POINTER, INTENT(in)        :: fwd_wind_factor(:)      !< Forward wind factor [-]
     REAL(wp), POINTER, INTENT(in)        :: fuel_bulk_density(:)    !< Weighted average across PFT for fuel bulk density [kg m-3]
     REAL(wp), POINTER, INTENT(inout)     :: ros_forward(:)          !<
     REAL(wp), POINTER, INTENT(inout)     :: ros_backwards(:)        !<
@@ -248,6 +250,7 @@ MODULE mo_q_dfire_sf_classes
     TYPE(t_sf_ros)                       :: sf_ros                  !< output [-]
     ! ----------------------------------------------------------------------------------------------------- !
     sf_ros%nc = nc
+    sf_ros%fwd_wind_factor => fwd_wind_factor
     sf_ros%fbd => fuel_bulk_density ! input
 
     ! outputs

@@ -372,7 +372,8 @@ CONTAINS
                     live_grass_fuel_1hr_lfp, &
                     cured_live_grass_fuel_1hr_dfp)
 
-    sf_ros = t_sf_ros(nc, fuel_bulk_density, & ! in
+    sf_ros = t_sf_ros(nc, fwd_wind_factor, &
+                             fuel_bulk_density, & ! in
                              ros_f, ros_b, & ! inout
                              distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
                              reaction_intensity, prop_flux_ratio, &
@@ -410,7 +411,6 @@ CONTAINS
                             df_sf_calorific_heat_content, df_sf_isurface_extinc_th)
 
     CALL calc_sf_dynamics(sf_config, & ! in...
-                        fwd_wind_factor, & !
                         burnable_area_ha, & ! soil properties
                         veg_cover_frac, & ! soil properties
                         sf_atm, & ! weather
@@ -449,7 +449,6 @@ CONTAINS
   !> Run science
   !>
   SUBROUTINE calc_sf_dynamics(sf_config, &
-                  lctlib_fwd_wind_factor, &
                   grid_cell_area, & ! fuel properties
                   veg_cover_frac, & ! in
                   sf_atm, & ! in
@@ -462,7 +461,6 @@ CONTAINS
                   mask) ! in
 
     TYPE(t_sf_config), INTENT(in) :: sf_config
-    REAL(wp), INTENT(in)  :: lctlib_fwd_wind_factor(sf_config%nc)            !< Forward wind factor [0 to 1]
     REAL(wp), INTENT(in)  :: grid_cell_area(sf_config%nc)                    !< Gridcell area [ha]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
     TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
@@ -490,7 +488,6 @@ CONTAINS
     !< ROS related
     REAL(wp)                :: u_f_wind(sf_config%nc)                     !< Wind speed at vegetation cover [m min-1]
 
-    !ndeadpools = SIZE(sf_fuel_load%dead_fuel_fcl, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
       mask_tile_enabled = mask
@@ -514,7 +511,7 @@ CONTAINS
     !> Fuel moisture and ROS
     !
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
-    u_f_wind = lctlib_fwd_wind_factor * sf_atm%wind_sf
+    u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
     dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx), DIM=2) ! 2 = fuel classes
