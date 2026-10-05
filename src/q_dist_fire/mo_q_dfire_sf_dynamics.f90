@@ -594,7 +594,7 @@ CONTAINS
                                     nesterov_index, &
                                     sf_mf, & ! inout
                                     fdi, & ! out
-                                    ros, &
+                                    sf_ros, &
                                     mask) !< optional
 
     USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
@@ -607,7 +607,7 @@ CONTAINS
     REAL(wp), INTENT(in)        :: nesterov_index(:)      !< [deg C2]
     TYPE(t_sf_mf), INTENT(inout):: sf_mf
     REAL(wp), INTENT(out)       :: fdi(:)                 !< Fire dange index [%]
-    TYPE(t_sf_ros), INTENT(inout) :: ros
+    TYPE(t_sf_ros), INTENT(inout) :: sf_ros
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)              !< True: gridcell is enabled
 
     LOGICAL :: has_fire_conditions(sf_config%nc)
@@ -637,12 +637,12 @@ CONTAINS
     has_fire_conditions = has_fire_conditions .AND. (fdi > 1.e-6_wp)
 
     CALL sf_calc_rate_of_spread_thon(sf_config % nc, sf_config % nfcl_ros, & ! in
-                      ros % fbd, &
-                      ros % u_f_wind, sf_mf % moisture_extinction, &
+                      sf_ros % fbd, &
+                      sf_ros % u_f_wind, sf_mf % moisture_extinction, &
                       sf_fuel_load % dead_fuel_litter * df_sf_units_g_to_kg, &
                       sf_mf % omegas_thon(:,df_sf_omega_o_idx), &
                       has_fire_conditions, &
-                      ros) ! inout
+                      sf_ros) ! inout
   END SUBROUTINE calc_sf_dynamics_for_thonicke
 
 
