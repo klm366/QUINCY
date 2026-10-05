@@ -129,7 +129,7 @@ CONTAINS
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
 
-    TYPE(t_sf_mf)                         :: fuel_moisture_all
+    TYPE(t_sf_mf)                         :: sf_fuel_moisture_all
     TYPE(t_sf_veget_cover_frac)           :: veg_cover_frac                               !< Vegetation cover
     TYPE(t_sf_atm)                        :: sf_atm                                       !< Atmosphere related variables / Weather
     TYPE(t_sf_ignitions)                  :: sf_ignitions                                 !< Ignition variables
@@ -394,7 +394,7 @@ CONTAINS
     ab_moisture_diag = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
 
-    fuel_moisture_all = t_sf_mf(nc, df_sf_fc_full_nr, moisture_extinction, & ! core
+    sf_fuel_moisture_all = t_sf_mf(nc, df_sf_fc_full_nr, moisture_extinction, & ! core
                                 df_sf_alpha_nr, df_sf_alphas, ab_moisture_diag, fuel_moisture, & ! thonicke
                                 df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
                                 df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
@@ -420,7 +420,7 @@ CONTAINS
                         sf_ignitions, & ! inout...
                         sf_ros, & ! rate of spread
                         nesterov_index, & ! dryness
-                        fuel_moisture_all, &
+                        sf_fuel_moisture_all, &
                         sf_dynamics, &
                         mask=mask_is_tile_enabled)
 
@@ -458,7 +458,7 @@ CONTAINS
                   sf_ignitions, & ! inout
                   sf_ros, & ! inout
                   nesterov_index, & ! inout
-                  fuel_moisture, & ! inout
+                  sf_fuel_moisture, & ! inout
                   spitfire, & ! inout
                   mask) ! in
 
@@ -471,7 +471,7 @@ CONTAINS
     TYPE(t_sf_ignitions), INTENT(inout)  :: sf_ignitions
     TYPE(t_sf_ros), INTENT(inout) :: sf_ros                        !< Rate of spread
     REAL(wp), INTENT(INOUT) :: nesterov_index(sf_config%nc)                  !< Dryness index [Celsius^2]
-    TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture                  !< Fuel moisture
+    TYPE(t_sf_mf), INTENT(inout) :: sf_fuel_moisture                  !< Fuel moisture
     TYPE(t_sf_dynamics), INTENT(inout)  :: spitfire                !< Spitfire dynamics
     LOGICAL, INTENT(in), OPTIONAL       :: mask(sf_config%nc)                !< Gridcell can burn
 
@@ -517,7 +517,7 @@ CONTAINS
                                     sf_ros % u_f_wind, &
                                     nesterov_index, &
                                     sf_fuel_load % dead_fuel_litter, sf_fuel_load % tot_dead_fuel_grass, &
-                                    fuel_moisture, & ! inout
+                                    sf_fuel_moisture, & ! inout
                                     spitfire % fdi, & !< outputs
                                     sf_ros, &
                                     mask=has_fire_conditions) !< optional
@@ -530,13 +530,13 @@ CONTAINS
           sf_fuel_load % dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
           sf_fuel_load % tot_dead_fuel_grass, & ! (#nc) 1 hour only
           sf_fuel_load % tot_live_fuel_tree, & ! total live fuel tree (#nc)
-          fuel_moisture, & ! inout
+          sf_fuel_moisture, & ! inout
           spitfire % fdi, & ! out
           sf_ros, &
           mask = has_fire_conditions) ! optional
 
        !< used in thonicke's implementation
-       fuel_moisture%omegas_thon = 0._wp
+       sf_fuel_moisture%omegas_thon = 0._wp
     ELSE
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
@@ -564,8 +564,8 @@ CONTAINS
 
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
     !< extracted from equations B1, B4, B5 and B6)
-    spitfire % dead_frac_consump = sf_calc_frac_consump(sf_config%nc, sf_config%nfcl, fuel_moisture%moisture_extinction, &
-        fuel_moisture % fuel_moisture_for_fc, mask=has_fire_conditions)
+    spitfire % dead_frac_consump = sf_calc_frac_consump(sf_config%nc, sf_config%nfcl, sf_fuel_moisture%moisture_extinction, &
+        sf_fuel_moisture % fuel_moisture_for_fc, mask=has_fire_conditions)
 
     !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
     !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.
