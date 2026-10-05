@@ -172,7 +172,7 @@ MODULE mo_q_dfire_sf_classes
   END TYPE t_sf_mf
 
   INTERFACE t_sf_mf
-    MODULE PROCEDURE :: create_t_sf_mf, create_new_sf_mf
+    MODULE PROCEDURE :: create_new_sf_mf
   END INTERFACE
 
 
@@ -433,23 +433,6 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> t_sf_mf fuel moisture constructor (Oberhagemann only)
   !>
-  FUNCTION create_t_sf_mf(nc, ndd, nlv, omegas_thon) RESULT (mf)
-    INTEGER, INTENT(in) :: nc
-    INTEGER, INTENT(in) :: ndd, nlv !< Number of dead and live pools, Oberhagemann only
-    REAL(wp), POINTER :: omegas_thon(:,:) !< omega_o and omega_nl, Thonicke only
-    TYPE(t_sf_mf) :: mf
-
-    mf%omegas_thon => omegas_thon
-
-    ALLOCATE(mf%dead(nc,ndd))
-    ALLOCATE(mf%live(nc,nlv))
-    ALLOCATE(mf%val(nc))
-    mf%dead = 0._wp
-    mf%live = 0._wp
-    mf%val = 0._wp
-  END FUNCTION create_t_sf_mf
-
-
   FUNCTION create_new_sf_mf(nc, nddfc, & ! core
                             moisture_extinction, &  ! core
                             nalphas_thon, alphas_thon, ab_moisture_thon, omegas_thon, &  ! thonicke only
