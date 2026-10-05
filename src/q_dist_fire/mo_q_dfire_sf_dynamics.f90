@@ -552,7 +552,6 @@ CONTAINS
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(sf_config%nc, &
-                  !lctlib_fwd_wind_factor, sf_atm%wind_sf, &
                   u_f_wind, &
                   spitfire % fdi, &
                   veg_cover_frac, &
