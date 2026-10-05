@@ -519,17 +519,12 @@ CONTAINS
                                     mask=has_fire_conditions) !< optional
     ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
 
-      CALL calc_sf_dynamics_for_oberhagemann(sf_config%nc, &
-          nesterov_index, &
-          sf_ros % fbd, &
-          sf_ros % u_f_wind, &
-          sf_fuel_load % dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
-          sf_fuel_load % tot_dead_fuel_grass, & ! (#nc) 1 hour only
-          sf_fuel_load % tot_live_fuel_tree, & ! total live fuel tree (#nc)
-          sf_fuel_moisture, & ! inout
-          spitfire % fdi, & ! out
-          sf_ros, &
-          mask = has_fire_conditions) ! optional
+      CALL calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, &
+                                    nesterov_index, &
+                                    sf_fuel_moisture, & ! inout
+                                    spitfire % fdi, & ! out
+                                    sf_ros, &
+                                    mask = has_fire_conditions) ! optional
 
        !< used in thonicke's implementation
        sf_fuel_moisture%omegas_thon = 0._wp
@@ -650,13 +645,8 @@ CONTAINS
   !>
   !> Calculate spitfire Oberhagemann's implementation
   !>
-  SUBROUTINE calc_sf_dynamics_for_oberhagemann(nc, &
+  SUBROUTINE calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, & ! in
                   nesterov_index, &
-                  fuel_bulk_density, &
-                  u_f_wind, &
-                  dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
-                  tot_dead_fuel_grass, & ! (#nc) 1 hour only
-                  tot_live_fuel_tree, & ! total live fuel tree (#nc)
                   fuel_moisture, & ! inout
                   fdi, & ! out
                   ros, &
@@ -672,32 +662,28 @@ CONTAINS
                                      ix_wdy => df_sf_ix_sigma_lv_wdy, &
                                  nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
 
-    INTEGER, INTENT(in) :: nc
+    TYPE(t_sf_config), INTENT(in) :: sf_config
+    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
-    REAL(wp), INTENT(in) :: fuel_bulk_density(:) !< Fuel bulk density [kg m-3]
-    REAL(wp), INTENT(in) :: u_f_wind(:) !< Wind speed at vegetation cover [m min-1]
-    REAL(wp), INTENT(in) :: dead_fuel_litter(:,:) !< [g DM m-2] (#nc,#Spread fuel classes-1,10,100 hours-)
-    REAL(wp), INTENT(in) :: tot_dead_fuel_grass(:) !< [g DM m-2]
-    REAL(wp), INTENT(in) :: tot_live_fuel_tree(:) !< [g DM m-2]
     TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture !< Fuel moisture
     REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(inout) :: ros !< Rate of spread [-]
     LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
 
-    REAL(wp) :: woi_dd(nc,fuel_moisture % sigma_dd_nr)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
-    REAL(wp) :: woi_lv(nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
-    REAL(wp) :: me_dd(nc)             !< Dead moisture of extinction [-] (#nc)
-    REAL(wp) :: me_lv(nc)             !< Live moisture of extinction [-] (#nc)
+    REAL(wp) :: woi_dd(sf_config%nc,fuel_moisture % sigma_dd_nr)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    REAL(wp) :: woi_lv(sf_config%nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    REAL(wp) :: me_dd(sf_config%nc)             !< Dead moisture of extinction [-] (#nc)
+    REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
 
     fdi = 0._wp
-    CALL calc_sf_fuel_moisture_for_oberhagemann(nc, &
+    CALL calc_sf_fuel_moisture_for_oberhagemann(sf_config % nc, &
                       fuel_moisture % sigma_dd_nr, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
                       nlitros, & ! 3=1, 10 and 100 hours
                       fuel_moisture % sigma_lv_nr, &
                       fuel_moisture % alphas_dead, &
                       fuel_moisture % lvg_moisture, &
-                      dead_fuel_litter, &
-                      tot_dead_fuel_grass, &
+                      sf_fuel_load % dead_fuel_litter, &
+                      sf_fuel_load % tot_dead_fuel_grass, &
                       nesterov_index, &
                       mask, &
                       fuel_moisture)
@@ -705,17 +691,17 @@ CONTAINS
     fuel_moisture % fuel_moisture_for_fc = fuel_moisture%dead
 
     woi_dd = 0._wp
-    woi_dd(:,ix_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_10hr) = dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_100hr) = dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_clvg) = tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
+    woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
+    woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
+    woi_dd(:,ix_100hr) = sf_fuel_load % dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
+    woi_dd(:,ix_clvg) = sf_fuel_load % tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
     woi_lv = 0._wp
     woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
-    woi_lv(:,ix_wdy) = tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
+    woi_lv(:,ix_wdy) = sf_fuel_load % tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
 
     me_dd = fuel_moisture % moisture_extinction
-    me_lv = calc_live_me(nc, fuel_moisture % sigma_dd_ros_nr, fuel_moisture % sigma_lv_nr, &
+    me_lv = calc_live_me(sf_config%nc, fuel_moisture % sigma_dd_ros_nr, fuel_moisture % sigma_lv_nr, &
                           fuel_moisture%dead(:,ixs_ros), &
                           me_dd, woi_dd(:,ixs_ros), woi_lv, &
                           fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
@@ -723,21 +709,21 @@ CONTAINS
 
     !< only involved ROS fuel (and FM)
     CALL sf_calc_rate_of_spread_ober(&
-        nc, &
+        sf_config%nc, &
         fuel_moisture % sigma_dd_ros_nr, &
         fuel_moisture % sigma_lv_nr, &
         fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
         woi_dd(:,ixs_ros), woi_lv, & ! fuels
         fuel_moisture%dead(:,ixs_ros), fuel_moisture%live, &
         me_dd, me_lv, &
-        fuel_bulk_density, &
-        u_f_wind, &
+        ros % fbd, & !fuel_bulk_density, &
+        ros % u_f_wind, &
         fuel_moisture%val, & ! output too
         mask, &
         ros)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    CALL calc_fire_danger_index(nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
+    CALL calc_fire_danger_index(sf_config%nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
 
   END SUBROUTINE calc_sf_dynamics_for_oberhagemann
 
