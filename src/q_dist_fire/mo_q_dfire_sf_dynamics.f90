@@ -483,7 +483,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: dead_fuel_litter(:,:)            !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
     REAL(wp), ALLOCATABLE   :: tot_dead_fuel_grass(:)           !< Total dead fuel grass [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
-    REAL(wp), ALLOCATABLE   :: fuel_moisture_for_fc(:,:)        !< fuel moisture (or omega) [%] (#nc,#fuel classes-1,10,100,1000hrs-)
 
     !< ROS related
     REAL(wp)                :: u_f_wind(sf_config%nc)                     !< Wind speed at vegetation cover [m min-1]
