@@ -35,7 +35,7 @@ MODULE mo_jsb_model_init
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
 
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: lp
   USE mo_exception,        ONLY: message, finish
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
@@ -128,7 +128,7 @@ CONTAINS
       grid%sinlat(:,:) = SIN(deg2rad * grid%lat(:,:))
       grid%coslon(:,:) = COS(deg2rad * grid%lon(:,:))
       grid%sinlon(:,:) = SIN(deg2rad * grid%lon(:,:))
-      grid%area(:,:) = 1._wp
+      grid%area(:,:) = 1._lp
     END IF
 
     CALL Register_grid(grid)
@@ -188,7 +188,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
     INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
+    REAL(lp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
@@ -737,7 +737,7 @@ CONTAINS
       ! The rel. fraction of the primary LCT is 1: The tile is fully covered by this LCT.
       ! Todo: Are these arrays (i.e. fract_glac_glac, fract_veg_veg, ...) of any interest, or
       ! should we remove the definition here and also remove the corresponding Add_var calls?
-      tile%lcts(1)%fract(:,:) = 1._wp
+      tile%lcts(1)%fract(:,:) = 1._lp
 
       ! We start with second LCT, as the tile's primary LCT fraction has just been set.
       lct_start=2
@@ -750,7 +750,7 @@ CONTAINS
 
         ! Tile has children. The tile thus had been visited before (s.above) and we're on the way up.
         ! Loop over the children and add their contributions to the specific LCT fraction.
-        tile_lct_fract_tmp(:,:) = 0._wp
+        tile_lct_fract_tmp(:,:) = 0._lp
         no_children = tile%Get_no_of_children()
         child => tile%Get_first_child_tile()
         DO i=1,no_children
@@ -774,12 +774,12 @@ CONTAINS
             ! Get the (absolute) fraction of the current tile
             CALL tile%Get_fraction(fract=fract_tmp(:,:))
             ! Calculate the (relative) LCT fraction of the tile
-            WHERE (tile_lct_fract_tmp(:,:) == 0._wp)
-              tile%lcts(ilct)%fract(:,:) = 0._wp
-            ELSE WHERE (fract_tmp(:,:) > 0._wp)
+            WHERE (tile_lct_fract_tmp(:,:) == 0._lp)
+              tile%lcts(ilct)%fract(:,:) = 0._lp
+            ELSE WHERE (fract_tmp(:,:) > 0._lp)
               tile%lcts(ilct)%fract(:,:) = tile_lct_fract_tmp(:,:) / fract_tmp(:,:)
             ELSE WHERE
-              tile%lcts(ilct)%fract(:,:) = 1._wp
+              tile%lcts(ilct)%fract(:,:) = 1._lp
             END WHERE
           END IF
           child => child%Get_next_sibling_tile()

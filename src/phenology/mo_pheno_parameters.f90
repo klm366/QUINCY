@@ -14,7 +14,7 @@
 MODULE mo_pheno_parameters
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
@@ -49,7 +49,7 @@ MODULE mo_pheno_parameters
   !> Collects parameters that apply to all phenology types
   !>
   TYPE t_GeneralParams
-    REAL(wp) :: &
+    REAL(lp) :: &
       & LAI_negligible = def_parameters,   & ! [-] Below this value an LAI is considered to be zero.
       & laiSeed = def_parameters,          & ! [-] Seed value used for the LAI to have a non-zero starting value
                                              ! whenever the vegetation starts growing.
@@ -60,7 +60,7 @@ MODULE mo_pheno_parameters
   !> Parameters that are common to the evergreen and raingreen phenology type
   !>
   TYPE t_EG_SG_common_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & tau_pseudo_soil = def_parameters,   & ! [days] Characteristic time for the memory loss for computing the pseudo
                                               ! soil temperature from air temperature [days] (see subroutine
                                               ! "update_pseudo_soil_temp")
@@ -74,7 +74,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the evergreen phenology type only
   !>
   TYPE t_evergreen_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & alternation_temp = def_parameters,    & ! [Celsius] Critical temperature of the alternating model, above
                                                 ! which temperature contributes to the heat sum, and below which
                                                 ! days are considered as chilling days (see subroutine
@@ -93,7 +93,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the summergreen phenology type only
   !>
   TYPE t_summergreen_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & alternation_temp = def_parameters,    & ! [Celsius] Critical temperature of the alternating model, above which
                                                 ! temperature contributes to the heat sum, and below which days are
                                                 ! considered as chilling days (see subroutine "update_growth_phase")
@@ -122,7 +122,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the raingreen phenology type only
   !>
   TYPE t_raingreen_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & shedRate_drySeason = def_parameters,  & ! [1/days] Leaf shedding rate (fast) in dry season
       & shedRate_aging = def_parameters,      & ! [1/days] Minimal leaf shedding rate by leaf aging (inverse leaf
                                                 ! longevity)
@@ -139,7 +139,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the grass phenology type only
   !>
   TYPE t_grass_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       &  crit_temp = def_parameters,         & ! [Celsius] Critical temperature for growth of grasses: Below this
                                                ! temperature growth of grasses stops.
       &  shedRate_growth = def_parameters,   & ! [1/days] Leaf shedding rate in the growth phase when growth
@@ -151,7 +151,7 @@ MODULE mo_pheno_parameters
   !> Parameters applying to the crop phenology only
   !>
   TYPE t_crop_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & crit_temp = def_parameters,         & ! [Celsius] Critical temperature for growth of crops: Below this
                                               ! temperature growth of crops stops.
       & gdd_temp = def_parameters,          & ! [Celsius] Critical (base) temperature for counting growing degree days
@@ -167,7 +167,7 @@ MODULE mo_pheno_parameters
   !> Parameters only required in case of l_forestRegrowth = true
   !>
   TYPE t_forestRegrowth_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & m2toha = def_parameters,           & ! JN-TODO: this is a more general constant -> move to somewhere else?
       & kgCtokg = def_parameters,          & ! JN-TODO: same
       & min_c   = def_parameters,          & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
@@ -209,58 +209,58 @@ CONTAINS
   SUBROUTINE init_pheno_parameters
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters'
 
-    pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_wp          !< citation or source ....  [-]
-    pheno_param_jsbach%all%laiSeed            = 0.40_wp             !< citation or source ....  [-]
-    pheno_param_jsbach%all%wilt_point         = 0.35_wp             !< citation or source ....  [-]
+    pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_lp          !< citation or source ....  [-]
+    pheno_param_jsbach%all%laiSeed            = 0.40_lp             !< citation or source ....  [-]
+    pheno_param_jsbach%all%wilt_point         = 0.35_lp             !< citation or source ....  [-]
 
-    pheno_param_jsbach%EG_SG%tau_pseudo_soil  = 10.0_wp             !< citation or source ....  [days]
-    pheno_param_jsbach%EG_SG%max_chill_days   = 365.0_wp            !< citation or source ....  [days]
+    pheno_param_jsbach%EG_SG%tau_pseudo_soil  = 10.0_lp             !< citation or source ....  [days]
+    pheno_param_jsbach%EG_SG%max_chill_days   = 365.0_lp            !< citation or source ....  [days]
 
-    pheno_param_jsbach%EG%alternation_temp    = 4.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%EG%heat_sum_min        = 10.0_wp             !< citation or source ....  [degree days]
-    pheno_param_jsbach%EG%heat_sum_range      = 1.5E+02_wp          !< citation or source ....  [degree days]
-    pheno_param_jsbach%EG%chill_decay_const   = 1.5E+01_wp          !< citation or source ....  [days]
-    pheno_param_jsbach%EG%growthPhaseLength   = 60.0_wp             !< citation or source ....  [days]
-    pheno_param_jsbach%EG%shedRate_vegetative = 8.0E-04_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%EG%growthRate          = 1.5E-02_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%EG%alternation_temp    = 4.0_lp              !< citation or source ....  [Celsius]
+    pheno_param_jsbach%EG%heat_sum_min        = 10.0_lp             !< citation or source ....  [degree days]
+    pheno_param_jsbach%EG%heat_sum_range      = 1.5E+02_lp          !< citation or source ....  [degree days]
+    pheno_param_jsbach%EG%chill_decay_const   = 1.5E+01_lp          !< citation or source ....  [days]
+    pheno_param_jsbach%EG%growthPhaseLength   = 60.0_lp             !< citation or source ....  [days]
+    pheno_param_jsbach%EG%shedRate_vegetative = 8.0E-04_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%EG%growthRate          = 1.5E-02_lp          !< citation or source ....  [1/days]
 
-    pheno_param_jsbach%SG%alternation_temp    = 4.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%SG%heat_sum_min        = 30.0_wp             !< citation or source ....  [Degree days]
-    pheno_param_jsbach%SG%heat_sum_range      = 2.0E+02_wp          !< citation or source ....  [Degree days]
-    pheno_param_jsbach%SG%chill_decay_const   = 2.5E+01_wp          !< citation or source ....  [days]
-    pheno_param_jsbach%SG%growthPhaseLength   = 60._wp              !< citation or source ....  [days]
-    pheno_param_jsbach%SG%autumn_event_temp   = 10._wp              !< citation or source ....  [Celcius]
-    pheno_param_jsbach%SG%shedRate_veget      = 4.0E-03_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%SG%shedRate_rest       = 1.0E-01_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%SG%growthRate          = 8.7195E-02_wp       !< citation or source ....  [1/days]
-    pheno_param_jsbach%SG%maxLength_gvPhase   = 270._wp             !< citation or source ....  [days]
-    pheno_param_jsbach%SG%minLength_gvPhase   = 90._wp              !< citation or source ....  [days]
+    pheno_param_jsbach%SG%alternation_temp    = 4.0_lp              !< citation or source ....  [Celsius]
+    pheno_param_jsbach%SG%heat_sum_min        = 30.0_lp             !< citation or source ....  [Degree days]
+    pheno_param_jsbach%SG%heat_sum_range      = 2.0E+02_lp          !< citation or source ....  [Degree days]
+    pheno_param_jsbach%SG%chill_decay_const   = 2.5E+01_lp          !< citation or source ....  [days]
+    pheno_param_jsbach%SG%growthPhaseLength   = 60._lp              !< citation or source ....  [days]
+    pheno_param_jsbach%SG%autumn_event_temp   = 10._lp              !< citation or source ....  [Celcius]
+    pheno_param_jsbach%SG%shedRate_veget      = 4.0E-03_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%SG%shedRate_rest       = 1.0E-01_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%SG%growthRate          = 8.7195E-02_lp       !< citation or source ....  [1/days]
+    pheno_param_jsbach%SG%maxLength_gvPhase   = 270._lp             !< citation or source ....  [days]
+    pheno_param_jsbach%SG%minLength_gvPhase   = 90._lp              !< citation or source ....  [days]
 
-    pheno_param_jsbach%RG%shedRate_drySeason  = 1.20E-01_wp         !< citation or source ....  [1/days]
-    pheno_param_jsbach%RG%shedRate_aging      = 5.0E-03_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%RG%growthRate          = 8.0E-02_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%RG%bucketFill_critical = 6.50E-01_wp         !< citation or source ....  [fraction]
-    pheno_param_jsbach%RG%bucketFill_leafout  = 4.00E-01_wp         !< citation or source ....  [fraction]
+    pheno_param_jsbach%RG%shedRate_drySeason  = 1.20E-01_lp         !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%shedRate_aging      = 5.0E-03_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%growthRate          = 8.0E-02_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%bucketFill_critical = 6.50E-01_lp         !< citation or source ....  [fraction]
+    pheno_param_jsbach%RG%bucketFill_leafout  = 4.00E-01_lp         !< citation or source ....  [fraction]
 
-    pheno_param_jsbach%GRS%crit_temp          = 4.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%GRS%shedRate_growth    = 1.50E-02_wp         !< citation or source ....  [1/days]
-    pheno_param_jsbach%GRS%growthRate         = 9.E-02_wp           !< citation or source ....  [1/days]
-    pheno_param_jsbach%GRS%shedRate_drySeason = 1.5E-02_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%GRS%crit_temp          = 4.0_lp              !< citation or source ....  [Celsius]
+    pheno_param_jsbach%GRS%shedRate_growth    = 1.50E-02_lp         !< citation or source ....  [1/days]
+    pheno_param_jsbach%GRS%growthRate         = 9.E-02_lp           !< citation or source ....  [1/days]
+    pheno_param_jsbach%GRS%shedRate_drySeason = 1.5E-02_lp          !< citation or source ....  [1/days]
 
-    pheno_param_jsbach%CRP%crit_temp          = 10.0_wp             !< citation or source ....  [Celsius]
-    pheno_param_jsbach%CRP%gdd_temp           = 6.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%CRP%sproud             = 0.37_wp             !< citation or source ....  [-]
-    pheno_param_jsbach%CRP%heat_sum_harvest   = 1300.0_wp           !< citation or source ....  [Degree days]
-    pheno_param_jsbach%CRP%shedRate_growth    = 0.03333_wp          !< citation or source ....  [1/days]
-    pheno_param_jsbach%CRP%shedRate_rest      = 0.1428_wp           !< citation or source ....  [1/days]
-    pheno_param_jsbach%CRP%leafAlloc_fract    = 0.8_wp              !< citation or source ....  [-]
+    pheno_param_jsbach%CRP%crit_temp          = 10.0_lp             !< citation or source ....  [Celsius]
+    pheno_param_jsbach%CRP%gdd_temp           = 6.0_lp              !< citation or source ....  [Celsius]
+    pheno_param_jsbach%CRP%sproud             = 0.37_lp             !< citation or source ....  [-]
+    pheno_param_jsbach%CRP%heat_sum_harvest   = 1300.0_lp           !< citation or source ....  [Degree days]
+    pheno_param_jsbach%CRP%shedRate_growth    = 0.03333_lp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%CRP%shedRate_rest      = 0.1428_lp           !< citation or source ....  [1/days]
+    pheno_param_jsbach%CRP%leafAlloc_fract    = 0.8_lp              !< citation or source ....  [-]
 
-    pheno_param_jsbach%FR%m2toha              = 10000._wp           !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%kgCtokg             = 2._wp               !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%min_c               = 1._wp               !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%min_zero            = 1.E-8_wp            !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%log_maxind          = 9.5_wp              !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%min_maxLAI          = 0.5_wp              !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%m2toha              = 10000._lp           !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%kgCtokg             = 2._lp               !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%min_c               = 1._lp               !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%min_zero            = 1.E-8_lp            !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%log_maxind          = 9.5_lp              !< citation or source ....  [ ? ]
+    pheno_param_jsbach%FR%min_maxLAI          = 0.5_lp              !< citation or source ....  [ ? ]
 
     !$ACC UPDATE DEVICE(pheno_param_jsbach) ASYNC(1)
     !$ACC UPDATE ASYNC(1) &

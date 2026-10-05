@@ -25,7 +25,7 @@
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_control,        ONLY: debug_on
 
@@ -51,28 +51,28 @@ MODULE mo_sse_init
 
   PUBLIC :: sse_init, init_soil_properties
 
-  REAL(wp), PARAMETER :: &
-    & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), & !< FAO thermal diffusivity by soil class [m2 s-1]
-    & fao_vol_hcap    (0:6) = (/2.25e+6_wp,1.93e+6_wp,2.10e+6_wp,2.25e+6_wp,2.36e+6_wp,2.48e+6_wp,-1._wp/)    !< FAO volumetric heat capacity by soil class [J m-3 K-1]
+  REAL(lp), PARAMETER :: &
+    & fao_thermal_diff(0:6) = (/7.4e-7_lp ,8.7e-7_lp ,8.0e-7_lp ,7.4e-7_lp ,7.1e-7_lp ,6.7e-7_lp ,-1._lp/), & !< FAO thermal diffusivity by soil class [m2 s-1]
+    & fao_vol_hcap    (0:6) = (/2.25e+6_lp,1.93e+6_lp,2.10e+6_lp,2.25e+6_lp,2.36e+6_lp,2.48e+6_lp,-1._lp/)    !< FAO volumetric heat capacity by soil class [J m-3 K-1]
 
   ! Heat capacity [J m-3 K-1] (see table 2.2 in Reick et al. 2020,
   ! Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp !< Volumetric heat capacity of sand [J m-3 K-1]
-  REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp !< Volumetric heat capacity of silt [J m-3 K-1]
-  REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp !< Volumetric heat capacity of clay [J m-3 K-1]
-  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp    !< Volumetric heat capacity of organic carbon [J m-3 K-1]
+  REAL(lp), PARAMETER ::  heat_cap_sand = 1.93e+06_lp !< Volumetric heat capacity of sand [J m-3 K-1]
+  REAL(lp), PARAMETER ::  heat_cap_silt = 2.25e+06_lp !< Volumetric heat capacity of silt [J m-3 K-1]
+  REAL(lp), PARAMETER ::  heat_cap_clay = 2.48e+06_lp !< Volumetric heat capacity of clay [J m-3 K-1]
+  REAL(lp), PARAMETER ::  heat_cap_oc = 2.5e+06_lp    !< Volumetric heat capacity of organic carbon [J m-3 K-1]
 
   ! Heat conductivity (see table 2.2 in Reick et al. 2020,
   ! Reports on Earth System Science 240)
-  REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp !< Thermal conductivity of sand [J m-1 s-1 K-1]
-  REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp  !< Thermal conductivity of silt [J m-1 s-1 K-1]
-  REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp !< Thermal conductivity of clay [J m-1 s-1 K-1]
-  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp     !< Thermal conductivity of organic carbon [J m-1 s-1 K-1]
+  REAL(lp), PARAMETER ::  heat_cond_sand = 1.6791_lp !< Thermal conductivity of sand [J m-1 s-1 K-1]
+  REAL(lp), PARAMETER ::  heat_cond_silt = 1.665_lp  !< Thermal conductivity of silt [J m-1 s-1 K-1]
+  REAL(lp), PARAMETER ::  heat_cond_clay = 1.6616_lp !< Thermal conductivity of clay [J m-1 s-1 K-1]
+  REAL(lp), PARAMETER ::  heat_cond_oc = 0.25_lp     !< Thermal conductivity of organic carbon [J m-1 s-1 K-1]
 
   !> Temporary container for auxiliary variables that are read from input files and used to
   !> initialize the SSE state.
   TYPE t_sse_init_vars
-    REAL(wp), POINTER ::     &
+    REAL(lp), POINTER ::     &
       & fao         (:,:  ) => NULL(), & !< FAO soil classification index
       & vol_heat_cap(:,:  ) => NULL(), & !< Volumetric heat capacity of dry soil [J m-3 K-1]
       & heat_cond   (:,:  ) => NULL(), & !< Thermal conductivity of dry soil [J m-1 s-1 K-1]
@@ -169,7 +169,7 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< Temporary input-data pointers
+    REAL(lp), POINTER :: ptr_2D(:,:), ptr_3D(:,:,:) !< Temporary input-data pointers
 
     TYPE(t_input_file) :: input_file !< Current boundary-condition input file
 
@@ -238,22 +238,22 @@ CONTAINS
     IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
 
       !> Fraction of sand in the upper soil
-      CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_SAND', tile%name, sse_init_vars%fr_sand, llimit=0._lp)
 
       !> Fraction of silt in the upper soil
-      CALL read_bc_data(input_file, 'FR_SILT', tile%name, sse_init_vars%fr_silt, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_SILT', tile%name, sse_init_vars%fr_silt, llimit=0._lp)
 
       !> Fraction of clay in the upper soil
-      CALL read_bc_data(input_file, 'FR_CLAY', tile%name, sse_init_vars%fr_clay, llimit=0._wp)
+      CALL read_bc_data(input_file, 'FR_CLAY', tile%name, sse_init_vars%fr_clay, llimit=0._lp)
 
       !> Fraction of sand in the deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, sse_init_vars%fr_sand_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_SAND', tile%name, sse_init_vars%fr_sand_deep, llimit=0._lp)
 
       !> Fraction of silt in the deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, sse_init_vars%fr_silt_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_SILT', tile%name, sse_init_vars%fr_silt_deep, llimit=0._lp)
 
       !> Fraction of clay in the deep soil
-      CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._wp)
+      CALL read_bc_data(input_file, 'SUB_FR_CLAY', tile%name, sse_init_vars%fr_clay_deep, llimit=0._lp)
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
@@ -279,21 +279,21 @@ CONTAINS
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! FAO
-        CALL read_bc_data(input_file, 'fao', tile%name, sse_init_vars%fao, default=0._wp)
-        sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
-                                     MIN(REAL(UBOUND(fao_thermal_diff,1),wp), sse_init_vars%fao(:,:)))
+        CALL read_bc_data(input_file, 'fao', tile%name, sse_init_vars%fao, default=0._lp)
+        sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),lp), &
+                                     MIN(REAL(UBOUND(fao_thermal_diff,1),lp), sse_init_vars%fao(:,:)))
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
         ! Volumetric heat capacity of dry soil [J m-3 K-1]
         CALL read_bc_data(input_file, 'heat_capacity', tile%name, sse_init_vars%vol_heat_cap, &
-          &  l_organic=l_organic, default=2.e6_wp)
+          &  l_organic=l_organic, default=2.e6_lp)
       END IF
 
       IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
         ! Heat conductivity of mineral soil
         CALL read_bc_data(input_file, 'heat_conductivity', tile%name, sse_init_vars%heat_cond, &
-          &  l_organic=l_organic, default=0.2_wp)
+          &  l_organic=l_organic, default=0.2_lp)
       END IF
 
     END IF ! l_soil_texture
@@ -327,7 +327,7 @@ CONTAINS
       ! Read climatological surface temperature
       ptr_3D => input_file%Read_2d_time( &
         & variable_name='surf_temp')
-      sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._lp, ptr_3D > 0._lp)
       DEALLOCATE(ptr_3D)
 
       CALL input_file%Close()
@@ -505,10 +505,10 @@ CONTAINS
           CALL finish (TRIM(routine), 'The setting of l_soil_texture differs between SSE_ and HYDRO_ '//TRIM(tile%name))
         END IF
       ELSE
-        sand_sl(:,:,:)      = 0.3_wp
-        silt_sl(:,:,:)      = 0.4_wp
-        clay_sl(:,:,:)      = 0.3_wp
-        bulk_dens_sl(:,:,:) = 1500.0_wp
+        sand_sl(:,:,:)      = 0.3_lp
+        silt_sl(:,:,:)      = 0.4_lp
+        clay_sl(:,:,:)      = 0.3_lp
+        bulk_dens_sl(:,:,:) = 1500.0_lp
 
         CALL message(TRIM(routine), 'QUINCY model: SSE_ l_soil_texture is FALSE '//TRIM(tile%name))
         CALL message(TRIM(routine), 'Setting soil properties (sand,silt,clay,bulk_density) to default values '//TRIM(tile%name))
@@ -573,7 +573,7 @@ CONTAINS
 
     ELSE
 #ifdef __QUINCY_STANDALONE__
-      dsl4jsb_var_ptr(SSE_,t_soil_sl) = 273.15_wp
+      dsl4jsb_var_ptr(SSE_,t_soil_sl) = 273.15_lp
 #else
       DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
         CALL init_soil_temperature(                   &
@@ -667,8 +667,8 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e !< Soil energy vertical grid
 
     INTEGER  :: nsoil, nproma, nblks, ic, is, ib !< Soil layers, horizontal dimensions, and loop indices
-    REAL(wp), POINTER :: soil_e_dz(:) !< Soil energy-layer thicknesses [m]
-    REAL(wp) :: heat_cap_sl, ws_max_sl !< Soil-layer heat capacity and maximum water storage [J m-2 K-1, m]
+    REAL(lp), POINTER :: soil_e_dz(:) !< Soil energy-layer thicknesses [m]
+    REAL(lp) :: heat_cap_sl, ws_max_sl !< Soil-layer heat capacity and maximum water storage [J m-2 K-1, m]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
@@ -756,7 +756,7 @@ CONTAINS
         DO is = 1, nsoil
           DO ib = 1, nblks
             DO ic = 1, nproma
-              liquid_max(ic,is,ib) = 0._wp
+              liquid_max(ic,is,ib) = 0._lp
             END DO
           END DO
         END DO
@@ -768,7 +768,7 @@ CONTAINS
         DO ib = 1, nblks
           DO ic = 1, nproma
             heat_cap_sl = soil_e_dz(is) * vol_heat_cap(ic,ib)
-            ice_soil_sl(ic,is,ib) = 0._wp
+            ice_soil_sl(ic,is,ib) = 0._lp
             IF (t_soil_sl(ic,is,ib) < tmelt .AND. wtr_soil_sl(ic,is,ib) > liquid_max(ic,is,ib)) THEN
               ice_soil_sl(ic,is,ib) = MIN(wtr_soil_sl(ic,is,ib) - liquid_max(ic,is,ib),                &
                 &                         heat_cap_sl * (tmelt - t_soil_sl(ic,is,ib)) / (alf * rhoh2o) &
@@ -807,7 +807,7 @@ CONTAINS
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
-            fract_org_sl(ic,is,ib) = 0._wp
+            fract_org_sl(ic,is,ib) = 0._lp
           END DO
         END DO
       END DO
@@ -836,12 +836,12 @@ CONTAINS
       DO ic = 1, nproma
         DO is = 1, nsoil
           DO ib = 1, nblks
-            IF (soil_depth_sl(ic,is,ib) > 0._wp) THEN
+            IF (soil_depth_sl(ic,is,ib) > 0._lp) THEN
               fract_water(ic,is,ib) = wtr_soil_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
               fract_ice  (ic,is,ib) = ice_soil_sl(ic,is,ib) / soil_depth_sl(ic,is,ib)
             ELSE
-              fract_water(ic,is,ib) = 0._wp
-              fract_ice  (ic,is,ib) = 0._wp
+              fract_water(ic,is,ib) = 0._lp
+              fract_ice  (ic,is,ib) = 0._lp
             END IF
           END DO
         END DO
@@ -978,8 +978,8 @@ CONTAINS
       DO ib=1,nblks
         DO ic = 1, nproma
           vol_heat_cap_snow(ic,ib) = ci * dens_snow_min              ! Use specific heat of ice (Verseghy 1991)
-          heat_cond_snow   (ic,ib) =   2.5e-6_wp * dens_snow_min**2._wp &
-            &                        - 0.123E-3_wp *dens_snow_min + 0.024_wp ! Calonne et al. (2011)
+          heat_cond_snow   (ic,ib) =   2.5e-6_lp * dens_snow_min**2._lp &
+            &                        - 0.123E-3_lp *dens_snow_min + 0.024_lp ! Calonne et al. (2011)
           ! vol_heat_cap_snow(ic,ib) = vol_hcap_snow_min
           ! heat_cond_snow   (ic,ib) = hcond_snow_min
         END DO

@@ -15,7 +15,7 @@ MODULE mo_hd_reservoir_cascade
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_jsb_time,    ONLY: get_day_length
   USE mo_jsb_control, ONLY: acc_stream
 
@@ -36,18 +36,18 @@ CONTAINS
   !   linear reservoir approach: The outflow from a reservoir is proportional to its content.
   !------------------------------------------------------------------------------------------------
 
-    REAL(wp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
-    REAL(wp),  INTENT(in)    :: dtime          !< time step [s]
+    REAL(lp),  INTENT(in)    :: inflow(:)        !< inflow to the cascade [m3/s]
+    REAL(lp),  INTENT(in)    :: dtime          !< time step [s]
     INTEGER,   INTENT(in)    :: nc               !< current block size
-    REAL(wp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
-    REAL(wp),  INTENT(in)    :: nres(:)          !< number of reservoirs
-    REAL(wp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade [m3]
-    REAL(wp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade [m3/s]
+    REAL(lp),  INTENT(in)    :: retention(:)     !< retention parameter (residence time of water in the reservoir) [day]
+    REAL(lp),  INTENT(in)    :: nres(:)          !< number of reservoirs
+    REAL(lp),  INTENT(inout) :: res_content(:,:) !< intermediate content of reservoir cascade [m3]
+    REAL(lp),  INTENT(out)   :: outflow(:)       !< outflow at the end of the cascade [m3/s]
 
     ! local variables
     ! ---------------
 
-    REAL(wp) :: &
+    REAL(lp) :: &
       & day_length,        &
       & amod,              &
       & akdiv(nc),         &
@@ -67,12 +67,12 @@ CONTAINS
     !$ACC   ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(amod)
     DO ic = 1, nc
-      IF (nres(ic) > 0._wp) THEN ! land - without internal drainage cells
+      IF (nres(ic) > 0._lp) THEN ! land - without internal drainage cells
         ! unit conversions: [day] -> [seconds]
         amod  = retention(ic) * day_length
         akdiv(ic) = dtime / (amod + dtime)
       ELSE                       ! ocean and lakes
-        akdiv(ic) = 0._wp
+        akdiv(ic) = 0._lp
       END IF
       ! conversions: [m3/s] -> [m3]
       inflow_cascade(ic) = inflow(ic) * dtime

@@ -23,7 +23,7 @@ MODULE mo_jsbach_model
 #ifndef __NO_JSBACH__
 
   USE mo_exception,   ONLY: message, message_text, finish
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp, wp
   USE mo_util_string, ONLY: int2string, real2string
 
   USE mtime,        ONLY: datetime, newDatetime, datetimeToString, timedelta, newTimedelta, getPTStringFromSeconds, &
@@ -170,7 +170,7 @@ CONTAINS
     ! Time and event management
     TYPE(datetime), POINTER       :: mtime_current
     TYPE(datetime), POINTER       :: mtime_old
-    REAL(wp) :: sim_time          ! elapsed simulation time
+    REAL(lp) :: sim_time          ! elapsed simulation time
     TYPE(datetime),  POINTER :: eventStartDate    => NULL(), &
       &                         eventEndDate      => NULL()
     TYPE(datetime),  POINTER :: checkpointRefDate => NULL(), &
@@ -403,7 +403,7 @@ CONTAINS
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, REAL(dtime,KIND=lp))
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -625,7 +625,7 @@ CONTAINS
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
-        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
+        lprint_timestep = MOD(jstep,timesteps_per_day(REAL(dtime,KIND=lp),1)) == 0
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
@@ -650,7 +650,7 @@ CONTAINS
         CALL run_one_timestep( &
           & jg, &                   ! model
           & p_patch(jg)%nblks_c, &  ! ..
-          & dtime, &                ! length of timestep in seconds
+          & REAL(dtime,KIND=lp), &  ! length of timestep in seconds
           & mtime_current)          ! ..
       END DO
 
@@ -824,7 +824,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
-    REAL(wp)              , INTENT(in)            :: dtime          !< time step
+    REAL(lp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=max_timedelta_str_len) :: dtime_string     !< time delta as string
@@ -857,10 +857,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
-    REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
+    REAL(lp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
+    REAL(lp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
 
-    REAL(wp) :: hlp1   ! Temporary scalar for mixing ratio calculations
+    REAL(lp) :: hlp1   ! Temporary scalar for mixing ratio calculations
     LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
     LOGICAL :: l_first_forcing_file    = .TRUE.
     LOGICAL :: l_shift_one_timestep    = .TRUE.
@@ -922,7 +922,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> start timestep
     !>
-    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_start_timestep(model_id, datetime_old, REAL(dtime,KIND=wp))
 
     model => get_model(model_id)
     grid  => get_grid(model%grid_id)
@@ -968,7 +968,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) = 1._wp
+            evapo_act2pot(ic, iblk) = 1._lp
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -978,8 +978,8 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
-              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
+            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._lp)) &
+              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._lp))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -1084,7 +1084,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._lp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -1094,7 +1094,7 @@ CONTAINS
         DO iblk = 1, nblks
           DO ic = 1, nproma
             hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
-            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._lp + 1._lp / hlp1)
             hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
             CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
           END DO
@@ -1152,7 +1152,7 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._lp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue
@@ -1175,7 +1175,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> finish timestep
     !>
-    CALL jsbach_finish_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_finish_timestep(model_id, datetime_old, REAL(dtime,KIND=wp))
 
     CALL deallocateDatetime(datetime_old)
     CALL deallocateDatetime(datetime_old_old)

@@ -16,7 +16,7 @@ MODULE mo_fage_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -123,11 +123,11 @@ CONTAINS
 
     INTEGER  :: i, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nacs, max_age
-    REAL(wp) :: dtime
-    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(lp) :: dtime
+    REAL(lp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
-    REAL(wp), ALLOCATABLE :: ac_ubound(:)
+    REAL(lp), DIMENSION(options%nc) :: current_fract
+    REAL(lp), ALLOCATABLE :: ac_ubound(:)
 
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(NLCC_)
@@ -211,9 +211,9 @@ CONTAINS
     dsl4jsb_Get_lcc_area_matrix(initial_area)
     dsl4jsb_Get_lcc_area_matrix(lost_area)
     dsl4jsb_Get_lcc_area_matrix(gained_area)
-    initial_area(:,:) = 0.0_wp
-    lost_area(:,:) = 0.0_wp
-    gained_area(:,:) = 0.0_wp
+    initial_area(:,:) = 0.0_lp
+    lost_area(:,:) = 0.0_lp
+    gained_area(:,:) = 0.0_lp
 
     !>
     !> 2. loop including init, start, end, dealloc moving area only from one age class to the next
@@ -238,15 +238,15 @@ CONTAINS
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! init gained and lost area
-      lost_area(:,:) = 0.0_wp
-      gained_area(:,:) = 0.0_wp
+      lost_area(:,:) = 0.0_lp
+      gained_area(:,:) = 0.0_lp
 
       !----- care for shifts among age class boundaries
       ! area is moved from the younger to the older age class
       lost_area(:,i-1) = fract_per_age(:, INT(ac_ubound(i - 1)))
       gained_area(:,i) = lost_area(:,i-1)
 
-      IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, :) > 0.0_lp)) THEN
         !>     When acs are merged: also merge variables that are no cqs but used for bookkeeping
         CALL merge_pheno_variables_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
         CALL merge_carbon_vars_upon_ageing(current_child, prev_child, options, lost_area(:,i-1))
@@ -261,7 +261,7 @@ CONTAINS
       CALL current_child%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
       ! Only needs to be executed if there is area to be moved
-      IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, :) > 0.0_lp)) THEN
         !>
         !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
         !>
@@ -340,7 +340,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)   :: tile           !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)      :: options        !< Additional run-time parameters
     INTEGER,  INTENT(in)                        ::  i_tile        !< index of the ac with disturbed area
-    REAL(wp), INTENT(in), DIMENSION(options%nc) :: disturbed_area !< area fraction disturbed for this ac
+    REAL(lp), INTENT(in), DIMENSION(options%nc) :: disturbed_area !< area fraction disturbed for this ac
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -368,7 +368,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(FAGE_, fract_per_age)
     dsl4jsb_Get_var2D_onChunk(FAGE_, mean_age)
 
-    IF (ANY(disturbed_area(:) .GT. 0._wp)) THEN
+    IF (ANY(disturbed_area(:) .GT. 0._lp)) THEN
       ! Put into age 0-1
       fract_per_age(:,1) = fract_per_age(:,1) + disturbed_area(:)
 
@@ -397,7 +397,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)   :: tile           !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)      :: options        !< Additional run-time parameters
-    REAL(wp), INTENT(in), DIMENSION(:)          :: gain           !< change in cover fraction
+    REAL(lp), INTENT(in), DIMENSION(:)          :: gain           !< change in cover fraction
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -410,7 +410,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
+    REAL(lp), DIMENSION(options%nc) :: current_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':apply_fract_per_age_change_for_alcc_forest_gain'
     ! -------------------------------------------------------------------------------------------------- !
@@ -452,9 +452,9 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options      !< Additional run-time parameters
-    REAL(wp), DIMENSION(:),     INTENT(in)    :: cf_loss      !< change in cover fraction
+    REAL(lp), DIMENSION(:),     INTENT(in)    :: cf_loss      !< change in cover fraction
     INTEGER,                    INTENT(in)    :: ind_first_ac !< index of first ac in lost_area vector
-    REAL(wp), DIMENSION(:,:),   INTENT(inout) :: lost_area    !< lost_area vector (dim2: nr of alcc tiles)
+    REAL(lp), DIMENSION(:,:),   INTENT(inout) :: lost_area    !< lost_area vector (dim2: nr of alcc tiles)
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: ac_grid
@@ -468,7 +468,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_per_age
     dsl4jsb_Real2D_onChunk :: mean_age
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract, forest_pft_fract, this_cf_loss
+    REAL(lp), DIMENSION(options%nc) :: current_fract, forest_pft_fract, this_cf_loss
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':distribute_forest_loss_from_alcc'
     ! -------------------------------------------------------------------------------------------------- !
@@ -496,7 +496,7 @@ CONTAINS
 
     age_class_tile => tile%Get_first_child_tile()
 
-    IF (ANY(cf_loss .GT. 0._wp)) THEN
+    IF (ANY(cf_loss .GT. 0._lp)) THEN
       IF (dsl4jsb_Config(FAGE_)%alcc_age_fract_scheme == 'prop' ) THEN
         ! ---------------------------------------------------------------------------------------------- !
         ! iterate over each age class - with the prop (proportional scheme)
@@ -507,8 +507,8 @@ CONTAINS
           ! -------------------------------------------------------------------------------------------- !
           ! determine the share of the loss of this age class
           CALL age_class_tile%Get_fraction(ics, ice, iblk, fract=current_fract)
-          this_cf_loss = 0._wp
-          WHERE(forest_pft_fract(:) > 0._wp) !JN-TODO: replace WHERE!
+          this_cf_loss = 0._lp
+          WHERE(forest_pft_fract(:) > 0._lp) !JN-TODO: replace WHERE!
             this_cf_loss(:) = cf_loss(:) * (current_fract(:) / forest_pft_fract(:))
           END WHERE
           ! -------------------------------------------------------------------------------------------- !

@@ -23,7 +23,7 @@ MODULE mo_sse_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_util,              ONLY: real2string, int2string
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -57,17 +57,17 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_freeze        !< Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< Allow for supercooled soil water
     LOGICAL  :: l_uniform_snow  !< Temporary workaround to use a uniform snow fraction for soil temperature computations
-    REAL(wp) :: w_soil_critical !< Critical water/ice content in the upper soil layer used to correct
+    REAL(lp) :: w_soil_critical !< Critical water/ice content in the upper soil layer used to correct
                                 !< the surface temperature during freezing and melting [m water equivalent]
     ! QUINCY-specific configuration
     INTEGER                     :: quincy_nsoil_e           !< Number of soil layers for soil energy calculations
                                 !< (equivalent to quincy_nsoil_w in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
     ! QUINCY standalone options
-    REAL(wp) :: qs_soil_sand         !< Site-specific sand fraction for the standalone setup
-    REAL(wp) :: qs_soil_silt         !< Site-specific silt fraction for the standalone setup
-    REAL(wp) :: qs_soil_clay         !< Site-specific clay fraction, derived as clay = 1 - sand - silt
-    REAL(wp) :: qs_bulk_density      !< Soil bulk density [kg m-3]
+    REAL(lp) :: qs_soil_sand         !< Site-specific sand fraction for the standalone setup
+    REAL(lp) :: qs_soil_silt         !< Site-specific silt fraction for the standalone setup
+    REAL(lp) :: qs_soil_clay         !< Site-specific clay fraction, derived as clay = 1 - sand - silt
+    REAL(lp) :: qs_bulk_density      !< Soil bulk density [kg m-3]
 #endif
 
   CONTAINS
@@ -120,26 +120,26 @@ CONTAINS
     LOGICAL  :: l_supercool      !< Allow for supercooled soil water.
     LOGICAL  :: l_soil_texture   !< Derive mineral soil thermal parameters from soil texture information.
     LOGICAL  :: l_uniform_snow   !< Temporary workaround to use a uniform snow fraction for soil temperature computations.
-    REAL(wp) :: w_soil_critical  !< Critical water/ice content in the upper soil layer used to correct the surface temperature
+    REAL(lp) :: w_soil_critical  !< Critical water/ice content in the upper soil layer used to correct the surface temperature
                                  !< during freezing and melting [m water equivalent].
     INTEGER  :: nsnow            !< Maximum number of snow layers used in the vertical snow discretization.
-    REAL(wp) :: dz_snow(max_snow_layers) !< Snow-layer thicknesses [m] used to define the vertical snow discretization.
+    REAL(lp) :: dz_snow(max_snow_layers) !< Snow-layer thicknesses [m] used to define the vertical snow discretization.
     CHARACTER(len=filename_max) :: ic_filename !< Name of the input file containing the initial-condition data.
     CHARACTER(len=filename_max) :: bc_filename !< Name of the input file containing the boundary-condition data.
 
     ! QUINCY-specific configuration
-    REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< Initial estimate of the
+    REAL(lp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< Initial estimate of the
                                  !< soil-layer upper bounds used to build the default profile [m].
-    REAL(wp) :: k_soil_profile   !< Exponential growth factor for the default QUINCY soil-layer profile.
-    REAL(wp) :: min_layer_depth  !< Minimum thickness enforced for each soil layer.
+    REAL(lp) :: k_soil_profile   !< Exponential growth factor for the default QUINCY soil-layer profile.
+    REAL(lp) :: min_layer_depth  !< Minimum thickness enforced for each soil layer.
     INTEGER  :: isoil            !< Loop index over soil layers.
     INTEGER  :: quincy_nsoil_e   !< Number of soil layers for soil energy calculations, equivalent to quincy_nsoil_w in HYDRO_.
 #ifdef __QUINCY_STANDALONE__
     ! QUINCY standalone options
-    REAL(wp) :: qs_soil_sand     !< Site-specific sand fraction for the standalone setup.
-    REAL(wp) :: qs_soil_silt     !< Site-specific silt fraction for the standalone setup.
-    REAL(wp) :: qs_soil_clay     !< Site-specific clay fraction, derived as clay = 1 - sand - silt.
-    REAL(wp) :: qs_bulk_density  !< Soil bulk density [kg m-3].
+    REAL(lp) :: qs_soil_sand     !< Site-specific sand fraction for the standalone setup.
+    REAL(lp) :: qs_soil_silt     !< Site-specific silt fraction for the standalone setup.
+    REAL(lp) :: qs_soil_clay     !< Site-specific clay fraction, derived as clay = 1 - sand - silt.
+    REAL(lp) :: qs_bulk_density  !< Soil bulk density [kg m-3].
 #endif
 
     NAMELIST /jsb_sse_nml/                      &
@@ -166,11 +166,11 @@ CONTAINS
     INTEGER :: istat                                    !< Status flag returned by namelist handling routines.
     INTEGER :: i                                        !< Loop index
     TYPE(t_input_file) :: input_file                    !< Input-file descriptor used for initial data.
-    REAL(wp), POINTER  :: ptr_1D(:)                     !< Temporary pointer to a one-dimensional real field.
-    REAL(wp), ALLOCATABLE :: depths(:)                  !< Depth levels used to construct the soil-layer profile.
-    REAL(wp), ALLOCATABLE :: mids(:)                    !< Midpoint depths of the vertical layers.
-    REAL(wp), ALLOCATABLE :: dz_energy(:)               !< Thickness of the soil layers.
-    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< Cumulative upper bounds of the soil layers.
+    REAL(lp), POINTER  :: ptr_1D(:)                     !< Temporary pointer to a one-dimensional real field.
+    REAL(lp), ALLOCATABLE :: depths(:)                  !< Depth levels used to construct the soil-layer profile.
+    REAL(lp), ALLOCATABLE :: mids(:)                    !< Midpoint depths of the vertical layers.
+    REAL(lp), ALLOCATABLE :: dz_energy(:)               !< Thickness of the soil layers.
+    REAL(lp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< Cumulative upper bounds of the soil layers.
     INTEGER :: nsoil                                    !< Number of soil layers used in the SSE process.
 
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_e !< Vertical grid for the soil layers.
@@ -184,8 +184,8 @@ CONTAINS
     active           = .TRUE.
     lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
-    dz_snow(:)       = 0._wp
-    dz_snow(1:nsnow) = 0.05_wp
+    dz_snow(:)       = 0._lp
+    dz_snow(1:nsnow) = 0.05_lp
     l_dynsnow        = .TRUE.
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
@@ -196,16 +196,16 @@ CONTAINS
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
     l_uniform_snow   = .TRUE.
-    w_soil_critical  = 5.85036E-3_wp
+    w_soil_critical  = 5.85036E-3_lp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
-    qs_soil_sand            = 0.3_wp
-    qs_soil_silt            = 0.4_wp
-    qs_soil_clay            = 0.3_wp
-    qs_bulk_density         = 1500.0_wp
+    qs_soil_sand            = 0.3_lp
+    qs_soil_silt            = 0.4_lp
+    qs_soil_clay            = 0.3_lp
+    qs_bulk_density         = 1500.0_lp
 #endif
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -260,7 +260,7 @@ CONTAINS
     ! quincy standalone
     config%qs_soil_sand    = qs_soil_sand
     config%qs_soil_silt    = qs_soil_silt
-    config%qs_soil_clay    = 1.0_wp - qs_soil_sand - qs_soil_silt
+    config%qs_soil_clay    = 1.0_lp - qs_soil_sand - qs_soil_silt
     config%qs_bulk_density = qs_bulk_density
 
     ! check for an error in clay content of soil
@@ -285,9 +285,9 @@ CONTAINS
       nsoil = SIZE(ptr_1D)
       ALLOCATE(depths(nsoil+1))
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
+      depths(1) = 0._lp
       depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._lp
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()
@@ -312,8 +312,8 @@ CONTAINS
       END IF
 
       ! parameter for soil layer calculations
-      k_soil_profile  = 0.25_wp
-      min_layer_depth = 0.065_wp
+      k_soil_profile  = 0.25_lp
+      min_layer_depth = 0.065_lp
 
       nsoil = config%quincy_nsoil_e
       ALLOCATE(ubounds_soil_lay_energy(nsoil))
@@ -324,7 +324,7 @@ CONTAINS
         DO isoil = 1,nsoil
           soil_layer_profile_ubound_estimate(isoil) = &
             &   min_layer_depth &
-            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, wp) / REAL(nsoil, wp)) &
+            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, lp) / REAL(nsoil, lp)) &
             &   - min_layer_depth
         END DO
         ! Final calculation of the soil profile, including layer thicknesses and the minimum
@@ -335,7 +335,7 @@ CONTAINS
             &   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
         END DO
       ELSE
-        dz_energy(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+        dz_energy(1:nsoil) = (/0.065_lp,0.254_lp,0.913_lp,2.902_lp,5.700_lp/)
       END IF
 
       ! calc upper bound of soil layers (water and energy) from layer thickness
@@ -351,7 +351,7 @@ CONTAINS
       !!
       !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
-      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_lp * (lbounds(:) + ubounds(:))
       vgrid_soil_e => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
         &   longname='Soil (energy) layers from SSE_ config', &
         &   units='m', &
@@ -384,11 +384,11 @@ CONTAINS
     END IF
     ALLOCATE(depths(nsnow+1))
     ALLOCATE(mids(nsnow))
-    depths(1) = 0._wp
+    depths(1) = 0._lp
     DO i=1,nsnow
       depths(i+1) = depths(i) + dz_snow(i)
     END DO
-    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
+    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._lp
 
     vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
       & levels    = mids                 (1:nsnow  ),                         &
