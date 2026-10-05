@@ -60,14 +60,13 @@ CONTAINS
   !>
   !> Do the science
   !>
-  SUBROUTINE sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, u_f_wind, moist_extinction, fdi, &
+  SUBROUTINE sf_calc_rate_of_spread_thon(nc, nfuels, fuel_bulk_density, u_f_wind, moist_extinction, &
                                         w_oi, omega_o, mask, ros)
     INTEGER, INTENT(in)                  :: nc
     INTEGER, INTENT(in)                  :: nfuels                      !< 1, 10 and 100 hours fuel classes
     REAL(wp), INTENT(in)                 :: fuel_bulk_density(nc)       !< [kg m-3]
     REAL(wp), INTENT(in)                 :: u_f_wind(nc)                !< [m min-1]
     REAL(wp), INTENT(in)                 :: moist_extinction(nc)        !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     REAL(wp), INTENT(in)                 :: w_oi(nc, nfuels)            !< [kg DM m-2] Note in kg
     !< According to Pfeiffer et al. (2013), omega_n must be treated as omega_o
     REAL(wp), INTENT(in)                 :: omega_o(nc)                 !< [0 to 1] (#nc)

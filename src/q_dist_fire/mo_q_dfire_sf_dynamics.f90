@@ -672,7 +672,7 @@ CONTAINS
 
     CALL sf_calc_rate_of_spread_thon(nc, nspread, & ! in
                       fuel_bulk_density, &
-                      u_f_wind, sf_mf % moisture_extinction, fdi, &
+                      u_f_wind, sf_mf % moisture_extinction, &
                       dead_fuel_litter * df_sf_units_g_to_kg, &
                       sf_mf % omegas_thon(:,df_sf_omega_o_idx), &
                       has_fire_conditions, &
