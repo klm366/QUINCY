@@ -55,9 +55,7 @@ CONTAINS
 
     LOGICAL :: has_live_fuel_lvg(nc), has_dead_fuel(nc)
     INTEGER :: inc
-    REAL(wp) :: omegas(nc,df_sf_omegas_nr) !< 2 = omega_o, omega_n_l
 
-    omegas = 0._wp
     has_dead_fuel = sf_calc_has_any_fuel(w_oi)
     has_live_fuel_lvg = (live_fuel_lvg > 0._wp)
 
@@ -66,12 +64,11 @@ CONTAINS
 
     DO inc = 1, nc
       IF (has_live_fuel_lvg(inc) .OR. has_dead_fuel(inc)) THEN
-        omegas(inc,:) = calc_all_omegas(nalphas, nfuels, alphas, nesterov_index(inc), &
+        fuel_moisture(inc,:) = calc_all_omegas(nalphas, nfuels, alphas, nesterov_index(inc), &
             litter_moisture(inc), live_fuel_lvg(inc), w_oi(inc,:))
       END IF
     END DO
 
-    fuel_moisture = omegas
   END FUNCTION calc_sf_fuel_moisture_for_thonicke
 
 

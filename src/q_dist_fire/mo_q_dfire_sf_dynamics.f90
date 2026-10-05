@@ -391,7 +391,7 @@ CONTAINS
     ab_moisture_diag = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
 
-    fuel_moisture_all = t_sf_mf(nc, moisture_extinction, & ! core
+    fuel_moisture_all = t_sf_mf(nc, df_sf_fc_full_nr, moisture_extinction, & ! core
                                 df_sf_alpha_nr, df_sf_alphas, ab_moisture_diag, fuel_moisture, & ! thonicke
                                 df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
                                 df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
@@ -458,11 +458,6 @@ CONTAINS
                   fuel_moisture, & ! inout
                   spitfire, & ! out
                   mask)
-
-    USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_ix_sigma_dd_1hr, &
-                                    ix_10hr => df_sf_ix_sigma_dd_10hr, &
-                                   ix_100hr => df_sf_ix_sigma_dd_100hr, &
-                                  ix_1000hr => df_sf_ix_sigma_dd_1000hr
 
     INTEGER, INTENT(in)   :: nc, nfuelclasses
     REAL(wp), INTENT(in)  :: dtime, one_day
@@ -532,7 +527,7 @@ CONTAINS
     u_f_wind = lctlib_fwd_wind_factor * sf_atm%wind_sf
     dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
-    tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,ix_1hr), DIM=2) ! 2 = fuel classes
+    tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx), DIM=2) ! 2 = fuel classes
     IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(nc, & ! in
@@ -588,28 +583,11 @@ CONTAINS
                           spitfire % area_burned_fract, & !< out
                           mask=has_fire_conditions) !< in, optional
 
-    IF (config_ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
-      ALLOCATE(fuel_moisture_for_fc(nc,nfuelclasses))
-      ASSOCIATE(w_o => fuel_moisture%omegas_thon(:,df_sf_omega_o_idx), w_nl => fuel_moisture%omegas_thon(:,df_sf_omega_nl_idx))
-        fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
-        fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
-        fuel_moisture_for_fc(:,ix_100hr) = w_o ! 100hrs
-        fuel_moisture_for_fc(:,ix_1000hr) = w_o ! 1000hrs
-      END ASSOCIATE
-    ELSE IF (config_ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      ALLOCATE(fuel_moisture_for_fc(nc,nfuelclasses))
-      fuel_moisture_for_fc(:,ix_1hr) = fuel_moisture%dead(:,ix_1hr)
-      fuel_moisture_for_fc(:,ix_10hr) = fuel_moisture%dead(:,ix_10hr)
-      fuel_moisture_for_fc(:,ix_100hr) = fuel_moisture%dead(:,ix_100hr)
-      fuel_moisture_for_fc(:,ix_1000hr) = fuel_moisture%dead(:,ix_1000hr)
-    ELSE
-      CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
-    END IF
 
     !< Fraction of consumption used to calculate dead fuel consumption (Thonicke et al. (2010),
     !< extracted from equations B1, B4, B5 and B6)
     spitfire % dead_frac_consump = sf_calc_frac_consump(nc, nfuelclasses, fuel_moisture%moisture_extinction, &
-        fuel_moisture_for_fc, mask=has_fire_conditions)
+        fuel_moisture % fuel_moisture_for_fc, mask=has_fire_conditions)
 
     !< Calculate dead fuel consumption for the 1h, 10h and 100h fuel classes,
     !< following Thonicke et al. (2010), Appendix B. and well as custom modifications.
@@ -648,6 +626,11 @@ CONTAINS
                                     ros, &
                                     mask) !< optional
 
+    USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
+                                       ix_10hr => df_sf_fc_10hr_idx, &
+                                      ix_100hr => df_sf_fc_100hr_idx, &
+                                     ix_1000hr => df_sf_fc_1000hr_idx
+
     INTEGER, INTENT(in)         :: nc, nspread
     REAL(wp), INTENT(in)        :: fuel_bulk_density(:)   !< Fuel bulk density [kg m-3]
     REAL(wp), INTENT(in)        :: u_f_wind(:)            !< Wind speed at vegetation cover [m min-1]
@@ -673,6 +656,13 @@ CONTAINS
                                           nesterov_index, sf_mf % ab_moisture, &
                                           dead_fuel_litter, &
                                           tot_dead_fuel_grass)
+
+    ASSOCIATE(w_o => sf_mf % omegas_thon(:,df_sf_omega_o_idx), w_nl => sf_mf % omegas_thon(:,df_sf_omega_nl_idx))
+      sf_mf % fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
+      sf_mf % fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
+      sf_mf % fuel_moisture_for_fc(:,ix_100hr) = w_o ! 100hrs
+      sf_mf % fuel_moisture_for_fc(:,ix_1000hr) = w_o ! 1000hrs
+    END ASSOCIATE
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     CALL calc_fire_danger_index(nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
@@ -711,6 +701,7 @@ CONTAINS
                                      ix_1hr => df_sf_ix_sigma_dd_1hr, &
                                     ix_10hr => df_sf_ix_sigma_dd_10hr, &
                                    ix_100hr => df_sf_ix_sigma_dd_100hr, &
+                                  ix_1000hr => df_sf_ix_sigma_dd_1000hr, &
                                      ix_lvg => df_sf_ix_sigma_lv_lvg, &
                                      ix_wdy => df_sf_ix_sigma_lv_wdy, &
                                  nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
@@ -744,6 +735,8 @@ CONTAINS
                       nesterov_index, &
                       mask, &
                       fuel_moisture)
+
+    fuel_moisture % fuel_moisture_for_fc = fuel_moisture%dead
 
     woi_dd = 0._wp
     woi_dd(:,ix_1hr) = dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg

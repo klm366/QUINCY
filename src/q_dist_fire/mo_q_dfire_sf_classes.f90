@@ -154,6 +154,7 @@ MODULE mo_q_dfire_sf_classes
     REAL(wp), ALLOCATABLE :: alphas(:) !< drying parameters
     REAL(wp), POINTER :: ab_moisture(:) => NULL() !< Above ground relative soil moisture layer [-]
     REAL(wp), POINTER :: omegas_thon(:,:) => NULL() !< 1 hr fuel moisture mixed with live grass(#nc)
+    REAL(wp), ALLOCATABLE :: fuel_moisture_for_fc(:,:) !< fuel moisture used for fraction of dead fuel consumption (#nc, #dead fuel classes -1, 10, 100, 1000 hours-)
     !REAL(wp), ALLOCATABLE :: val(:) !< omega_o (mixed -1+lvg,10,100-) ! todo:
 
     !< Fuel moisture for oberhagemann et al. (2025)
@@ -449,12 +450,13 @@ MODULE mo_q_dfire_sf_classes
   END FUNCTION create_t_sf_mf
 
 
-  FUNCTION create_new_sf_mf(nc, & ! core
+  FUNCTION create_new_sf_mf(nc, nddfc, & ! core
                             moisture_extinction, &  ! core
                             nalphas_thon, alphas_thon, ab_moisture_thon, omegas_thon, &  ! thonicke only
                             sigma_dd_nr, sigma_dd_ros_nr, sigma_lv_nr, alphas_dead, sigmas_dead, sigmas_live, lvg_moisture &  ! oberhagemann only
                             ) RESULT (mf)
     INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: nddfc !< number of dead fuel classes (1, 10, 100 and 1000 hours)
     REAL(wp), POINTER, INTENT(in) :: moisture_extinction(:)
 
     INTEGER, INTENT(in) :: nalphas_thon
@@ -469,7 +471,9 @@ MODULE mo_q_dfire_sf_classes
 
     TYPE(t_sf_mf) :: mf
 
+    ! core
     mf%moisture_extinction => moisture_extinction
+    ALLOCATE(mf%fuel_moisture_for_fc(nc, nddfc))
 
     ! Thonicke et al. (2010)
     mf%nalphas = nalphas_thon
