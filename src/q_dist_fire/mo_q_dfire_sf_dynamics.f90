@@ -478,7 +478,6 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(sf_config%nc)
 
     ! locals
-    !INTEGER                 :: ndeadpools
     LOGICAL                 :: has_dead_fuel(sf_config%nc)                !< True = dead fuel
     LOGICAL                 :: has_fire_conditions(sf_config%nc)          !< 1, 10, 100 and 1000 hours
 
