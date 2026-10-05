@@ -1,11 +1,9 @@
-!>
 !> Contains carbon process routines shared between the standard carbon usage and the methane version
-!>
 !>
 !> ICON-Land
 !>
 !> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
