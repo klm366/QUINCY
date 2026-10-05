@@ -484,9 +484,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE   :: tot_dead_fuel_grass(:)           !< Total dead fuel grass [g DM m-2] (#nc)
     REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
 
-    !< ROS related
-    REAL(wp)                :: u_f_wind(sf_config%nc)                     !< Wind speed at vegetation cover [m min-1]
-
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
       mask_tile_enabled = mask
@@ -510,7 +507,7 @@ CONTAINS
     !> Fuel moisture and ROS
     !
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
-    u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
+    sf_ros % u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
     dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
     tot_dead_fuel_grass = SUM(sf_fuel_load%cured_live_grass_fuel_fcl(:,:,df_sf_fc_1hr_idx), DIM=2) ! 2 = fuel classes
@@ -519,7 +516,7 @@ CONTAINS
       CALL calc_sf_dynamics_for_thonicke(sf_config%nc, & ! in
                                     sf_config % nfcl_ros, &
                                     sf_ros % fbd, &
-                                    u_f_wind, &
+                                    sf_ros % u_f_wind, &
                                     nesterov_index, &
                                     dead_fuel_litter, tot_dead_fuel_grass, &
                                     fuel_moisture, & ! inout
@@ -533,7 +530,7 @@ CONTAINS
       CALL calc_sf_dynamics_for_oberhagemann(sf_config%nc, &
           nesterov_index, &
           sf_ros % fbd, &
-          u_f_wind, &
+          sf_ros % u_f_wind, &
           dead_fuel_litter, & ! (#nc,#litter pools,#fuel classes-1,10,100 hours-)
           tot_dead_fuel_grass, & ! (#nc) 1 hour only
           tot_live_fuel_tree, & ! total live fuel tree (#nc)
@@ -548,7 +545,7 @@ CONTAINS
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(sf_config%nc, &
-                  u_f_wind, &
+                  sf_ros % u_f_wind, &
                   spitfire % fdi, &
                   veg_cover_frac, &
                   has_fire_conditions, &

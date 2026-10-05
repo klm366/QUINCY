@@ -33,10 +33,11 @@ MODULE mo_q_dfire_sf_classes
 
   !< Atmosphere related variables
   TYPE :: t_sf_atm
-    !< To spitfire units
+    !< To spitfire units (derived)
     REAL(wp), ALLOCATABLE :: t_air_min_c(:) ! [C]
     REAL(wp), ALLOCATABLE :: t_air_max_c(:) ! [C]
     REAL(wp), ALLOCATABLE :: wind_sf(:) ! [m/min]
+    !< input
     REAL(wp), POINTER :: precip_daily_mmd(:) => NULL() ! [mm/day]
   END TYPE t_sf_atm
 
@@ -46,13 +47,13 @@ MODULE mo_q_dfire_sf_classes
 
   !< Rate of spread characteristics type
   TYPE t_sf_ros
-    INTEGER               :: nc
-
     !< input
+    INTEGER               :: nc
     REAL(wp), POINTER :: fbd(:) => NULL()                !< Weighted average across PFT for fuel bulk density [kg m-3]
     REAL(wp), POINTER :: fwd_wind_factor(:) => NULL()    !< Forward wind factor [-]
 
     !< outputs (intermediate)
+    REAL(wp), ALLOCATABLE :: u_f_wind(:)                 !< Forward wind factor [-]
     REAL(wp), POINTER :: ros_forward(:) => NULL()        !< Forward rate of spread of the fire [m min-1]
     REAL(wp), POINTER :: ros_backwards(:) => NULL()      !< Backwards rate of spread of the fire [m min-1]
     REAL(wp), POINTER :: distance_travelled(:) => NULL() !< Total distance travelled [m]
@@ -122,14 +123,17 @@ MODULE mo_q_dfire_sf_classes
 
 
   TYPE t_sf_ignitions
+    ! inputs
     REAL(wp), POINTER :: a_nd(:) => NULL() ! [ignitions individuals-1 d-1]
     REAL(wp), POINTER :: pop_dens(:) => NULL() ! [individuals km-2]
     REAL(wp), POINTER :: lightning_freq(:) => NULL() ! [lightning ha-1 d-1]
 
+    ! outputs
     REAL(wp), POINTER :: e_n_humans(:) => NULL() ! Rate of human caused ignitions [ha-1 ts-1]
     REAL(wp), POINTER :: e_n_lightning(:) => NULL() ! Rate of lightning caused ignitions [ha-1 ts-1]
     REAL(wp), POINTER :: e_n_ignitions(:) => NULL() ! Total rate of ignitions [ha-1 ts-1]
 
+    ! config
     REAL(wp) :: max_human_pop_dens !< maximum human population density [individuals km-2]
   END TYPE t_sf_ignitions
 
@@ -288,6 +292,10 @@ MODULE mo_q_dfire_sf_classes
     sf_ros%net_fuel_load(:) = 0._wp
     sf_ros%moist_damp_coeff(:) = 0._wp
     sf_ros%mineral_damp_coeff(:) = 0._wp
+
+    ! derived
+    ALLOCATE(sf_ros%u_f_wind(nc))
+    sf_ros%u_f_wind(:) = 0._wp
   END FUNCTION create_sf_ros_init
 
 
