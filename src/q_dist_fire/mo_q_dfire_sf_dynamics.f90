@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann
+  USE mo_q_dfire_sf_fmoist_class, ONLY: wrap_calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann
   USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -583,10 +583,10 @@ CONTAINS
                                     sf_ros, &
                                     mask) !< optional
 
-    USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
-                                       ix_10hr => df_sf_fc_10hr_idx, &
-                                      ix_100hr => df_sf_fc_100hr_idx, &
-                                     ix_1000hr => df_sf_fc_1000hr_idx
+    !USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
+    !                                   ix_10hr => df_sf_fc_10hr_idx, &
+    !                                  ix_100hr => df_sf_fc_100hr_idx, &
+    !                                 ix_1000hr => df_sf_fc_1000hr_idx
 
     TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
@@ -603,18 +603,7 @@ CONTAINS
     has_fire_conditions = .TRUE.
     IF (PRESENT(mask)) has_fire_conditions = mask
 
-    !< Compute fuel moisture (omega_o, omega_nl)
-    sf_mf % omegas_thon = calc_sf_fuel_moisture_for_thonicke(sf_config % nc, sf_mf % nalphas, sf_config % nfcl_ros, sf_mf % alphas, &
-                                          nesterov_index, sf_mf % ab_moisture, &
-                                          sf_fuel_load % dead_fuel_litter, &
-                                          sf_fuel_load % tot_dead_fuel_grass)
-
-    ASSOCIATE(w_o => sf_mf % omegas_thon(:,df_sf_omega_o_idx), w_nl => sf_mf % omegas_thon(:,df_sf_omega_nl_idx))
-      sf_mf % fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
-      sf_mf % fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
-      sf_mf % fuel_moisture_for_fc(:,ix_100hr) = w_o ! 100hrs
-      sf_mf % fuel_moisture_for_fc(:,ix_1000hr) = w_o ! 1000hrs
-    END ASSOCIATE
+    CALL wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_mf)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     CALL calc_fire_danger_index(sf_config % nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)

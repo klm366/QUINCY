@@ -27,31 +27,63 @@ MODULE mo_q_dfire_sf_fmoist_class
   USE mo_jsb_lctlib_class,    ONLY: t_lctlib_element
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
   USE mo_q_dfire_sf_constants, ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
-  USE mo_q_dfire_sf_classes,   ONLY: t_sf_lfmc, t_sf_mf
+  USE mo_q_dfire_sf_classes,   ONLY: t_sf_lfmc, t_sf_mf, t_sf_config, t_sf_fuel_load
+
 
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann, &
             calc_mflg_ober
+  PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
+
+  !>
+  !> Wrap Infraestructure <-> science
+  !>
+  SUBROUTINE wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture)
+    USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
+                                       ix_10hr => df_sf_fc_10hr_idx, &
+                                      ix_100hr => df_sf_fc_100hr_idx, &
+                                     ix_1000hr => df_sf_fc_1000hr_idx
+
+    TYPE(t_sf_config), INTENT(in)         :: sf_config
+    REAL(wp), INTENT(in)                  :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
+    TYPE(t_sf_fuel_load), INTENT(in)      :: sf_fuel_load
+    TYPE(t_sf_mf), INTENT(inout)          :: sf_fuel_moisture
+
+    !< Compute fuel moisture (omega_o, omega_nl)
+    CALL calc_sf_fuel_moisture_for_thonicke(sf_config % nc, sf_fuel_moisture % nalphas, sf_config % nfcl_ros, sf_fuel_moisture % alphas, &
+                                          nesterov_index, sf_fuel_moisture % ab_moisture, &
+                                          sf_fuel_load % dead_fuel_litter, &
+                                          sf_fuel_load % tot_dead_fuel_grass, &
+                                          sf_fuel_moisture % omegas_thon)
+
+    ASSOCIATE(w_o => sf_fuel_moisture % omegas_thon(:,df_sf_omega_o_idx), w_nl => sf_fuel_moisture % omegas_thon(:,df_sf_omega_nl_idx))
+      sf_fuel_moisture % fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
+      sf_fuel_moisture % fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
+      sf_fuel_moisture % fuel_moisture_for_fc(:,ix_100hr) = w_o ! 100hrs
+      sf_fuel_moisture % fuel_moisture_for_fc(:,ix_1000hr) = w_o ! 1000hrs
+    END ASSOCIATE
+  END SUBROUTINE wrap_calc_sf_fuel_moisture_for_thonicke
+
+
   ! ======================================================================================================= !
   !>
   !> Fuel moisture calculation:
   !> - omega_o: dead fuel for 1, 10 and 100 hours + live grass (accounted for 1 hour)
   !> - omega_n,l: 1 hour dead fuel + live grass
   !>
-  FUNCTION calc_sf_fuel_moisture_for_thonicke(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg) &
-                                      RESULT (fuel_moisture)
+  SUBROUTINE calc_sf_fuel_moisture_for_thonicke(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg, fuel_moisture)
     INTEGER, INTENT(in)                 :: nc, nalphas, nfuels        !< Number of gridcells, number of alpha params, number of fuels used to calc fuel moisture
     REAL(wp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
     REAL(wp), INTENT(in)                :: nesterov_index(nc)         !< Nesterov index = Dryness index [Celsius^2]
     REAL(wp), INTENT(in)                :: litter_moisture(nc)        !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
     REAL(wp), INTENT(in)                :: w_oi(nc,nfuels)            !< Dead fuel involved in the calculation of fuel moisture [g DM m-2]
     REAL(wp), INTENT(in)                :: live_fuel_lvg(nc)          !< Total live grass fuel [g DM m-2]
-    REAL(wp)                            :: fuel_moisture(nc, df_sf_omegas_nr) !< output [0 to 1]
+    REAL(wp), INTENT(out)               :: fuel_moisture(nc, df_sf_omegas_nr) !< output [0 to 1]
 
     LOGICAL :: has_live_fuel_lvg(nc), has_dead_fuel(nc)
     INTEGER :: inc
@@ -69,7 +101,7 @@ CONTAINS
       END IF
     END DO
 
-  END FUNCTION calc_sf_fuel_moisture_for_thonicke
+  END SUBROUTINE calc_sf_fuel_moisture_for_thonicke
 
 
   ! ======================================================================================================= !
