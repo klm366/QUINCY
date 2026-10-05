@@ -512,6 +512,8 @@ CONTAINS
         mask= has_fire_conditions)
 
     !> Fuel moisture and ROS
+    !
+    !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     u_f_wind = lctlib_fwd_wind_factor * sf_atm%wind_sf
     dead_fuel_litter = SUM(sf_fuel_load%dead_fuel_fcl(:,ixs_sf_dead_litter_fuel_pools,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2= fuel pools index, litter pools only
     !< Calculate amount of dead fuel available for combustion following Thonicke et al. (2010)
@@ -550,7 +552,8 @@ CONTAINS
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
     CALL sf_calc_rate_of_spread(sf_config%nc, &
-                  lctlib_fwd_wind_factor, sf_atm%wind_sf, &
+                  !lctlib_fwd_wind_factor, sf_atm%wind_sf, &
+                  u_f_wind, &
                   spitfire % fdi, &
                   veg_cover_frac, &
                   has_fire_conditions, &

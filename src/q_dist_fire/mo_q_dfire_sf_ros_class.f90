@@ -56,23 +56,18 @@ CONTAINS
   !>
   !>
   SUBROUTINE sf_calc_rate_of_spread(nc, &
-                  fwd_wind_factor, wind, &
+                  u_f_wind, &
                   fdi, &
                   veg_cover_frac, &
                   mask, ros)
     INTEGER, INTENT(in)                  :: nc
-    REAL(wp), INTENT(in)                 :: fwd_wind_factor(nc)         !< [0 to 1]
-    REAL(wp), INTENT(in)                 :: wind(nc)                    !< [m min-1]
+    REAL(wp), INTENT(in)                 :: u_f_wind(nc)                !< [m min-1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros), INTENT(inout)        :: ros                         !< output [-]
 
-    REAL(wp) :: u_f_wind(nc)  !< Wind speed at vegetation cover [m min-1]
     INTEGER  :: inc
-
-    !< Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
-    u_f_wind = fwd_wind_factor * wind
 
     DO inc=1, nc
       IF (.NOT. mask(inc)) CYCLE !< skip gridcell
