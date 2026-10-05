@@ -189,7 +189,7 @@ Other top-level directories: `data/` (lctlib files), `doc/` (FORD guide pages, m
 - Per-process namelists: **`jsb_<proc>_nml`** historically for JSBACH processes (`jsb_hydro_nml`, `jsb_carbon_nml`, `jsb_sse_nml`, ...) and **`lnd_<proc>_nml`** for the QUINCY ones (`lnd_veg_nml`, `lnd_sb_nml`, `lnd_q_assimi_nml`, `lnd_q_pheno_nml`, `lnd_q_syl_nml`, `lnd_q_agr_nml`). Each carries at least `active`, plus `bc_filename`/`ic_filename`.
 - In coupled runs ICON-Land output namelists belong to `NAMELIST_atm`, not `NAMELIST_lnd` as in standalone runs.
 
-`__NO_JSBACH__` and `__NO_JSBACH_HD__` guard the whole component and the HD process respectively; other cpp keys in use are `_OPENACC`, `_OPENMP`, `HAVE_CDI_PIO`, `HAVE_F2003`, `HAVE_FC_ATTRIBUTE_CONTIGUOUS`. Keep preprocessor use to technical concerns only, and mind capitalization.
+`__NO_JSBACH__` and `__NO_JSBACH_HD__` guard the whole component and the HD process respectively; other cpp keys in use are `_OPENACC`, `_OPENMP`, `HAVE_F2003`, `HAVE_FC_ATTRIBUTE_CONTIGUOUS`. Keep preprocessor use to technical concerns only, and mind capitalization.
 
 ## Build and run (via the host model; here for levante)
 

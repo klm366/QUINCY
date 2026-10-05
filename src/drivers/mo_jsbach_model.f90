@@ -42,10 +42,6 @@ MODULE mo_jsbach_model
 
   PRIVATE
 
-#ifdef HAVE_CDI_PIO
-    INCLUDE 'cdipio.inc'
-#endif
-
   PUBLIC :: jsbach_model
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsbach_model'
@@ -90,7 +86,7 @@ CONTAINS
     USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   num_io_procs, pio_type, proc0_shift,                                 &
+      &                                   num_io_procs, proc0_shift,                                           &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -110,20 +106,9 @@ CONTAINS
       &                                   istime4name_list_output
     USE mo_output_event_handler,    ONLY: get_current_jfile
     USE mo_icon_output_tools,       ONLY: init_io_processes
-#ifdef HAVE_CDI_PIO
-    USE mo_mpi,                     ONLY: mpi_comm_null, p_comm_work_io
-    USE mo_name_list_output_init,   ONLY: init_cdipio_cb
-    USE mo_name_list_output,        ONLY: write_ready_files_cdipio
-    USE yaxt,                       ONLY: xt_initialize, xt_initialized
-    USE mo_cdi,                     ONLY: namespacegetactive, namespaceSetActive
-    USE mo_cdi_pio_interface,       ONLY: nml_io_cdi_pio_namespace, &
-      &                                   cdi_base_namespace, &
-      &                                   nml_io_cdi_pio_client_comm, &
-      &                                   nml_io_cdi_pio_conf_handle
-#endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
+    USE mo_impl_constants,          ONLY: SUCCESS
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -162,10 +147,6 @@ CONTAINS
     INTEGER :: i
     CHARACTER(len=MAX_MTIME_ERROR_STR_LEN) :: errstring
     INTEGER                                :: error_status
-
-#ifdef HAVE_CDI_PIO
-    INTEGER :: prev_cdi_namespace
-#endif
 
     ! Time and event management
     TYPE(datetime), POINTER       :: mtime_current
@@ -276,7 +257,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=proc0_shift)
+         &                          num_dio_procs=proc0_shift)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -774,14 +755,6 @@ CONTAINS
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
     ENDIF
-#ifdef HAVE_CDI_PIO
-    IF (pio_type == pio_type_cdipio) THEN
-      prev_cdi_namespace = namespaceGetActive()
-      CALL namespaceSetActive(nml_io_cdi_pio_namespace)
-      CALL pioFinalize
-      CALL namespaceSetActive(prev_cdi_namespace)
-    END IF
-#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 22.0 finish message and print performance timers
