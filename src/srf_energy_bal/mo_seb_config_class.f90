@@ -16,7 +16,7 @@ MODULE mo_seb_config_class
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -27,12 +27,12 @@ MODULE mo_seb_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_seb_config
      CHARACTER(len=10)           :: scheme_albedo !< Scheme to use for computation of albedo (echam5 only for now)
-     REAL(wp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
-     REAL(wp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
-     REAL(wp)                    :: coef_ril_tm1           !< Weighting factor for Richardson numbers at different steps ...
-     REAL(wp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
-     REAL(wp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
-     REAL(wp)                    :: eb_threshold           !< Energy balance residuals greater than this threshold lead to
+     REAL(lp)                    :: lake_mixed_layer_depth !< Depth of lake mixed layer                             [m]
+     REAL(lp)                    :: lake_min_ice_depth     !< Minimum ice thickness to start ice formation on lakes [m]
+     REAL(lp)                    :: coef_ril_tm1           !< Weighting factor for Richardson numbers at different steps ...
+     REAL(lp)                    :: coef_ril_t             !< ... used to calculate a drag coefficient that approximates ...
+     REAL(lp)                    :: coef_ril_tp1           !< ... the drag coefficient at time t, but helps to maintain stability.
+     REAL(lp)                    :: eb_threshold           !< Energy balance residuals greater than this threshold lead to
                                                            !< diagnostic logging. Negative threshold: no printing.
      LOGICAL                     :: l_ice_on_lakes         !< Whether to use ice on lakes
      INTEGER                     :: niter_tmx              !< For tmx: number of iterations in seb solver
@@ -54,7 +54,7 @@ CONTAINS
     LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     CHARACTER(len=10)           :: scheme_albedo
-    REAL(wp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, eb_threshold, &
+    REAL(lp)                    :: lake_mixed_layer_depth, lake_min_ice_depth, eb_threshold, &
       &                            coef_ril_tm1, coef_ril_t, coef_ril_tp1
     LOGICAL                     :: l_ice_on_lakes
     INTEGER                     :: niter_tmx
@@ -87,12 +87,12 @@ CONTAINS
     ic_filename     = 'ic_land_srf.nc'
     bc_filename     = 'bc_land_srf.nc'
     scheme_albedo   = 'echam5'
-    coef_ril_tm1    = 0.15_wp
-    coef_ril_t      = 0.70_wp
-    coef_ril_tp1    = 0.15_wp
-    eb_threshold    = -1.0_wp  ! Negative values correspond to no printouts
-    lake_mixed_layer_depth = 10._wp
-    lake_min_ice_depth     = 0.05_wp
+    coef_ril_tm1    = 0.15_lp
+    coef_ril_t      = 0.70_lp
+    coef_ril_tp1    = 0.15_lp
+    eb_threshold    = -1.0_lp  ! Negative values correspond to no printouts
+    lake_mixed_layer_depth = 10._lp
+    lake_min_ice_depth     = 0.05_lp
     l_ice_on_lakes  = .TRUE.
     niter_tmx       = 0
     l_skin_temp     = .FALSE.   ! default for QUINCY: TRUE

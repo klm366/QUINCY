@@ -20,7 +20,7 @@
 MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
-  USE mo_kind,         ONLY: wp
+  USE mo_kind,         ONLY: lp
   USE mo_exception,    ONLY: message_text, finish
   USE mo_util,         ONLY: int2string
 
@@ -49,101 +49,101 @@ MODULE mo_jsb_lctlib_class
     LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
 
     ! --- Albedo ------------------------------------------------------------------------------------------------------------------
-    REAL(wp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowVisMax      !< Maximum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowNirMin      !< Minimum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowNirMax      !< Maximum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowMin         !< Minimum snow albedo
-    REAL(wp) :: AlbedoSnowMax         !< Maximum snow albedo
-    REAL(wp) :: AlbedoCanopyVIS       !< Albedo of the canopy (vegetation) in the visible range
-    REAL(wp) :: AlbedoCanopyNIR       !< Albedo of the canopy (vegetation) in the NIR range
-    REAL(wp) :: AlbedoLitterVis       !< Albedo of the leaf litter in the visible range
-    REAL(wp) :: AlbedoLitterNir       !< Albedo of the leaf litter in the NIR range
+    REAL(lp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
+    REAL(lp) :: AlbedoSnowVisMax      !< Maximum snow albedo in the visible range
+    REAL(lp) :: AlbedoSnowNirMin      !< Minimum snow albedo in the NIR range
+    REAL(lp) :: AlbedoSnowNirMax      !< Maximum snow albedo in the NIR range
+    REAL(lp) :: AlbedoSnowMin         !< Minimum snow albedo
+    REAL(lp) :: AlbedoSnowMax         !< Maximum snow albedo
+    REAL(lp) :: AlbedoCanopyVIS       !< Albedo of the canopy (vegetation) in the visible range
+    REAL(lp) :: AlbedoCanopyNIR       !< Albedo of the canopy (vegetation) in the NIR range
+    REAL(lp) :: AlbedoLitterVis       !< Albedo of the leaf litter in the visible range
+    REAL(lp) :: AlbedoLitterNir       !< Albedo of the leaf litter in the NIR range
 
     ! --- parameters used by bethy ------------------------------------------------------------------------------------------------
     LOGICAL  :: NitrogenScalingFlag   !< Indicates, whether nitrogen scaling shall be applied to that vegetation type
-    REAL(wp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
+    REAL(lp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
-    REAL(wp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
+    REAL(lp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
                                                   !< ... (Table 2.6 in Knorr)
-    REAL(wp) :: VegHeight             !< Typical height of the vegetation classes [m]
-    REAL(wp) :: VegRoughness          !< Roughness length of the vegetation classes [m]
-    REAL(wp) :: MinVegRoughness       !< Minimal roughness length of the vegetation classes (LAI = 0) [m]
-    REAL(wp) :: MaxVegRoughness       !< Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
+    REAL(lp) :: VegHeight             !< Typical height of the vegetation classes [m]
+    REAL(lp) :: VegRoughness          !< Roughness length of the vegetation classes [m]
+    REAL(lp) :: MinVegRoughness       !< Minimal roughness length of the vegetation classes (LAI = 0) [m]
+    REAL(lp) :: MaxVegRoughness       !< Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
     ! --- Parameters used in LoGroP Phenology scheme --------------------------------------------------------------------------
     INTEGER  :: PhenologyType         !< Phenology type (only for natural vegetation):
                                                   !< ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
-    REAL(wp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
-    REAL(wp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
+    REAL(lp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
+    REAL(lp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
 
     ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
-    REAL(wp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
-    REAL(wp) :: beta_nr_ind           !< Parameter of self-thinning relationship
-    REAL(wp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass
-    REAL(wp) :: beta_leaf             !< Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(lp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
+    REAL(lp) :: beta_nr_ind           !< Parameter of self-thinning relationship
+    REAL(lp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(lp) :: beta_leaf             !< Parameter of relationship between total biomass per ind and leaf biomass
 
      ! --- Parameters used in Knorr Phenology scheme ---------------------------------------------------------------------------
-    REAL(wp) :: knorr_Tau_w           !< Time before leaf shedding  [days]
-    REAL(wp) :: knorr_T_phi           !< Temperature trigger for leaf growth [deg C]
-    REAL(wp) :: knorr_T_r             !< "Spread" (sigma) of T_phi [deg C]
-    REAL(wp) :: knorr_Day_c           !< Day-length at leaf shedding [hours]
-    REAL(wp) :: knorr_Day_r           !< "Spread" (sigma) of Day_c [hours]
-    REAL(wp) :: knorr_k_l             !< Inverse of leaf longevity [days-1]
-    REAL(wp) :: knorr_leaf_growth_rate !< Initial leaf growth rate [days-1]
-    REAL(wp) :: knorr_max_lai         !< Maximum LAI
+    REAL(lp) :: knorr_Tau_w           !< Time before leaf shedding  [days]
+    REAL(lp) :: knorr_T_phi           !< Temperature trigger for leaf growth [deg C]
+    REAL(lp) :: knorr_T_r             !< "Spread" (sigma) of T_phi [deg C]
+    REAL(lp) :: knorr_Day_c           !< Day-length at leaf shedding [hours]
+    REAL(lp) :: knorr_Day_r           !< "Spread" (sigma) of Day_c [hours]
+    REAL(lp) :: knorr_k_l             !< Inverse of leaf longevity [days-1]
+    REAL(lp) :: knorr_leaf_growth_rate !< Initial leaf growth rate [days-1]
+    REAL(lp) :: knorr_max_lai         !< Maximum LAI
 
     ! --- Parameters used in the carbon balance model -----------------------------------------------------------------------------
-    REAL(wp) :: reserveC2leafC        !< Ratio of opt. C content of the reserve pool to the opt. C content of leaves
-    REAL(wp) :: fract_npp_2_woodPool   !< Maximum fraction of NPP put into the wood pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_reservePool !< Optimal fraction of NPP put into the reserve pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_exudates   !< Optimal fraction of NPP put into the root exudates of the carbon balance model
-    REAL(wp) :: fract_green_2_herbivory !< Fraction of NPP that is grazed by herbivores
-    REAL(wp) :: LAI_shed_constant     !<
+    REAL(lp) :: reserveC2leafC        !< Ratio of opt. C content of the reserve pool to the opt. C content of leaves
+    REAL(lp) :: fract_npp_2_woodPool   !< Maximum fraction of NPP put into the wood pool of the carbon balance model
+    REAL(lp) :: fract_npp_2_reservePool !< Optimal fraction of NPP put into the reserve pool of the carbon balance model
+    REAL(lp) :: fract_npp_2_exudates   !< Optimal fraction of NPP put into the root exudates of the carbon balance model
+    REAL(lp) :: fract_green_2_herbivory !< Fraction of NPP that is grazed by herbivores
+    REAL(lp) :: LAI_shed_constant     !<
                                                       !< .. atmosphere (rest enters slow pool)
-    REAL(wp) :: Max_C_content_woods   !< Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
+    REAL(lp) :: Max_C_content_woods   !< Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
                                                   !< .. forests this is closely related to the yield, usually measured in
                                                   !< .. m^3(wood)/hectar)
-    REAL(wp) :: ClumpinessFactor      !< Factor to calculate vegetation clumpiness:
+    REAL(lp) :: ClumpinessFactor      !< Factor to calculate vegetation clumpiness:
                                                   !< Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
                                                   !< converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_onSite    !< Fraction of wood pool to anthropogenically controlled onSite pool wenn
+    REAL(lp) :: fract_wood_2_onSite    !< Fraction of wood pool to anthropogenically controlled onSite pool wenn
                                                   !< converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_paper     !< Fraction of wood pool to paper (intermediately longlived) pool wenn...
-    REAL(wp) :: fract_wood_2_construction !< Fract of wood pool to constructions (e.g. houses, furniture = longlived)
+    REAL(lp) :: fract_wood_2_paper     !< Fraction of wood pool to paper (intermediately longlived) pool wenn...
+    REAL(lp) :: fract_wood_2_construction !< Fract of wood pool to constructions (e.g. houses, furniture = longlived)
                                                   !<   pool when converting natural PFTs into agricultural PFTs
 
     ! --- Parameters used in the carbon balance model and the dynamic vegetation --------------------------------------------------
-    REAL(wp) :: tau_c_woods           !< PFT-specific time scale for woody (lignified) plant tissue
+    REAL(lp) :: tau_c_woods           !< PFT-specific time scale for woody (lignified) plant tissue
 
     ! --- Parameters used by the dynamic vegetation -------------------------------------------------------------------------------
     LOGICAL  :: dynamic_PFT               !< indicates those PFTs which shall take part in the vegetation dynamics
     LOGICAL  :: woody_PFT                 !< indicates those PFTs which are of woody type (in contrast to grasses)
     LOGICAL  :: pasture_PFT               !< indicates those PFTs which are pasture
-    REAL(wp) :: bclimit_min_cold_mmtemp   !< PFT-specific minimum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_cold_mmtemp   !< PFT-specific maximum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
-    REAL(wp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
-    REAL(wp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
+    REAL(lp) :: bclimit_min_cold_mmtemp   !< PFT-specific minimum coldest monthly mean temperature
+    REAL(lp) :: bclimit_max_cold_mmtemp   !< PFT-specific maximum coldest monthly mean temperature
+    REAL(lp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
+    REAL(lp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
+    REAL(lp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
-    REAL(wp) :: moist_extinction          !< PFT specific moisture of extinction
-    REAL(wp) :: fuel_dens                 !< fuel bulk density
-    REAL(wp) :: flame_length_f            !< f parameter for flame length(scorch height) parameter 45 in lpj
-    REAL(wp) :: crown_length              !< crown length parameter see table 1 in thonicke et al. 2010
-    REAL(wp) :: bark_par1                 !< bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: bark_par2                 !< bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: RCK                       !< resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
-    REAL(wp) :: mort_prob                 !< mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
+    REAL(lp) :: moist_extinction          !< PFT specific moisture of extinction
+    REAL(lp) :: fuel_dens                 !< fuel bulk density
+    REAL(lp) :: flame_length_f            !< f parameter for flame length(scorch height) parameter 45 in lpj
+    REAL(lp) :: crown_length              !< crown length parameter see table 1 in thonicke et al. 2010
+    REAL(lp) :: bark_par1                 !< bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(lp) :: bark_par2                 !< bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(lp) :: RCK                       !< resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
+    REAL(lp) :: mort_prob                 !< mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
 
     ! --- Parameters for the climate buffer ---------------------------------------------------------------------------------------
-    REAL(wp) :: gdd_base                  !< PFT-specific GDD base
-    REAL(wp) :: upper_tlim                !< PFT-specific base to calculate GDD_upper_tlim
+    REAL(lp) :: gdd_base                  !< PFT-specific GDD base
+    REAL(lp) :: upper_tlim                !< PFT-specific base to calculate GDD_upper_tlim
 
     ! --- Parameters used by the yasso soil carbon model -------------------------------------------------------------------------
-    REAL(wp) :: LitVeg_coef(5)       !< Yasso coefficient for separating litter into chemical pools
-    REAL(wp) :: LeafLit_coef(5)      !< Yasso coefficient for separating leaf litter into chemical pools
-    REAL(wp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
-    REAL(wp) :: WoodLitterSize       !< Yasso: size of the litter
+    REAL(lp) :: LitVeg_coef(5)       !< Yasso coefficient for separating litter into chemical pools
+    REAL(lp) :: LeafLit_coef(5)      !< Yasso coefficient for separating leaf litter into chemical pools
+    REAL(lp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
+    REAL(lp) :: WoodLitterSize       !< Yasso: size of the litter
 
     ! --- Parameters used by the megan emission scheme ---------------------------------------------------------------------------
     REAL(wp) :: em_fac_iso           !< Emission factors for plant produced isoprene
@@ -151,7 +151,7 @@ MODULE mo_jsb_lctlib_class
     REAL(wp) :: em_fac_NO            !< Emission factors for plant produced nitricoxide
 
     ! --- Other parameters --------------------------------------------------------------------------------------------------------
-    REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
+    REAL(lp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
     REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
     REAL(wp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
@@ -160,30 +160,30 @@ MODULE mo_jsb_lctlib_class
     INTEGER  :: growthform
     INTEGER  :: ps_pathway
     INTEGER  :: phenology_type
-    REAL(wp) :: lai_max
-    REAL(wp) :: vegetation_height
-    REAL(wp) :: sla
-    REAL(wp) :: sigma_vis
-    REAL(wp) :: sigma_nir
-    REAL(wp) :: omega_clumping
-    REAL(wp) :: crown_shape_factor
-    REAL(wp) :: cn_leaf
-    REAL(wp) :: cn_leaf_min
-    REAL(wp) :: cn_leaf_max
-    REAL(wp) :: np_leaf
-    REAL(wp) :: np_leaf_min
-    REAL(wp) :: np_leaf_max
-    REAL(wp) :: k0_fn_struc
-    REAL(wp) :: fn_oth_min
-    REAL(wp) :: t_jmax_opt
-    REAL(wp) :: t_jmax_omega
-    REAL(wp) :: g0
-    REAL(wp) :: g1_medlyn
-    REAL(wp) :: g1_bberry
-    REAL(wp) :: gmin
+    REAL(lp) :: lai_max
+    REAL(lp) :: vegetation_height
+    REAL(lp) :: sla
+    REAL(lp) :: sigma_vis
+    REAL(lp) :: sigma_nir
+    REAL(lp) :: omega_clumping
+    REAL(lp) :: crown_shape_factor
+    REAL(lp) :: cn_leaf
+    REAL(lp) :: cn_leaf_min
+    REAL(lp) :: cn_leaf_max
+    REAL(lp) :: np_leaf
+    REAL(lp) :: np_leaf_min
+    REAL(lp) :: np_leaf_max
+    REAL(lp) :: k0_fn_struc
+    REAL(lp) :: fn_oth_min
+    REAL(lp) :: t_jmax_opt
+    REAL(lp) :: t_jmax_omega
+    REAL(lp) :: g0
+    REAL(lp) :: g1_medlyn
+    REAL(lp) :: g1_bberry
+    REAL(lp) :: gmin
 
     ! turnover times
-    REAL(wp) :: tau_leaf          , &
+    REAL(lp) :: tau_leaf          , &
                 tau_fine_root     , &
                 tau_coarse_root   , &
                 tau_branch        , &
@@ -194,20 +194,20 @@ MODULE mo_jsb_lctlib_class
                 tau_mycorrhiza
 
     ! N uptake parameters
-    REAL(wp) :: vmax_uptake_n     , &
+    REAL(lp) :: vmax_uptake_n     , &
                 vmax_uptake_p     , &
                 bnf_base          , &
                 vmax_symb_bnf     , &
                 km_symb_bnf
 
     ! Vegetation dynamics parameters
-    REAL(wp) :: lambda_est_light  , &
+    REAL(lp) :: lambda_est_light  , &
                 k_est_light       , &
                 seed_size         , &
                 k1_mort_greff
 
     ! Phenology parameters
-    REAL(wp) :: beta_soil_flush       , &
+    REAL(lp) :: beta_soil_flush       , &
                 beta_soil_senescence  , &
                 gdd_req_max           , &
                 k_gdd_dormance        , &
@@ -215,7 +215,7 @@ MODULE mo_jsb_lctlib_class
                 min_leaf_age
 
     ! Allocation paramters
-    REAL(wp) :: frac_sapwood_branch   , &
+    REAL(lp) :: frac_sapwood_branch   , &
                 wood_density          , &
                 k_latosa              , &
                 k_crtos               , &
@@ -230,7 +230,7 @@ MODULE mo_jsb_lctlib_class
                 fstore_target
 
     ! Soil
-    REAL(wp) :: &
+    REAL(lp) :: &
       & k_root_dist                   , &
       & k_som_fast_init               , &
       & k_som_slow_init
@@ -674,7 +674,7 @@ CONTAINS
           CASE ('tau_c_woods')                              ! PFT-specific time_scale for c_woods (and vegetation dynamics)
              READ(line(pos:length),*) lctlib(1:nlct)%tau_c_woods
              ! Conversion from years to days
-             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._wp
+             lctlib(1:nlct)%tau_c_woods = lctlib(1:nlct)%tau_c_woods * 365._lp
              exist_tau_c_woods = .TRUE.
           CASE ('lai_shed_constant')                               ! Time constant by which leaves are constantly shedded [days-1]
              READ(line(pos:length),*) lctlib(1:nlct)%LAI_shed_constant
@@ -770,7 +770,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values don't add up to 1 carbon is not conserved
-                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (ABS(SUM(lctlib(i)%LitVeg_coef(:)) - 1._lp) .GE. EPSILON(1._lp)) &
                      CALL finish('init_lctlib','invalid value for LitVeg_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_litveg_coef = .TRUE.
@@ -782,7 +782,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (SUM(ABS(lctlib(i)%LeafLit_coef(:)) - 1._lp) .GE. EPSILON(1._lp)) &
                      CALL finish('init_lctlib','invalid value for LeafLit_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_leaflit_coef = .TRUE.
@@ -794,7 +794,7 @@ CONTAINS
              END DO
              DO i = 1, nlct
                 ! DSG: this check is important, if values dont add up to 1 carbon is not conserved
-                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._wp) .GE. EPSILON(1._wp)) &
+                IF (ABS(SUM(lctlib(i)%WoodLit_coef(:)) - 1._lp) .GE. EPSILON(1._lp)) &
                      CALL finish('init_lctlib','invalid value for WoodLit_coef_coef in '//TRIM(lctlib_file_name))
              END DO
              exists_woodlit_coef = .TRUE.
@@ -1112,7 +1112,7 @@ CONTAINS
          IF(.NOT. exist_PhenologyType) &
               CALL finish('init_lctlib','No data for PhenologyType found in '//TRIM(lctlib_file_name))
          IF (.NOT. exist_CanopyResistanceMin) &
-              lctlib%CanopyResistanceMin = -1.0_wp
+              lctlib%CanopyResistanceMin = -1.0_lp
          IF(.NOT. exist_MaxLAI) &
               CALL finish('init_lctlib','No data for MaxLAI found in '//TRIM(lctlib_file_name))
          IF(.NOT. exist_StemArea) &
@@ -1227,8 +1227,8 @@ CONTAINS
          ! Set carbox rate to  [Mol(CO2)/m^2/s]
          ! SET e-transport rate to [Mol(CO2)/m^2/s]
          DO i=1,nlct
-           lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_wp
-           lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_wp
+           lctLib(i)%ETransport=lctLib(i)%ETransport * 1.e-06_lp
+           lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_lp
          END DO
          !------------------------------------------------------------------------------------------
        END IF
@@ -1388,50 +1388,50 @@ CONTAINS
        IF (model_scheme_char == "quincy") THEN
        ! sla
          DO i = 1,nlct
-             lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
+             lctlib(i)%sla = 1._lp / carbon_per_dryweight_leaf / 1000.0_lp * molar_mass_C * lctlib(i)%sla
          END DO
        ! cn_leaf
          DO i = 1,nlct
-           lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
+           lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._lp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
          END DO
        ! cn_leaf_min
          DO i = 1,nlct
-           lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
+           lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._lp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
          END DO
        ! cn_leaf_max
          DO i = 1,nlct
-           lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
+           lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._lp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
          END DO
        ! np_leaf
          DO i = 1,nlct
-           lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._lp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                 lctlib(i)%np_leaf
          END DO
        ! np_leaf_min
          DO i = 1,nlct
-           lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._lp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_min
          END DO
        ! np_leaf_max
          DO i = 1,nlct
-           lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+           lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._lp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
                                    lctlib(i)%np_leaf_max
          END DO
        ! fn_oth_min
          DO i = 1,nlct
-           lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
+           lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_lp/molar_mass_n * 0.5_lp * 1.e3_lp * 71.4_lp * molar_mass_N / 1.e6_lp
          END DO
        ! tau_leaf
          DO i = 1,nlct
-           lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
+           lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_lp
          END DO
        ! bnf_base
          DO i = 1,nlct
-          lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+          lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_lp
          END DO
        ! vmax_symb_bnf
          DO i = 1,nlct
-          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_wp
+          lctlib(i)%vmax_symb_bnf = lctlib(i)%vmax_symb_bnf / (molar_mass_N / molar_mass_C) / one_day / one_year * 1.e6_lp
          END DO
        ! km_symb_bnf
          DO i = 1,nlct
@@ -1443,25 +1443,25 @@ CONTAINS
          END DO
        ! wood_density
          DO i = 1,nlct
-           lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
+           lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_lp/ molar_mass_C
          END DO
        ! k_root
          DO i = 1,nlct
-           lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
+           lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_lp
          END DO
        ! k_sapwood
          DO i = 1,nlct
-           lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
+           lctlib(i)%k_sapwood = 1.e-3_lp * lctlib(i)%k_sapwood
          END DO
         ! k_rtos
          DO i = 1,nlct
           SELECT CASE (lctlib(i)%growthform)
           CASE (itree)
-            lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+            lctlib(i)%k_rtos = 1.75_lp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
             !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * &
             !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
           CASE (igrass,icrop)
-            lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+            lctlib(i)%k_rtos = 0.5_lp / sm2lm_grass
           END SELECT
          END DO
          ! c0_allom
@@ -1471,7 +1471,7 @@ CONTAINS
                                        lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * &
                                   lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
            ELSE
-             lctlib(i)%c0_allom = 0.0_wp
+             lctlib(i)%c0_allom = 0.0_lp
            END IF
          END DO
        ! derive C4flag from ps_pathway

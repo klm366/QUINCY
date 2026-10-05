@@ -30,7 +30,7 @@ MODULE mo_jsb_lcc
 
   USE mo_exception,           ONLY: finish, message, message_text
   USE mo_util,                ONLY: int2string, one_of, tolower
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
 
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
@@ -403,7 +403,7 @@ CONTAINS
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations   !< LCC process structure for relocations
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Runtime parameters
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: tile              !< Tile on which the LCC process runs
-    REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Current area of involved tiles
+    REAL(lp),                   INTENT(inout) :: initial_area(:,:) !< Current area of involved tiles
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_lcc_reloc' !< Name of the routine
 
@@ -411,7 +411,7 @@ CONTAINS
       &                                    parent                  !< Pointer to the parent tile
     LOGICAL                             :: on_second_level         !< Flag indicating if the child of a
                                                                    !< tile has children
-    REAL(wp), DIMENSION(options%nc)     :: current_fract           !< Current cover fractions of a tile
+    REAL(lp), DIMENSION(options%nc)     :: current_fract           !< Current cover fractions of a tile
     INTEGER :: i_tile, &    !< Loop index over tiles
       &         i_var, &    !< Loop index over variables
       &          iblk, &    !< Block index
@@ -471,9 +471,9 @@ CONTAINS
     ! Initialise / reset relocation arrays
     DO i_var = 1,lcc_relocations%nr_of_active_vars
       IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL2D) THEN
-        lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+        lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_lp
       ELSE IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL3D) THEN
-        lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_wp
+        lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_lp
       ELSE
         CALL finish(TRIM(routine), 'Not supported variable type: '// &
             & int2string(lcc_relocations%active_vars(i_var)%p%var_type)//'. Please check!')
@@ -481,9 +481,9 @@ CONTAINS
     END DO
     DO i_var = 1,lcc_relocations%nr_of_passive_vars
       IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL2D) THEN
-        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_lp
       ELSE IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL3D) THEN
-        lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_wp
+        lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk) = 0.0_lp
       ELSE
         CALL finish(TRIM(routine), 'Not supported variable type: '// &
             & int2string(lcc_relocations%passive_vars(i_var)%p%var_type)// '. Please check!')
@@ -505,8 +505,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations   !< LCC process structure for relocations
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Runtime parameters
-    REAL(wp),                   INTENT(in)    :: lost_area(:,:)    !< Area lost from involved tiles
-    REAL(wp),                   INTENT(in)    :: initial_area(:,:) !< Initial area of involved tiles
+    REAL(lp),                   INTENT(in)    :: lost_area(:,:)    !< Area lost from involved tiles
+    REAL(lp),                   INTENT(in)    :: initial_area(:,:) !< Initial area of involved tiles
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':start_lcc_reloc' !< Name of the routine
 
@@ -529,9 +529,9 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have unexpected size. Please check!')
     END IF
 
-    ! Assertion: lost area is >= 0.0_wp and <= 1.0_wp
-    IF (ANY(lost_area < 0.0_wp) .OR. ANY(lost_area > 1.0_wp + max_tolerated_cf_mismatch) &
-      & .OR. ANY(initial_area < 0.0_wp) .OR. ANY(initial_area > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+    ! Assertion: lost area is >= 0.0_lp and <= 1.0_lp
+    IF (ANY(lost_area < 0.0_lp) .OR. ANY(lost_area > 1.0_lp + max_tolerated_cf_mismatch) &
+      & .OR. ANY(initial_area < 0.0_lp) .OR. ANY(initial_area > 1.0_lp + max_tolerated_cf_mismatch)) THEN
       WRITE (message_text,*) 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]),', &
         & ' Minimum lost_area: ', MINVAL(lost_area), ' at ', MINLOC(lost_area),           &
         & ' Maximum lost_area: ', MAXVAL(lost_area), ' at ', MAXLOC(lost_area),           &
@@ -542,7 +542,7 @@ CONTAINS
 
     ! Assertion: lost area <= initial_area
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
-    IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
+    IF (ANY((initial_area - lost_area) < -EPSILON(1._lp) )) THEN
       WRITE (message_text,*) 'Violation of assertion: Lost area exceeds available area' &
         & //' for lcc process '// TRIM(lcc_relocations%name) &
         & //' -- MINVAL: ', MINVAL(initial_area-lost_area), ' at ', MINLOC(initial_area-lost_area), &
@@ -583,7 +583,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations   !< LCC process structure for relocations
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Runtime parameters
-    REAL(wp),                   INTENT(in)    :: gained_area(:,:)  !< Area gained on involved tiles
+    REAL(lp),                   INTENT(in)    :: gained_area(:,:)  !< Area gained on involved tiles
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':end_lcc_reloc'  !< Name of the routine
 
@@ -598,7 +598,7 @@ CONTAINS
       &   nr_of_tiles, &    !< Number of tiles
       &         i_dim, &    !< Index of additional dimension in case of REAL3D typed passive variables
       &         n_dim       !< Number of additional dimension in case of REAL3D typed passive variables
-    REAL(wp) :: passive_var_sum(options%nc), &  !< Sum of a passively relocated variable over all involved tiles
+    REAL(lp) :: passive_var_sum(options%nc), &  !< Sum of a passively relocated variable over all involved tiles
       &         gained_area_sum(options%nc)     !< Sum of all gained area for all involved tiles
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
@@ -624,9 +624,9 @@ CONTAINS
         not_zero = .TRUE.
 
         IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL2D) THEN
-          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_wp)
+          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_lp)
         ELSE IF (lcc_relocations%active_vars(i_var)%p%var_type == REAL3D) THEN
-          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,i_tile,iblk) /= 0.0_wp)
+          not_zero = ANY(lcc_relocations%active_vars(i_var)%p%relocate_this_3D(ics:ice,:,i_tile,iblk) /= 0.0_lp)
         ELSE
           CALL finish(TRIM(routine), 'Not supported variable type: '// &
               & int2string(lcc_relocations%active_vars(i_var)%p%var_type)// '. Please check!')
@@ -647,13 +647,13 @@ CONTAINS
       IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL2D) THEN
         passive_var_sum(:) = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk), DIM=2)
         DO i_tile = 1,nr_of_tiles
-          WHERE (gained_area(:, i_tile) > 0.0_wp)
+          WHERE (gained_area(:, i_tile) > 0.0_lp)
             lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
               & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
               & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
           END WHERE
         END DO
-        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
+        lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_lp
 
       ELSE IF (lcc_relocations%passive_vars(i_var)%p%var_type == REAL3D) THEN
         n_dim = SIZE(lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,:,:,iblk), DIM=2)
@@ -661,13 +661,13 @@ CONTAINS
         DO i_dim = 1,n_dim
           passive_var_sum(:) = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,i_dim,:,iblk), DIM=2)
           DO i_tile = 1,nr_of_tiles
-            WHERE (gained_area(:, i_tile) > 0.0_wp)
+            WHERE (gained_area(:, i_tile) > 0.0_lp)
               lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics:ice,i_dim,iblk) &
                 & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr3d(ics:ice,i_dim,iblk) &
                 & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
             END WHERE
           END DO
-          lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,i_dim,:,iblk) = 0.0_wp
+          lcc_relocations%passive_vars(i_var)%p%relocate_this_3D(ics:ice,i_dim,:,iblk) = 0.0_lp
         END DO
       ELSE
         CALL finish(TRIM(routine), 'Not supported variable type: '// &
@@ -729,7 +729,7 @@ CONTAINS
       has_non_zero_active_var = .FALSE.
       DO i_var = 1, lcc_relocations%nr_of_active_vars
         IF (lcc_relocations%active_vars_process_id(i_var) == proc_id) THEN
-          IF (ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) .NE. 0.0_wp ) ) THEN
+          IF (ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) .NE. 0.0_lp ) ) THEN
             has_non_zero_active_var = .TRUE.
           END IF
         END IF
@@ -893,11 +893,11 @@ CONTAINS
 
     IF (conserved_quantities(i_cqt)%p%var_type == REAL2D) THEN
       ALLOCATE(var_list(i_of_kind)%p%relocate_this(nproma,nr_of_tiles,nblks))
-      var_list(i_of_kind)%p%relocate_this(:,:,:) = 0.0_wp
+      var_list(i_of_kind)%p%relocate_this(:,:,:) = 0.0_lp
     ELSE IF (conserved_quantities(i_cqt)%p%var_type == REAL3D) THEN
       extra_dim = SIZE(conserved_quantities(i_cqt)%p%cq_vars(i_var)%p%ptr3d,DIM=2)
       ALLOCATE(var_list(i_of_kind)%p%relocate_this_3D(nproma,extra_dim,nr_of_tiles,nblks))
-      var_list(i_of_kind)%p%relocate_this_3D(:,:,:,:) = 0.0_wp
+      var_list(i_of_kind)%p%relocate_this_3D(:,:,:,:) = 0.0_lp
     ELSE
       CALL finish(TRIM(routine), 'Not supported variable type: '// &
           & int2string(conserved_quantities(i_cqt)%p%var_type)// '. Please check!')
@@ -979,8 +979,8 @@ CONTAINS
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Runtime parameters
-    REAL(wp),                   INTENT(in)    :: lost_area(:,:)    !< Area lost on involved tiles
-    REAL(wp),                   INTENT(in)    :: initial_area(:,:) !< Initial area of involved tiles
+    REAL(lp),                   INTENT(in)    :: lost_area(:,:)    !< Area lost on involved tiles
+    REAL(lp),                   INTENT(in)    :: initial_area(:,:) !< Initial area of involved tiles
     INTEGER,                    INTENT(in)    :: nr_of_tiles, &    !< Number of tiles
       &                                          nr_of_vars        !< Number of variables
     TYPE(t_jsb_lcc_var_p),      INTENT(inout) :: var_list(:)       !< List of LCC variable pointers
@@ -994,7 +994,7 @@ CONTAINS
       &        iblk, &            !< Block index
       &        i_var, &           !< Variable index
       &        i_tile             !< Tile index
-    REAL(wp) :: to_be_transferred !< Matter to be transferred
+    REAL(lp) :: to_be_transferred !< Matter to be transferred
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_to_be_transferred_matter' !< Name of the routine
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
@@ -1006,7 +1006,7 @@ CONTAINS
     DO i_var = 1,nr_of_vars
       DO i_tile = 1,nr_of_tiles
         DO ic = 1,nc
-          IF (lost_area(ic, i_tile) > 0.0_wp) THEN
+          IF (lost_area(ic, i_tile) > 0.0_lp) THEN
             ! Collect to be transferred matter
             IF (var_list(i_var)%p%var_type == REAL2D) THEN
               ! Depending on the transfer_all flag either all matter from the variable is transferred

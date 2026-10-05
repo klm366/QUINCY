@@ -14,7 +14,7 @@
 MODULE mo_jsb_grid_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_jsb_domain_iface,   ONLY: t_patch, get_host_patch_id,                    &
@@ -43,15 +43,15 @@ MODULE mo_jsb_grid_class
     CHARACTER(LEN=filename_max)   :: filename = ''          !< Filename containing grid information (currently not used)
     INTEGER                       :: ntotal = 0             !< Number of cells on this process
     INTEGER                       :: nland = 0              !< Number of land grid cells (currently not used)
-    REAL(wp), POINTER             :: lon(:,:) => NULL()     !< Longitudes of the grid cells in degrees
-    REAL(wp), POINTER             :: lat(:,:) => NULL()     !< Latitudes of the grid cells in degrees
-    REAL(wp), POINTER             :: coslat(:,:) => NULL()  !< Cosine of the latitudes
-    REAL(wp), POINTER             :: sinlat(:,:) => NULL()  !< Sine of latitudes
-    REAL(wp), POINTER             :: coslon(:,:) => NULL()  !TODO: remove, not used
-    REAL(wp), POINTER             :: sinlon(:,:) => NULL()  !TODO: remove, not used
-    REAL(wp), POINTER             :: area(:,:) => NULL()    !< Grid cell areas
+    REAL(lp), POINTER             :: lon(:,:) => NULL()     !< Longitudes of the grid cells in degrees
+    REAL(lp), POINTER             :: lat(:,:) => NULL()     !< Latitudes of the grid cells in degrees
+    REAL(lp), POINTER             :: coslat(:,:) => NULL()  !< Cosine of the latitudes
+    REAL(lp), POINTER             :: sinlat(:,:) => NULL()  !< Sine of latitudes
+    REAL(lp), POINTER             :: coslon(:,:) => NULL()  !TODO: remove, not used
+    REAL(lp), POINTER             :: sinlon(:,:) => NULL()  !TODO: remove, not used
+    REAL(lp), POINTER             :: area(:,:) => NULL()    !< Grid cell areas
     LOGICAL,  ALLOCATABLE         :: lsm(:,:)               !< Logical land sea mask: .true. = land
-    REAL(wp), ALLOCATABLE         :: lsf(:,:)               !< Fractional land sea mask: 1. = complete land
+    REAL(lp), ALLOCATABLE         :: lsf(:,:)               !< Fractional land sea mask: 1. = complete land
     INTEGER                       :: nblks = 1              !< Number of blocks within the domain
     INTEGER                       :: nproma = 0             !< Block length (vector length)
     INTEGER                       :: npromz = 0             !< Last cell of the block (needed if last block has less
@@ -86,10 +86,10 @@ MODULE mo_jsb_grid_class
     CHARACTER(len=50) :: longname     = ''   !< Grid longname: short description
     CHARACTER(len=10) :: units        = ''   !< Unit of the vertical axis
     INTEGER :: n_levels               = 0    !< Number of vertical levels
-    REAL(wp), ALLOCATABLE :: levels(:)       !< Grid vertical levels (center value of layer)
-    REAL(wp), ALLOCATABLE :: lbounds(:)      !< Lower bounds of the levels (numerically smaller bound)
-    REAL(wp), ALLOCATABLE :: ubounds(:)      !< Upper bounds of the levels (numerically higher bound)
-    REAL(wp), ALLOCATABLE :: dz(:)           !< Level thickness
+    REAL(lp), ALLOCATABLE :: levels(:)       !< Grid vertical levels (center value of layer)
+    REAL(lp), ALLOCATABLE :: lbounds(:)      !< Lower bounds of the levels (numerically smaller bound)
+    REAL(lp), ALLOCATABLE :: ubounds(:)      !< Upper bounds of the levels (numerically higher bound)
+    REAL(lp), ALLOCATABLE :: dz(:)           !< Level thickness
     INTEGER :: cdi_axis_type          = 0
     INTEGER :: ZaxisID                = 0   !< ICON: zaxis type (ZA_*), ECHAM: cdi zaxis id
     INTEGER :: echamZaxisIdx          = 0   !< ICON: N/A, ECHAM: levelindx for dimension
@@ -161,16 +161,16 @@ CONTAINS
     ALLOCATE(new%coslat(new%nproma,new%nblks), new%sinlat(new%nproma,new%nblks), &
       &      new%coslon(new%nproma,new%nblks), new%sinlon(new%nproma,new%nblks))  !TODO: remove coslon and sinlon
     ! Compute cosine and sin of the latitudes and convert from radiant to degree
-    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._wp)
-    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._wp)
-    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._wp) !TODO: remove
-    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._wp) !TODO: remove
+    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._lp)
+    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._lp)
+    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._lp) !TODO: remove
+    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._lp) !TODO: remove
     new%area    => get_area_domain         (patch)
 
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     ! Initialization of the land sea masks - will be changed later according to 'notsea'
     new%lsm(:,:) = .TRUE.
-    new%lsf(:,:) = 1.0_wp
+    new%lsf(:,:) = 1.0_lp
 
     new%configured = .TRUE.   ! keep track that the new grid has been configured
 
@@ -219,8 +219,8 @@ CONTAINS
   ! Not implemented, yet!
   ! FUNCTION new_grid_from_lonlat(lon, lat) RESULT(grid)
 
-  !   REAL(wp)                        :: lon
-  !   REAL(wp)                        :: lat
+  !   REAL(lp)                        :: lon
+  !   REAL(lp)                        :: lat
   !   TYPE(t_jsb_grid), POINTER       :: grid
 
   !   TYPE(t_jsb_grid), POINTER       :: new
@@ -412,10 +412,10 @@ CONTAINS
     INTEGER,                    INTENT(in) :: length          !< Number of vertical grid levels
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname        !< Long name of grid variable
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: units           !< Unit of vertical axis
-    REAL(wp),         OPTIONAL, INTENT(in) :: levels(length)  !< Grid vertical levels (center value of layer)
-    REAL(wp),         OPTIONAL, INTENT(in) :: lbounds(length) !< Lower bounds of the levels (numerically smaller bound)
-    REAL(wp),         OPTIONAL, INTENT(in) :: ubounds(length) !< Upper bounds of the levels (numerically higher bound)
-    REAL(wp),         OPTIONAL, INTENT(in) :: dz(length)      !< Level thickness
+    REAL(lp),         OPTIONAL, INTENT(in) :: levels(length)  !< Grid vertical levels (center value of layer)
+    REAL(lp),         OPTIONAL, INTENT(in) :: lbounds(length) !< Lower bounds of the levels (numerically smaller bound)
+    REAL(lp),         OPTIONAL, INTENT(in) :: ubounds(length) !< Upper bounds of the levels (numerically higher bound)
+    REAL(lp),         OPTIONAL, INTENT(in) :: dz(length)      !< Level thickness
 
     TYPE(t_jsb_vgrid), POINTER :: new                         !< New vertical grid object
 
@@ -445,17 +445,17 @@ CONTAINS
     END IF
 
     ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
-    new%levels (:) = 0._wp
-    new%lbounds(:) = 0._wp
-    new%ubounds(:) = 0._wp
-    new%dz     (:) = 0._wp
+    new%levels (:) = 0._lp
+    new%lbounds(:) = 0._lp
+    new%ubounds(:) = 0._lp
+    new%dz     (:) = 0._lp
     !$ACC ENTER DATA PCREATE(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
     IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
+      IF (ANY(dz(:) <= 0._lp)) CALL finish(routine, 'Dz must be larger than zero')
       new%dz     (:) = dz(:)
     END IF
 
@@ -463,18 +463,18 @@ CONTAINS
     IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
       IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
       IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._lp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
       ELSE
         new%dz(:) = ubounds(:) - lbounds(:)
       END IF
       IF (.NOT. PRESENT(levels)) THEN
-        new%levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+        new%levels(:) = 0.5_lp * (lbounds(:) + ubounds(:))
       END IF
     ELSE IF (PRESENT(lbounds)) THEN
       IF (PRESENT(dz)) THEN
         new%ubounds(:) = lbounds(:) + dz(:)
         IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (lbounds(:) + new%ubounds(:))
+          new%levels(:) = 0.5_lp * (lbounds(:) + new%ubounds(:))
         END IF
       ELSE IF (PRESENT(levels)) THEN
         new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
@@ -486,7 +486,7 @@ CONTAINS
       IF (PRESENT(dz)) THEN
         new%lbounds(:) = ubounds(:) - dz(:)
         IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (new%lbounds(:) + ubounds(:))
+          new%levels(:) = 0.5_lp * (new%lbounds(:) + ubounds(:))
         END IF
       ELSE IF (PRESENT(levels)) THEN
         new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
@@ -498,15 +498,15 @@ CONTAINS
       IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
         CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
       ELSE IF (PRESENT(dz)) THEN
-        new%lbounds(1) = 0._wp
+        new%lbounds(1) = 0._lp
         DO i=2,length
           new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
         END DO
         new%ubounds(:) = new%lbounds(:) + dz(:)
-        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
+        new%levels(:) = 0.5_lp * (new%lbounds(:) + new%ubounds(:))
       ELSE IF (PRESENT(levels)) THEN
         IF (length > 1) THEN ! Multi-level axis
-          new%lbounds(1) = 0._wp
+          new%lbounds(1) = 0._lp
           DO i=2,length
             new%lbounds(i) = levels(i-1) + (levels(i-1) - new%lbounds(i-1))
           END DO
@@ -515,23 +515,23 @@ CONTAINS
         ELSE ! Single level axis (level specified)
           new%lbounds(1) = levels(1)
           new%ubounds(1) = levels(1)
-          new%dz(1)      = 0._wp
+          new%dz(1)      = 0._lp
         END IF
       ELSE
         IF (length > 1) THEN ! Multi-level axis
           ! ToDo: this is inconsistent with the former definition, lbounds and ubounds should be at
           ! half indice steps instead of the index values
           DO i=1,length
-            new%levels(i) = REAL(i,wp)
-            new%lbounds(i) = REAL(i,wp)
-            new%ubounds(i) = REAL(i+1,wp)
-            new%dz(i) = 1._wp
+            new%levels(i) = REAL(i,lp)
+            new%lbounds(i) = REAL(i,lp)
+            new%ubounds(i) = REAL(i+1,lp)
+            new%dz(i) = 1._lp
           END DO
         ELSE ! Single level axis (level not specified)
-          new%levels(1) = 0._wp
-          new%lbounds(1) = 0._wp
-          new%ubounds(1) = 0._wp
-          new%dz(1)      = 0._wp
+          new%levels(1) = 0._lp
+          new%lbounds(1) = 0._lp
+          new%ubounds(1) = 0._lp
+          new%dz(1)      = 0._lp
         END IF
       END IF
     END IF

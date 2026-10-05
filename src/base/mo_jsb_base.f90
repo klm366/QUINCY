@@ -30,7 +30,7 @@ CONTAINS
   !> Orchestrates setting up the ICON-Land model structure
 
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
-    USE mo_kind,                ONLY: wp
+    USE mo_kind,                ONLY: lp
     USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
@@ -262,7 +262,7 @@ CONTAINS
       ! dimension is needed in setups with changing PFT fractions.
       IF (model%Do_fractions_change()) THEN
         pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
-          & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
+          & levels=(/ (REAL(i,kind=lp),i=1,model%config%npft) /), units='')
         CALL register_vgrid(pft_layer)
       END IF
       CALL model%Set_options(npft=model%config%npft)

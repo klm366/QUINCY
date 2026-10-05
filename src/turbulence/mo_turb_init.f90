@@ -19,7 +19,7 @@ MODULE mo_turb_init
   USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
@@ -35,7 +35,7 @@ MODULE mo_turb_init
   PUBLIC :: turb_init
 
   TYPE t_turb_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(lp), POINTER ::  &
       & rough_m(:,:)
   END TYPE t_turb_init_vars
 
@@ -88,7 +88,7 @@ CONTAINS
 
     dsl4jsb_Def_config(TURB_)
 
-    REAL(wp), POINTER :: ptr_2D(:,:)       !< temporary pointer
+    REAL(lp), POINTER :: ptr_2D(:,:)       !< temporary pointer
     TYPE(t_input_file) :: input_file
 
     INTEGER :: nproma, nblks
@@ -117,8 +117,8 @@ CONTAINS
     ptr_2D => input_file%Read_2d(         &
       & variable_name='roughness_length',         &
       & fill_array = turb_init_vars%rough_m)
-    ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
-    IF (dsl4jsb_Config(TURB_)%max_ini_rough_m > 0._wp) THEN
+    ptr_2D = MERGE(ptr_2D, 1._lp, ptr_2D > 0._lp)
+    IF (dsl4jsb_Config(TURB_)%max_ini_rough_m > 0._lp) THEN
       ptr_2D = MIN(ptr_2D, dsl4jsb_Config(TURB_)%max_ini_rough_m)
                                   ! TODO: rough_m should not be larger than lowest model layer thickness, or even half of that !?
     END IF
@@ -176,11 +176,11 @@ CONTAINS
 
       ! Surface roughness length
       dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
-      dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
+      dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._lp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
 
       ! Needed for tmx
       dsl4jsb_var2D_onDomain(TURB_,rough_h) = turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
-      dsl4jsb_var2D_onDomain(TURB_,rough_h_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / &
+      dsl4jsb_var2D_onDomain(TURB_,rough_h_star) = 1._lp / LOG(dsl4jsb_Config(TURB_)%blending_height / &
         & (turb_init_vars%rough_m / dsl4jsb_Config(TURB_)%roughness_momentum_to_heat)) ** 2
 
       !$ACC UPDATE ASYNC(1) &

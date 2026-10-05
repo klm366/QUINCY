@@ -25,7 +25,7 @@ MODULE mo_pplcc_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
   USE mo_util,            ONLY: int2string
 
@@ -155,7 +155,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER      :: model             !< Current instance of the model
-    REAL(wp), DIMENSION(options%nc) :: conversion_factor !< Conversion factor for the conserved quantities
+    REAL(lp), DIMENSION(options%nc) :: conversion_factor !< Conversion factor for the conserved quantities
 
     INTEGER  :: &
       & iblk,       & !< Current block index
@@ -166,7 +166,7 @@ CONTAINS
       & cqt_id,     & !< ID of conserved quantity type
       & i_cqt,      & !< Index of conserved quantity type
       & i_cq_var      !< Current conserved quantity variable
-    REAL(wp) :: dtime !< Time step length [s]
+    REAL(lp) :: dtime !< Time step length [s]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
@@ -274,7 +274,7 @@ CONTAINS
             ! ATTENTION: If further lcc processes were implemented for IQJ this assumption would no longer be valid.
             DO ic = 1,nc
               IF (.NOT. tile%l_fract_alcc_change(ics+ic-1, iblk)) THEN
-                conversion_factor(ic) = 1.0_wp
+                conversion_factor(ic) = 1.0_lp
               END IF
             END DO
 
@@ -360,7 +360,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER      :: model             !< Current instance of the model
-    REAL(wp), DIMENSION(options%nc) :: conversion_factor !< Conversion factor for current conserved quantity
+    REAL(lp), DIMENSION(options%nc) :: conversion_factor !< Conversion factor for current conserved quantity
 
     INTEGER  :: &
       & iblk,       & !< Current block index
@@ -371,7 +371,7 @@ CONTAINS
       & cqt_id,     & !< ID of conserved quantity type
       & i_cqt,      & !< Index of conserved quantity type
       & i_cq_var      !< Current conserved quantity variable
-    REAL(wp) :: dtime !< Time step length
+    REAL(lp) :: dtime !< Time step length
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
@@ -463,7 +463,7 @@ CONTAINS
             ! and the conserved quantities only need to be processed on cells where tile fractions had been modified.
             DO ic = 1,nc
               IF (.NOT. tile%l_fract_alcc_change(ics+ic-1, iblk)) THEN
-                conversion_factor(ic) = 1.0_wp
+                conversion_factor(ic) = 1.0_lp
               END IF
             END DO
 
@@ -486,22 +486,22 @@ CONTAINS
           SELECT CASE (tile%conserved_quantities(i_cqt)%p%var_type)
           CASE (REAL2D)
             ! Only do the conversion where the conversion factor is not zero
-            WHERE (conversion_factor(:) > 0.0_wp)
+            WHERE (conversion_factor(:) > 0.0_lp)
               tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
                 & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) &
                 &   / conversion_factor(:)
             ELSEWHERE
-              tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0_wp
+              tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0_lp
             END WHERE
           CASE (REAL3D)
             DO ic = ics,ice
-              IF (conversion_factor(ic-ics+1) > 0.0_wp) THEN
+              IF (conversion_factor(ic-ics+1) > 0.0_lp) THEN
                 ! Only do the conversion where the conversion factor is not zero!
                 tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
                   & = tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) &
                   &   / conversion_factor(ic-ics+1)
               ELSE
-                tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) = 0.0_wp
+                tile%conserved_quantities(i_cqt)%p%cq_vars(i_cq_var)%p%ptr3d(ic,:,iblk) = 0.0_lp
               END IF
             END DO
           CASE DEFAULT
@@ -545,7 +545,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER           :: model        !< Current instance of the model
     CLASS(t_jsb_tile_abstract),  POINTER :: ptr_tile, &  !< Pointer to search the land tile
       &                                     ptr_pft      !< Pointer to pft tile
-    REAL(wp), DIMENSION(options%nc)      :: pft_fract, & !< Cover fraction of the current pft tile
+    REAL(lp), DIMENSION(options%nc)      :: pft_fract, & !< Cover fraction of the current pft tile
       &                                     veg_fract, & !< Cover fraction of the veg tile
       &                                     bare_fract   !< Bare land fraction (conceptually different for JSBACH and QUINCY)
 
@@ -558,7 +558,7 @@ CONTAINS
       & ipft,   & !< Index of pft tile
       & npft      !< Number of pft tiles
 
-    REAL(wp), DIMENSION(options%nc)  :: correction_factor !< Additional scaling factor (JSBACH)
+    REAL(lp), DIMENSION(options%nc)  :: correction_factor !< Additional scaling factor (JSBACH)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':pplcc_fraction_diagnostics'
 
@@ -595,7 +595,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)      ! in
       correction_factor(:) = fract_fpc_max(:)
     ELSE
-      correction_factor(:) = 1.0_wp ! Note: In QUINCY all state variables are defined for 100% of the cover fraction
+      correction_factor(:) = 1.0_lp ! Note: In QUINCY all state variables are defined for 100% of the cover fraction
     END IF
 
     dsl4jsb_Get_var2D_onChunk(PPLCC_, tree_fract)           ! out
@@ -608,14 +608,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PPLCC_, C4pft_fract)          ! out
 
     ! Initialization
-    tree_fract     = 0._wp
-    shrub_fract    = 0._wp
-    grass_fract    = 0._wp
-    crop_fract     = 0._wp
-    pasture_fract  = 0._wp
-    baresoil_fract = 0._wp
-    C3pft_fract    = 0._wp
-    C4pft_fract    = 0._wp
+    tree_fract     = 0._lp
+    shrub_fract    = 0._lp
+    grass_fract    = 0._lp
+    crop_fract     = 0._lp
+    pasture_fract  = 0._lp
+    baresoil_fract = 0._lp
+    C3pft_fract    = 0._lp
+    C4pft_fract    = 0._lp
 
     ! To get the PFT fractions we first need a pointer to the land tile,
     ! and from the land tile to the veg tile, which has PFT children.
@@ -691,10 +691,10 @@ CONTAINS
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
       ! Note: In the current usecase the land tile in JSBACH does not have a bare soil child, thus
       !       bare_fract is set to zero.
-      bare_fract(:)=0._wp
+      bare_fract(:)=0._lp
 
       ! Baresoil fraction
-      baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-correction_factor(:))
+      baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._lp-correction_factor(:))
     END IF
 
   END SUBROUTINE pplcc_fraction_diagnostics
@@ -713,7 +713,7 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile              !< Current tile
-    REAL(wp),                   INTENT(in) :: area_scaling(:,:) !< Area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: area_scaling(:,:) !< Area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_pplcc_diagnostics'
 
@@ -728,14 +728,14 @@ CONTAINS
     dsl4jsb_Real2D_onDomain  :: C3pft_fract    !< C3 pft fraction relative to the grid-cell area
     dsl4jsb_Real2D_onDomain  :: C4pft_fract    !< C4 pft fraction relative to the grid-cell area
 
-    REAL(wp), POINTER :: tree_area_gsum(:)     !< Global total tree area sum
-    REAL(wp), POINTER :: shrub_area_gsum(:)    !< Global total shrub area sum
-    REAL(wp), POINTER :: grass_area_gsum(:)    !< Global total grass area sum
-    REAL(wp), POINTER :: crop_area_gsum(:)     !< Global total crop area sum
-    REAL(wp), POINTER :: pasture_area_gsum(:)  !< Global total pasture area sum
-    REAL(wp), POINTER :: baresoil_area_gsum(:) !< Global total bare soil area sum
-    REAL(wp), POINTER :: C3pft_area_gsum(:)    !< Global total C3 pft area sum
-    REAL(wp), POINTER :: C4pft_area_gsum(:)    !< Global total C4 pft area sum
+    REAL(lp), POINTER :: tree_area_gsum(:)     !< Global total tree area sum
+    REAL(lp), POINTER :: shrub_area_gsum(:)    !< Global total shrub area sum
+    REAL(lp), POINTER :: grass_area_gsum(:)    !< Global total grass area sum
+    REAL(lp), POINTER :: crop_area_gsum(:)     !< Global total crop area sum
+    REAL(lp), POINTER :: pasture_area_gsum(:)  !< Global total pasture area sum
+    REAL(lp), POINTER :: baresoil_area_gsum(:) !< Global total bare soil area sum
+    REAL(lp), POINTER :: C3pft_area_gsum(:)    !< Global total C3 pft area sum
+    REAL(lp), POINTER :: C4pft_area_gsum(:)    !< Global total C4 pft area sum
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(PPLCC_)
     dsl4jsb_Get_var2D_onDomain(PPLCC_,  tree_fract)                 ! in
@@ -762,35 +762,35 @@ CONTAINS
     ! Calculate 1d global land variables, if requested for output
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
     IF (PPLCC__mem%tree_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(tree_area_gsum, tree_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(tree_area_gsum, tree_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%tree_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%shrub_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(shrub_area_gsum, shrub_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(shrub_area_gsum, shrub_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%shrub_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%grass_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(grass_area_gsum, grass_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(grass_area_gsum, grass_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%grass_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%crop_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(crop_area_gsum, crop_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(crop_area_gsum, crop_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%crop_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%pasture_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(pasture_area_gsum, pasture_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(pasture_area_gsum, pasture_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%pasture_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%baresoil_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(baresoil_area_gsum, baresoil_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(baresoil_area_gsum, baresoil_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%baresoil_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%C3pft_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C3pft_area_gsum, C3pft_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C3pft_area_gsum, C3pft_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%C3pft_area_gsum%ptr(:))
     END IF
     IF (PPLCC__mem%C4pft_area_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C4pft_area_gsum, C4pft_fract, area_scaling, 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C4pft_area_gsum, C4pft_fract, area_scaling, 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PPLCC__mem%C4pft_area_gsum%ptr(:))
     END IF
 
