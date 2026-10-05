@@ -195,7 +195,10 @@ MODULE mo_q_dfire_sf_classes
   !< Configuration for the surface fire model
   TYPE :: t_sf_config
     INTEGER :: nc !< number of grid cells
+    INTEGER :: nfcl_ros !< number of fuel classes involved in fire spread
     INTEGER :: nfcl !< total number of fuel classes
+    INTEGER :: nddpools !< number of dead fuel pools
+
     REAL(wp) :: dtime !< time step length [s]
     REAL(wp) :: one_day !< length of one day in sec [s]
 
@@ -566,13 +569,15 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> t_sf_fuel_load: initialize and rebuild fuel load
   !>
-  FUNCTION create_sf_config(nc, nfcl, &
+  FUNCTION create_sf_config(nc, nfcl_ros, nfcl, nddpools, &
                             dtime, one_day, &
                             ros_model_id, &
                             const_calorific_heat_content, const_isurface_extinct_thd) &
                             RESULT(sf_config)
     INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: nfcl_ros
     INTEGER, INTENT(in) :: nfcl
+    INTEGER, INTENT(in) :: nddpools
     REAL(wp), INTENT(in) :: dtime
     REAL(wp), INTENT(in) :: one_day
     INTEGER, INTENT(in) :: ros_model_id
@@ -581,7 +586,9 @@ MODULE mo_q_dfire_sf_classes
     TYPE(t_sf_config) :: sf_config
 
     sf_config % nc = nc
+    sf_config % nfcl_ros = nfcl_ros
     sf_config % nfcl = nfcl
+    sf_config % nddpools = nddpools
     sf_config % dtime = dtime
     sf_config % one_day = one_day
     sf_config % ros_model_id = ros_model_id

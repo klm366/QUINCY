@@ -403,7 +403,8 @@ CONTAINS
                                 area_burned, area_burned_fract, &
                                 dead_frac_consumption, i_surface)
 
-    sf_config = t_sf_config(nc, df_sf_fc_full_nr, &
+    sf_config = t_sf_config(nc, df_sf_fc_spread_nr, df_sf_fc_full_nr, &
+                            sf_fuel_dead_fuel_nr, &
                             dtime, one_day, &
                             dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, &
                             df_sf_calorific_heat_content, df_sf_isurface_extinc_th)
@@ -482,7 +483,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(sf_config%nc)
 
     ! locals
-    INTEGER                 :: ndeadpools
+    !INTEGER                 :: ndeadpools
     LOGICAL                 :: has_dead_fuel(sf_config%nc)                !< True = dead fuel
     LOGICAL                 :: has_fire_conditions(sf_config%nc)          !< 1, 10, 100 and 1000 hours
 
@@ -495,7 +496,7 @@ CONTAINS
     !< ROS related
     REAL(wp)                :: u_f_wind(sf_config%nc)                     !< Wind speed at vegetation cover [m min-1]
 
-    ndeadpools = SIZE(sf_fuel_load%dead_fuel_fcl, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
+    !ndeadpools = SIZE(sf_fuel_load%dead_fuel_fcl, DIM=2) ! 2=dead fuel pools !fuel_cls % Count_dead_fuel_pools()
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
       mask_tile_enabled = mask
@@ -592,7 +593,7 @@ CONTAINS
     !< According to Thonicke et al. (2010), fire intensity is calculated based on the fractional fuel combustion,
     !< rate of spread and burned area fraction (Sec. 2.2.5).
     !< Here, it is calculated only for grid cells where fuel is dry enough.
-    spitfire % i_surface = sf_calc_fire_intensity(sf_config%nc, ndeadpools, df_sf_fc_spread_nr, &
+    spitfire % i_surface = sf_calc_fire_intensity(sf_config%nc, sf_config%nddpools, sf_config % nfcl_ros, &
                                                 sf_config % const_calorific_heat_content, &
                                                 sf_ros %  ros_forward, &
                                                 spitfire % area_burned_fract, &
