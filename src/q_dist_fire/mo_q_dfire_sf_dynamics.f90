@@ -478,13 +478,7 @@ CONTAINS
     LOGICAL :: mask_tile_enabled(sf_config%nc)
 
     ! locals
-    LOGICAL                 :: has_dead_fuel(sf_config%nc)                !< True = dead fuel
     LOGICAL                 :: has_fire_conditions(sf_config%nc)          !< 1, 10, 100 and 1000 hours
-
-    !< Thonicke related
-    REAL(wp), ALLOCATABLE   :: dead_fuel_litter(:,:)            !< Dead fuel litter [g DM m-2] (#nc,#fuel classes-1,10,100-)
-    REAL(wp), ALLOCATABLE   :: tot_dead_fuel_grass(:)           !< Total dead fuel grass [g DM m-2] (#nc)
-    REAL(wp), ALLOCATABLE   :: tot_live_fuel_tree(:)            !< Total live fuel tree [g DM m-2] (#nc)
 
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
