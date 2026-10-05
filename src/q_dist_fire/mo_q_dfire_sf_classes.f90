@@ -209,6 +209,7 @@ MODULE mo_q_dfire_sf_classes
 
     INTEGER :: ros_model_id !< Select ROS implementation
 
+    REAL(wp) :: const_max_density_human_pop  !< maximum human population density [individuals km-2]
     REAL(wp) :: const_calorific_heat_content !< Fuel calorific heat content [kJ kg-1]
     REAL(wp) :: const_isurface_extinct_thd !< Fire intensity threshold [kW m-1]
   END TYPE t_sf_config
@@ -438,10 +439,9 @@ MODULE mo_q_dfire_sf_classes
   !>
   !> Constructor for t_sf_ignitions: allocate and initialize
   !>
-  FUNCTION create_sf_ignitions(nc, max_human_pop_dens, pop_dens, a_nd, lightning_freq, &
+  FUNCTION create_sf_ignitions(nc, pop_dens, a_nd, lightning_freq, &
                         e_n_humans, e_n_lightning, e_n_ignitions) RESULT (sf_ignitions)
     INTEGER, INTENT(in)              :: nc
-    REAL(wp), INTENT(in)             :: max_human_pop_dens
     REAL(wp), POINTER, INTENT(in)    :: pop_dens(:), a_nd(:), lightning_freq(:)
     REAL(wp), POINTER, INTENT(inout) :: e_n_humans(:), e_n_lightning(:), e_n_ignitions(:)
     TYPE(t_sf_ignitions)             :: sf_ignitions
@@ -449,7 +449,6 @@ MODULE mo_q_dfire_sf_classes
     sf_ignitions%a_nd => a_nd
     sf_ignitions%pop_dens => pop_dens
     sf_ignitions%lightning_freq => lightning_freq
-    sf_ignitions%max_human_pop_dens = max_human_pop_dens
 
     sf_ignitions%e_n_humans => e_n_humans
     sf_ignitions%e_n_lightning => e_n_lightning
@@ -583,6 +582,7 @@ MODULE mo_q_dfire_sf_classes
   FUNCTION create_sf_config(nc, nfcl_ros, nfcl, nddpools, &
                             dtime, one_day, &
                             ros_model_id, &
+                            const_max_density_human_pop, &
                             const_calorific_heat_content, const_isurface_extinct_thd) &
                             RESULT(sf_config)
     INTEGER, INTENT(in) :: nc
@@ -592,6 +592,7 @@ MODULE mo_q_dfire_sf_classes
     REAL(wp), INTENT(in) :: dtime
     REAL(wp), INTENT(in) :: one_day
     INTEGER, INTENT(in) :: ros_model_id
+    REAL(wp), INTENT(in) :: const_max_density_human_pop
     REAL(wp), INTENT(in) :: const_calorific_heat_content
     REAL(wp), INTENT(in) :: const_isurface_extinct_thd
     TYPE(t_sf_config) :: sf_config
@@ -603,6 +604,7 @@ MODULE mo_q_dfire_sf_classes
     sf_config % dtime = dtime
     sf_config % one_day = one_day
     sf_config % ros_model_id = ros_model_id
+    sf_config % const_max_density_human_pop = const_max_density_human_pop
     sf_config % const_calorific_heat_content = const_calorific_heat_content
     sf_config % const_isurface_extinct_thd = const_isurface_extinct_thd
   END FUNCTION create_sf_config

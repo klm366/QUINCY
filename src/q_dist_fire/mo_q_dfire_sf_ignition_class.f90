@@ -20,7 +20,7 @@ MODULE mo_q_dfire_sf_ignition_class
   USE mo_exception,           ONLY: message
 
   USE mo_q_dfire_sf_constants, ONLY: df_sf_lign_cg, df_sf_lign_eff
-  USE mo_q_dfire_sf_classes,  ONLY: t_sf_ignitions
+  USE mo_q_dfire_sf_classes,  ONLY: t_sf_ignitions, t_sf_config
 
   IMPLICIT NONE
 
@@ -36,21 +36,20 @@ CONTAINS
   !>
   !> Call main ignition method and applies time scaling to ignition events.
   !>
-  SUBROUTINE wrap_calc_sf_ignitions(nc, dtime, one_day, sf_ignitions)
-    INTEGER, INTENT(in)    :: nc                     !< dimensions
-    REAL(wp), INTENT(in)   :: dtime, one_day         !< time step (sec),  one day in seconds (sec)
+  SUBROUTINE wrap_calc_sf_ignitions(sf_config, sf_ignitions)
+    TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_ignitions), INTENT(inout) :: sf_ignitions
 
-    CALL calc_sf_ignitions(nc, sf_ignitions%max_human_pop_dens, &
+    CALL calc_sf_ignitions(sf_config%nc, sf_config%const_max_density_human_pop, &
                           sf_ignitions%pop_dens, &
                           sf_ignitions%a_nd, &
                           sf_ignitions%lightning_freq,  &
                           sf_ignitions%e_n_humans, sf_ignitions%e_n_lightning, sf_ignitions%e_n_ignitions)
 
     !< Daily to ts
-    sf_ignitions%e_n_ignitions = sf_ignitions%e_n_ignitions * (dtime / one_day)
-    sf_ignitions%e_n_humans = sf_ignitions%e_n_humans * (dtime / one_day)
-    sf_ignitions%e_n_lightning = sf_ignitions%e_n_lightning * (dtime / one_day)
+    sf_ignitions%e_n_ignitions = sf_ignitions%e_n_ignitions * (sf_config%dtime / sf_config%one_day)
+    sf_ignitions%e_n_humans = sf_ignitions%e_n_humans * (sf_config%dtime / sf_config%one_day)
+    sf_ignitions%e_n_lightning = sf_ignitions%e_n_lightning * (sf_config%dtime / sf_config%one_day)
   END SUBROUTINE wrap_calc_sf_ignitions
 
 

@@ -383,7 +383,7 @@ CONTAINS
                              moist_damp_coeff, mineral_damp_coeff)
 
     sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
-    sf_ignitions = t_sf_ignitions(nc, df_sf_max_density_human_pop, ic_pop_dens, a_nd, a2l_lightning_events, &
+    sf_ignitions = t_sf_ignitions(nc, ic_pop_dens, a_nd, a2l_lightning_events, &
                                   e_n_humans, e_n_lightning, e_n_ignitions)
 
     !< Pack vegetation cover fraction
@@ -408,6 +408,7 @@ CONTAINS
                             sf_fuel_dead_fuel_nr, &
                             dtime, one_day, &
                             dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id, &
+                            df_sf_max_density_human_pop, &
                             df_sf_calorific_heat_content, df_sf_isurface_extinc_th)
 
     CALL calc_sf_dynamics(sf_config, & ! in...
@@ -552,7 +553,7 @@ CONTAINS
                   sf_ros)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    CALL wrap_calc_sf_ignitions(sf_config%nc, sf_config%dtime, sf_config%one_day, sf_ignitions)
+    CALL wrap_calc_sf_ignitions(sf_config, sf_ignitions)
 
     !< no ignitions events, no fire conditions
     has_fire_conditions = has_fire_conditions .AND. (sf_ignitions%e_n_ignitions > 0._wp)
