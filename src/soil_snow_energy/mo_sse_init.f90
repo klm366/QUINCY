@@ -259,8 +259,8 @@ CONTAINS
       CASE (MODEL_QUINCY)
         !>     - bulk density
         CALL read_bc_data(input_file, 'BLDFIE', tile%name, sse_init_vars%bulk_density)
-        sse_init_vars%bulk_density(:,:) = MERGE(sse_init_vars%bulk_density(:,:), 1000.0_wp, &
-          &                               sse_init_vars%bulk_density(:,:) > 0.0_wp)
+        sse_init_vars%bulk_density(:,:) = MERGE(sse_init_vars%bulk_density(:,:), 1000.0_lp, &
+          &                               sse_init_vars%bulk_density(:,:) > 0.0_lp)
       END SELECT
 
       ! calculate soil heat capacity [J m-3 K-1] incl. organic fraction
