@@ -228,8 +228,7 @@ CONTAINS
   !>
   SUBROUTINE update_exchange_coefficients(tile, options)
 
-    USE mo_aes_thermo,  ONLY: potential_temperature ! Todo: use from mo_util_jsbach
-    USE mo_phy_schemes, ONLY: qsat_water, qsat_ice, sfc_exchange_coefficients
+    USE mo_phy_schemes, ONLY: qsat_water, qsat_ice, sfc_exchange_coefficients, potential_temperature
       ! &                 exchange_coefficients, registered_exchange_coefficients_procedure
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
