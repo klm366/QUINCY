@@ -27,7 +27,7 @@ MODULE mo_q_dfire_sf_classes
 
   PRIVATE
   PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort, &
-            t_sf_atm, t_sf_fuel_load
+            t_sf_atm, t_sf_fuel_load, t_sf_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -190,6 +190,24 @@ MODULE mo_q_dfire_sf_classes
   INTERFACE t_sf_fuel_load
     MODULE PROCEDURE :: create_sf_fuel_load
   END INTERFACE
+
+
+  !< Configuration for the surface fire model
+  TYPE :: t_sf_config
+    INTEGER :: nc !< number of grid cells
+    INTEGER :: nfcl !< total number of fuel classes
+    REAL(wp) :: dtime !< time step length [s]
+    REAL(wp) :: one_day !< length of one day in sec [s]
+
+    INTEGER :: ros_model_id !< Select ROS implementation
+
+    REAL(wp) :: const_calorific_heat_content !< Fuel calorific heat content [kJ kg-1]
+    REAL(wp) :: const_isurface_extinct_thd !< Fire intensity threshold [kW m-1]
+  END TYPE t_sf_config
+
+  INTERFACE t_sf_config
+    MODULE PROCEDURE :: create_sf_config
+  END INTERFACE t_sf_config
 
   CONTAINS
 
@@ -542,5 +560,34 @@ MODULE mo_q_dfire_sf_classes
     sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_100hr_idx) = live_tree_fuel_100hr
     sf_fuel_load%live_tree_fuel_fcl(:,:,df_sf_fc_1000hr_idx) = live_tree_fuel_1000hr
   END FUNCTION create_sf_fuel_load
+
+
+  ! ======================================================================================================= !
+  !>
+  !> t_sf_fuel_load: initialize and rebuild fuel load
+  !>
+  FUNCTION create_sf_config(nc, nfcl, &
+                            dtime, one_day, &
+                            ros_model_id, &
+                            const_calorific_heat_content, const_isurface_extinct_thd) &
+                            RESULT(sf_config)
+    INTEGER, INTENT(in) :: nc
+    INTEGER, INTENT(in) :: nfcl
+    REAL(wp), INTENT(in) :: dtime
+    REAL(wp), INTENT(in) :: one_day
+    INTEGER, INTENT(in) :: ros_model_id
+    REAL(wp), INTENT(in) :: const_calorific_heat_content
+    REAL(wp), INTENT(in) :: const_isurface_extinct_thd
+    TYPE(t_sf_config) :: sf_config
+
+    sf_config % nc = nc
+    sf_config % nfcl = nfcl
+    sf_config % dtime = dtime
+    sf_config % one_day = one_day
+    sf_config % ros_model_id = ros_model_id
+    sf_config % const_calorific_heat_content = const_calorific_heat_content
+    sf_config % const_isurface_extinct_thd = const_isurface_extinct_thd
+  END FUNCTION create_sf_config
+
 #endif
 END MODULE mo_q_dfire_sf_classes
