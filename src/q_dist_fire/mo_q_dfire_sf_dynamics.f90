@@ -525,9 +525,6 @@ CONTAINS
                                     spitfire % fdi, & ! out
                                     sf_ros, &
                                     mask = has_fire_conditions) ! optional
-
-       !< used in thonicke's implementation
-       sf_fuel_moisture%omegas_thon = 0._wp
     ELSE
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
