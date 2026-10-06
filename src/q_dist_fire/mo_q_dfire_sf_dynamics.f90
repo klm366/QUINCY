@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann
+  USE mo_q_dfire_sf_fmoist_class, ONLY: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann, calc_sf_fuel_moisture
   USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -503,6 +503,8 @@ CONTAINS
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     sf_ros % u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
 
+    CALL calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, has_fire_conditions)
+
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
@@ -599,11 +601,11 @@ CONTAINS
     LOGICAL :: has_fire_conditions(sf_config%nc)
 
     fdi = 0._wp
-    sf_mf % omegas_thon = 0._wp
+    !sf_mf % omegas_thon = 0._wp
     has_fire_conditions = .TRUE.
     IF (PRESENT(mask)) has_fire_conditions = mask
 
-    CALL wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_mf)
+    !CALL wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_mf)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
     CALL calc_fire_danger_index(sf_config % nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
@@ -657,7 +659,7 @@ CONTAINS
 
     fdi = 0._wp
 
-    CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
+    !CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
 
     woi_dd = 0._wp
     woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg

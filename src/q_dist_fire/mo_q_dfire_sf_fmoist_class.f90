@@ -28,6 +28,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   !< Total number of fuel moisture(omega_o and omega_nl), omega_o index, omega_nl index
   USE mo_q_dfire_sf_constants, ONLY: df_sf_omegas_nr, df_sf_omega_o_idx, df_sf_omega_nl_idx
   USE mo_q_dfire_sf_classes,   ONLY: t_sf_lfmc, t_sf_mf, t_sf_config, t_sf_fuel_load
+  USE mo_q_dfire_sf_config_class, ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
 
   IMPLICIT NONE
@@ -35,13 +36,36 @@ MODULE mo_q_dfire_sf_fmoist_class
   PRIVATE
   PUBLIC :: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann, &
             calc_mflg_ober
-  PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann
+  PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann, &
+            calc_sf_fuel_moisture
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
 
+
   !>
-  !> Wrap Infraestructure <-> science
+  !> Main routine to calculate fuel moisture
+  !>
+  SUBROUTINE calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
+    TYPE(t_sf_config), INTENT(in)           :: sf_config
+    REAL(wp), INTENT(in)                    :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
+    TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
+    TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture
+    LOGICAL, INTENT(in)                     :: mask(:)
+
+    IF (sf_config % ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      CALL wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture)
+    ELSE IF (sf_config % ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
+    ELSE
+      CALL finish(modname, 'unsupported ROS model: nor Thonicke nor Oberhagemann')
+    END IF
+  END SUBROUTINE calc_sf_fuel_moisture
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Infraestructure <-> science
   !>
   SUBROUTINE wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture)
     USE mo_q_dfire_sf_constants, ONLY:  ix_1hr => df_sf_fc_1hr_idx, &
