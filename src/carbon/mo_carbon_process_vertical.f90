@@ -15,13 +15,12 @@ MODULE mo_carbon_process_vertical
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  ! USE mo_exception,       ONLY: message, message_text, finish
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: calc_vertical_soil_c, depth_to_layers, relocate_carbon_vertical_fire, relocate_carbon_vertical_damage, &
-            determine_root_dist  ! , yasso_minimal
+    &       determine_root_dist
 
   CHARACTER(*), PARAMETER :: modname = 'mo_carbon_process_vertical'
 
@@ -109,17 +108,17 @@ CONTAINS
 
     ! Input meteorology for Yasso
     REAL(wp),  INTENT(in)    :: temp                     !< multi-day mean temperature [K]
-    REAL(wp),  INTENT(in)    :: precip                   !< multi-mean precipitation [mm s-1]
-    REAL(wp),  INTENT(in)    :: t_soil_sl(:)             !< soil temperatures
-    REAL(wp),  INTENT(in)    :: wtr_soil_rel_sl(:)       !< soil water, relative
-    REAL(wp),  INTENT(in)    :: n_thaw_cycle             !< number of freeze-thaw cycles
+    REAL(wp),  INTENT(in)    :: precip                   !< multi-day mean precipitation [mm s-1]
+    REAL(wp),  INTENT(in)    :: t_soil_sl(:)             !< soil layer temperatures
+    REAL(wp),  INTENT(in)    :: wtr_soil_rel_sl(:)       !< relative soil moisture
+    REAL(wp),  INTENT(in)    :: n_thaw_cycle             !< number of freeze-thaw cycles in previous year
 
     ! Input parameters from topmodel (or other wetland scheme)
     REAL(wp),  INTENT(in)    :: frac_inun                !< Fraction of tile inundated []
 
     ! Input soil and / or active layer depth
-    REAL(wp),  INTENT(in)    :: soil_depth               !< soil depth [m]
-    REAL(wp),  INTENT(in)    :: soil_depth_sl(:)         !< soil depth [m], per layer
+    REAL(wp),  INTENT(in)    :: soil_depth               !< Total soil depth until bedrock [m]
+    REAL(wp),  INTENT(in)    :: soil_depth_sl(:)         !< Soil depth within each layer [m]
     REAL(wp),  INTENT(in)    :: max_depth                !< maximum available depth [m], either soil or thaw
     REAL(wp),  INTENT(in)    :: max_depth_sl(:)          !< maximum available depth [m], either soil or thaw, per layer
     REAL(wp),  INTENT(in)    :: thaw_depth               !< thaw depth [m]
@@ -236,7 +235,7 @@ CONTAINS
     CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
     ! C pools output
     CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
-                            c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
+      &                     c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic      + Y_out_fluxes(F_RESP) / delta_time_C
     c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -453,10 +452,11 @@ CONTAINS
   ! ---------------------------------------------------------------------------------------------------------
 
   SUBROUTINE yasso_minimal(Y_in_pools, Y_in_mod, Y_out_pools, Y_out_fluxes,                                 &
-                           A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+    &                      A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+
     USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
-                     F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,                         &
-                     M_LITTER, M_HUMUS, sec_per_year, sec_per_day
+      &                            F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,           &
+      &                            M_LITTER, M_HUMUS, sec_per_year, sec_per_day
 
     REAL(wp), DIMENSION(5),  INTENT(IN)  :: Y_in_pools       !< Yasso pools IN [mol(c)/m2]
     REAL(wp), DIMENSION(2),  INTENT(IN)  :: Y_in_mod         !< Yasso rate modifiers IN
@@ -481,7 +481,7 @@ CONTAINS
     REAL(wp)     :: d_nonsoluble
     REAL(wp)     :: d_humus
 
-    ! Carbon fluxes [mol(C) m-2 yr-1] - Unit indicated by names CAflx (Carbon annual flux)
+    ! Carbon fluxes [mol(C) m-2 yr-1] - Unit indicated by names Cflx_yr (Carbon annual flux)
     REAL(wp)     :: Cflx_yr_from_acid              !< Loss flux of acid soluble pool        [mol(c)/m2/yr]
     REAL(wp)     :: Cflx_yr_from_water             !< Loss flux of water soluble pool       [mol(c)/m2/yr]
     REAL(wp)     :: Cflx_yr_from_ethanol           !< Loss flux of ethanol soluble pool     [mol(c)/m2/yr]
@@ -497,7 +497,7 @@ CONTAINS
     REAL(wp)     :: Cflx_yr_resp_from_litter
     REAL(wp)     :: Cflx_yr_respiration
 
-    ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
+    ! Fractions to split the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
     ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux
     ! does not exists. However, after a recalibration of the model this fraction may change.
@@ -584,7 +584,7 @@ CONTAINS
     d_nonsoluble = ref_decomp_rate_nonsoluble * Y_in_mod(M_LITTER)
     d_humus      = ref_decomp_rate_humus      * Y_in_mod(M_HUMUS)
 
-    ! 2. Calculate fluxes
+    ! Calculate fluxes
     !   annual loss fluxes (negative values):
     Cflx_yr_from_acid         = c_acid       * d_acid
     Cflx_yr_from_water        = c_water      * d_water
@@ -672,19 +672,21 @@ CONTAINS
   END SUBROUTINE yasso_minimal
 
   ! ---------------------------------------------------------------------------------------------------------
-  !!
-  ! @brief     determine distribution of plant roots in model soil layers (based on Jackson 1996)
+  !>
+  !> We here determine the distribution of plant roots in the soil (based on Jackson 1996), assuming an
+  !> exponential decay of root material with depth.
+  !>
+  !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components. It has no direct affect on the plant hydrology. 
   !
-  !!
   FUNCTION determine_root_dist(max_thick, layer_depth, root_dist_beta, t_soil_sl, permafrost_layer) RESULT(root_dist)
     USE mo_carbon_constants,       ONLY: permafrost_threshold
     USE mo_jsb_physical_constants, ONLY: tmelt
 
-    REAL(wp), INTENT(in)  :: max_thick(:)         !< soil layer thickness
-    REAL(wp), INTENT(in)  :: layer_depth(:)       !< soil layer depth
-    REAL(wp), INTENT(in)  :: root_dist_beta       !< exponential factor for root distribution
-    REAL(wp), INTENT(in)  :: t_soil_sl(:)         !< soil temperature
-    REAL(wp), INTENT(in)  :: permafrost_layer(:)  !< permafrost status of soil layers
+    REAL(wp), INTENT(in)  :: max_thick(:)         !< Active layer thickness [m]
+    REAL(wp), INTENT(in)  :: layer_depth(:)       !< Model layer depth [m]
+    REAL(wp), INTENT(in)  :: root_dist_beta       !< PFT dependent factor for root decay with depth
+    REAL(wp), INTENT(in)  :: t_soil_sl(:)         !< Soil temperature [K]
+    REAL(wp), INTENT(in)  :: permafrost_layer(:)  !< permafrost status of soil layers [??]
 
 
     ! locals
@@ -731,11 +733,13 @@ CONTAINS
   END FUNCTION determine_root_dist
 
   ! ---------------------------------------------------------------------------------------------------------
-
+  !>
+  !> The routine prepares the yasso call: The "yasso_in" buffer is filled with data from the current vertical
+  !> yasso pools.
+  !>
   PURE SUBROUTINE input_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,      &
-                                    cpool_nonsoluble, cpool_humus, YASSO_in)
-    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, &
-  & Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
+    &                               cpool_nonsoluble, cpool_humus, YASSO_in)
+    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
     REAL(wp), INTENT(in)  :: cpool_acid
     REAL(wp), INTENT(in)  :: cpool_water
@@ -752,12 +756,14 @@ CONTAINS
   END SUBROUTINE input_YASSO_pools
 
   ! ---------------------------------------------------------------------------------------------------------
-!   SUBROUTINE output_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,         &
+  !>
+  !> This subroutine moves the yasso output to the respective vertical yasso pools. Depending on argument "plus"
+  !> the yasso output values are added to (true) or are replacing (false) current vertical pool values.
+  !>
   PURE SUBROUTINE output_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,         &
-                                     cpool_nonsoluble, cpool_humus, plus, YASSO_out)
+    &                                cpool_nonsoluble, cpool_humus, plus, YASSO_out)
 
-    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER,                             &
-                    Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
+    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
     REAL(wp), INTENT(inout)  :: cpool_acid
     REAL(wp), INTENT(inout)  :: cpool_water
@@ -918,19 +924,19 @@ CONTAINS
     REAL(wp) :: dz_here, dz_above, dz_below
     REAL(wp) :: C_here, C_above, C_below
 
-    ! diagonal, left and right subdiagonals for Crank-Nicholson matrix
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: left
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: diag
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: right
+    ! Diagonal, left and right subdiagonals for Crank-Nicholson matrix
+    REAL(wp) :: left(size(act_depth_sl))
+    REAL(wp) :: diag(size(act_depth_sl))
+    REAL(wp) :: right(size(act_depth_sl))
 
-    ! requires carbon CONCENTRATIONS for diffusion algorithm
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: C_conc
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: src_C_conc
+    ! Requires carbon concentrations for diffusion algorithm
+    REAL(wp) :: C_conc(size(act_depth_sl))
+    REAL(wp) :: src_C_conc(size(act_depth_sl))
 
     ! Right hand side vector for Crank-Nicholson scheme equations
     ! This is overwritten with solution by dgtsv tridiagonal solver
-    REAL(wp), DIMENSION(size(act_depth_sl)) :: rhs
-    INTEGER                                 :: info             ! dgtsv status variable
+    REAL(wp) :: rhs(size(act_depth_sl))
+    INTEGER  :: info             ! dgtsv status variable
 
     REAL(wp) :: C_before, C_after
 
@@ -1066,8 +1072,8 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   SUBROUTINE set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, &
-  &                        layer_depth, t_soil_sl, wtr_rel_sl,                &
-  &                        n_thaw_cycle, permafrost_layer)
+    &                        layer_depth, t_soil_sl, wtr_rel_sl,                &
+    &                        n_thaw_cycle, permafrost_layer)
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
@@ -1106,13 +1112,13 @@ CONTAINS
     IF (thaw_depth < soil_depth) THEN    ! active layer depth < soil depth --> permafrost
       DO is = 1,nsoil
         isp1 = MIN(is+1,nsoil)
-        IF ((permafrost_layer(is)   < permafrost_threshold) .AND. &
-  & (permafrost_layer(isp1) < permafrost_threshold) .AND. &
-  & (t_soil_sl(is)          > tmelt)) THEN
+        IF (  (permafrost_layer(is)   < permafrost_threshold) .AND. &
+            & (permafrost_layer(isp1) < permafrost_threshold) .AND. &
+            & (t_soil_sl(is)          > tmelt)) THEN
           diff_coeff(is) = cryo_max *                               &
-                           MIN(1._wp, wtr_rel_sl(is)) *             &
-                           MIN(1._wp, (n_thaw_cycle / 40._wp))*     &
-                           (1._wp - layer_depth(is)/thaw_depth)
+            &             MIN(1._wp, wtr_rel_sl(is)) *             &
+            &              MIN(1._wp, (n_thaw_cycle / 40._wp))*     &
+            &              (1._wp - layer_depth(is)/thaw_depth)
         ELSE
           diff_coeff(is) = 0._wp
         END IF
@@ -1135,10 +1141,10 @@ CONTAINS
   ! check column C amounts, ensure that C makes sense.
   ! Idea: peat column defines maximum C possible, if more C in 1 layer, it needs to be moved down.
     SUBROUTINE move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
-  &                     c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
-  &                     c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
-  &                     c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
-  &                     c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
+      &                     c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
+      &                     c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
+      &                     c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
+      &                     c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
 
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
   &                            permafrost_threshold
@@ -1186,11 +1192,14 @@ CONTAINS
 
     ! Check ag soil
     cpool_tot = c_acid_ag1 + c_acid_ag2       +      &
-  &    c_water_ag1 + c_water_ag2     +      &
-  &    c_ethanol_ag1 + c_ethanol_ag2 +      &
-  &    c_nonsoluble_ag1 + c_nonsoluble_ag2
+      &         c_water_ag1 + c_water_ag2     +      &
+      &         c_ethanol_ag1 + c_ethanol_ag2 +      &
+      &         c_nonsoluble_ag1 + c_nonsoluble_ag2
 
     IF (cpool_tot > max_C_ag) THEN
+      ! Rescale above ground carbon pools such, that maximum amount is no longer exceeded
+      ! and move excess carbon into the uppermost below ground layer.
+
       rfrac = max_C_ag / cpool_tot
 
       tmp                    = c_acid_ag1
@@ -1224,15 +1233,18 @@ CONTAINS
     DO is = 1,nsoil-1
       isp1 = MIN(is+1, nsoil)
       IF ((depth_upper < max_depth) .AND. (permafrost_layer(is) < permafrost_threshold) &
-  & .AND. (permafrost_layer(isp1) < permafrost_threshold)) THEN
+          & .AND. (permafrost_layer(isp1) < permafrost_threshold)) THEN
         depth_upper = depth_upper + layer_thick(is)
         cpool_tot = c_acid_bg1_sl(is)       + c_acid_bg2_sl(is)       +      &
-  &    c_water_bg1_sl(is)      + c_water_bg2_sl(is)      +      &
-  &    c_ethanol_bg1_sl(is)    + c_ethanol_bg2_sl(is)    +      &
-  &    c_nonsoluble_bg1_sl(is) + c_nonsoluble_bg2_sl(is) +      &
-  &    c_humus_1_sl(is)        + c_humus_2_sl(is)
+          &         c_water_bg1_sl(is)      + c_water_bg2_sl(is)      +      &
+          &         c_ethanol_bg1_sl(is)    + c_ethanol_bg2_sl(is)    +      &
+          &         c_nonsoluble_bg1_sl(is) + c_nonsoluble_bg2_sl(is) +      &
+          &         c_humus_1_sl(is)        + c_humus_2_sl(is)
 
         IF (cpool_tot > max_C_bg(is)) THEN
+          ! Rescale this layers carbon pools such, that maximum amount is no longer exceeded
+          ! and move excess carbon into the layer below.
+
           rfrac = max_C_bg(is) / cpool_tot
 
           tmp                       = c_acid_bg1_sl(is)
@@ -1288,22 +1300,22 @@ CONTAINS
     upper_bound = 0._wp
 
     ! Check for C below bedrock depth
-    DO is = 1,nsoil
+    DO is = 1, nsoil
       IF (soil_depth > upper_bound) THEN
         max_layer_above = is
         soil_above = soil_above + layer_thick(is)
       ELSE
-        IF(c_pool_bg(is) > 0._wp) THEN
+        IF (c_pool_bg(is) > 0._wp) THEN
           C_below_bedrock = C_below_bedrock + c_pool_bg(is)
         END IF
       END IF
       upper_bound = upper_bound + layer_thick(is)
     END DO
 
-    ! move C to last layer above bedrock
+    ! Move C to lowest layer above bedrock, the lowest layer with a soil fraction 
     IF ((C_below_bedrock > 0._wp) .AND. (soil_above > 0._wp) .AND. (max_layer_above > 0)) THEN
       c_pool_bg(max_layer_above) = c_pool_bg(max_layer_above) + C_below_bedrock
-      DO is = MIN(max_layer_above+1,nsoil),nsoil
+      DO is = MIN(max_layer_above+1,nsoil), nsoil
         c_pool_bg(is) = 0._wp
       END DO
     END IF
@@ -1313,53 +1325,53 @@ CONTAINS
 
   ! --- relocate_carbon_fire() ---------------------------------------------------------------------------------------------------
   !
-  ! This routine models the consequences of fire for the carbon pools. More precisely:
-  ! It is assumed that for the burned area the carbon from the above ground litter pools (c_litter_green_ag,
-  ! c_litter_wood_ag) is completely released to the atmosphere and the carbon from the living plant pools
-  ! (c_green_st, c_reserve_st, c_woods_st) is partly released to the atmosphere and partly relocated
-  ! into the litter pools.
+  !> This routine handles the impact of fire on the carbon pools.
+  !>
+  !> We assume that the above ground litter carbon (yasso ag1 and ag2 pools), is completely released
+  !> to the atmosphere while the carbon of the living plants (c_green, c_reserve, c_woods) is partly
+  !> released to the atmosphere and partly relocated into the litter pools.
   !
   SUBROUTINE relocate_carbon_vertical_fire( &
-  & burned_fract,                      & ! in from disturbed_frac
-  & fire_fract_wood_2_atmos,           & ! in
-  & LeafLit_coef,                      & ! in
-  & WoodLit_coef,                      & ! in
-  & fuel_moisture,                     & ! in
-  & c_green,                           & ! inout
-  & c_woods,                           & ! inout
-  & c_reserve,                         & ! inout
-  & cflux_dist_green_2_soil,           & ! inout
-  & cflux_dist_woods_2_soil,           & ! inout
-  & c_acid_ag1,                        & ! inout
-  & c_water_ag1,                       & ! inout
-  & c_ethanol_ag1,                     & ! inout
-  & c_nonsoluble_ag1,                  & ! inout
-  & c_acid_ag2,                        & ! inout
-  & c_water_ag2,                       & ! inout
-  & c_ethanol_ag2,                     & ! inout
-  & c_nonsoluble_ag2,                  & ! inout
-  & c_acid_bg1,                        & ! inout
-  & c_water_bg1,                       & ! inout
-  & c_ethanol_bg1,                     & ! inout
-  & c_nonsoluble_bg1,                  & ! inout
-  & c_acid_bg2,                        & ! inout
-  & c_water_bg2,                       & ! inout
-  & c_ethanol_bg2,                     & ! inout
-  & c_nonsoluble_bg2,                  & ! inout
-  & c_humus_1,                         & ! inout
-  & c_humus_2,                         & ! inout
-  & co2flux_fire_all_2_atm,            & ! out
-  & c_acid_bg1_sl,                        & ! inout
-  & c_water_bg1_sl,                       & ! inout
-  & c_ethanol_bg1_sl,                     & ! inout
-  & c_nonsoluble_bg1_sl,                  & ! inout
-  & c_acid_bg2_sl,                        & ! inout
-  & c_water_bg2_sl,                       & ! inout
-  & c_ethanol_bg2_sl,                     & ! inout
-  & c_nonsoluble_bg2_sl,                  & ! inout
-  & c_humus_1_sl,                         & ! inout
-  & c_humus_2_sl                          & ! inout
-  & )
+    & burned_fract,                      & ! in
+    & fire_fract_wood_2_atmos,           & ! in
+    & LeafLit_coef,                      & ! in
+    & WoodLit_coef,                      & ! in
+    & fuel_moisture,                     & ! in
+    & c_green,                           & ! inout
+    & c_woods,                           & ! inout
+    & c_reserve,                         & ! inout
+    & cflux_dist_green_2_soil,           & ! inout
+    & cflux_dist_woods_2_soil,           & ! inout
+    & c_acid_ag1,                        & ! inout
+    & c_water_ag1,                       & ! inout
+    & c_ethanol_ag1,                     & ! inout
+    & c_nonsoluble_ag1,                  & ! inout
+    & c_acid_ag2,                        & ! inout
+    & c_water_ag2,                       & ! inout
+    & c_ethanol_ag2,                     & ! inout
+    & c_nonsoluble_ag2,                  & ! inout
+    & c_acid_bg1,                        & ! inout
+    & c_water_bg1,                       & ! inout
+    & c_ethanol_bg1,                     & ! inout
+    & c_nonsoluble_bg1,                  & ! inout
+    & c_acid_bg2,                        & ! inout
+    & c_water_bg2,                       & ! inout
+    & c_ethanol_bg2,                     & ! inout
+    & c_nonsoluble_bg2,                  & ! inout
+    & c_humus_1,                         & ! inout
+    & c_humus_2,                         & ! inout
+    & co2flux_fire_all_2_atm,            & ! out
+    & c_acid_bg1_sl,                     & ! inout
+    & c_water_bg1_sl,                    & ! inout
+    & c_ethanol_bg1_sl,                  & ! inout
+    & c_nonsoluble_bg1_sl,               & ! inout
+    & c_acid_bg2_sl,                     & ! inout
+    & c_water_bg2_sl,                    & ! inout
+    & c_ethanol_bg2_sl,                  & ! inout
+    & c_nonsoluble_bg2_sl,               & ! inout
+    & c_humus_1_sl,                      & ! inout
+    & c_humus_2_sl                       & ! inout
+    & )
 
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day, molarMassCO2_kg
     USE mo_carbon_shared,    ONLY: distribute_yasso_litter
@@ -1368,20 +1380,20 @@ CONTAINS
     REAL(wp), INTENT(in)    :: burned_fract(:)              !< Fraction of the vegetated area of each tile burned till the last
                                                             !< call of this routine
     REAL(wp), INTENT(in)    :: fire_fract_wood_2_atmos      !< Fraction of above ground wood immediately emitted to atmosphere
-                                                            !< by fire
+                                                            !< in case of fire
     REAL(wp), INTENT(in)    :: fuel_moisture(:)             !
     REAL(wp), INTENT(in)    :: LeafLit_coef(:)              !< Factor to spread non woody litterfall into yasso pools [ ]
     REAL(wp), INTENT(in)    :: WoodLit_coef(:)              !< Factor to spread woody litterfall into yasso pools [ ]
-    REAL(wp), INTENT(inout) :: c_green(:)                   !< Value of green carbon pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_woods(:)                   !< Value of wood carbon pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_reserve(:)                 !< Value of reserve carbon pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    !< CO2 immediately released by fire per tile [kg(CO2)m-2(canopy)s-1]
-    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   !< Amount of carbon relocated by wind and fire damage
-                                                            !< .. to the green litter pools [mol(C)/m^2(canopy)s-1]
-    REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   !< Amount of carbon relocated by wind damage and fire
-                                                            !< .. to the wood litter pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: c_green(:)                   !< Amount of green carbon [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_woods(:)                   !< Amount of woody carbon [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_reserve(:)                 !< Amount of reserve carbon [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    !< CO2 released by fire [kg(CO2)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   !< Carbon relocated by disturbances from non-woody biomass
+                                                            !< to the green litter pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   !< Carbon relocated by disturbances from woody biomass to
+                                                            !< the wood litter pools [mol(C)/m^2(canopy)s-1]
     !   YASSO
-    ! SIZE CLASS 1 ; GREEN
+    ! SIZE CLASS 1: Green, originating from non-woody biomass
     !   above ground C pools
     REAL(wp), INTENT(inout) :: c_acid_ag1(:)          !< Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_water_ag1(:)         !< Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
@@ -1393,7 +1405,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_ethanol_bg1(:)       !< Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_nonsoluble_bg1(:)    !< Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_humus_1(:)           !< Humus litter pool for Yasso [mol(C)/m^2(canopy)]
-    ! SIZE CLASS 2 ; WOOD
+    ! SIZE CLASS 2: Woody, originating from woody biomass
     !   above ground C pools
     REAL(wp), INTENT(inout) :: c_acid_ag2(:)          !< Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_water_ag2(:)         !< Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
@@ -1424,32 +1436,35 @@ CONTAINS
 
     nc = SIZE(burned_fract)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
     !$ACC   PRIVATE(non_woody_litter, fraction)
     DO ic = 1, nc
       non_woody_litter = c_green(ic) + c_reserve(ic)
 
-      ! Amount of carbon released from the green and reserve pools entering the green litter pools
+      ! Carbon released due to disturbances from the green and reserve pools, that enters the green litter and
+      ! soil pools. We here add the contribution of fires.
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
-  & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
-      ! Amount of carbon released from the wood pool entering the woody litter pools
+        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
+      ! Carbon released due to disturbances from the woody vegetation pool, that enters the woody litter and soil
+      ! pools. We here add the contribution of fires.
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
-  & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
+        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
 
-      ! Determine the amount of carbon released from the wood pool, the living tissue pools, and the
-      ! litter pools going to the atmosphere
+      ! Determine the carbon flux to the atmosphere due to fire: We assume that the above ground non-woody
+      ! biomass and above ground litter are burnt completely, while parts of the above ground woody biomass
+      ! and below ground matter resists the flames.
       co2flux_fire_all_2_atm(ic) = ( &
           ! above ground fraction of living biomass
-  & non_woody_litter * fract_green_aboveGround                          &
+        & non_woody_litter * fract_green_aboveGround                          &
           ! add the above ground YASSO pools
-  & + c_water_ag1(ic) + c_acid_ag1(ic) + c_ethanol_ag1(ic)              &
-  & + c_nonsoluble_ag1(ic)                                              &
-  & + c_water_ag2(ic) + c_acid_ag2(ic) + c_ethanol_ag2(ic)              &
-  & + c_nonsoluble_ag2(ic)                                              &
+        & + c_water_ag1(ic) + c_acid_ag1(ic) + c_ethanol_ag1(ic)              &
+        & + c_nonsoluble_ag1(ic)                                              &
+        & + c_water_ag2(ic) + c_acid_ag2(ic) + c_ethanol_ag2(ic)              &
+        & + c_nonsoluble_ag2(ic)                                              &
           ! add the fire affected fraction of the above ground wood pools
-  & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
+        & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-  & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
+        & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
 
       ! Reduce the above ground yasso pools accordingly
       fraction = 1._wp - burned_fract(ic)
@@ -1463,22 +1478,22 @@ CONTAINS
       c_ethanol_ag2   (ic) = fraction * c_ethanol_ag2    (ic)
       c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2 (ic)
 
-      ! Add below ground fraction of the burned vegetation to the below ground green litter pools
+      ! Add the below ground fraction of the burned vegetation to the below ground green litter pools
       fraction = (1._wp-fract_green_aboveGround) * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg1_sl(ic,1), c_water_bg1_sl(ic,1), c_ethanol_bg1_sl(ic,1), &
-  &                          c_nonsoluble_bg1_sl(ic,1), c_humus_1_sl(ic,1), &
-  &                          non_woody_litter, fraction, LeafLit_coef)
+        &                          c_nonsoluble_bg1_sl(ic,1), c_humus_1_sl(ic,1), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
 
-      ! Distribute the remaings of burned wood to the yasso litter pools
+      ! Distribute the remanings of burned wood to the yasso litter pools
       !  Above ground
       fraction = (1._wp-fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
-  &                          c_woods(ic), fraction, WoodLit_coef)
+        &                          c_woods(ic), fraction, WoodLit_coef)
       !  Below ground
       fraction = (1._wp - fract_wood_aboveGround) * burned_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg2_sl(ic,1), c_water_bg2_sl(ic,1), c_ethanol_bg2_sl(ic,1), &
-  &                          c_nonsoluble_bg2_sl(ic,1), c_humus_2_sl(ic,1), &
-  &                          c_woods(ic), fraction, WoodLit_coef)
+        &                          c_nonsoluble_bg2_sl(ic,1), c_humus_2_sl(ic,1), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
 
       ! Reduce the living plant carbon pools accordingly
       fraction = 1._wp - burned_fract(ic)
@@ -1503,48 +1518,48 @@ CONTAINS
 
   ! --- relocate_carbon_damage() ---------------------------------------------------------------------------------------------------
   !
-  ! This routine models the consequences of damages to the vegetation (e.g. wind break) for the carbon pools. More precisely:
-  ! It is assumed that for the damaged area the carbon from the living plant pools (c_green_st, c_reserve_st and
-  ! c_woods_st) is partly relocated into the litter pools.
+  !< In this routine we model the impact of vegetation damage (i.e. wind through) on the carbon pools:
+  !< Depending on the disturbed area fraction carbon from the living vegetation pools (c_green,
+  !< c_reserve and c_woods) is relocated  to the litter and soil pools.
   !
   SUBROUTINE relocate_carbon_vertical_damage(  &
-  & damaged_fract,                  & ! in
-  & LeafLit_coef,                   & ! in
-  & WoodLit_coef,                   & ! in
-  & c_green,                        & ! inout
-  & c_woods,                        & ! inout
-  & c_reserve,                      & ! inout
-  & cflux_dist_green_2_soil,        & ! inout
-  & cflux_dist_woods_2_soil,        & ! inout
-  & c_acid_ag1,                     & ! inout
-  & c_water_ag1,                    & ! inout
-  & c_ethanol_ag1,                  & ! inout
-  & c_nonsoluble_ag1,               & ! inout
-  & c_acid_ag2,                     & ! inout
-  & c_water_ag2,                    & ! inout
-  & c_ethanol_ag2,                  & ! inout
-  & c_nonsoluble_ag2,               & ! inout
-  & c_acid_bg1,                     & ! inout
-  & c_water_bg1,                    & ! inout
-  & c_ethanol_bg1,                  & ! inout
-  & c_nonsoluble_bg1,               & ! inout
-  & c_acid_bg2,                     & ! inout
-  & c_water_bg2,                    & ! inout
-  & c_ethanol_bg2,                  & ! inout
-  & c_nonsoluble_bg2,               & ! inout
-  & c_humus_1,                      & ! inout
-  & c_humus_2,                      & ! inout
-  & c_acid_bg1_sl,                        & ! inout
-  & c_water_bg1_sl,                       & ! inout
-  & c_ethanol_bg1_sl,                     & ! inout
-  & c_nonsoluble_bg1_sl,                  & ! inout
-  & c_acid_bg2_sl,                        & ! inout
-  & c_water_bg2_sl,                       & ! inout
-  & c_ethanol_bg2_sl,                     & ! inout
-  & c_nonsoluble_bg2_sl,                  & ! inout
-  & c_humus_1_sl,                         & ! inout
-  & c_humus_2_sl                          & ! inout
-  & )
+    & damaged_fract,                  & ! in
+    & LeafLit_coef,                   & ! in
+    & WoodLit_coef,                   & ! in
+    & c_green,                        & ! inout
+    & c_woods,                        & ! inout
+    & c_reserve,                      & ! inout
+    & cflux_dist_green_2_soil,        & ! inout
+    & cflux_dist_woods_2_soil,        & ! inout
+    & c_acid_ag1,                     & ! inout
+    & c_water_ag1,                    & ! inout
+    & c_ethanol_ag1,                  & ! inout
+    & c_nonsoluble_ag1,               & ! inout
+    & c_acid_ag2,                     & ! inout
+    & c_water_ag2,                    & ! inout
+    & c_ethanol_ag2,                  & ! inout
+    & c_nonsoluble_ag2,               & ! inout
+    & c_acid_bg1,                     & ! inout
+    & c_water_bg1,                    & ! inout
+    & c_ethanol_bg1,                  & ! inout
+    & c_nonsoluble_bg1,               & ! inout
+    & c_acid_bg2,                     & ! inout
+    & c_water_bg2,                    & ! inout
+    & c_ethanol_bg2,                  & ! inout
+    & c_nonsoluble_bg2,               & ! inout
+    & c_humus_1,                      & ! inout
+    & c_humus_2,                      & ! inout
+    & c_acid_bg1_sl,                  & ! inout
+    & c_water_bg1_sl,                 & ! inout
+    & c_ethanol_bg1_sl,               & ! inout
+    & c_nonsoluble_bg1_sl,            & ! inout
+    & c_acid_bg2_sl,                  & ! inout
+    & c_water_bg2_sl,                 & ! inout
+    & c_ethanol_bg2_sl,               & ! inout
+    & c_nonsoluble_bg2_sl,            & ! inout
+    & c_humus_1_sl,                   & ! inout
+    & c_humus_2_sl                    & ! inout
+    & )
 
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day
     USE mo_carbon_shared,    ONLY: distribute_yasso_litter
@@ -1554,14 +1569,13 @@ CONTAINS
                                                        !< call of this routine
     real(wp),intent(in)    :: LeafLit_coef(:)          !< Factor to spread non woody litter into yasso pools [ ]
     real(wp),intent(in)    :: WoodLit_coef(:)          !< Factor to spread woody litterfall into yasso pools [ ]
-    real(wp),intent(inout) :: c_green(:)               !< Value of green carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: c_woods(:)               !< Value of wood carbon pool [mol(C)/m^2(canopy)]
-    real(wp),intent(inout) :: c_reserve(:)             !< Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(inout) :: cflux_dist_green_2_soil(:)  !< Amount of carbon relocated by wind damage
-                                                          !< (and later also by fire)
-    real(wp),intent(inout) :: cflux_dist_woods_2_soil(:)  !< Amount of carbon relocated by wind damage
-                                                          !< (and later also by fire)
-                                                          !< .. to the green litter pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: c_green(:)               !< Amount of carbon in green pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_woods(:)               !< Amount carbon in wood pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_reserve(:)             !< Amount of carbon in reserve pool [mol(C)/m^(canopy)2]
+   REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)  !< Disturbance-induced carbon flux of non-woody living biomass
+                                                           !< to the green litter and soil pools [mol(C)/m^2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)  !< Disturbance-induced carbon flux of woody living biomass to
+                                                           !< the woody litter and soil pools [mol(C)/m^2(canopy)s-1]
 
     !   YASSO
     ! Size class 1: green
@@ -1614,33 +1628,35 @@ CONTAINS
 
       non_woody_litter = c_green(ic) + c_reserve(ic)
 
-      ! Amount of carbon transfered from damaged wood pool to the wood litter pools
+      ! Carbon transferred from the wood pool to the woody litter and soil pools due to disturbances;
+      ! we here add the contribution of wind throw.
       cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / sec_per_day
 
-      ! Amount of carbon transfered from the damaged non-woody vegetation pools to the green litter pools
+      ! Carbon transferred from the non-woody vegetation pools to the green litter and soil pools due to
+      ! disturbances; we here add the contribution of wind throw.
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / sec_per_day
 
-      ! Add the carbon of damaged non-woody vegetation pools to the yasso soil pools
+      ! Distribute the carbon of damaged non-woody vegetation to the yasso litter and soil pools
       !  Above ground
       fraction = fract_green_aboveGround * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), c_nonsoluble_ag1(ic), c_humus_1(ic), &
-  &                          non_woody_litter, fraction, LeafLit_coef)
+        &                          non_woody_litter, fraction, LeafLit_coef)
       !  Below ground
       fraction = (1._wp - fract_green_aboveGround) * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg1_sl(ic,1), c_water_bg1_sl(ic,1), c_ethanol_bg1_sl(ic,1), &
-  &                          c_nonsoluble_bg1_sl(ic,1), c_humus_1_sl(ic,1), &
-  &                          non_woody_litter, fraction, LeafLit_coef)
+        &                          c_nonsoluble_bg1_sl(ic,1), c_humus_1_sl(ic,1), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
 
-      ! Add the carbon of damaged woody vegetation pool to the yasso soil pools
+      ! Distribute the carbon of damaged woody vegetation to the yasso litter and soil pools
       !  Above ground
       fraction = fract_wood_aboveGround * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
-  &                          c_woods(ic), fraction, WoodLit_coef)
+        &                          c_woods(ic), fraction, WoodLit_coef)
       !  Below ground
       fraction = (1._wp - fract_wood_aboveGround)  * damaged_fract(ic)
       CALL distribute_yasso_litter(c_acid_bg2_sl(ic,1), c_water_bg2_sl(ic,1), c_ethanol_bg2_sl(ic,1), &
-  &                          c_nonsoluble_bg2_sl(ic,1), c_humus_2_sl(ic,1), &
-  &                          c_woods(ic), fraction, WoodLit_coef)
+        &                          c_nonsoluble_bg2_sl(ic,1), c_humus_2_sl(ic,1), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
 
       ! Reduce the living plant carbon pools accordingly
       fraction = 1._wp - damaged_fract(ic)
