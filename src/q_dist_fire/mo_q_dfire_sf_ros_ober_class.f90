@@ -36,7 +36,7 @@ MODULE mo_q_dfire_sf_ros_ober_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread_ober, calc_live_me
+  PUBLIC :: sf_calc_rate_of_spread_ober, calc_live_me, calc_weighting_factors, t_fwvar_r1d, t_sf_weighting_factors
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_ober_class'
 
@@ -157,7 +157,6 @@ CONTAINS
                                   me_dd, me_lv, &
                                   fbd, &
                                   u_f_wind, &
-                                  fm_weighted, &
                                   mask, &
                                   ros)
     INTEGER, INTENT(in) :: nc
@@ -170,7 +169,6 @@ CONTAINS
     REAL(wp), INTENT(in) :: me_dd(nc), me_lv(nc) !< Moisture of extinction [-]
     REAL(wp), INTENT(in) :: fbd(nc) !< Fuel bulk density [kg/m3]
     REAL(wp), INTENT(in) :: u_f_wind(nc) !< Wind speed at midflame height [m min-1]
-    REAL(wp), INTENT(out) :: fm_weighted(nc) !< Fuel moisture weighted over all fuel classes [%]
     LOGICAL, INTENT(in)  :: mask(nc)
     TYPE(t_sf_ros), INTENT(inout) :: ros !< Output: rate of spread [m min-1]
 
@@ -309,7 +307,6 @@ CONTAINS
     !ros%net_fuel_load = wn ! dead, live
     !ros%moist_damp_coeff  = eta_m  ! dead, live
     ros%mineral_damp_coeff = df_sf_mineral_damp_coeff
-    fm_weighted = mf%total
 
   END SUBROUTINE sf_calc_rate_of_spread_ober
 

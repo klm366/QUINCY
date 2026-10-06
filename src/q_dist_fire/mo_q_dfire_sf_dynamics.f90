@@ -644,6 +644,9 @@ CONTAINS
                                      ix_wdy => df_sf_ix_sigma_lv_wdy, &
                                  nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
 
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens
+    USE mo_q_dfire_sf_ros_ober_class, ONLY: calc_weighting_factors, t_fwvar_r1d, t_sf_weighting_factors
+
     TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
@@ -656,6 +659,9 @@ CONTAINS
     REAL(wp) :: woi_lv(sf_config%nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
     REAL(wp) :: me_dd(sf_config%nc)             !< Dead moisture of extinction [-] (#nc)
     REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
+    TYPE(t_sf_weighting_factors) :: wfactors
+    TYPE(t_fwvar_r1d) :: mf !< moisture content [-]
+    INTEGER :: ic
 
     fdi = 0._wp
 
@@ -678,6 +684,19 @@ CONTAINS
                           fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
                           mask)
 
+    wfactors = calc_weighting_factors(fuel_moisture % sigmas_dead, woi_dd(:,ixs_ros), &
+                                      fuel_moisture % sigmas_live, woi_lv, &
+                                      df_sf_oven_dry_part_dens)
+
+    mf = t_fwvar_r1d(sf_config % nc, has_total=.TRUE.)
+    DO ic = 1, sf_config % nc
+      IF (.NOT. mask(ic))  CYCLE
+      mf%d(ic) = SUM(wfactors%fij%d(ic,:) * fuel_moisture%dead(ic,ixs_ros))
+      mf%l(ic) = SUM(wfactors%fij%l(ic,:) * fuel_moisture%live(ic,:))
+      mf%total(ic) = wfactors%fi%l(ic) * mf%l(ic) + wfactors%fi%d(ic) * mf%d(ic)
+    END  DO
+    fuel_moisture%val = mf%total
+
     !< only involved ROS fuel (and FM)
     CALL sf_calc_rate_of_spread_ober(&
         sf_config%nc, &
@@ -689,7 +708,6 @@ CONTAINS
         me_dd, me_lv, &
         ros % fbd, & !fuel_bulk_density, &
         ros % u_f_wind, &
-        fuel_moisture%val, & ! output too
         mask, &
         ros)
 
