@@ -676,7 +676,7 @@ CONTAINS
   !> We here determine the distribution of plant roots in the soil (based on Jackson 1996), assuming an
   !> exponential decay of root material with depth.
   !>
-  !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components. It has no direct affect on the plant hydrology. 
+  !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components. It has no direct affect on the plant hydrology.
   !
   FUNCTION determine_root_dist(max_thick, layer_depth, root_dist_beta, t_soil_sl, permafrost_layer) RESULT(root_dist)
     USE mo_carbon_constants,       ONLY: permafrost_threshold
@@ -1312,7 +1312,7 @@ CONTAINS
       upper_bound = upper_bound + layer_thick(is)
     END DO
 
-    ! Move C to lowest layer above bedrock, the lowest layer with a soil fraction 
+    ! Move C to lowest layer above bedrock, the lowest layer with a soil fraction
     IF ((C_below_bedrock > 0._wp) .AND. (soil_above > 0._wp) .AND. (max_layer_above > 0)) THEN
       c_pool_bg(max_layer_above) = c_pool_bg(max_layer_above) + C_below_bedrock
       DO is = MIN(max_layer_above+1,nsoil), nsoil
