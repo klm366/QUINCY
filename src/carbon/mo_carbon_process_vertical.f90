@@ -27,65 +27,65 @@ MODULE mo_carbon_process_vertical
 CONTAINS
 
   SUBROUTINE calc_vertical_soil_c(            &
-      ! General inputs
-      delta_time_C, nsoil,                    &
-      layer_depth, layer_thick,               &
-      ! Input coefficients (fixed)
-      LeafLit_coefV, WoodLit_coefV,           &
-      MiscPar,                                &
-      ! Climate inputs
-      temp,                                   &
-      precip,                                 &
-      t_soil_sl,                              &
-      wtr_soil_rel_sl,                        &
-      n_thaw_cycle,                           &
-      ! Topmodel inputs
-      frac_inun,                              &
-      ! Soil inputs
-      soil_depth,                             &
-      soil_depth_sl,                          &
-      max_depth,                              &
-      max_depth_sl,                           &
-      thaw_depth,                             &
-      root_dist_sl,                           &
-      permafrost_layer,                       &
-      ! Litter inputs
-      woodLitter,                             &
-      leafLitter,                             &
-      rootExudates,                           &
-      ! Yasso pools. Used on input and updated on output
-      c_acid_ag1,                             &
-      c_water_ag1,                            &
-      c_ethanol_ag1,                          &
-      c_nonsoluble_ag1,                       &
-      c_acid_ag2,                             &
-      c_water_ag2,                            &
-      c_ethanol_ag2,                          &
-      c_nonsoluble_ag2,                       &
-      c_acid_bg1_sl,                          &
-      c_water_bg1_sl,                         &
-      c_ethanol_bg1_sl,                       &
-      c_nonsoluble_bg1_sl,                    &
-      c_humus_1_sl,                           &
-      c_acid_bg2_sl,                          &
-      c_water_bg2_sl,                         &
-      c_ethanol_bg2_sl,                       &
-      c_nonsoluble_bg2_sl,                    &
-      c_humus_2_sl,                           &
-      ! Output fluxes
-      c_decomp_humus_1_sum,                   &
-      c_decomp_humus_2_sum,                   &
-      c_into_humus_1_sum,                     &
-      c_into_humus_2_sum,                     &
-      soilResp_oxic_sl,                       &
-      soilResp_anox_sl                        &
-      )
+       ! General inputs
+    &  delta_time_C, nsoil,                   &
+    &  layer_depth, layer_thick,              &
+       ! Input coefficients (fixed)
+    &  LeafLit_coefV, WoodLit_coefV,          &
+    &  MiscPar,                               &
+       ! Climate inputs
+    &  temp,                                  &
+    &  precip,                                &
+    &  t_soil_sl,                             &
+    &  wtr_soil_rel_sl,                       &
+    &  n_thaw_cycle,                          &
+       ! Topmodel inputs
+    &  frac_inun,                             &
+       ! Soil inputs
+    &  soil_depth,                            &
+    &  soil_depth_sl,                         &
+    &  max_depth,                             &
+    &  max_depth_sl,                          &
+    &  thaw_depth,                            &
+    &  root_dist_sl,                          &
+    &  permafrost_layer,                      &
+       ! Litter inputs
+    &  woodLitter,                            &
+    &  leafLitter,                            &
+    &  rootExudates,                          &
+       ! Yasso pools. Used on input and updated on output
+    &  c_acid_ag1,                            &
+    &  c_water_ag1,                           &
+    &  c_ethanol_ag1,                         &
+    &  c_nonsoluble_ag1,                      &
+    &  c_acid_ag2,                            &
+    &  c_water_ag2,                           &
+    &  c_ethanol_ag2,                         &
+    &  c_nonsoluble_ag2,                      &
+    &  c_acid_bg1_sl,                         &
+    &  c_water_bg1_sl,                        &
+    &  c_ethanol_bg1_sl,                      &
+    &  c_nonsoluble_bg1_sl,                   &
+    &  c_humus_1_sl,                          &
+    &  c_acid_bg2_sl,                         &
+    &  c_water_bg2_sl,                        &
+    &  c_ethanol_bg2_sl,                      &
+    &  c_nonsoluble_bg2_sl,                   &
+    &  c_humus_2_sl,                          &
+       ! Output fluxes
+    &  c_decomp_humus_1_sum,                  &
+    &  c_decomp_humus_2_sum,                  &
+    &  c_into_humus_1_sum,                    &
+    &  c_into_humus_2_sum,                    &
+    &  soilResp_oxic_sl,                      &
+    &  soilResp_anox_sl                       &
+    &  )
 
     USE mo_carbon_constants,       ONLY: fract_green_aboveGround, fract_wood_aboveGround,    &
-                                         LCT_HUMUS, F_RESP, F_2_HUMUS, F_F_HUMUS,            &
-                                         M_LITTER, M_HUMUS,                                  &
-                                         WOODLITSIZE, ROOT_DIST_BETA,                        &
-                                         d_oxic, d_anox, d_size_leaf !, sec_per_year, sec_per_day
+      &                                  LCT_HUMUS, F_RESP, F_2_HUMUS, F_F_HUMUS,            &
+      &                                  M_LITTER, M_HUMUS,                                  &
+      &                                  WOODLITSIZE, ROOT_DIST_BETA,                        &
+      &                                  d_oxic, d_anox, d_size_leaf !, sec_per_year, sec_per_day
     USE mo_carbon_shared,          ONLY: distribute_yasso_litter
 
     REAL(wp),  INTENT(in)    :: delta_time_C             !< Carbon time step [s]
@@ -230,7 +230,7 @@ CONTAINS
 
     ! C pools input
     CALL input_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
-                           c_nonsoluble_ag1, 0._wp, Y_in_pools)
+      &                    c_nonsoluble_ag1, 0._wp, Y_in_pools)
     ! call YASSO for oxic
     CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
     ! C pools output
@@ -248,7 +248,7 @@ CONTAINS
       CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
-                              c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
+        &                     c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C
       c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
@@ -264,12 +264,12 @@ CONTAINS
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),  &
-                             c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), Y_in_pools)
+        &                    c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), Y_in_pools)
       ! call YASSO for oxic
       CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
-                              c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
+        &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is)  + Y_out_fluxes(F_RESP) / delta_time_C     ! respiration
       c_decomp_humus_1_sum     = c_decomp_humus_1_sum  + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -284,7 +284,7 @@ CONTAINS
         CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
         ! C pools output
         CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
-                                c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
+          &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
         c_decomp_humus_1_sum   = c_decomp_humus_1_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -305,12 +305,12 @@ CONTAINS
 
     ! C pools input
     CALL input_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2,  &
-                           c_nonsoluble_ag2, 0._wp, Y_in_pools)
+      &                    c_nonsoluble_ag2, 0._wp, Y_in_pools)
     ! call YASSO for oxic
     CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
     ! C pools output
     CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
-                            c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
+      &                     c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic + Y_out_fluxes(F_RESP) / delta_time_C
     c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -323,7 +323,7 @@ CONTAINS
       CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
-                              c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
+        &                     c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C
       c_into_humus_2_sum       = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -338,12 +338,12 @@ CONTAINS
 
       ! C pools input
       CALL input_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
-                             c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), Y_in_pools)
+        &                    c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), Y_in_pools)
       ! call YASSO for oxic
       CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
-                              c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
+        &                     c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
       c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -359,7 +359,7 @@ CONTAINS
 
         ! C pools output
         CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
-                                c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .true., Y_out_pools)
+          &                     c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .true., Y_out_pools)
 
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
@@ -371,10 +371,10 @@ CONTAINS
     c_humus_2_sl(1) = c_humus_2_sl(1) + tmp_out_humus
     tmp_out_humus   = 0._wp
 
-    c_into_humus_1_sum   = c_into_humus_1_sum   +  &
-                           LeafLit_coefV(LCT_HUMUS) * leafLitter * delta_time_C
-    c_into_humus_2_sum   = c_into_humus_2_sum   +  &
-                           WoodLit_coefV(LCT_HUMUS) * woodLitter * delta_time_C
+    c_into_humus_1_sum   = c_into_humus_1_sum + &
+      &                    LeafLit_coefV(LCT_HUMUS) * leafLitter * delta_time_C
+    c_into_humus_2_sum   = c_into_humus_2_sum + &
+      &                    WoodLit_coefV(LCT_HUMUS) * woodLitter * delta_time_C
 
     ! soil respiration: ag respiration is really part of top soil layer respiration
     soilResp_oxic_sl(1)     = soilResp_oxic_sl(1) + soilResp_oxic
@@ -385,14 +385,14 @@ CONTAINS
     ! a) leaf litter
     ! ag
     CALL distribute_yasso_litter(c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, c_humus_1_sl(1),  &
-                                 leafLitter*delta_time_C, fract_green_aboveGround, LeafLit_coefV)
+      &                          leafLitter*delta_time_C, fract_green_aboveGround, LeafLit_coefV)
 
     ! bg
     DO is = 1, nsoil
       CALL distribute_yasso_litter(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),              &
-                                   c_nonsoluble_bg1_sl(is), c_humus_1_sl(is),                                &
-                                   leafLitter*delta_time_C, (1.0_wp - fract_green_aboveGround) * root_dist_sl(is),        &
-                                   LeafLit_coefV)
+        &                          c_nonsoluble_bg1_sl(is), c_humus_1_sl(is),                                &
+        &                          leafLitter*delta_time_C, (1.0_wp - fract_green_aboveGround) * root_dist_sl(is),        &
+        &                          LeafLit_coefV)
       ! root exudates are carbohydrates, go directly into water_bg pools
       c_water_bg1_sl(is) = c_water_bg1_sl(is) + rootExudates * delta_time_C * root_dist_sl(is)
     END DO
@@ -401,28 +401,28 @@ CONTAINS
     ! b) woody litter
     ! ag
     CALL distribute_yasso_litter(c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, c_humus_2_sl(1),  &
-                                 woodLitter*delta_time_C, fract_wood_aboveGround, WoodLit_coefV)
+      &                          woodLitter*delta_time_C, fract_wood_aboveGround, WoodLit_coefV)
 
     ! bg
     DO is = 1, nsoil
       CALL distribute_yasso_litter(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is),              &
-                                   c_nonsoluble_bg2_sl(is), c_humus_2_sl(is),                                &
-                                   woodLitter*delta_time_C, (1.0_wp - fract_wood_aboveGround) * root_dist_sl(is),         &
-                                   WoodLit_coefV)
+        &                          c_nonsoluble_bg2_sl(is), c_humus_2_sl(is),                                &
+        &                          woodLitter*delta_time_C, (1.0_wp - fract_wood_aboveGround) * root_dist_sl(is),         &
+        &                          WoodLit_coefV)
     END DO
 
     ! ----------------------------------------------------------------------------------------
     ! vertical mixing
 
     CALL move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
-  &             c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
-  &             c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
-  &             c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
-  &             c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
+      &               c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
+      &               c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
+      &               c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
+      &               c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
 
     CALL set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, &
-  &                layer_depth, t_soil_sl, wtr_soil_rel_sl, &
-  &                n_thaw_cycle, permafrost_layer)
+      &                 layer_depth, t_soil_sl, wtr_soil_rel_sl,            &
+      &                 n_thaw_cycle, permafrost_layer)
     CALL vertical_C_transport(c_acid_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
     CALL vertical_C_transport(c_acid_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
     CALL vertical_C_transport(c_water_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
@@ -595,62 +595,62 @@ CONTAINS
     !   annual gain fluxes (positive values):
     !   fixed fractions of each loss flux enters another pool; REMARK: the fraction can be zero (see above why)
     Cflx_yr_2_acid            = ABS(Cflx_yr_from_water      * W_2_A  &    ! returns positive fluxes
-                                  + Cflx_yr_from_ethanol    * E_2_A  &
-                                  + Cflx_yr_from_nonsoluble * N_2_A)
+      &                           + Cflx_yr_from_ethanol    * E_2_A  &
+      &                           + Cflx_yr_from_nonsoluble * N_2_A)
 
     Cflx_yr_2_water           = ABS(Cflx_yr_from_acid       * A_2_W  &
-                                  + Cflx_yr_from_ethanol    * E_2_W  &
-                                  + Cflx_yr_from_nonsoluble * N_2_W)
+      &                            + Cflx_yr_from_ethanol    * E_2_W &
+      &                            + Cflx_yr_from_nonsoluble * N_2_W)
 
     Cflx_yr_2_ethanol         = ABS(Cflx_yr_from_acid       * A_2_E  &
-                                  + Cflx_yr_from_water      * W_2_E  &
-                                  + Cflx_yr_from_nonsoluble * N_2_E)
+      &                            + Cflx_yr_from_water      * W_2_E &
+      &                            + Cflx_yr_from_nonsoluble * N_2_E)
 
     Cflx_yr_2_nonsoluble      = ABS(Cflx_yr_from_acid       * A_2_N  &
-                                  + Cflx_yr_from_water      * W_2_N  &
-                                  + Cflx_yr_from_ethanol    * E_2_N)
+      &                           + Cflx_yr_from_water      * W_2_N  &
+      &                           + Cflx_yr_from_ethanol    * E_2_N)
 
     Cflx_yr_2_humus           = ABS(Cflx_yr_from_acid                &
-                                  + Cflx_yr_from_water               &
-                                  + Cflx_yr_from_ethanol             &
-                                  ) * AWE_2_H                        &
-                                    +                                &
-                                ABS(Cflx_yr_from_nonsoluble)         &
-                                  * N_2_H
+      &                           + Cflx_yr_from_water               &
+      &                           + Cflx_yr_from_ethanol             &
+      &                           ) * AWE_2_H                        &
+      &                             +                                &
+      &                         ABS(Cflx_yr_from_nonsoluble)         &
+      &                             * N_2_H
 
     !   litter ag & bg respiration (needed for N cycle)
     Cflx_yr_resp_from_litter =  Cflx_yr_from_acid       * (1.0_wp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
-                              + Cflx_yr_from_water      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
-                              + Cflx_yr_from_ethanol    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
-                              + Cflx_yr_from_nonsoluble * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
+      &                       + Cflx_yr_from_water      * (1.0_wp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
+      &                       + Cflx_yr_from_ethanol    * (1.0_wp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
+      &                       + Cflx_yr_from_nonsoluble * (1.0_wp - N_2_A - N_2_W - N_2_E -   N_2_H)
 
     Cflx_yr_respiration      =  Cflx_yr_resp_from_litter                      &
-                              + Cflx_yr_from_humus
+      &                       + Cflx_yr_from_humus
 
     ! 3. update Yasso pools
 
     !   3a. redistribution among yasso pools
     c_acid        = MAX(0.0_wp,                                    &
-                        c_acid                                     & ! old pool
-                     + (Cflx_yr_from_acid                          & ! incoming flux from AWEN pools
-                      + Cflx_yr_2_acid) * years_per_ts)
+      &                 c_acid                                     & ! old pool
+      &              + (Cflx_yr_from_acid                          & ! incoming flux from AWEN pools
+      &               + Cflx_yr_2_acid) * years_per_ts)
     c_water       = MAX(0.0_wp,                                    & ! ...
-                        c_water                                    &
-                     + (Cflx_yr_from_water                         &
-                      +  Cflx_yr_2_water) * years_per_ts)
+      &                 c_water                                    &
+      &              + (Cflx_yr_from_water                         &
+      &               + Cflx_yr_2_water) * years_per_ts)
     c_ethanol     = MAX(0.0_wp,                                    &
-                        c_ethanol                                  &
-                     + (Cflx_yr_from_ethanol                       &
-                      + Cflx_yr_2_ethanol) * years_per_ts)
+      &                 c_ethanol                                  &
+      &              + (Cflx_yr_from_ethanol                       &
+      &               + Cflx_yr_2_ethanol) * years_per_ts)
     c_nonsoluble  = MAX(0.0_wp,                                    &
-                        c_nonsoluble                               &
-                     + (Cflx_yr_from_nonsoluble                    &
-                      + Cflx_yr_2_nonsoluble) * years_per_ts)
+      &                 c_nonsoluble                               &
+      &              + (Cflx_yr_from_nonsoluble                    &
+      &               + Cflx_yr_2_nonsoluble) * years_per_ts)
 
     c_humus       = MAX(0.0_wp,                                    &
-                        c_humus                                    &
-                     + (Cflx_yr_from_humus                         &
-                      + Cflx_yr_2_humus) * years_per_ts)
+      &                 c_humus                                    &
+      &              + (Cflx_yr_from_humus                         &
+      &               + Cflx_yr_2_humus) * years_per_ts)
 
     ! 4.1 Write pools into the output array
     Y_out_pools(Y_ACID)       = c_acid
@@ -676,7 +676,8 @@ CONTAINS
   !> We here determine the distribution of plant roots in the soil (based on Jackson 1996), assuming an
   !> exponential decay of root material with depth.
   !>
-  !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components. It has no direct affect on the plant hydrology.
+  !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components.
+  !>       It has no direct affect on the plant hydrology.
   !
   FUNCTION determine_root_dist(max_thick, layer_depth, root_dist_beta, t_soil_sl, permafrost_layer) RESULT(root_dist)
     USE mo_carbon_constants,       ONLY: permafrost_threshold
@@ -808,7 +809,7 @@ CONTAINS
 
     IF (.NOT. do_Q10) THEN       ! use YASSO formulation
       d_temp  = EXP(temp_p1*(temp_soil - tmelt) + &                 ! YASSO formulation for temperature dependence
-                    temp_p2*(temp_soil- tmelt)**2.0_wp)
+        &           temp_p2*(temp_soil- tmelt)**2.0_wp)
     ELSE                        ! use alternative Q10 formulation
       d_temp  = Q10**((temp_soil - (tmelt + 10._wp))/10._wp)        ! Temperature modifier as CLM
     END IF
@@ -827,9 +828,9 @@ CONTAINS
     d_water(:) = 0._wp
 
     DO is = 1,nsoil
-      d_water(is) = ( ( (water_soil(is) - moist_p_b) / (moist_p_a-moist_p_b) )**   &
-                       ( moist_p_d*( (moist_p_b-moist_p_a)/moist_p_a ) ) ) *       &
-                      ( (water_soil(is) / moist_p_a)**moist_p_d )
+      d_water(is) = ( ( (water_soil(is) - moist_p_b) / (moist_p_a-moist_p_b) )**  &
+        &             ( moist_p_d*( (moist_p_b-moist_p_a)/moist_p_a ) ) ) *       &
+        &             ( (water_soil(is) / moist_p_a)**moist_p_d )
     END DO
   END FUNCTION get_modifier_water
 
@@ -992,8 +993,8 @@ CONTAINS
           ! for the layers below, upwards diffusivity is the weighted mean of the layer
           ! diffusivity in layer and layer above
           D_above = (dz(is-1)*diff_coeff(is-1) + &
-                    dz(is  )*diff_coeff(is))  / &
-                    (dz(is-1) + dz(is))
+            &        dz(is  )*diff_coeff(is))  / &
+            &        (dz(is-1) + dz(is))
         END IF
         IF (is == nsoil_loc) THEN
           ! downwards diffusivity in the bottom layer is set to zero
@@ -1003,8 +1004,8 @@ CONTAINS
           ! for the layers above, downwards diffusivity is the weighted mean of the
           ! diffusivity in the layer and the layer below
           D_below = (dz(is  )*diff_coeff(is  )  + &
-                    dz(is+1)*diff_coeff(is+1)) / &
-                    (dz(is) + dz(is+1))
+            &        dz(is+1)*diff_coeff(is+1)) / &
+            &        (dz(is) + dz(is+1))
         END IF
 
         ! Calculate layer-dependent weighting factors.
@@ -1027,9 +1028,9 @@ CONTAINS
 
         ! Calculate right hand side vector values.
         rhs(is) = (1.0_wp - (1.0_wp - implicit_contrib)*(W_below + W_above)) * C_here + &
-                  (1.0_wp - implicit_contrib)*W_below*C_below +                         &
-                  (1.0_wp - implicit_contrib)*W_above*C_above +                         &
-                  src_C_conc(is)
+          &        (1.0_wp - implicit_contrib)*W_below*C_below +                         &
+          &        (1.0_wp - implicit_contrib)*W_above*C_above +                         &
+          &        src_C_conc(is)
       END DO
 
       ! Semi-implicit case -- whenever implicit_contrib > 0.1,
@@ -1038,7 +1039,7 @@ CONTAINS
         !------------------------------------------------------------
         ! solve tridiagonal system using dgtsv from NETLIB
         CALL dgtsv(nsoil_loc, 1, left(2:nsoil_loc), diag, &
-                  right(1:nsoil_loc-1), rhs, nsoil_loc, info)
+          &        right(1:nsoil_loc-1), rhs, nsoil_loc, info)
   !       IF (PRESENT(lissue)) lissue = info /= 0
   !      IF (info /= 0) THEN
   !        WRITE(message_text,*) 'dgtsv info ', info
@@ -1113,10 +1114,10 @@ CONTAINS
       DO is = 1,nsoil
         isp1 = MIN(is+1,nsoil)
         IF (  (permafrost_layer(is)   < permafrost_threshold) .AND. &
-            & (permafrost_layer(isp1) < permafrost_threshold) .AND. &
-            & (t_soil_sl(is)          > tmelt)) THEN
+          &   (permafrost_layer(isp1) < permafrost_threshold) .AND. &
+          &   (t_soil_sl(is)          > tmelt)) THEN
           diff_coeff(is) = cryo_max *                               &
-            &             MIN(1._wp, wtr_rel_sl(is)) *             &
+            &             MIN(1._wp, wtr_rel_sl(is)) *              &
             &              MIN(1._wp, (n_thaw_cycle / 40._wp))*     &
             &              (1._wp - layer_depth(is)/thaw_depth)
         ELSE
@@ -1147,7 +1148,7 @@ CONTAINS
       &                     c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
 
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
-  &                            permafrost_threshold
+      &                            permafrost_threshold
 
     REAL(wp), INTENT(inout) :: c_acid_ag1
     REAL(wp), INTENT(inout) :: c_acid_bg1_sl(:)
@@ -1233,7 +1234,7 @@ CONTAINS
     DO is = 1,nsoil-1
       isp1 = MIN(is+1, nsoil)
       IF ((depth_upper < max_depth) .AND. (permafrost_layer(is) < permafrost_threshold) &
-          & .AND. (permafrost_layer(isp1) < permafrost_threshold)) THEN
+        & .AND. (permafrost_layer(isp1) < permafrost_threshold)) THEN
         depth_upper = depth_upper + layer_thick(is)
         cpool_tot = c_acid_bg1_sl(is)       + c_acid_bg2_sl(is)       +      &
           &         c_water_bg1_sl(is)      + c_water_bg2_sl(is)      +      &
