@@ -645,9 +645,6 @@ CONTAINS
 
     executed_sb_model_spinup_accelerator_this_timestep = .FALSE.
 
-    ! Reset all tiles at the beginning of the timestep
-    CALL model%Reset_tiles()
-
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime_lp) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
