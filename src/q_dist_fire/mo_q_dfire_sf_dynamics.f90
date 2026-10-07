@@ -513,27 +513,29 @@ CONTAINS
       CALL calc_fire_danger_index(sf_config % nc, sf_fuel_moisture % val, sf_fuel_moisture % moisture_extinction, spitfire % fdi, mask=has_fire_conditions)
     ENDIF
 
-    IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
-
-      CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
-                                    nesterov_index, &
-                                    sf_fuel_moisture, & ! inout
-                                    sf_ros, &
-                                    mask=(has_fire_conditions .AND. spitfire % fdi > 1.e-6_wp))
-    ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-
-      CALL calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, &
-                                    nesterov_index, &
-                                    sf_fuel_moisture, & ! inout
-                                    sf_ros, &
-                                    mask = has_fire_conditions)
-    ELSE
-      CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
-    END IF
+    !IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+    !  CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
+    !                                nesterov_index, &
+    !                                sf_fuel_moisture, & ! inout
+    !                                sf_ros, &
+    !                                mask=(has_fire_conditions .AND. spitfire % fdi > 1.e-6_wp))
+    !ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+    !  CALL calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, &
+    !                                nesterov_index, &
+    !                                sf_fuel_moisture, & ! inout
+    !                                sf_ros, &
+    !                                mask = has_fire_conditions)
+    !ELSE
+    !  CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
+    !END IF
     CALL sf_calc_rate_of_spread(sf_config%nc, &
+                  sf_config, &
                   sf_ros % u_f_wind, &
                   spitfire % fdi, &
+                  nesterov_index, &
                   veg_cover_frac, &
+                  sf_fuel_moisture, &
+                  sf_fuel_load, &
                   has_fire_conditions, &
                   sf_ros)
 
@@ -636,7 +638,7 @@ CONTAINS
                   sf_ros, &
                   mask) ! optional
 
-    !USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, & ! 1hr, 10hr, 100hr, cured live grass (dead)
+    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros! 1hr, 10hr, 100hr, cured live grass (dead)
     !                                ix_clvg => df_sf_ix_sigma_dd_clvg, &
     !                                 ix_1hr => df_sf_ix_sigma_dd_1hr, &
     !                                ix_10hr => df_sf_ix_sigma_dd_10hr, &
@@ -711,7 +713,7 @@ CONTAINS
         sf_ros % fbd, & !fuel_bulk_density, &
         sf_ros % u_f_wind, &
         mask, &
-        ros)
+        sf_ros)
 
   END SUBROUTINE calc_sf_dynamics_for_oberhagemann
 

@@ -21,7 +21,7 @@ MODULE mo_q_dfire_sf_ros_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_q_dfire_sf_classes,        ONLY: t_sf_ros
+  USE mo_q_dfire_sf_classes,        ONLY: t_sf_ros, t_sf_fuel_load, t_sf_mf, t_sf_config
   USE mo_q_dfire_sf_config_class,   ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
   USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober, calc_live_me
   USE mo_q_dfire_sf_ros_thon_class, ONLY: sf_calc_rate_of_spread_thon
@@ -56,38 +56,80 @@ CONTAINS
   !>
   !>
   SUBROUTINE sf_calc_rate_of_spread(nc, &
+                  sf_config, &
                   u_f_wind, &
                   fdi, &
+                  nesterov_index, &
                   veg_cover_frac, &
-                  mask, ros)
+                  sf_fuel_moisture, &
+                  sf_fuel_load, &
+                  mask, sf_ros)
+
+    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
+                                        df_sf_omega_o_idx, & !< omega_o index from calc_sf_fuel_moisture_for_thonicke output (array)
+                                        df_sf_omega_nl_idx
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_units_g_to_kg
+
     INTEGER, INTENT(in)                  :: nc
+    TYPE(t_sf_config), INTENT(in)        :: sf_config
     REAL(wp), INTENT(in)                 :: u_f_wind(nc)                !< [m min-1]
     REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
+    REAL(wp), INTENT(in)                 :: nesterov_index(nc)          !< Dryness index [deg C2]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
+    TYPE(t_sf_mf), INTENT(in)            :: sf_fuel_moisture            !< Fuel moisture [-]
+    TYPE(t_sf_fuel_load), INTENT(in)     :: sf_fuel_load                !< Fuel load [-]
     LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
-    TYPE(t_sf_ros), INTENT(inout)        :: ros                         !< output [-]
+    TYPE(t_sf_ros), INTENT(inout)        :: sf_ros                         !< output [-]
 
     INTEGER  :: inc
+
+    IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+
+      CALL sf_calc_rate_of_spread_thon(sf_config % nc, sf_config % nfcl_ros, & ! in
+                        sf_ros % fbd, &
+                        sf_ros % u_f_wind, sf_fuel_moisture % moisture_extinction, &
+                        sf_fuel_load % dead_fuel_litter * df_sf_units_g_to_kg, &
+                        sf_fuel_moisture % omegas_thon(:,df_sf_omega_o_idx), &
+                        (mask .AND. fdi > 1.e-6_wp) , &
+                        sf_ros) ! inout
+    ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+
+      CALL sf_calc_rate_of_spread_ober(&
+                        sf_config%nc, &
+                        sf_fuel_moisture % sigma_dd_ros_nr, &
+                        sf_fuel_moisture % sigma_lv_nr, &
+                        sf_fuel_moisture % sigmas_dead, sf_fuel_moisture % sigmas_live, &
+                        sf_fuel_moisture % woi_dd(:,ixs_ros), sf_fuel_moisture % woi_lv, & ! fuels
+                        sf_fuel_moisture % dead(:,ixs_ros), sf_fuel_moisture % live, &
+                        sf_fuel_moisture % me_dd, sf_fuel_moisture % me_lv, &
+                        sf_ros % fbd, & !fuel_bulk_density, &
+                        sf_ros % u_f_wind, &
+                        mask, &
+                        sf_ros)
+    ELSE
+      CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
+    END IF
 
     DO inc=1, nc
       IF (.NOT. mask(inc)) CYCLE !< skip gridcell
 
       !< ( Eq. 10 from Thonicke et al. (2010))
-      ros%ros_backwards(inc) = ros%ros_forward(inc) * exp(-0.012_wp * u_f_wind(inc)) !< [m min-1]
+      sf_ros%ros_backwards(inc) = sf_ros%ros_forward(inc) * exp(-0.012_wp * u_f_wind(inc)) !< [m min-1]
 
       !< (Eqs. A38, A39, A40 from Pfeiffer et al. (2013))
-      ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(u_f_wind(inc), &
+      sf_ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(u_f_wind(inc), &
           veg_cover_frac%tree(inc), &
           veg_cover_frac%grass(inc))
 
-      ros%fire_duration(inc) = 241._wp / (1._wp + 240._wp * exp(-11.06_wp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
-      IF (ros%fire_duration(inc) > df_sf_fire_duration_thd) THEN
-        ros%fire_duration(inc) = df_sf_fire_duration_thd
+      sf_ros%fire_duration(inc) = 241._wp / (1._wp + 240._wp * exp(-11.06_wp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
+      IF (sf_ros%fire_duration(inc) > df_sf_fire_duration_thd) THEN
+        sf_ros%fire_duration(inc) = df_sf_fire_duration_thd
       END IF
-      ros%distance_travelled(inc) = (ros%ros_forward(inc) + ros%ros_backwards(inc)) * &
-          ros%fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
+      sf_ros%distance_travelled(inc) = (sf_ros%ros_forward(inc) + sf_ros%ros_backwards(inc)) * &
+          sf_ros%fire_duration(inc) !< (Eq. A42 from Pfeiffer et al. (2013)) [m]
       !< mean fire area (Eq. 11 from Thonicke et al. (2010))
-      ros%mean_fire_area(inc) = calc_mean_fire_area(ros%l2b_ratio(inc), ros%distance_travelled(inc)) !< [ha]
+      sf_ros%mean_fire_area(inc) = calc_mean_fire_area(sf_ros%l2b_ratio(inc), sf_ros%distance_travelled(inc)) !< [ha]
     ENDDO
 
   END SUBROUTINE sf_calc_rate_of_spread
