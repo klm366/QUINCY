@@ -472,7 +472,7 @@ CONTAINS
     REAL(wp), PARAMETER   :: temp_p1                    =  0.095_wp   !< first  order temperature dependence [K-1]
     REAL(wp), PARAMETER   :: temp_p2                    = -0.0014_wp  !< second order temperature dependence [K-1]
     !   parameter for precipitation dependence
-    REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    !< first  order precipitation dependence [yr-1]
+    REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    !< first  order precipitation dependence [yr m-1]
     !   parameters for size dependence
     REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    !< first  order size dependence [cm-1]
     REAL(wp), PARAMETER   :: size_p2                    =  0.86_wp    !< second order size dependence [cm-1]

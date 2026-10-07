@@ -128,7 +128,7 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER   :: temp_p1     = 0.095_wp   !< first  order temperature dependence [1/C]
   REAL(wp), PARAMETER   :: temp_p2     = -0.0014_wp !< second order temperature dependence [1/C]
   ! Parameter for precipitation dependence
-  REAL(wp), PARAMETER   :: precip_p1   = -1.21_wp   !< first  order precipitation dependence [a/m]
+  REAL(wp), PARAMETER   :: precip_p1   = -1.21_wp   !< first  order precipitation dependence [yr/m]
   ! Parameters for size dependence
   REAL(wp), PARAMETER   :: size_p1     = -1.71_wp   !< first  order size dependence [1/cm]
   REAL(wp), PARAMETER   :: size_p2     = 0.86_wp    !< second order size dependence [1/cm]

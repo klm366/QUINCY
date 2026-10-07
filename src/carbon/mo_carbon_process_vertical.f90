@@ -936,9 +936,8 @@ CONTAINS
           ! only do this, if layer is thick enough and non-permafrost
           C_conc(is) = cpool_bg_sl(is) / act_depth_sl(is)
         ELSE
-          IF (nsoil_loc == nsoil) THEN
-            nsoil_loc = MAX(is - 1, 1)
-          END IF
+          nsoil_loc = MAX(is - 1, 1)
+          EXIT
         END IF
       END DO
 
@@ -1070,21 +1069,8 @@ CONTAINS
     REAL(wp), INTENT(out)   :: diff_coeff(:)
     INTEGER :: is, isp1, nsoil
 
-!     REAL(wp), PARAMETER :: cryo_max = 0.15_wp     ! m2/yr (?)
-!     REAL(wp), PARAMETER :: bio_max  = 0.015_wp
-
-    ! unit conversion: sec per year = 31557600. = 3e8 -->
-    ! 0.15 -> 0.15/31557600 = 4.7532e-09
-    !
-    ! 0.15 multiplier 0.0000001 (1e-7) -> 1.5e-8
-    !
-    ! cm2 -> m2 --> 1m2 = 100cm*100cm = 10000cm2 ==> 1m2 = 1e5 cm2
-    !
-    ! 15 cm2/yr --> 15/1e5 m2/yr -> 15/1e5 m2/31557600s --> 15/1e5/31557600 m2/s --> 4.7532e-12 m2/s
-    !
-
-    REAL(wp), PARAMETER :: cryo_max = 4.7e-12_wp     ! m2/yr (?)
-    REAL(wp), PARAMETER :: bio_max  = 4.7e-13_wp
+    REAL(wp), PARAMETER :: cryo_max = 4.7e-12_wp !< Maximum diffusivity for cryoturbation [m^2 s-1]
+    REAL(wp), PARAMETER :: bio_max  = 4.7e-13_wp !< Maximum diffusivity for bioturbation [m^2 s-1]
 
 
     nsoil = size(diff_coeff)
@@ -1119,9 +1105,13 @@ CONTAINS
   END SUBROUTINE set_diffusivity
 
   ! ---------------------------------------------------------------------------------------------------------
-  ! move_ag_2_bg
-  ! check column C amounts, ensure that C makes sense.
-  ! Idea: peat column defines maximum C possible, if more C in 1 layer, it needs to be moved down.
+  !>
+  !> This subroutine moves carbon from the above ground litter pools to the below ground litter pools,
+  !> if the above ground litter pools exceed a certain threshold. The threshold is defined as a fraction
+  !> of the maximum carbon content in the above ground layer. The excess carbon is moved to the uppermost
+  !> below ground layer. Similarily, if the below ground litter pools exceed a certain threshold, the
+  !> excess carbon is moved to the next below ground layer.
+  !>
     SUBROUTINE move_ag_2_bg(max_depth, layer_thick, permafrost_period_sl,                                     &
       &                     c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
       &                     c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
@@ -1132,29 +1122,30 @@ CONTAINS
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
       &                            permafrost_threshold
 
-    REAL(wp), INTENT(in)    :: max_depth
-    REAL(wp), INTENT(in)    :: layer_thick(:)
+    REAL(wp), INTENT(in)    :: max_depth               !< Soil depth until bedrock or permafrost [m]
+    REAL(wp), INTENT(in)    :: layer_thick(:)          !< Thickness of soil layers [m]
     REAL(wp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
-    REAL(wp), INTENT(inout) :: c_acid_ag1
-    REAL(wp), INTENT(inout) :: c_acid_bg1_sl(:)
-    REAL(wp), INTENT(inout) :: c_acid_ag2
-    REAL(wp), INTENT(inout) :: c_acid_bg2_sl(:)
-    REAL(wp), INTENT(inout) :: c_water_ag1
-    REAL(wp), INTENT(inout) :: c_water_bg1_sl(:)
-    REAL(wp), INTENT(inout) :: c_water_ag2
-    REAL(wp), INTENT(inout) :: c_water_bg2_sl(:)
-    REAL(wp), INTENT(inout) :: c_ethanol_ag1
-    REAL(wp), INTENT(inout) :: c_ethanol_bg1_sl(:)
-    REAL(wp), INTENT(inout) :: c_ethanol_ag2
-    REAL(wp), INTENT(inout) :: c_ethanol_bg2_sl(:)
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1_sl(:)
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2_sl(:)
-    REAL(wp), INTENT(inout) :: c_humus_1_sl(:)
-    REAL(wp), INTENT(inout) :: c_humus_2_sl(:)
+    REAL(wp), INTENT(inout) :: c_acid_ag1              !< Above ground acid soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_acid_bg1_sl(:)        !< Below ground acid soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_acid_ag2              !< Above ground acid soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_acid_bg2_sl(:)        !< Below ground acid soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_water_ag1             !< Above ground water soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_water_bg1_sl(:)       !< Below ground water soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_water_ag2             !< Above ground water soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_water_bg2_sl(:)       !< Below ground water soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag1           !< Above ground ethanol soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg1_sl(:)     !< Below ground ethanol soluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag2           !< Above ground ethanol soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg2_sl(:)     !< Below ground ethanol soluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1        !< Above ground nonsoluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1_sl(:)  !< Below ground nonsoluble green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2        !< Above ground nonsoluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2_sl(:)  !< Below ground nonsoluble woody litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_humus_1_sl(:)         !< Humus pool from green litter pool [mol(C) m-2]
+    REAL(wp), INTENT(inout) :: c_humus_2_sl(:)         !< Humus pool from woody litter pool [mol(C) m-2]
+
     REAL(wp),  PARAMETER :: thresh_frac_org    = 1.25_wp  !< Threshold organic fraction above which C is being moved downwards
-    REAL(wp),  PARAMETER :: ag_layer_depth     = 0.13_wp
+    REAL(wp),  PARAMETER :: ag_layer_depth     = 0.13_wp  !< Assumed depth of above ground litter layer [m]
     REAL(wp) :: cpool_tot
     REAL(wp) :: depth_upper
     REAL(wp) :: rfrac
@@ -1264,8 +1255,12 @@ CONTAINS
     END DO
   END SUBROUTINE move_ag_2_bg
 
-  ! --- remove_C_below_bedrock ---------------------------------------------------------------------------------------------------
-  !
+  ! ---------------------------------------------------------------------------------------------------------
+  !>
+  !> Remove any carbon that is below the bedrock depth and move it to the lowest layer above bedrock.
+  !> This should not happen in reality, but can occur due to numerical issues.
+  !> This routine is a safeguard against that.
+  !>
   SUBROUTINE remove_C_below_bedrock(soil_depth, layer_thick, c_pool_bg)
     REAL(wp), INTENT(in)     :: soil_depth
     REAL(wp), INTENT(in)     :: layer_thick(:)
