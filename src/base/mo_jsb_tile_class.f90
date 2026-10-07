@@ -242,24 +242,28 @@ MODULE mo_jsb_tile_class
     END SUBROUTINE end_interface
 
     !> Interface for deferred subroutine [[t_jsb_aggregator:Aggregate_2d]] of [[t_jsb_aggregator]] type
-    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
+    SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this            !< Aggregator
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real2d),     INTENT(inout) :: var             !< Variable with 2 dimensions
       INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
       CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
+      LOGICAL,  OPTIONAL,         INTENT(in)    :: mask(:)         !< T=pft to apply aggregation, F=skip (#pfts)
+      CHARACTER(len=*), OPTIONAL, INTENT(in)    :: mask_on_tile    !< Apply mask at a specific tile level
     END SUBROUTINE aggregate_interface_2d
 
 
     !> Interface for deferred subroutine [[t_jsb_aggregator:Aggregate_3d]] of [[t_jsb_aggregator]] type
-    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk, caller)
+    SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real3d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
       TYPE(t_jsb_var_real3d),     INTENT(inout) :: var             !< Variable with 3 dimensions
       INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
       CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
+      LOGICAL,  OPTIONAL,         INTENT(in)    :: mask(:)         !< T=pft to apply aggregation, F=skip (#pfts)
+      CHARACTER(len=*), OPTIONAL, INTENT(in)    :: mask_on_tile    !< Apply mask at a specific tile level
     END SUBROUTINE aggregate_interface_3d
 
   END INTERFACE
@@ -895,18 +899,21 @@ CONTAINS
   !>
   !> Aggregation of a 2d variable from the child tiles by weighted fractions
   !>
-  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< 2d variable to be aggregated
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< Chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< Calling aggregation routine
+    LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
+    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
     LOGICAL :: l_aggregate_all
@@ -918,6 +925,27 @@ CONTAINS
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
       &  'This should never happen!')
+
+    ! Mask arguments
+    IF (PRESENT(mask) .AND. PRESENT(mask_on_tile)) THEN ! ensure both optional arguments are defined
+      IF (tile%name == mask_on_tile) THEN
+        ALLOCATE(mask_use_child, source=mask)
+      ELSE ! when mask_on_tile does not match expected tile, ignore given mask and enable all childs.
+           ! tile hierarchy is not at 'vegetation' but at another level
+        ALLOCATE(mask_use_child(no_children))
+        mask_use_child =  .TRUE.
+      ENDIF
+    ELSE ! no mask, so all PFTs enabled
+      ALLOCATE(mask_use_child(no_children))
+      mask_use_child=.TRUE.
+    END IF
+
+    IF (PRESENT(mask) .AND. .NOT. PRESENT(mask_on_tile)) THEN
+      CALL finish("Aggregate_weighted_by_fract_3d", "mask and mask_on_tile must be both enabled but mask_on_tile is not")
+    ENDIF
+    IF (.NOT. PRESENT(mask) .AND. PRESENT(mask_on_tile)) THEN
+      CALL finish("Aggregate_weighted_by_fract_3d", "mask and mask_on_tile must be both enabled but mask is not")
+    ENDIF
 
     ! Set the aggregation fractions of the child tiles (on the current chunk) on the aggregator (this)
     CALL this%Set_fractions(tile, ics, ice, iblk)
@@ -984,6 +1012,8 @@ CONTAINS
       !
       !$ACC LOOP SEQ
       DO i=1,no_children
+        IF (.NOT. mask_use_child(i)) CYCLE ! skip current child
+
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
           ! The variable exists on the child tile
@@ -1064,18 +1094,21 @@ CONTAINS
   !>
   !> Aggregation of a 3d variable from the child tiles by weighted fractions
   !>
-  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
 
     CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< 3d variable to be aggregated
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< Chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< Calling aggregation routine
+    LOGICAL, OPTIONAL,                         INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
     REAL(wp), POINTER :: fract_sum(:,:)
     REAL(wp), POINTER :: data_sum(:,:)
+    LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
     LOGICAL :: l_aggregate_all
@@ -1087,6 +1120,26 @@ CONTAINS
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(TRIM(routine)//' (called by '//TRIM(caller)//')', &
       &  'This should never happen!')
+
+    IF (PRESENT(mask) .AND. PRESENT(mask_on_tile)) THEN ! ensure both optional arguments are defined
+      IF (tile%name == mask_on_tile) THEN
+        ALLOCATE(mask_use_child, source=mask)
+      ELSE ! when mask_on_tile does not match expected tile, ignore given mask and enable all childs.
+           ! tile hierarchy is not at 'vegetation' but at another level
+        ALLOCATE(mask_use_child(no_children))
+        mask_use_child =  .TRUE.
+      ENDIF
+    ELSE ! no mask, so all PFTs enabled
+      ALLOCATE(mask_use_child(no_children))
+      mask_use_child=.TRUE.
+    END IF
+
+    IF (PRESENT(mask) .AND. .NOT. PRESENT(mask_on_tile)) THEN
+      CALL finish("Aggregate_weighted_by_fract_3d", "mask and mask_on_tile must be both enabled but mask_on_tile is not")
+    ENDIF
+    IF (.NOT. PRESENT(mask) .AND. PRESENT(mask_on_tile)) THEN
+      CALL finish("Aggregate_weighted_by_fract_3d", "mask and mask_on_tile must be both enabled but mask is not")
+    ENDIF
 
     ! Set the aggregation fractions of the child tiles (on the current chunk) on the aggregator (this)
     CALL this%Set_fractions(tile, ics, ice, iblk)
@@ -1156,6 +1209,8 @@ CONTAINS
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
+        IF (.NOT. mask_use_child(i)) CYCLE
+
         ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF (var%child_idx(i) > 0) THEN
           !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1182,6 +1237,8 @@ CONTAINS
 
         !$ACC LOOP SEQ
         DO i=1,no_children
+          IF (.NOT. mask_use_child(i)) CYCLE
+
           IF (var%child_idx(i) > 0) THEN
             !$ACC LOOP GANG(STATIC: 1) VECTOR
             DO j = ics, ice
