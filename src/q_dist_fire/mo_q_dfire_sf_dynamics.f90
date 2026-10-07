@@ -505,13 +505,7 @@ CONTAINS
 
     CALL calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, has_fire_conditions)
 
-    IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
-      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-      CALL calc_fire_danger_index(sf_config % nc, sf_fuel_moisture % omegas_thon(:, df_sf_omega_o_idx), sf_fuel_moisture % moisture_extinction, spitfire % fdi, mask=has_fire_conditions)
-    ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
-      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-      CALL calc_fire_danger_index(sf_config % nc, sf_fuel_moisture % val, sf_fuel_moisture % moisture_extinction, spitfire % fdi, mask=has_fire_conditions)
-    ENDIF
+    CALL calc_fire_danger_index_main(sf_config, sf_fuel_moisture, spitfire % fdi, has_fire_conditions)
 
     CALL sf_calc_rate_of_spread(sf_config%nc, &
                   sf_config, &
@@ -565,6 +559,34 @@ CONTAINS
                                           (spitfire % i_surface >= sf_config % const_isurface_extinct_thd)
 
   END SUBROUTINE calc_sf_dynamics
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate Fire Danger Index (FDI)
+  !>
+  SUBROUTINE calc_fire_danger_index_main(sf_config, sf_fuel_moisture, fdi, mask)
+    TYPE(t_sf_config), INTENT(in) :: sf_config
+    TYPE(t_sf_mf), INTENT(in)  :: sf_fuel_moisture
+    REAL(wp), INTENT(out) :: fdi(:)
+    LOGICAL, INTENT(in) :: mask(:)
+
+    IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+      CALL calc_fire_danger_index(sf_config % nc, &
+                                  sf_fuel_moisture % omegas_thon(:, df_sf_omega_o_idx), &
+                                  sf_fuel_moisture % moisture_extinction, &
+                                  fdi, &
+                                  mask=mask)
+    ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+      CALL calc_fire_danger_index(sf_config % nc, &
+                                  sf_fuel_moisture % val, &
+                                  sf_fuel_moisture % moisture_extinction, &
+                                  fdi, &
+                                  mask=mask)
+    ENDIF
+  END SUBROUTINE calc_fire_danger_index_main
 
 
   ! ======================================================================================================= !
