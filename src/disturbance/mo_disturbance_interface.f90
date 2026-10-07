@@ -776,17 +776,17 @@ CONTAINS
                   & c_nonsoluble_bg2(:),                      & ! inout
                   & c_humus_1(:),                             & ! inout
                   & c_humus_2(:),                             & ! inout
-                  & co2flux_fire_all_2_atm,                   & ! out
-                  & c_acid_bg1_sl(:,:),                           & ! inout
-                  & c_water_bg1_sl(:,:),                          & ! inout
-                  & c_ethanol_bg1_sl(:,:),                        & ! inout
-                  & c_nonsoluble_bg1_sl(:,:),                     & ! inout
-                  & c_acid_bg2_sl(:,:),                           & ! inout
-                  & c_water_bg2_sl(:,:),                          & ! inout
-                  & c_ethanol_bg2_sl(:,:),                        & ! inout
-                  & c_nonsoluble_bg2_sl(:,:),                     & ! inout
-                  & c_humus_1_sl(:,:),                            & ! inout
-                  & c_humus_2_sl(:,:)                             & ! inout
+                  & c_acid_bg1_sl(:,:),                       & ! inout
+                  & c_water_bg1_sl(:,:),                      & ! inout
+                  & c_ethanol_bg1_sl(:,:),                    & ! inout
+                  & c_nonsoluble_bg1_sl(:,:),                 & ! inout
+                  & c_acid_bg2_sl(:,:),                       & ! inout
+                  & c_water_bg2_sl(:,:),                      & ! inout
+                  & c_ethanol_bg2_sl(:,:),                    & ! inout
+                  & c_nonsoluble_bg2_sl(:,:),                 & ! inout
+                  & c_humus_1_sl(:,:),                        & ! inout
+                  & c_humus_2_sl(:,:),                        & ! inout
+                  & co2flux_fire_all_2_atm                    & ! out
                   & )
 
                 DO ic = 1, nc

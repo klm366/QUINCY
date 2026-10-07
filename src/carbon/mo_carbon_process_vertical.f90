@@ -47,12 +47,13 @@ CONTAINS
     &  max_depth,                             &
     &  max_depth_sl,                          &
     &  thaw_depth,                            &
-    &  root_dist_sl,                          &
     &  permafrost_layer,                      &
        ! Litter inputs
     &  woodLitter,                            &
     &  leafLitter,                            &
     &  rootExudates,                          &
+       ! Input/output
+    &  root_dist_sl,                          &
        ! Yasso pools. Used on input and updated on output
     &  c_acid_ag1,                            &
     &  c_water_ag1,                           &
@@ -122,8 +123,9 @@ CONTAINS
     REAL(wp),  INTENT(in)    :: max_depth                !< maximum available depth [m], either soil or thaw
     REAL(wp),  INTENT(in)    :: max_depth_sl(:)          !< maximum available depth [m], either soil or thaw, per layer
     REAL(wp),  INTENT(in)    :: thaw_depth               !< thaw depth [m]
-    REAL(wp),  INTENT(inout) :: root_dist_sl(:)          !< root distribution, per layer
     REAL(wp),  INTENT(in)    :: permafrost_layer(:)      !< permafrost status of soil layer
+
+    REAL(wp),  INTENT(inout) :: root_dist_sl(:)          !< root distribution, per layer
 
     ! Yasso pools [mol(C) m-2(canopy)], input and updated on output
     ! Size class 1; green litter
@@ -232,10 +234,11 @@ CONTAINS
     CALL input_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
       &                    c_nonsoluble_ag1, 0._wp, Y_in_pools)
     ! call YASSO for oxic
-    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, &
+      & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
     ! C pools output
-    CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
-      &                     c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
+    CALL output_YASSO_pools(.false., Y_out_pools, c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
+      &                     c_nonsoluble_ag1, tmp_out_humus)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic      + Y_out_fluxes(F_RESP) / delta_time_C
     c_into_humus_1_sum         = c_into_humus_1_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -245,10 +248,11 @@ CONTAINS
       Y_in_mod(M_LITTER) = d_temp * d_water * d_size_leaf * d_anox
 
       ! call YASSO for anoxic
-      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, &
+        & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
       ! C pools output
-      CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
-        &                     c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
+      CALL output_YASSO_pools(.true., Y_out_pools, c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
+        &                     c_nonsoluble_ag1, tmp_out_humus)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C
       c_into_humus_1_sum       = c_into_humus_1_sum   + Y_out_fluxes(F_2_HUMUS)        ! decomposition into humus
@@ -266,10 +270,11 @@ CONTAINS
       CALL input_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),  &
         &                    c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), Y_in_pools)
       ! call YASSO for oxic
-      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, &
+        & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
       ! C pools output
-      CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
-        &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
+      CALL output_YASSO_pools(.false., Y_out_pools, c_acid_bg1_sl(is), c_water_bg1_sl(is), &
+        &                     c_ethanol_bg1_sl(is), c_nonsoluble_bg1_sl(is), c_humus_1_sl(is))
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is)  + Y_out_fluxes(F_RESP) / delta_time_C     ! respiration
       c_decomp_humus_1_sum     = c_decomp_humus_1_sum  + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -281,10 +286,11 @@ CONTAINS
         Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
-        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, &
+          & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
         ! C pools output
-        CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
-          &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
+        CALL output_YASSO_pools(.true., Y_out_pools, c_acid_bg1_sl(is), c_water_bg1_sl(is), &
+          &                     c_ethanol_bg1_sl(is), c_nonsoluble_bg1_sl(is), c_humus_1_sl(is))
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
         c_decomp_humus_1_sum   = c_decomp_humus_1_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -307,10 +313,11 @@ CONTAINS
     CALL input_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2,  &
       &                    c_nonsoluble_ag2, 0._wp, Y_in_pools)
     ! call YASSO for oxic
-    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, &
+      & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
     ! C pools output
-    CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
-      &                     c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
+    CALL output_YASSO_pools(.false., Y_out_pools, c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
+      &                     c_nonsoluble_ag2, tmp_out_humus)
     ! Fluxes
     soilResp_oxic              = soilResp_oxic + Y_out_fluxes(F_RESP) / delta_time_C
     c_into_humus_2_sum         = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -320,10 +327,11 @@ CONTAINS
       Y_in_mod(M_LITTER) = d_temp * d_water * d_size_wood * d_anox
 
       ! call YASSO for anoxic
-      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, &
+        & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
       ! C pools output
-      CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
-        &                     c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
+      CALL output_YASSO_pools(.true., Y_out_pools, c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
+        &                     c_nonsoluble_ag2, tmp_out_humus)
       ! Fluxes
       soilResp_anox            = soilResp_anox + Y_out_fluxes(F_RESP) / delta_time_C
       c_into_humus_2_sum       = c_into_humus_2_sum + Y_out_fluxes(F_2_HUMUS)          ! decomposition into humus
@@ -340,10 +348,11 @@ CONTAINS
       CALL input_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
         &                    c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), Y_in_pools)
       ! call YASSO for oxic
-      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, &
+        & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
       ! C pools output
-      CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
-        &                     c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
+      CALL output_YASSO_pools(.false., Y_out_pools, c_acid_bg2_sl(is), c_water_bg2_sl(is), &
+        &                     c_ethanol_bg2_sl(is), c_nonsoluble_bg2_sl(is), c_humus_2_sl(is))
       ! Fluxes
       soilResp_oxic_sl(is)     = soilResp_oxic_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
       c_decomp_humus_2_sum     = c_decomp_humus_2_sum + Y_out_fluxes(F_F_HUMUS)        ! decomposition of humus
@@ -355,11 +364,12 @@ CONTAINS
         Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
-        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, &
+          & Y_out_pools=Y_out_pools, Y_out_fluxes=Y_out_fluxes)
 
         ! C pools output
-        CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
-          &                     c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .true., Y_out_pools)
+        CALL output_YASSO_pools(.true., Y_out_pools, c_acid_bg2_sl(is), c_water_bg2_sl(is), &
+          &                     c_ethanol_bg2_sl(is), c_nonsoluble_bg2_sl(is), c_humus_2_sl(is))
 
         ! Fluxes
         soilResp_anox_sl(is)   = soilResp_anox_sl(is) + Y_out_fluxes(F_RESP) / delta_time_C      ! respiration
@@ -414,45 +424,46 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------
     ! vertical mixing
 
-    CALL move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
+    CALL move_ag_2_bg(max_depth, layer_thick, permafrost_layer,                                       &
+      &               c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
       &               c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
       &               c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
       &               c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
-      &               c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
+      &               c_humus_1_sl, c_humus_2_sl)
 
-    CALL set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, &
-      &                 layer_depth, t_soil_sl, wtr_soil_rel_sl,            &
-      &                 n_thaw_cycle, permafrost_layer)
-    CALL vertical_C_transport(c_acid_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_acid_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_water_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_water_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_ethanol_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_ethanol_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_nonsoluble_bg1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_nonsoluble_bg2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_humus_1_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
-    CALL vertical_C_transport(c_humus_2_sl, max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer)
+    CALL set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
+      &                  wtr_soil_rel_sl, n_thaw_cycle, permafrost_layer, diff_coeff)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_acid_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_acid_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_water_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_water_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_ethanol_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_ethanol_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_nonsoluble_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_nonsoluble_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_humus_1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_humus_2_sl)
 
     ! remove any C that might be below bedrock boundary
-    CALL remove_C_below_bedrock(c_acid_bg1_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_acid_bg2_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_water_bg1_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_water_bg2_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_ethanol_bg1_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_ethanol_bg2_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_nonsoluble_bg1_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_nonsoluble_bg2_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_humus_1_sl, soil_depth, layer_thick)
-    CALL remove_C_below_bedrock(c_humus_2_sl, soil_depth, layer_thick)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_acid_bg1_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_acid_bg2_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_water_bg1_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_water_bg2_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_ethanol_bg1_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_ethanol_bg2_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_nonsoluble_bg1_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_nonsoluble_bg2_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_humus_1_sl)
+    CALL remove_C_below_bedrock(soil_depth, layer_thick, c_humus_2_sl)
 
   END SUBROUTINE calc_vertical_soil_c
 
 
   ! ---------------------------------------------------------------------------------------------------------
 
-  SUBROUTINE yasso_minimal(delta_time_C, Y_in_pools, Y_in_mod, Y_out_pools, Y_out_fluxes,                   &
-    &                      A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
+  SUBROUTINE yasso_minimal(delta_time_C, Y_in_pools, Y_in_mod,                                             &
+    &                      A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H, &
+    &                      Y_out_pools, Y_out_fluxes)
 
     USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
       &                            F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,           &
@@ -461,11 +472,11 @@ CONTAINS
     REAL(wp), INTENT(in)                 :: delta_time_C     !< Carbon time step [s]
     REAL(wp), DIMENSION(5),  INTENT(IN)  :: Y_in_pools       !< Yasso pools IN [mol(c)/m2]
     REAL(wp), DIMENSION(2),  INTENT(IN)  :: Y_in_mod         !< Yasso rate modifiers IN
-    REAL(wp), DIMENSION(5),  INTENT(OUT) :: Y_out_pools      !< Yasso pools OUT [mol(c)/m2]
-    REAL(wp), DIMENSION(4),  INTENT(OUT) :: Y_out_fluxes     !< Yasso fluxes OUT [mol(c)/m2]
 
     ! Possibilities to overwrite (some of) the default exchange coefficients (AWEN2H for backward compatibility)
     REAL(wp), OPTIONAL,      INTENT(in)  :: A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H
+    REAL(wp), DIMENSION(5),  INTENT(OUT) :: Y_out_pools      !< Yasso pools OUT [mol(c)/m2]
+    REAL(wp), DIMENSION(4),  INTENT(OUT) :: Y_out_fluxes     !< Yasso fluxes OUT [mol(c)/m2]
 
     !local
     ! Yasso pools   [mol(c)/m2]
@@ -761,18 +772,18 @@ CONTAINS
   !> This subroutine moves the yasso output to the respective vertical yasso pools. Depending on argument "plus"
   !> the yasso output values are added to (true) or are replacing (false) current vertical pool values.
   !>
-  PURE SUBROUTINE output_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,         &
-    &                                cpool_nonsoluble, cpool_humus, plus, YASSO_out)
+  PURE SUBROUTINE output_YASSO_pools(plus, YASSO_out, cpool_acid, cpool_water, cpool_ethanol, &
+    &                                cpool_nonsoluble, cpool_humus)
 
     USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
+    LOGICAL,  INTENT(in)     :: plus
+    REAL(wp), INTENT(in)     :: YASSO_out(5)
     REAL(wp), INTENT(inout)  :: cpool_acid
     REAL(wp), INTENT(inout)  :: cpool_water
     REAL(wp), INTENT(inout)  :: cpool_ethanol
     REAL(wp), INTENT(inout)  :: cpool_nonsoluble
     REAL(wp), INTENT(inout)  :: cpool_humus
-    LOGICAL,  INTENT(in)     :: plus
-    REAL(wp), INTENT(in)     :: YASSO_out(5)
 
     IF (plus) THEN
       cpool_acid       = cpool_acid       + YASSO_out(Y_ACID)
@@ -907,15 +918,15 @@ CONTAINS
   END FUNCTION depth_to_layers
 
   ! ---------------------------------------------------------------------------------------------------------
-  SUBROUTINE vertical_C_transport(cpool_bg_sl, act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_layer)
+  SUBROUTINE vertical_C_transport(act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_layer, cpool_bg_sl)
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
-    REAL(wp), INTENT(inout) :: cpool_bg_sl(:)       !< bg C pools on soil layers
     REAL(wp), INTENT(in)    :: act_depth_sl(:)      !< actual layer thickness, considering soil depth and active layer thickness
     REAL(wp), INTENT(in)    :: diff_coeff(:)        !< diffusivity
     REAL(wp), INTENT(in)    :: delta_time_C         !< Carbon time step [s]
     REAL(wp), INTENT(in)    :: dz(:)                !< layer thickness [m]
     REAL(wp), INTENT(in)    :: permafrost_layer(:)  !< permafrost indicator [yr]
+    REAL(wp), INTENT(inout) :: cpool_bg_sl(:)       !< bg C pools on soil layers
 
     ! layer counters, # soil layers
     INTEGER :: is, nsoil, nsoil_loc
@@ -1076,13 +1087,11 @@ CONTAINS
   END SUBROUTINE vertical_C_transport
 
   ! ---------------------------------------------------------------------------------------------------------
-  SUBROUTINE set_diffusivity(diff_coeff, soil_depth, soil_depth_sl, thaw_depth, &
-    &                        layer_depth, t_soil_sl, wtr_rel_sl,                &
-    &                        n_thaw_cycle, permafrost_layer)
+  SUBROUTINE set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
+    &                        wtr_rel_sl, n_thaw_cycle, permafrost_layer, diff_coeff)
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
-    REAL(wp), INTENT(out)   :: diff_coeff(:)
     REAL(wp), INTENT(in)    :: soil_depth
     REAL(wp), INTENT(in)    :: soil_depth_sl(:)
     REAL(wp), INTENT(in)    :: thaw_depth
@@ -1091,6 +1100,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: wtr_rel_sl(:)
     REAL(wp), INTENT(in)    :: n_thaw_cycle
     REAL(wp), INTENT(in)    :: permafrost_layer(:)
+    REAL(wp), INTENT(out)   :: diff_coeff(:)
     INTEGER :: is, isp1, nsoil
 
 !     REAL(wp), PARAMETER :: cryo_max = 0.15_wp     ! m2/yr (?)
@@ -1145,15 +1155,19 @@ CONTAINS
   ! move_ag_2_bg
   ! check column C amounts, ensure that C makes sense.
   ! Idea: peat column defines maximum C possible, if more C in 1 layer, it needs to be moved down.
-    SUBROUTINE move_ag_2_bg(c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
+    SUBROUTINE move_ag_2_bg(max_depth, layer_thick, permafrost_layer,                                     &
+      &                     c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
       &                     c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
       &                     c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
       &                     c_nonsoluble_ag1, c_nonsoluble_bg1_sl, c_nonsoluble_ag2, c_nonsoluble_bg2_sl, &
-      &                     c_humus_1_sl, c_humus_2_sl, max_depth, layer_thick, permafrost_layer)
+      &                     c_humus_1_sl, c_humus_2_sl)
 
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
       &                            permafrost_threshold
 
+    REAL(wp), INTENT(in)    :: max_depth
+    REAL(wp), INTENT(in)    :: layer_thick(:)
+    REAL(wp), INTENT(in)    :: permafrost_layer(:)
     REAL(wp), INTENT(inout) :: c_acid_ag1
     REAL(wp), INTENT(inout) :: c_acid_bg1_sl(:)
     REAL(wp), INTENT(inout) :: c_acid_ag2
@@ -1172,10 +1186,6 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_nonsoluble_bg2_sl(:)
     REAL(wp), INTENT(inout) :: c_humus_1_sl(:)
     REAL(wp), INTENT(inout) :: c_humus_2_sl(:)
-    REAL(wp), INTENT(in)    :: max_depth
-    REAL(wp), INTENT(in)    :: layer_thick(:)
-    REAL(wp), INTENT(in)    :: permafrost_layer(:)
-
     REAL(wp),  PARAMETER :: thresh_frac_org    = 1.25_wp  !< Threshold organic fraction above which C is being moved downwards
     REAL(wp),  PARAMETER :: ag_layer_depth     = 0.13_wp
     REAL(wp) :: cpool_tot
@@ -1289,10 +1299,10 @@ CONTAINS
 
   ! --- remove_C_below_bedrock ---------------------------------------------------------------------------------------------------
   !
-  SUBROUTINE remove_C_below_bedrock(c_pool_bg, soil_depth, layer_thick)
-    REAL(wp), INTENT(inout)  :: c_pool_bg(:)
+  SUBROUTINE remove_C_below_bedrock(soil_depth, layer_thick, c_pool_bg)
     REAL(wp), INTENT(in)     :: soil_depth
     REAL(wp), INTENT(in)     :: layer_thick(:)
+    REAL(wp), INTENT(inout)  :: c_pool_bg(:)
 
     INTEGER  :: is, nsoil, max_layer_above
     REAL(wp) :: soil_above, C_below_bedrock, upper_bound
@@ -1366,7 +1376,6 @@ CONTAINS
     & c_nonsoluble_bg2,                  & ! inout
     & c_humus_1,                         & ! inout
     & c_humus_2,                         & ! inout
-    & co2flux_fire_all_2_atm,            & ! out
     & c_acid_bg1_sl,                     & ! inout
     & c_water_bg1_sl,                    & ! inout
     & c_ethanol_bg1_sl,                  & ! inout
@@ -1376,7 +1385,8 @@ CONTAINS
     & c_ethanol_bg2_sl,                  & ! inout
     & c_nonsoluble_bg2_sl,               & ! inout
     & c_humus_1_sl,                      & ! inout
-    & c_humus_2_sl                       & ! inout
+    & c_humus_2_sl,                      & ! inout
+    & co2flux_fire_all_2_atm             & ! out
     & )
 
     USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, molarMassCO2_kg
@@ -1394,7 +1404,6 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_green(:)                   !< Amount of green carbon [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_woods(:)                   !< Amount of woody carbon [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_reserve(:)                 !< Amount of reserve carbon [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    !< CO2 released by fire [kg(CO2)m-2(canopy)s-1]
     REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   !< Carbon relocated by disturbances from non-woody biomass
                                                             !< to the green litter pools [mol(C)/m^2(canopy)s-1]
     REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   !< Carbon relocated by disturbances from woody biomass to
@@ -1436,6 +1445,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_ethanol_bg2_sl(:,:)       !< Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_nonsoluble_bg2_sl(:,:)    !< Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_humus_2_sl(:,:)           !< Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)   !< CO2 released by fire [kg(CO2)m-2(canopy)s-1]
 
     ! Local variables
     REAL(wp)  :: non_woody_litter, fraction ! Helper

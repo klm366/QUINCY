@@ -923,12 +923,12 @@ CONTAINS
             &  max_depth                    = soil_depth_thaw(ic),                      & ! in
             &  max_depth_sl                 = max_layer_sl(ic,:),                       & ! in
             &  thaw_depth                   = thaw_depth(ic),                           & ! in
-            &  root_dist_sl                 = root_dist_sl(ic,:),                       & ! inout
             &  permafrost_layer             = permafrost_period_sl_climbuf(ic,:),       & ! in
                !
             &  woodLitter                   = cflux_c_wood_2_litter(ic),                & ! in
             &  leafLitter                   = cflux_c_green_2_litter(ic),               & ! in
             &  rootExudates                 = root_exudates(ic),                        & ! in
+            &  root_dist_sl                 = root_dist_sl(ic,:),                       & ! inout
                !
             &  c_acid_ag1                   = c_acid_ag1(ic),                           & ! inout
             &  c_water_ag1                  = c_water_ag1(ic),                          & ! inout
