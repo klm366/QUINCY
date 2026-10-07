@@ -28,7 +28,7 @@ MODULE mo_q_dfire_sf_classes
 
   PRIVATE
   PUBLIC :: t_sf_ros, t_sf_dynamics, t_sf_tree_damage, t_sf_ignitions, t_sf_mf, t_sf_lfmc, create_t_sf_prob_mort, &
-            t_sf_atm, t_sf_fuel_load, t_sf_config
+            t_sf_atm, t_sf_fuel_load, t_sf_config, t_sf_veget_cover_frac
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_classes'
 
@@ -229,7 +229,32 @@ MODULE mo_q_dfire_sf_classes
     MODULE PROCEDURE :: create_sf_config
   END INTERFACE t_sf_config
 
+
+  !< Vegetation cover fraction
+  TYPE t_sf_veget_cover_frac
+    REAL(wp), ALLOCATABLE :: tree(:) !< How much of tree covers the tile [0 to 1]
+    REAL(wp), ALLOCATABLE :: grass(:) !< How much grass covers the tile [0 to 1]
+  END TYPE t_sf_veget_cover_frac
+
+  INTERFACE t_sf_veget_cover_frac
+    MODULE PROCEDURE :: create_veget_cover_frac
+  END INTERFACE t_sf_veget_cover_frac
+
   CONTAINS
+
+  ! ======================================================================================================= !
+  !>
+  !> t_sf_veget_cover_frac constructor
+  !>
+  FUNCTION create_veget_cover_frac(nc, tree_cover_frac, grass_cover_frac) RESULT  (veg_cover_frac)
+    INTEGER, INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: tree_cover_frac(nc)   !< [0 to 1]
+    REAL(wp), INTENT(in) :: grass_cover_frac(nc)  !< [0 to 1]
+    TYPE(t_sf_veget_cover_frac) :: veg_cover_frac
+
+    ALLOCATE(veg_cover_frac%tree, source = tree_cover_frac)
+    ALLOCATE(veg_cover_frac%grass, source = grass_cover_frac)
+  END FUNCTION create_veget_cover_frac
 
 
   ! ======================================================================================================= !

@@ -21,7 +21,7 @@ MODULE mo_q_dfire_sf_ros_class
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
-  USE mo_q_dfire_sf_classes,        ONLY: t_sf_ros, t_sf_fuel_load, t_sf_mf, t_sf_config
+  USE mo_q_dfire_sf_classes,        ONLY: t_sf_ros, t_sf_fuel_load, t_sf_mf, t_sf_config, t_sf_veget_cover_frac
   USE mo_q_dfire_sf_config_class,   ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
   USE mo_q_dfire_sf_ros_ober_class, ONLY: sf_calc_rate_of_spread_ober, calc_live_me
   USE mo_q_dfire_sf_ros_thon_class, ONLY: sf_calc_rate_of_spread_thon
@@ -33,21 +33,9 @@ MODULE mo_q_dfire_sf_ros_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread_main, t_sf_veget_cover_frac, calc_mean_fire_area
+  PUBLIC :: sf_calc_rate_of_spread_main, calc_mean_fire_area
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
-
-
-  !< Vegetation cover fraction
-  TYPE t_sf_veget_cover_frac
-    REAL(wp), ALLOCATABLE :: tree(:) !< How much of tree covers the tile [0 to 1]
-    REAL(wp), ALLOCATABLE :: grass(:) !< How much grass covers the tile [0 to 1]
-  END TYPE t_sf_veget_cover_frac
-
-  INTERFACE t_sf_veget_cover_frac
-    MODULE PROCEDURE :: create_veget_cover_frac
-  END INTERFACE t_sf_veget_cover_frac
-
 
 CONTAINS
 
@@ -199,21 +187,6 @@ CONTAINS
     lb_term = pi / (4.0_wp * l2b_ratio)
     mean_fire_area = lb_term * (distance_travelled ** 2) / 10000._wp
   END FUNCTION calc_mean_fire_area
-
-
-  ! ======================================================================================================= !
-  !>
-  !> t_sf_veget_cover_frac constructor
-  !>
-  FUNCTION create_veget_cover_frac(nc, tree_cover_frac, grass_cover_frac) RESULT  (veg_cover_frac)
-    INTEGER, INTENT(in) :: nc
-    REAL(wp), INTENT(in) :: tree_cover_frac(nc)   !< [0 to 1]
-    REAL(wp), INTENT(in) :: grass_cover_frac(nc)  !< [0 to 1]
-    TYPE(t_sf_veget_cover_frac) :: veg_cover_frac
-
-    ALLOCATE(veg_cover_frac%tree, source = tree_cover_frac)
-    ALLOCATE(veg_cover_frac%grass, source = grass_cover_frac)
-  END FUNCTION create_veget_cover_frac
 
 
 #endif
