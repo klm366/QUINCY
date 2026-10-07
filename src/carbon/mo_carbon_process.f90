@@ -17,9 +17,9 @@ MODULE mo_carbon_process
   USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
-                               & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
-                               & LCT_NONSOLUBLE, LCT_HUMUS,                       &
-                               & molarMassCO2_kg
+    & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
+    & LCT_NONSOLUBLE, LCT_HUMUS,                       &
+    & molarMassCO2_kg
   USE mo_carbon_shared,    ONLY: yasso, distribute_yasso_litter
 
   IMPLICIT NONE
