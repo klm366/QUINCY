@@ -65,7 +65,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_config_class,  ONLY: Q_DFIRE_ROS_THONICKE, Q_DFIRE_ROS_OBERHAGEMANN
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
-  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture
+  USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_main
   USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
@@ -501,7 +501,7 @@ CONTAINS
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     sf_ros % u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
 
-    CALL calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, has_fire_conditions)
+    CALL calc_sf_fuel_moisture_main(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, has_fire_conditions)
 
     CALL calc_fire_danger_index_main(sf_config, sf_fuel_moisture, spitfire % fdi, has_fire_conditions)
 

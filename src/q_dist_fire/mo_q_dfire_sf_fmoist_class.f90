@@ -37,7 +37,7 @@ MODULE mo_q_dfire_sf_fmoist_class
   PUBLIC :: calc_sf_fuel_moisture_for_thonicke, calc_sf_fuel_moisture_for_oberhagemann, &
             calc_mflg_ober
   PUBLIC :: wrap_calc_sf_fuel_moisture_for_thonicke, wrap_calc_sf_fuel_moisture_for_oberhagemann, &
-            calc_sf_fuel_moisture
+            calc_sf_fuel_moisture_main
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_fmoist_class'
 CONTAINS
@@ -46,7 +46,7 @@ CONTAINS
   !>
   !> Main routine to calculate fuel moisture
   !>
-  SUBROUTINE calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
+  SUBROUTINE calc_sf_fuel_moisture_main(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
     TYPE(t_sf_config), INTENT(in)           :: sf_config
     REAL(wp), INTENT(in)                    :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
     TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
@@ -60,7 +60,7 @@ CONTAINS
     ELSE
       CALL finish(modname, 'unsupported ROS model: nor Thonicke nor Oberhagemann')
     END IF
-  END SUBROUTINE calc_sf_fuel_moisture
+  END SUBROUTINE calc_sf_fuel_moisture_main
 
 
   ! ======================================================================================================= !
