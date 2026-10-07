@@ -90,8 +90,8 @@ CONTAINS
 
     REAL(wp),  INTENT(in)    :: delta_time_C             !< Carbon time step [s]
     INTEGER,   INTENT(in)    :: nsoil                    !
-    REAL(wp),  INTENT(in)    :: layer_depth(:)
-    REAL(wp),  INTENT(in)    :: layer_thick(:)
+    REAL(wp),  INTENT(in)    :: layer_depth(:)           !< Depths of soil layer center [m]
+    REAL(wp),  INTENT(in)    :: layer_thick(:)           !< Thickness of soil layer [m]
     !
     ! Fixed input parameters for Yasso
     !   Vegetation dependent coefficients to separate leaf litter into classes of chemical composition
@@ -874,6 +874,10 @@ CONTAINS
   END FUNCTION get_modifier_precip
 
   ! ---------------------------------------------------------------------------------------------------------
+  !>
+  !> This function return the actual thickness of each soil layer, given the total soil depth (e.g. until bedrock or
+  !> until permafrost boundary) and the thickness of each layer.
+  !>
   FUNCTION depth_to_layers(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:)
@@ -910,12 +914,12 @@ CONTAINS
     REAL(wp), INTENT(in)    :: act_depth_sl(:)      !< actual layer thickness, considering soil depth and active layer thickness
     REAL(wp), INTENT(in)    :: diff_coeff(:)        !< diffusivity
     REAL(wp), INTENT(in)    :: delta_time_C         !< Carbon time step [s]
-    REAL(wp), INTENT(in)    :: dz(:)                !< layer thickness
-    REAL(wp), INTENT(in)    :: permafrost_layer(:)  !< permafrost indicator
+    REAL(wp), INTENT(in)    :: dz(:)                !< layer thickness [m]
+    REAL(wp), INTENT(in)    :: permafrost_layer(:)  !< permafrost indicator [yr]
 
     ! layer counters, # soil layers
     INTEGER :: is, nsoil, nsoil_loc
-    REAL(wp), PARAMETER :: implicit_contrib = 0.5_wp
+    REAL(wp), PARAMETER :: implicit_contrib = 0.5_wp !< weighting factor for Crank-Nicholson scheme
 
     ! Diffusion constants averaged over adjacent layers.
     REAL(wp) :: D_below, D_above
@@ -994,7 +998,7 @@ CONTAINS
           ! diffusivity in layer and layer above
           D_above = (dz(is-1)*diff_coeff(is-1) + &
             &        dz(is  )*diff_coeff(is))  / &
-            &        (dz(is-1) + dz(is))
+            &       (dz(is-1) + dz(is))
         END IF
         IF (is == nsoil_loc) THEN
           ! downwards diffusivity in the bottom layer is set to zero
@@ -1005,7 +1009,7 @@ CONTAINS
           ! diffusivity in the layer and the layer below
           D_below = (dz(is  )*diff_coeff(is  )  + &
             &        dz(is+1)*diff_coeff(is+1)) / &
-            &        (dz(is) + dz(is+1))
+            &       (dz(is) + dz(is+1))
         END IF
 
         ! Calculate layer-dependent weighting factors.
@@ -1034,7 +1038,7 @@ CONTAINS
       END DO
 
       ! Semi-implicit case -- whenever implicit_contrib > 0.1,
-      ! fully explicit case is solced already ( = rhs)
+      ! fully explicit case is solved already ( = rhs)
       IF (implicit_contrib >= 0.1_wp) THEN
         !------------------------------------------------------------
         ! solve tridiagonal system using dgtsv from NETLIB
