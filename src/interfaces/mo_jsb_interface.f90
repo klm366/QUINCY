@@ -324,7 +324,7 @@ CONTAINS
     !>
     !>  Run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
     !>
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+    CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.0 Give the required variables back to the atmosphere
@@ -539,7 +539,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! Run tasks in queue
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+    CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
     CALL model%Get_top_tile(tile)
@@ -641,9 +641,6 @@ CONTAINS
     dtime_lp = REAL(dtime, KIND=lp)
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime_lp)
-
-    ! Reset all tiles at the beginning of the timestep
-    CALL model%Reset_tiles()
 
     ! For the ALCC process land use data has to be read once a year
     IF (is_newyear(current_datetime,dtime_lp) .AND. model%processes(ALCC_)%p%config%active) THEN
@@ -773,9 +770,6 @@ CONTAINS
       CALL model%Write_back_to_bgcms()
     END IF
 
-    ! Reset all tiles (needed for tile loops in following test routines)
-    CALL model%Reset_tiles()
-
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime_lp)
 
@@ -795,7 +789,7 @@ CONTAINS
 
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
-      CALL seb_check_temperature_range(model_id, no_omp_thread)
+      CALL seb_check_temperature_range(model_id)
     END IF
 
 
@@ -981,7 +975,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
     CLASS(t_jsb_var),            POINTER :: var_ptr
     CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-    INTEGER :: process_id, pos, ic, nc, icount
+    INTEGER :: process_id, pos, ic, nc, icount, itile
     LOGICAL :: l_on_chunk, l_found
     INTEGER :: no_omp_thread
 
@@ -1015,18 +1009,17 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile_ptr)
     ! If `tile` is not present the variable on the box tile is used, otherwise search for tile with given name
     l_found = .TRUE.
     IF (PRESENT(tile)) THEN
       l_found = .FALSE.
-      DO WHILE (ASSOCIATED(tile_ptr))
-        IF (TRIM(tile_ptr%name) == tile) THEN
+      DO itile=1,SIZE(model%tiles)
+        IF (TRIM(model%tiles(itile)%p%name) == tile) THEN
+          tile_ptr => model%tiles(itile)%p
           l_found = .TRUE.
           EXIT
         END IF
-        CALL model%Goto_next_tile(tile_ptr)
       END DO
     END IF
     IF (.NOT. l_found) CALL finish(routine, 'tile '//tile//' not found!')

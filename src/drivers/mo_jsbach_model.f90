@@ -1129,7 +1129,7 @@ CONTAINS
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue
-      CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+      CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
       ! @TODO cleanup / remove ?
       !!$    IF (iblk == 1)                                                              &

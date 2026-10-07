@@ -23,7 +23,7 @@ You cannot usefully edit this code without these. They are all wiki-documented; 
 
 ### Model → tiles → process memory
 
-A **model** (`t_jsb_model`, `src/base/mo_jsb_model_class.f90`) owns a **hierarchical tile tree**, a list of **processes**, and a **task queue**. It extends a hierarchical state machine (`t_Hsm`, `src/base/mo_hsm_class.f90`).
+A **model** (`t_jsb_model`, `src/base/mo_jsb_model_class.f90`) owns a **hierarchical tile tree**, a list of **processes**, a **task queue**, and the **task schedule** derived from them. Tiles are nodes of the tile tree (`t_jsb_tile_tree_node`, `src/base/mo_jsb_tile_tree_class.f90`: `parent`, `first_child`, `next_sibling`, `Has_children`, ...). The model keeps all tiles in precomputed lists, `model%tiles(:)` (pre-order, parents first) and `model%tiles_postorder(:)` (children first), built once by `Build_tile_lists` in `jsbach_setup_tiles`; to loop over tiles, iterate over one of these (`DO itile=1,SIZE(model%tiles); tile => model%tiles(itile)%p`).
 
 **Tiles** (`t_jsb_tile_abstract`, `src/base/mo_jsb_tile_class.f90`, `src/base/mo_jsb_tile.f90`) subdivide each grid cell by surface type, e.g. `box → {land, lake}`, `land → {veg, glacier}`, `veg → {pft01 … pftNN}`. Each tile carries a fraction `tile%fract`; children sum to their parent, and the `box` fraction is the land(+lake) fraction of the ICON grid cell. Each tile holds **its own memory per process**: `tile%mem(PROC_)%p`.
 
@@ -72,9 +72,9 @@ Where a process runs on the tile tree (see associations in `src/base/mo_jsb_mode
 
 Query helpers (see FAQ): `model%Is_process_enabled` (configured at all), `tile%Is_process_active` (integrated *or* aggregated here), `tile%Is_process_calculated` (integrated here), `tile%Has_process_memory`. In addition, the config of a process `PROC` is often directly used to test if a process is active — using `dsl4jsb_Config(PROC_)%active` or (mostly in the infrastructure) `model%processes(PROC_)%p%config%active`.
 
-### Task queue
+### Task queue and schedule
 
-The task queue (`src/base/mo_jsb_task_class.f90`, built in `jsbach_init` in `src/base/mo_jsb_model_init.f90`) fixes the order of `update_*` calls within a timestep. Tiles are walked **leaves → top** so that `aggregate_*` works. `update_`/`aggregate_` are ultimately dispatched from `task%Do_it` inside `Process_task_on_tile` (`src/base/mo_jsb_tile.f90`) — deep inside the state machine, which is why call sites are hard to grep for.
+The task queue (`src/base/mo_jsb_task_class.f90`, built in `jsbach_init` in `src/base/mo_jsb_model_init.f90`) fixes the order of `update_*` calls within a timestep. At the end of `jsbach_init`, `model%Build_task_schedule` turns it into the **task schedule** `model%schedule(:)`: per task, the ordered steps (tile, `TASK_INTEGRATE`/`TASK_AGGREGATE`) obtained by a depth-first walk of the tile tree — a tile with `SKIP_`/`INHERIT_` is skipped with its sub-tree, `ON_TILE_`/`ON_SUBTREE_` or a leaf is integrated, any other tile has its children processed first and is then aggregated (**leaves → top**). Each timestep, `model%Run_tasks` just iterates over these steps and calls `task%Do_it` (with OpenACC, consecutive integrate steps of a task run on separate async queues that are joined before the next aggregate step). Set `debug_level` ≥ 1 to print the schedule at initialization, ≥ 3 to trace every step.
 
 Ordering rules:
 
@@ -84,7 +84,7 @@ Ordering rules:
 
 Currently two different task queues are defined depending on the model scheme (`model%config%model_scheme` — `MODEL_JSBACH` or `MODEL_QUINCY`). For the model scheme `MODEL_QUINCY` additional modularity on task queueing is added by the selected mode (`model%config%qmodel_id`) with `QCANOPY` only adding tasks required for bio-geophysical land-surface processes, `QPLANT` additionally to `QCANOPY` adding tasks required for plant bio-geochemistry, `QSOIL` additionally to `QCANOPY` adding tasks required for soil bio-geochemistry (whereby the implementation of `QSOIL` is not completed yet), and `QLAND` enabling all tasks.
 
-Tasks are queued regardless of the process's `active` namelist flag, so **every `update_`/`aggregate_` routine should start with `IF (.NOT. tile%Is_process_active(XYZ_)) RETURN`**.
+Tasks are queued regardless of the process's `active` namelist flag; the schedule drops tasks of inactive processes and tiles where `tile%Is_process_active` is false. Still, **every `update_`/`aggregate_` routine should start with `IF (.NOT. tile%Is_process_active(XYZ_)) RETURN`**.
 
 ### Aggregation
 
@@ -173,7 +173,7 @@ Full macro inventory: grep `dsl4jsb_` in `scripts/dsl4jsb/dsl4jsb.py`. Families 
 
 Infrastructure:
 
-- `base/` — the framework: model/tile/process/task/memory/variable classes, HSM, usecases, task-queue construction, lcc infrastructure, grids, time, I/O, parallel, lctlib, CQT classes, BGCM store, `mo_jsb_version.f90`
+- `base/` — the framework: model/tile/process/task/memory/variable classes, tile tree, usecases, task-queue and schedule construction, lcc infrastructure, grids, time, I/O, parallel, lctlib, CQT classes, BGCM store, `mo_jsb_version.f90`
 - `interfaces/` — `mo_jsb_interface.f90`, the entry points the host calls: `jsbach_interface`, `jsbach_start_timestep`, `jsbach_finish_timestep`, `jsbach_get_var`, `invalidate_cuda_graphs`
 - `drivers/` — `mo_jsbach_model.f90` (standalone driver, invoked from ICON's `src/drivers/icon.f90`) and `mo_jsb4_forcing.f90` (offline forcing)
 - `shared/` — cross-process helpers: physical/math constants, `mo_phy_schemes.f90`, `mo_orbit_solar.f90`, isotope and time-averaging utilities, OpenACC helpers
