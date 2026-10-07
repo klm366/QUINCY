@@ -17,7 +17,6 @@ MODULE mo_carbon_process
   USE mo_jsb_control,      ONLY: acc_stream
   USE mo_kind,             ONLY: wp
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
-                               & sec_per_day,                                     &
                                & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
                                & LCT_NONSOLUBLE, LCT_HUMUS,                       &
                                & molarMassCO2_kg
@@ -38,7 +37,7 @@ CONTAINS
 #endif
   SUBROUTINE calc_soil_c( &
     ! General inputs
-    & dt,                         &
+    & delta_time_C,               &
     ! Input coefficients (fixed)
     & LeafLit_coef_acid,          &
     & LeafLit_coef_water,         &
@@ -87,7 +86,7 @@ CONTAINS
     !$ACC ROUTINE SEQ
     ! Arguments
 
-    REAL(wp), INTENT(in)    :: dt                         ! Time step for carbon processes
+    REAL(wp), INTENT(in)    :: delta_time_C               !< Carbon time step [s]
     !
     ! Fixed input parameters for Yasso
     !   Vegetation dependent coefficients to separate leaf litter into classes of chemical composition
@@ -232,8 +231,9 @@ CONTAINS
 
 
     !! call yasso for leaf litter
-    CALL yasso(dt,Yasso_io_pools(1:9), Weather, Cflx_green_2_litter * dt, LeafLit_coefV,                &
-      &        sizeZero, Yasso_out, fract_green_aboveGround, Cflx_2_root_exudates * dt, redFact_Nlimitation)
+    CALL yasso(delta_time_C, Yasso_io_pools(1:9), Weather, Cflx_green_2_litter * delta_time_C, &
+      &        LeafLit_coefV, sizeZero, Yasso_out, fract_green_aboveGround, &
+      &        Cflx_2_root_exudates * delta_time_C, redFact_Nlimitation)
 
     c_acid_ag1        = Yasso_out(1)
     c_water_ag1       = Yasso_out(2)
@@ -249,11 +249,11 @@ CONTAINS
     c_into_humus_1_sum   = c_into_humus_1_sum + Yasso_out(18)
 
     ! rescale respiration (from leaf litter decomposition) from "per day" to "per second"
-    Cflx_soil_respiration = Yasso_out(10) / dt
+    Cflx_soil_respiration = Yasso_out(10) / delta_time_C
 
     !! call yasso for woody litter
-    CALL yasso(dt,Yasso_io_pools(10:18), Weather, Cflx_wood_2_litter * dt, WoodLit_coefV,       &
-      & WoodLitterSize, Yasso_out, fract_wood_aboveGround, 0.0_wp, redFact_Nlimitation) ! no exudates
+    CALL yasso(delta_time_C, Yasso_io_pools(10:18), Weather, Cflx_wood_2_litter * delta_time_C, &
+      & WoodLit_coefV, WoodLitterSize, Yasso_out, fract_wood_aboveGround, 0.0_wp, redFact_Nlimitation) ! no exudates
 
     c_acid_ag2        = Yasso_out(1)
     c_water_ag2       = Yasso_out(2)
@@ -267,7 +267,7 @@ CONTAINS
 
     !! Yasso total respiration
     ! add respiration from wood litter decomposition and rescale respiration from "per day" to "per second"
-    Cflx_soil_respiration = CFlx_soil_respiration + Yasso_out(10) / dt
+    Cflx_soil_respiration = CFlx_soil_respiration + Yasso_out(10) / delta_time_C
 
     c_decomp_humus_2_sum = c_decomp_humus_2_sum + Yasso_out(17)
     c_into_humus_2_sum   = c_into_humus_2_sum + Yasso_out(18)
@@ -283,6 +283,7 @@ CONTAINS
   ! into the litter pools.
   !
   SUBROUTINE relocate_carbon_fire( &
+    & delta_time_C,                      & ! in
     & burned_fract,                      & ! in from disturbed_frac
     & fire_fract_wood_2_atmos,           & ! in
     & LeafLit_coef,                      & ! in
@@ -315,6 +316,7 @@ CONTAINS
     & )
 
     ! Arguments
+    REAL(wp), INTENT(in)    :: delta_time_C                 !< Carbon time step [s]
     REAL(wp), INTENT(in)    :: burned_fract(:)              ! Fraction of the vegetated area of each tile burned till the last
                                                             ! call of this routine
     REAL(wp), INTENT(in)    :: fire_fract_wood_2_atmos      ! Fraction of above ground wood immediately emitted to atmosphere
@@ -369,11 +371,11 @@ CONTAINS
 
       ! Amount of carbon released from the green and reserve pools entering the green litter pools
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
-        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
+        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / delta_time_C
 
       ! Amount of carbon released from the wood pool entering the woody litter pools
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
-        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
+        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / delta_time_C
 
       ! Determin the amount of carbon released from the wood pool, the living tissue pools, and the
       ! litter pools going to the atmosphere
@@ -388,7 +390,7 @@ CONTAINS
           ! add the fire affected fraction of the above ground wood pools
         & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-        & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
+        & ) * burned_fract(ic) * molarMassCO2_kg / delta_time_C
 
       ! Reduce the above ground yasso pools accordingly
       fraction = 1._wp - burned_fract(ic)
@@ -434,6 +436,7 @@ CONTAINS
   ! c_woods_st) is partly relocated into the litter pools.
   !
   SUBROUTINE relocate_carbon_damage(  &
+    & delta_time_C,                   & ! in
     & damaged_fract,                  & ! in
     & LeafLit_coef,                   & ! in
     & WoodLit_coef,                   & ! in
@@ -463,6 +466,7 @@ CONTAINS
     & )
 
     ! Arguments
+    REAL(wp), INTENT(in)   :: delta_time_C             !< Carbon time step [s]
     real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged since the last
                                                        ! call of this routine
     real(wp),intent(in)    :: LeafLit_coef(:)          ! Factor to spread non woody litter into yasso pools [ ]
@@ -516,10 +520,10 @@ CONTAINS
       non_woody_litter = c_green(ic) + c_reserve(ic)
 
       ! Amount of carbon transfered from damaged wood pool to the wood litter pools
-      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / sec_per_day
+      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / delta_time_C
 
       ! Amount of carbon transfered from the damaged non-woody vegetation pools to the green litter pools
-      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / sec_per_day
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / delta_time_C
 
       ! Add the carbon of damaged non-woody vegetation pools to the yasso soil pools
       !  Above ground

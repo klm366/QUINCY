@@ -30,7 +30,7 @@ CONTAINS
 #endif
   SUBROUTINE calc_plant_c( &
     ! Inputs
-  & dt, is_crop,                &
+  & delta_time_C, is_crop,      &
   & LAI,                        &
   & LAI_previous,               &
   & max_LAI,                    &
@@ -76,7 +76,7 @@ CONTAINS
     !! All [m-2] are refere to canopy area
 
     ! Input arguments
-    REAL(wp), INTENT(in)    :: dt                      !< Time step of carbon calculations [s]
+    REAL(wp), INTENT(in)    :: delta_time_C            !< Carbon time step [s]
     LOGICAL,  INTENT(in)    :: is_crop                 !< Is this a crop tile?
     REAL(wp), INTENT(in)    :: LAI                     !< Yesterdays mean LAI
     REAL(wp), INTENT(in)    :: LAI_previous            !< The day before yesterdays mean LAI
@@ -239,11 +239,11 @@ CONTAINS
     IF (NPP_pot_yDayMean <= 0.0_wp) THEN                      !! In case of negative or zero NPP
       NPP_excess = 0.0_wp
 
-      c_NPP_2_reservePool =  NPP_pot_yDayMean * dt            !! .. the plant looses C and
+      c_NPP_2_reservePool =  NPP_pot_yDayMean * delta_time_C  !! .. the plant looses C and
       c_reserve     = c_reserve + c_NPP_2_reservePool         !! .. we try to take it from the reserve pool
       IF (c_reserve < 0.0_wp) THEN                            !! But if thereby the reserve pool gets negative
         c_NPP_2_reservePool = c_NPP_2_reservePool - c_reserve !! .. we absorb negative NPP only up to zero reserve pool and
-        NPP_flux_correction = -c_reserve / dt                 !! .. give the deficit as a flux correction back to the
+        NPP_flux_correction = -c_reserve / delta_time_C       !! .. give the deficit as a flux correction back to the
         c_reserve = 0.0_wp                                    !! .. calling routine. Hence all Carbon from the reserve pool
       END IF                                                  !! .. is used up.
 
@@ -257,10 +257,11 @@ CONTAINS
     ELSE  !! NPP is positive
 
       !! NPP it is distributed according to predefined relative fraction
-      c_NPP_2_woodPool     = dt * fract_npp_2_woodPool    * NPP_pot_yDayMean
-      c_NPP_2_reservePool  = dt * fract_npp_2_reservePool * NPP_pot_yDayMean
-      c_NPP_2_rootExudates = dt * fract_npp_2_exudates    * NPP_pot_yDayMean
-      c_NPP_2_greenPool    = dt * (1.0_wp-fract_npp_2_woodPool-fract_npp_2_reservePool-fract_npp_2_exudates) * NPP_pot_yDayMean
+      c_NPP_2_woodPool     = delta_time_C * fract_npp_2_woodPool    * NPP_pot_yDayMean
+      c_NPP_2_reservePool  = delta_time_C * fract_npp_2_reservePool * NPP_pot_yDayMean
+      c_NPP_2_rootExudates = delta_time_C * fract_npp_2_exudates    * NPP_pot_yDayMean
+      c_NPP_2_greenPool    = delta_time_C * &
+        & (1.0_wp-fract_npp_2_woodPool-fract_npp_2_reservePool-fract_npp_2_exudates) * NPP_pot_yDayMean
 
       !! Growth of Wood Pool (structural carbon of living plants)
 
@@ -306,8 +307,8 @@ CONTAINS
                                                                         !!      reserve pool is less.
       END IF
 
-      NPP_excess           = c_excess             / dt
-      Cflx_2_root_exudates = c_NPP_2_rootExudates / dt
+      NPP_excess           = c_excess             / delta_time_C
+      Cflx_2_root_exudates = c_NPP_2_rootExudates / delta_time_C
 
     END IF !! NPP > 0 end
 
@@ -348,7 +349,7 @@ CONTAINS
     IF (NPP_pot_yDayMean > 0.0_wp) THEN
       NPP_act = (c_NPP_2_green_via_mobileN + c_NPP_2_wood_via_mobileN + c_NPP_2_rootExudates +             &
   & redFact_Nlimitation * (c_NPP_2_green_pot + c_NPP_2_wood_pot) + c_NPP_2_reserve_pot  &
-  & ) / dt
+  & ) / delta_time_C
     ELSE
       NPP_act = NPP_pot_yDayMean + NPP_flux_correction  ! NPP_pot_yDayMean is negative: NPP_flux_correction is zero
                                                          ! except c_reserve was < 0.0_wp.
@@ -359,18 +360,18 @@ CONTAINS
     c_crop_harvest_2_atm    =  c_crop_harvest / tau_c_crop_harvest
     c_crop_harvest          =  c_crop_harvest - c_crop_harvest_2_atm
 
-    Cflx_crop_harvest_2_atm = -c_crop_harvest_2_atm / dt
+    Cflx_crop_harvest_2_atm = -c_crop_harvest_2_atm / delta_time_C
 
     !! ============== COMPUTE Herbivory RESPIRATION =====
 
-    Cflx_herb_2_atm = -(c_faeces_2_atm) / dt
+    Cflx_herb_2_atm = -(c_faeces_2_atm) / delta_time_C
 
     !! ============== Litter and herbivory diagnostics (flux from d-1 to s-1)
-    Cflx_greenwood_2_litter = (c_2_litter_greenPool + c_2_litter_woodPool + c_reserve_2_litter_greenPool) / dt
-    Cflx_green_2_litter     = Cflx_greenwood_2_litter + (-c_2_litter_woodPool+c_faeces_2_LG-c_2_crop_harvest) / dt
-    Cflx_wood_2_litter      = c_2_litter_woodPool / dt
-    Cflx_herbivory          = c_Green_2_herbivory / dt
-    Cflx_herb_2_littergreen = c_faeces_2_LG  / dt   ! DSG: goes into yasso
+    Cflx_greenwood_2_litter = (c_2_litter_greenPool + c_2_litter_woodPool + c_reserve_2_litter_greenPool) / delta_time_C
+    Cflx_green_2_litter     = Cflx_greenwood_2_litter + (-c_2_litter_woodPool+c_faeces_2_LG-c_2_crop_harvest) / delta_time_C
+    Cflx_wood_2_litter      = c_2_litter_woodPool / delta_time_C
+    Cflx_herbivory          = c_Green_2_herbivory / delta_time_C
+    Cflx_herb_2_littergreen = c_faeces_2_LG  / delta_time_C   ! DSG: goes into yasso
 
     ! R: only for spitfire:
     ! fraction of new wood litter, assume old and new litter are respired in the same way, respiration does not change the fraction
@@ -389,7 +390,7 @@ CONTAINS
 #ifndef _OPENACC
   PURE &
 #endif
-  SUBROUTINE yasso (dt, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
+  SUBROUTINE yasso (delta_time_C, Yasso_in_pools, Weather, c_2_litter, Lit_coefV, WoodLitterSize, Yasso_out, fract_aboveground, &
   &               c_2_rootExudates, redFact_Nlimit, is_anoxic, is_peat,                                             &
   &               A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
     !$ACC ROUTINE SEQ
@@ -435,7 +436,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
     IMPLICIT NONE
 
-    REAL(wp),                INTENT(in)  :: dt                 !< Carbon time step
+    REAL(wp),                INTENT(in)  :: delta_time_C       !< Carbon time step [s]
     ! TODO: instead of Yasso_in_pools and Yasso_out use a variable Yasso_pools or such with intent INOUT
     !       for the Yasso pools and a variable Yasso_fluxes or such replacing Yasso_out(10:18) with intent out.
 
@@ -587,7 +588,7 @@ CONTAINS
     ! steps, thus the fluxes have to be scaled up to annual rates.
     REAL(wp)     :: years_per_ts, ts_per_year
 
-    ts_per_year = REAL(sec_per_year,wp) / dt
+    ts_per_year = REAL(sec_per_year,wp) / delta_time_C
     years_per_ts = 1.0_wp/ts_per_year
 
     ! Treatment of optional parameters

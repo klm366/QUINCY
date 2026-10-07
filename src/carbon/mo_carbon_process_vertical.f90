@@ -85,7 +85,7 @@ CONTAINS
       &                                  LCT_HUMUS, F_RESP, F_2_HUMUS, F_F_HUMUS,            &
       &                                  M_LITTER, M_HUMUS,                                  &
       &                                  WOODLITSIZE, ROOT_DIST_BETA,                        &
-      &                                  d_oxic, d_anox, d_size_leaf !, sec_per_year, sec_per_day
+      &                                  d_oxic, d_anox, d_size_leaf
     USE mo_carbon_shared,          ONLY: distribute_yasso_litter
 
     REAL(wp),  INTENT(in)    :: delta_time_C             !< Carbon time step [s]
@@ -232,7 +232,7 @@ CONTAINS
     CALL input_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
       &                    c_nonsoluble_ag1, 0._wp, Y_in_pools)
     ! call YASSO for oxic
-    CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
     ! C pools output
     CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
       &                     c_nonsoluble_ag1, tmp_out_humus, .false., Y_out_pools)
@@ -245,7 +245,7 @@ CONTAINS
       Y_in_mod(M_LITTER) = d_temp * d_water * d_size_leaf * d_anox
 
       ! call YASSO for anoxic
-      CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_ag1, c_water_ag1, c_ethanol_ag1, &
         &                     c_nonsoluble_ag1, tmp_out_humus, .true., Y_out_pools)
@@ -266,7 +266,7 @@ CONTAINS
       CALL input_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is),  &
         &                    c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), Y_in_pools)
       ! call YASSO for oxic
-      CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
         &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .false., Y_out_pools)
@@ -281,7 +281,7 @@ CONTAINS
         Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
-        CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
         ! C pools output
         CALL output_YASSO_pools(c_acid_bg1_sl(is), c_water_bg1_sl(is), c_ethanol_bg1_sl(is), &
           &                     c_nonsoluble_bg1_sl(is), c_humus_1_sl(is), .true., Y_out_pools)
@@ -307,7 +307,7 @@ CONTAINS
     CALL input_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2,  &
       &                    c_nonsoluble_ag2, 0._wp, Y_in_pools)
     ! call YASSO for oxic
-    CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+    CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
     ! C pools output
     CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
       &                     c_nonsoluble_ag2, tmp_out_humus, .false., Y_out_pools)
@@ -320,7 +320,7 @@ CONTAINS
       Y_in_mod(M_LITTER) = d_temp * d_water * d_size_wood * d_anox
 
       ! call YASSO for anoxic
-      CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_ag2, c_water_ag2, c_ethanol_ag2, &
         &                     c_nonsoluble_ag2, tmp_out_humus, .true., Y_out_pools)
@@ -340,7 +340,7 @@ CONTAINS
       CALL input_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
         &                    c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), Y_in_pools)
       ! call YASSO for oxic
-      CALL yasso_minimal(Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
+      CALL yasso_minimal(delta_time_C, Y_in_pools * (1._wp - frac_inun_loc), Y_in_mod, Y_out_pools, Y_out_fluxes)
       ! C pools output
       CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
         &                     c_nonsoluble_bg2_sl(is), c_humus_2_sl(is), .false., Y_out_pools)
@@ -355,7 +355,7 @@ CONTAINS
         Y_in_mod(M_HUMUS)  = d_temp_sl(is) * d_depth_sl(is) * d_water_sl(is) * d_anox
 
         ! call YASSO for anoxic
-        CALL yasso_minimal(Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
+        CALL yasso_minimal(delta_time_C, Y_in_pools * frac_inun_loc, Y_in_mod, Y_out_pools, Y_out_fluxes)
 
         ! C pools output
         CALL output_YASSO_pools(c_acid_bg2_sl(is), c_water_bg2_sl(is), c_ethanol_bg2_sl(is), &
@@ -451,13 +451,14 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
 
-  SUBROUTINE yasso_minimal(Y_in_pools, Y_in_mod, Y_out_pools, Y_out_fluxes,                                 &
+  SUBROUTINE yasso_minimal(delta_time_C, Y_in_pools, Y_in_mod, Y_out_pools, Y_out_fluxes,                   &
     &                      A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H)
 
     USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
       &                            F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,           &
-      &                            M_LITTER, M_HUMUS, sec_per_year, sec_per_day
+      &                            M_LITTER, M_HUMUS, sec_per_year
 
+    REAL(wp), INTENT(in)                 :: delta_time_C     !< Carbon time step [s]
     REAL(wp), DIMENSION(5),  INTENT(IN)  :: Y_in_pools       !< Yasso pools IN [mol(c)/m2]
     REAL(wp), DIMENSION(2),  INTENT(IN)  :: Y_in_mod         !< Yasso rate modifiers IN
     REAL(wp), DIMENSION(5),  INTENT(OUT) :: Y_out_pools      !< Yasso pools OUT [mol(c)/m2]
@@ -538,10 +539,9 @@ CONTAINS
 
     ! time stepping; the parameterization of yasso is done on a annual time
     ! step, thus the fluxes have to be scaled up to annual rates.
-    REAL(wp)     :: years_per_ts, ts_per_year, dt
+    REAL(wp)     :: years_per_ts, ts_per_year
 
-    dt = sec_per_day
-    ts_per_year = REAL(sec_per_year,wp) / dt
+    ts_per_year = REAL(sec_per_year,wp) / delta_time_C
     years_per_ts = 1.0_wp/ts_per_year
 
     ! Treatment of optional parameters
@@ -903,13 +903,13 @@ CONTAINS
   END FUNCTION depth_to_layers
 
   ! ---------------------------------------------------------------------------------------------------------
-  SUBROUTINE vertical_C_transport(cpool_bg_sl, act_depth_sl, diff_coeff, delta_time, dz, permafrost_layer)
+  SUBROUTINE vertical_C_transport(cpool_bg_sl, act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_layer)
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
     REAL(wp), INTENT(inout) :: cpool_bg_sl(:)       !< bg C pools on soil layers
     REAL(wp), INTENT(in)    :: act_depth_sl(:)      !< actual layer thickness, considering soil depth and active layer thickness
     REAL(wp), INTENT(in)    :: diff_coeff(:)        !< diffusivity
-    REAL(wp), INTENT(in)    :: delta_time           !< time step length
+    REAL(wp), INTENT(in)    :: delta_time_C         !< Carbon time step [s]
     REAL(wp), INTENT(in)    :: dz(:)                !< layer thickness
     REAL(wp), INTENT(in)    :: permafrost_layer(:)  !< permafrost indicator
 
@@ -1010,8 +1010,8 @@ CONTAINS
 
         ! Calculate layer-dependent weighting factors.
         dz_factor = 0.25_wp * (dz_below + 2._wp * dz_here + dz_above)
-        W_below = D_below * (delta_time / dz_factor) * (2._wp / (dz_below + dz_here))
-        W_above = D_above * (delta_time / dz_factor) * (2._wp / (dz_here + dz_above))
+        W_below = D_below * (delta_time_C / dz_factor) * (2._wp / (dz_below + dz_here))
+        W_above = D_above * (delta_time_C / dz_factor) * (2._wp / (dz_here + dz_above))
 
         ! boundary conditions for surface and bottom layers: no flux through top / bottom
         IF (is == 1) THEN
@@ -1333,6 +1333,7 @@ CONTAINS
   !> released to the atmosphere and partly relocated into the litter pools.
   !
   SUBROUTINE relocate_carbon_vertical_fire( &
+    & delta_time_C,                      & ! in
     & burned_fract,                      & ! in
     & fire_fract_wood_2_atmos,           & ! in
     & LeafLit_coef,                      & ! in
@@ -1374,10 +1375,11 @@ CONTAINS
     & c_humus_2_sl                       & ! inout
     & )
 
-    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day, molarMassCO2_kg
+    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, molarMassCO2_kg
     USE mo_carbon_shared,    ONLY: distribute_yasso_litter
 
     ! Arguments
+    REAL(wp), INTENT(in)    :: delta_time_C                 !< Carbon time step [s]
     REAL(wp), INTENT(in)    :: burned_fract(:)              !< Fraction of the vegetated area of each tile burned till the last
                                                             !< call of this routine
     REAL(wp), INTENT(in)    :: fire_fract_wood_2_atmos      !< Fraction of above ground wood immediately emitted to atmosphere
@@ -1445,11 +1447,11 @@ CONTAINS
       ! Carbon released due to disturbances from the green and reserve pools, that enters the green litter and
       ! soil pools. We here add the contribution of fires.
       cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
-        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / sec_per_day
+        & (c_green(ic) + c_reserve(ic)) * (1._wp - fract_green_aboveGround) * burned_fract(ic) / delta_time_C
       ! Carbon released due to disturbances from the woody vegetation pool, that enters the woody litter and soil
       ! pools. We here add the contribution of fires.
       cflux_dist_woods_2_soil(ic)  = cflux_dist_woods_2_soil(ic) + &
-        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / sec_per_day
+        & c_woods(ic) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / delta_time_C
 
       ! Determine the carbon flux to the atmosphere due to fire: We assume that the above ground non-woody
       ! biomass and above ground litter are burnt completely, while parts of the above ground woody biomass
@@ -1465,7 +1467,7 @@ CONTAINS
           ! add the fire affected fraction of the above ground wood pools
         & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
           ! scale with the burned fraction
-        & ) * burned_fract(ic) * molarMassCO2_kg / sec_per_day
+        & ) * burned_fract(ic) * molarMassCO2_kg / delta_time_C
 
       ! Reduce the above ground yasso pools accordingly
       fraction = 1._wp - burned_fract(ic)
@@ -1524,6 +1526,7 @@ CONTAINS
   !< c_reserve and c_woods) is relocated  to the litter and soil pools.
   !
   SUBROUTINE relocate_carbon_vertical_damage(  &
+    & delta_time_C,                   & ! in
     & damaged_fract,                  & ! in
     & LeafLit_coef,                   & ! in
     & WoodLit_coef,                   & ! in
@@ -1562,18 +1565,19 @@ CONTAINS
     & c_humus_2_sl                    & ! inout
     & )
 
-    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day
+    USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround
     USE mo_carbon_shared,    ONLY: distribute_yasso_litter
 
     ! Arguments
-    real(wp),intent(in)    :: damaged_fract(:)         !< Fraction of the vegetated area of each tile damaged since the last
-                                                       !< call of this routine
-    real(wp),intent(in)    :: LeafLit_coef(:)          !< Factor to spread non woody litter into yasso pools [ ]
-    real(wp),intent(in)    :: WoodLit_coef(:)          !< Factor to spread woody litterfall into yasso pools [ ]
-    REAL(wp), INTENT(inout) :: c_green(:)               !< Amount of carbon in green pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_woods(:)               !< Amount carbon in wood pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_reserve(:)             !< Amount of carbon in reserve pool [mol(C)/m^(canopy)2]
-   REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)  !< Disturbance-induced carbon flux of non-woody living biomass
+    REAL(wp), INTENT(in)    :: delta_time_C                !< Carbon time step [s]
+    real(wp), intent(in)    :: damaged_fract(:)            !< Fraction of the vegetated area of each tile damaged since the last
+                                                           !< call of this routine
+    real(wp), intent(in)    :: LeafLit_coef(:)             !< Factor to spread non woody litter into yasso pools [ ]
+    real(wp), intent(in)    :: WoodLit_coef(:)             !< Factor to spread woody litterfall into yasso pools [ ]
+    REAL(wp), INTENT(inout) :: c_green(:)                  !< Amount of carbon in green pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_woods(:)                  !< Amount carbon in wood pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_reserve(:)                !< Amount of carbon in reserve pool [mol(C)/m^(canopy)2]
+    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)  !< Disturbance-induced carbon flux of non-woody living biomass
                                                            !< to the green litter and soil pools [mol(C)/m^2(canopy)s-1]
     REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)  !< Disturbance-induced carbon flux of woody living biomass to
                                                            !< the woody litter and soil pools [mol(C)/m^2(canopy)s-1]
@@ -1631,11 +1635,11 @@ CONTAINS
 
       ! Carbon transferred from the wood pool to the woody litter and soil pools due to disturbances;
       ! we here add the contribution of wind throw.
-      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / sec_per_day
+      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / delta_time_C
 
       ! Carbon transferred from the non-woody vegetation pools to the green litter and soil pools due to
       ! disturbances; we here add the contribution of wind throw.
-      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / sec_per_day
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / delta_time_C
 
       ! Distribute the carbon of damaged non-woody vegetation to the yasso litter and soil pools
       !  Above ground

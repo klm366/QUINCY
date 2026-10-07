@@ -378,6 +378,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER                :: model
     REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum_ta, cflux
     REAL(wp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
+    REAL(wp)                                  :: delta_time_C    !< Carbon time step [s]
 
     INTEGER :: iblk, ics, ice, ic, nc
 
@@ -447,6 +448,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    delta_time_C = sec_per_day
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
@@ -541,6 +543,7 @@ CONTAINS
 
               IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
                 CALL relocate_carbon_damage(                 &
+                  & delta_time_C,                            & ! in
                   & damaged_fract(:),                        & ! in
                   & lctlib_LeafLit_coef(1:5),                & ! in
                   & lctlib_WoodLit_coef(1:5),                & ! in
@@ -584,6 +587,7 @@ CONTAINS
                   & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:))
               ELSE
                 CALL relocate_carbon_vertical_damage(                 &
+                  & delta_time_C,                            & ! in
                   & damaged_fract(:),                        & ! in
                   & lctlib_LeafLit_coef(1:5),                & ! in
                   & lctlib_WoodLit_coef(1:5),                & ! in
@@ -694,6 +698,7 @@ CONTAINS
 
               IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
                 CALL relocate_carbon_fire(                    &
+                  & delta_time_C,                             & ! in
                   & burned_fract(:),                          & ! in, only for windbreak
                   & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
                   & lctlib_LeafLit_coef(1:5),                 & ! in
@@ -742,6 +747,7 @@ CONTAINS
 
               ELSE
                 CALL relocate_carbon_vertical_fire(                    &
+                  & delta_time_C,                             & ! in
                   & burned_fract(:),                          & ! in, only for windbreak
                   & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos, & ! in
                   & lctlib_LeafLit_coef(1:5),                 & ! in

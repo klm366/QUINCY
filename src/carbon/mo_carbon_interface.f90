@@ -191,6 +191,7 @@ CONTAINS
     REAL(wp)                     :: lctlib_WoodLit_coef_humus
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(wp)                     :: dtime
+    REAL(wp)                     :: delta_time_C        !< Carbon time step [s]
     REAL(wp), DIMENSION(options%nc) :: MaxLai
     REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
     REAL(wp), DIMENSION(options%nc) :: cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos
@@ -411,6 +412,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
+    delta_time_C = sec_per_day
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -794,7 +796,7 @@ CONTAINS
       DO ic = 1, nc
         ! Now update the C pools for plants
         CALL calc_plant_c( &
-          &  sec_per_day, is_crop,                              & ! in
+          &  delta_time_C, is_crop,                             & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -856,7 +858,7 @@ CONTAINS
       IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         DO ic = 1, nc
           CALL calc_soil_c( &
-            & sec_per_day,                                                                  & ! in
+            & delta_time_C,                                                                 & ! in
             & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID)),       & ! in
             & LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER)),      & ! in
             & LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL)),    & ! in
@@ -904,8 +906,8 @@ CONTAINS
         END DO
       ELSE
         DO ic = 1, nc
-          CALL calc_vertical_soil_c(sec_per_day,                                        &
-            &  nsoil, layer_depth, layer_thick,                                         & ! in
+          CALL calc_vertical_soil_c(delta_time_C, nsoil,                                & ! in
+            &  layer_depth, layer_thick,                                                & ! in
             &  LeafLit_coefV, WoodLit_coefV, MiscPar,                                   & ! in
                !
             &  temp                         = temp_15d_yDay_climbuf(ic),                & ! in
