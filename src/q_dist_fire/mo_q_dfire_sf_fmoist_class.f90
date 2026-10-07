@@ -275,7 +275,7 @@ CONTAINS
     !< fuel moisture by fuel class
     sf_fuel_moisture % fuel_moisture_for_fc = sf_fuel_moisture%dead
 
-    !< calculate mixed fuel moisture weighted by fuel moisture classes
+    !< calculate mixed fuel moisture weighted by fuel load
     sf_fuel_moisture % woi_dd = 0._wp
     sf_fuel_moisture % woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
     sf_fuel_moisture % woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
