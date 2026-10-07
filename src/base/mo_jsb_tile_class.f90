@@ -1553,13 +1553,15 @@ CONTAINS
   !>
   !> Aggregation of a 2d variable from the child tiles by sum all
   !>
-  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_sum_2d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL, OPTIONAL,                         INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
@@ -1703,13 +1705,15 @@ CONTAINS
   !> Aggregation of a 3d variable from the child tiles by sum
   !> todo: ensure it works
   !>
-  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller)
+  SUBROUTINE Aggregate_sum_3d(this, tile, var, ics, ice, iblk, caller, mask, mask_on_tile)
 
     CLASS(t_jsb_aggregator_sum),               INTENT(inout) :: this           !< Aggregator
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
     TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
     CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
+    LOGICAL, OPTIONAL,                         INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
+    CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
