@@ -85,6 +85,7 @@ CONTAINS
                                           sf_fuel_load % tot_dead_fuel_grass, &
                                           sf_fuel_moisture % omegas_thon)
 
+    !< fuel moisture by fuel load classes
     ASSOCIATE(w_o => sf_fuel_moisture % omegas_thon(:,df_sf_omega_o_idx), w_nl => sf_fuel_moisture % omegas_thon(:,df_sf_omega_nl_idx))
       sf_fuel_moisture % fuel_moisture_for_fc(:,ix_1hr) = w_nl ! 1hr
       sf_fuel_moisture % fuel_moisture_for_fc(:,ix_10hr) = w_o ! 10hrs
