@@ -115,28 +115,28 @@ CONTAINS
     ! Yasso pools [mol(C) m-2(canopy)], input and updated on output
     ! Size class 1; green litter
     !   Aboveground
-    REAL(wp), INTENT(inout) :: c_acid_ag1        ! Acid soluble litter pool
-    REAL(wp), INTENT(inout) :: c_water_ag1       ! Water soluble litter pool
-    REAL(wp), INTENT(inout) :: c_ethanol_ag1     ! Ethanol soluble litter pool
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1  ! Non-soluble litter pool
+    REAL(wp), INTENT(inout) :: c_acid_ag1        ! Acid soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_water_ag1       ! Water soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_ethanol_ag1     ! Ethanol soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1  ! Non-soluble green litter pool
     !   Belowground
-    REAL(wp), INTENT(inout) :: c_acid_bg1        ! Acid soluble litter pool
-    REAL(wp), INTENT(inout) :: c_water_bg1       ! Water soluble litter pool
-    REAL(wp), INTENT(inout) :: c_ethanol_bg1     ! Ethanol soluble litter pool
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1  ! Non-soluble litter pool
-    REAL(wp), INTENT(inout) :: c_humus_1         ! Humus litter pool
+    REAL(wp), INTENT(inout) :: c_acid_bg1        ! Acid soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_water_bg1       ! Water soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_ethanol_bg1     ! Ethanol soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1  ! Non-soluble green litter pool
+    REAL(wp), INTENT(inout) :: c_humus_1         ! Humus pool from green litter
     ! Size class 2; woody litter
     !   Aboveground
-    REAL(wp), INTENT(inout) :: c_acid_ag2        ! Acid soluble litter pool
-    REAL(wp), INTENT(inout) :: c_water_ag2       ! Water soluble litter pool
-    REAL(wp), INTENT(inout) :: c_ethanol_ag2     ! Ethanol soluble litter pool
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2  ! Non-soluble litter pool
+    REAL(wp), INTENT(inout) :: c_acid_ag2        ! Acid soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_water_ag2       ! Water soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_ethanol_ag2     ! Ethanol soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2  ! Non-soluble woody litter pool
     !   Belowground
-    REAL(wp), INTENT(inout) :: c_acid_bg2        ! Acid soluble litter pool
-    REAL(wp), INTENT(inout) :: c_water_bg2       ! Water soluble litter pool
-    REAL(wp), INTENT(inout) :: c_ethanol_bg2     ! Ethanol soluble litter pool
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2  ! Non-soluble litter pool
-    REAL(wp), INTENT(inout) :: c_humus_2         ! Humus litter pool
+    REAL(wp), INTENT(inout) :: c_acid_bg2        ! Acid soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_water_bg2       ! Water soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_ethanol_bg2     ! Ethanol soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2  ! Non-soluble woody litter pool
+    REAL(wp), INTENT(inout) :: c_humus_2         ! Humus pool from woody litter
 
     ! Decomposistion fluxes
     REAL(wp), INTENT(inout) :: c_decomp_humus_1_sum   ! annual cflux sum of humus decomposed (leaf)
@@ -335,28 +335,28 @@ CONTAINS
     !   YASSO
     ! SIZE CLASS 1 ; GREEN
     !   above ground C pools
-    REAL(wp), INTENT(inout) :: c_acid_ag1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_water_ag1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_ethanol_ag1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_acid_ag1(:)          ! Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_ag1(:)         ! Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag1(:)       ! Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag1(:)    ! Non-soluble green litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(wp), INTENT(inout) :: c_acid_bg1(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_water_bg1(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_ethanol_bg1(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_humus_1(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_acid_bg1(:)          ! Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_bg1(:)         ! Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg1(:)       ! Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg1(:)    ! Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_humus_1(:)           ! Humus pool from green litter [mol(C)/m^2(canopy)]
     ! SIZE CLASS 2 ; WOOD
     !   above ground C pools
-    REAL(wp), INTENT(inout) :: c_acid_ag2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_water_ag2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_ethanol_ag2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_acid_ag2(:)          ! Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_ag2(:)         ! Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_ag2(:)       ! Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_ag2(:)    ! Non-soluble woody litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(wp), INTENT(inout) :: c_acid_bg2(:)          ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_water_bg2(:)         ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_ethanol_bg2(:)       ! Ethanol soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2(:)    ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(inout) :: c_humus_2(:)           ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_acid_bg2(:)          ! Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_water_bg2(:)         ! Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_ethanol_bg2(:)       ! Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_nonsoluble_bg2(:)    ! Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(inout) :: c_humus_2(:)           ! Humus pool from woody litter [mol(C)/m^2(canopy)]
 
     ! Local variables
     REAL(wp)  :: non_woody_litter, fraction ! Helper
@@ -483,28 +483,28 @@ CONTAINS
     !   YASSO
     ! Size class 1: green
     !   above ground C pools
-    REAL(wp),INTENT(inout) :: c_acid_ag1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_water_ag1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_ethanol_ag1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    REAL(wp),INTENT(inout) :: c_nonsoluble_ag1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_acid_ag1(:)        ! Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_water_ag1(:)       ! Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_ethanol_ag1(:)     ! Ethanol soluble green litter pool [mol(C)/m2(canopy)]
+    REAL(wp),INTENT(inout) :: c_nonsoluble_ag1(:)  ! Non-soluble green litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(wp),INTENT(inout) :: c_acid_bg1(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_water_bg1(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_ethanol_bg1(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    REAL(wp),INTENT(inout) :: c_nonsoluble_bg1(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_humus_1(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_acid_bg1(:)        ! Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_water_bg1(:)       ! Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_ethanol_bg1(:)     ! Ethanol soluble green litter pool [mol(C)/m2(canopy)]
+    REAL(wp),INTENT(inout) :: c_nonsoluble_bg1(:)  ! Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_humus_1(:)         ! Humus pool from green litter [mol(C)/m^2(canopy)]
     ! Size class 2: wood
     !   above ground C pools
-    REAL(wp),INTENT(inout) :: c_acid_ag2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_water_ag2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_ethanol_ag2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    REAL(wp),INTENT(inout) :: c_nonsoluble_ag2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_acid_ag2(:)        ! Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_water_ag2(:)       ! Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_ethanol_ag2(:)     ! Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
+    REAL(wp),INTENT(inout) :: c_nonsoluble_ag2(:)  ! Non-soluble woody litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(wp),INTENT(inout) :: c_acid_bg2(:)        ! Acid soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_water_bg2(:)       ! Water soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_ethanol_bg2(:)     ! Ethanol soluble litter pool for Yasso [mol(C)/m2(canopy)]
-    REAL(wp),INTENT(inout) :: c_nonsoluble_bg2(:)  ! Non-soluble litter pool for Yasso [mol(C)/m^2(canopy)]
-    REAL(wp),INTENT(inout) :: c_humus_2(:)         ! Humus litter pool for Yasso [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_acid_bg2(:)        ! Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_water_bg2(:)       ! Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_ethanol_bg2(:)     ! Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
+    REAL(wp),INTENT(inout) :: c_nonsoluble_bg2(:)  ! Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(wp),INTENT(inout) :: c_humus_2(:)         ! Humus pool from woody litter [mol(C)/m^2(canopy)]
 
     ! Local variables
     REAL(wp)  :: non_woody_litter, fraction  ! Helper
