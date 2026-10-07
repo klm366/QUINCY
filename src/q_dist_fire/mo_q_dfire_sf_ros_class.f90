@@ -42,16 +42,14 @@ CONTAINS
   !>
   !> Calculate rate of spread common all sub fire models
   !>
-  !>
-  SUBROUTINE sf_calc_rate_of_spread_main(nc, &
-                  sf_config, &
-                  u_f_wind, &
+  SUBROUTINE sf_calc_rate_of_spread_main(sf_config, &
                   fdi, &
                   nesterov_index, &
                   veg_cover_frac, &
                   sf_fuel_moisture, &
                   sf_fuel_load, &
-                  mask, sf_ros)
+                  sf_ros, &
+                  mask)
 
     USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros
     USE mo_q_dfire_sf_constants,  ONLY: df_sf_omegas_nr, & !< Fuel moisture dimension size (for omega_o and omega_nl)
@@ -59,16 +57,14 @@ CONTAINS
                                         df_sf_omega_nl_idx
     USE mo_q_dfire_sf_constants,  ONLY: df_sf_units_g_to_kg
 
-    INTEGER, INTENT(in)                  :: nc
     TYPE(t_sf_config), INTENT(in)        :: sf_config
-    REAL(wp), INTENT(in)                 :: u_f_wind(nc)                !< [m min-1]
-    REAL(wp), INTENT(in)                 :: fdi(nc)                     !< Fire dange index [0 to 1]
-    REAL(wp), INTENT(in)                 :: nesterov_index(nc)          !< Dryness index [deg C2]
+    REAL(wp), INTENT(in)                 :: fdi(:)                     !< Fire dange index [0 to 1]
+    REAL(wp), INTENT(in)                 :: nesterov_index(:)          !< Dryness index [deg C2]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
     TYPE(t_sf_mf), INTENT(in)            :: sf_fuel_moisture            !< Fuel moisture [-]
     TYPE(t_sf_fuel_load), INTENT(in)     :: sf_fuel_load                !< Fuel load [-]
-    LOGICAL, INTENT(in)                  :: mask(nc)                    !< True =  compute gridcell(s)
     TYPE(t_sf_ros), INTENT(inout)        :: sf_ros                         !< output [-]
+    LOGICAL, INTENT(in)                  :: mask(:)                    !< True =  compute gridcell(s)
 
     INTEGER  :: inc
 
@@ -99,14 +95,14 @@ CONTAINS
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
 
-    DO inc=1, nc
+    DO inc=1, sf_config % nc
       IF (.NOT. mask(inc)) CYCLE !< skip gridcell
 
       !< ( Eq. 10 from Thonicke et al. (2010))
-      sf_ros%ros_backwards(inc) = sf_ros%ros_forward(inc) * exp(-0.012_wp * u_f_wind(inc)) !< [m min-1]
+      sf_ros%ros_backwards(inc) = sf_ros%ros_forward(inc) * exp(-0.012_wp * sf_ros % u_f_wind(inc)) !< [m min-1]
 
       !< (Eqs. A38, A39, A40 from Pfeiffer et al. (2013))
-      sf_ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(u_f_wind(inc), &
+      sf_ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(sf_ros % u_f_wind(inc), &
           veg_cover_frac%tree(inc), &
           veg_cover_frac%grass(inc))
 

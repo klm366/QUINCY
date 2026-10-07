@@ -505,16 +505,14 @@ CONTAINS
 
     CALL calc_fire_danger_index_main(sf_config, sf_fuel_moisture, spitfire % fdi, has_fire_conditions)
 
-    CALL sf_calc_rate_of_spread_main(sf_config%nc, &
-                  sf_config, &
-                  sf_ros % u_f_wind, &
+    CALL sf_calc_rate_of_spread_main(sf_config, &
                   spitfire % fdi, &
                   nesterov_index, &
                   veg_cover_frac, &
                   sf_fuel_moisture, &
                   sf_fuel_load, &
-                  has_fire_conditions, &
-                  sf_ros)
+                  sf_ros, &
+                  has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
     CALL wrap_calc_sf_ignitions(sf_config, sf_ignitions)
