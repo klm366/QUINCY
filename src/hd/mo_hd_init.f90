@@ -15,7 +15,7 @@ MODULE mo_hd_init
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -55,7 +55,7 @@ CONTAINS
     INTEGER, POINTER ::         &
       & hd_mask_ptr(:,:),       &
       & cell_sea_land_mask(:,:)
-    REAL(wp), POINTER ::         &
+    REAL(lp), POINTER ::         &
       & return_pointer   (:,:),  &   !< temporary pointer
       & cells_up_ptr (:,:,:)     !< temporary pointer
 
@@ -86,7 +86,7 @@ CONTAINS
       ! Initialize boundary conditions
       !
       ! Number of base flow reservoirs
-      dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._wp
+      dsl4jsb_var2D_onDomain(HD_, nres_baseflow) = 1._lp
 
       ! Maximum number of reservoirs
       ! If this is changed one has to change the definition of the three grids in mo_hd_config_class!!!
@@ -105,7 +105,7 @@ CONTAINS
       hd_mask_ptr => input_file%Read_2d_int(        &
         & variable_name='MASK')
       IF (ASSOCIATED(hd_mask_ptr)) THEN
-        dsl4jsb_var_ptr(HD_,hd_mask)(:,:) = REAL(hd_mask_ptr(:,:), wp)
+        dsl4jsb_var_ptr(HD_,hd_mask)(:,:) = REAL(hd_mask_ptr(:,:), lp)
         DEALLOCATE(hd_mask_ptr)
       END IF
 
@@ -146,7 +146,7 @@ CONTAINS
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
       ELSE
-        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._lp
       END IF
 
       nproma = grid%nproma
@@ -216,9 +216,9 @@ CONTAINS
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
-        & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(1._lp, 0._lp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
-        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(0._lp, 1._lp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL input_file%Close()
@@ -237,7 +237,7 @@ CONTAINS
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
-        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+        & MERGE(0._lp, 1._lp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL input_file%Close()
@@ -265,7 +265,7 @@ CONTAINS
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
 
-    REAL(wp), POINTER :: &
+    REAL(lp), POINTER :: &
       & tile_fract(:,:), &
       & ptr(:,:,:)            !< temporary pointer
 
@@ -366,9 +366,9 @@ CONTAINS
 
       ALLOCATE(tile_fract(grid%nproma, grid%nblks))
       CALL tile%Get_fraction(fract=tile_fract(:,:))
-      dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_o_max)
-      dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_b_max)
-      dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._wp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_r_max)
+      dsl4jsb_var3D_onDomain(HD_,overlflow_res) = 1000._lp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_o_max)
+      dsl4jsb_var3D_onDomain(HD_,baseflow_res)  = 5000._lp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_b_max)
+      dsl4jsb_var3D_onDomain(HD_,riverflow_res) = 1000._lp * SPREAD(tile_fract(:,:), DIM=2, NCOPIES=dsl4jsb_memory(HD_)%nres_r_max)
 
     END IF
 

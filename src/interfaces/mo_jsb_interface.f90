@@ -19,7 +19,8 @@
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp, &   !< lp := working-precision of ICON-Land
+    &                               wp      !< wp := working-precision of ICON
   USE mo_exception,           ONLY: message, finish !, message_text
   ! USE mo_util,         ONLY: int2string
 
@@ -254,7 +255,7 @@ CONTAINS
     !> 1.0 Update options
     !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()) )
+      & dtime=REAL(dtime,KIND=lp), alpha=MERGE(1._lp, REAL(cvdifts,KIND=lp), jsbach_runs_standalone()) )
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -323,7 +324,7 @@ CONTAINS
     !>
     !>  Run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
     !>
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+    CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.0 Give the required variables back to the atmosphere
@@ -503,7 +504,7 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
-      & dtime=dtime, alpha=1._wp)
+      & dtime=REAL(dtime,KIND=lp), alpha=1._lp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     ! Put atmospheric forcing into the a2l memory.
@@ -538,7 +539,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! Run tasks in queue
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+    CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
     CALL model%Get_top_tile(tile)
@@ -585,7 +586,7 @@ CONTAINS
   !     & ics,               &
   !     & ice
   !
-  !   REAL(wp), INTENT(inout) :: &
+  !   REAL(lp), INTENT(inout) :: &
   !     & t_srf    (:), &
   !     & t_eff_srf(:), &
   !     & qsat_srf (:), &
@@ -617,6 +618,7 @@ CONTAINS
     REAL(wp),                  INTENT(in) :: dtime
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),  POINTER :: model
+    REAL(lp)                    :: dtime_lp
     INTEGER                     :: no_omp_thread
     INTEGER                     :: current_year     !< The current year (requried for Quincy SB_ slow-pool spinup-accelerator control)
     INTEGER                     :: nr_years_passed  !< Years passed since start of Quincy SB_ slow-pool spinup-accelerator (if used)
@@ -636,20 +638,19 @@ CONTAINS
     END IF
     model => Get_model(model_id)
 
-    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
+    dtime_lp = REAL(dtime, KIND=lp)
 
-    ! Reset all tiles at the beginning of the timestep
-    CALL model%Reset_tiles()
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime_lp)
 
     ! For the ALCC process land use data has to be read once a year
-    IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
+    IF (is_newyear(current_datetime,dtime_lp) .AND. model%processes(ALCC_)%p%config%active) THEN
       CALL read_land_use_data(model_id, current_datetime)
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF (model%config%qmodel_id == QLAND) THEN
         ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
-        IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
+        IF ((is_newyear(current_datetime,dtime_lp) .OR. is_time_experiment_start(current_datetime))) THEN
           IF (model%processes(Q_SYL_)%p%config%active) THEN
             CALL read_harvest_fraction(model_id, current_datetime)
           END IF
@@ -662,9 +663,9 @@ CONTAINS
       IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QSOIL) THEN
         ! For the SB process data on n and p deposition might have to be read once a year / at the beginning of a simulation
         ! and might need to be updated once a month
-        IF ((is_newmonth(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime)) &
+        IF ((is_newmonth(current_datetime,dtime_lp) .OR. is_time_experiment_start(current_datetime)) &
             & .AND. model%processes(SB_)%p%config%active) THEN
-          CALL provide_n_and_p_deposition(model_id, current_datetime, dtime)
+          CALL provide_n_and_p_deposition(model_id, current_datetime, dtime_lp)
         END IF
 
         ! For the SB process also check if the SB_ slow-pool spinup-accelerator has been or should be executed
@@ -678,7 +679,7 @@ CONTAINS
           END IF
 
           ! Check if it should be executed this timestep
-          IF (is_newyear(current_datetime, dtime)) THEN
+          IF (is_newyear(current_datetime, dtime_lp)) THEN
             current_year  = get_year(current_datetime)
             IF (current_year >= model%config%slow_sb_pool_spinup_accelerator_start_year) THEN
               ! 2. The year needs to be a multiple of the accelerator frequency
@@ -702,7 +703,7 @@ CONTAINS
     ! If this is .true., old graphs will be invalidated and the new ones will be captured
     invalidate_cuda_graphs = .FALSE.
     IF (     is_time_experiment_start(current_datetime) .OR. is_time_restart(current_datetime)  &
-        .OR. is_newday(current_datetime, dtime) .OR. is_newyear(current_datetime, dtime) ) THEN
+        .OR. is_newday(current_datetime, dtime_lp) .OR. is_newyear(current_datetime, dtime_lp) ) THEN
       ! Invalidate graphs when the workflow is changing
       invalidate_cuda_graphs = .TRUE.
     END IF
@@ -743,6 +744,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile
+    REAL(lp)                            :: dtime_lp
     LOGICAL                             :: l_trace_memory
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: linit
@@ -758,6 +760,8 @@ CONTAINS
 
     linit = .FALSE.
     IF (PRESENT(init)) linit = init
+
+    dtime_lp = REAL(dtime, KIND=lp)
     ! ----------------------------------------------------------------------------------------------------- !
 
     ! TBD: this is only required if restart or output is written for this timestep!
@@ -766,16 +770,13 @@ CONTAINS
       CALL model%Write_back_to_bgcms()
     END IF
 
-    ! Reset all tiles (needed for tile loops in following test routines)
-    CALL model%Reset_tiles()
-
     ! Update options
-    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
+    CALL model%Set_options(current_datetime=current_datetime, dtime=dtime_lp)
 
     ! Carbon conservation test JSBACH
     CALL model%Get_top_tile(tile)
     IF (model%processes(CARBON_)%p%config%active) THEN
-      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
+      IF (is_newday(current_datetime, dtime_lp) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
         CALL yday_carbon_conservation_test(tile)
       END IF
     END IF
@@ -788,7 +789,7 @@ CONTAINS
 
     ! Make sure temperatures are within an exceptable range
     IF (model%processes(SEB_)%p%config%active) THEN
-      CALL seb_check_temperature_range(model_id, no_omp_thread)
+      CALL seb_check_temperature_range(model_id)
     END IF
 
 
@@ -813,9 +814,9 @@ CONTAINS
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
     CASE (1)
-      l_trace_memory = is_newmonth(current_datetime, dtime)
+      l_trace_memory = is_newmonth(current_datetime, dtime_lp)
     CASE (2)
-      l_trace_memory = is_newday(current_datetime, dtime)
+      l_trace_memory = is_newday(current_datetime, dtime_lp)
     CASE (3)
       l_trace_memory = .TRUE.
     END SELECT
@@ -858,14 +859,14 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER      :: grid
 
     INTEGER                :: iproc, jc, blk
-    REAL(wp), POINTER      :: area(:,:)
-    REAL(wp), POINTER      :: notsea(:,:)
+    REAL(lp), POINTER      :: area(:,:)
+    REAL(lp), POINTER      :: notsea(:,:)
     LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    REAL(wp), ALLOCATABLE  :: in_domain(:,:)    ! 1._wp: cell in domain, 0._wp: halo cell
+    REAL(lp), ALLOCATABLE  :: in_domain(:,:)    ! 1._lp: cell in domain, 0._lp: halo cell
                                                 ! - to mask all halo cells for global sums (otherwise these cells are counted twice)
-    REAL(wp), ALLOCATABLE  :: area_scaling(:,:)
-    REAL(wp), ALLOCATABLE  :: land_area_scaling(:,:)
-    REAL(wp)               :: global_land_area
+    REAL(lp), ALLOCATABLE  :: area_scaling(:,:)
+    REAL(lp), ALLOCATABLE  :: land_area_scaling(:,:)
+    REAL(lp)               :: global_land_area
     ! ----------------------------------------------------------------------------------------------------- !
     notsea => tile%fract(:,:)   ! fraction of the box tile: notsea
     model  => Get_model(tile%owner_model_id)
@@ -885,9 +886,9 @@ CONTAINS
     DO blk = 1, grid%nblks
       DO jc = 1, grid%nproma
         IF (is_in_domain(jc,blk)) THEN
-          in_domain(jc,blk) = 1._wp
+          in_domain(jc,blk) = 1._lp
         ELSE
-          in_domain(jc,blk) = 0._wp
+          in_domain(jc,blk) = 0._lp
         END IF
 
         area_scaling(jc,blk) = area(jc,blk) * in_domain(jc,blk)
@@ -962,7 +963,7 @@ CONTAINS
                                               !< If given, chunk (ics:ice,iblk) is returned, otherwise whole domain
     REAL(wp), OPTIONAL, INTENT(inout)      :: arr1d(:), arr2d(:,:), arr3d(:,:,:)
                                               !< Requested variable (section) is copied into these arrays
-    REAL(wp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
+    REAL(lp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
                                               !< Pointers to the requested variable (section); must not be associated
     LOGICAL, OPTIONAL, INTENT(in)          :: lacc
                                               !< Switch whether the variables should be copied to GPU
@@ -974,7 +975,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
     CLASS(t_jsb_var),            POINTER :: var_ptr
     CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-    INTEGER :: process_id, pos, ic, nc, icount
+    INTEGER :: process_id, pos, ic, nc, icount, itile
     LOGICAL :: l_on_chunk, l_found
     INTEGER :: no_omp_thread
 
@@ -1008,18 +1009,17 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile_ptr)
     ! If `tile` is not present the variable on the box tile is used, otherwise search for tile with given name
     l_found = .TRUE.
     IF (PRESENT(tile)) THEN
       l_found = .FALSE.
-      DO WHILE (ASSOCIATED(tile_ptr))
-        IF (TRIM(tile_ptr%name) == tile) THEN
+      DO itile=1,SIZE(model%tiles)
+        IF (TRIM(model%tiles(itile)%p%name) == tile) THEN
+          tile_ptr => model%tiles(itile)%p
           l_found = .TRUE.
           EXIT
         END IF
-        CALL model%Goto_next_tile(tile_ptr)
       END DO
     END IF
     IF (.NOT. l_found) CALL finish(routine, 'tile '//tile//' not found!')
