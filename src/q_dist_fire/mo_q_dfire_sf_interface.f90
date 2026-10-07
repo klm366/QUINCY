@@ -131,7 +131,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_10hr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_100hr, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1000hr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, dead_frac_consumption, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, area_burned_fract, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, area_burned, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, area_burned_fract_output, weighted_by_fract)

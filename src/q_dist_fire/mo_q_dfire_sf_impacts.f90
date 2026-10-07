@@ -175,7 +175,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk                :: area_burned               ! in [ha ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! in [-]
-    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! in [-]
+    dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! in [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! in [kW m-1]
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! in [-]
     dsl4jsb_Real2D_onChunk                :: pm_prop_ck                ! out [-]
@@ -277,7 +277,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned)               ! in [ha ts-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! in [-]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_frac_consumption)     ! in [-]
+    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, frac_consump_fcl)          ! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, i_surface)                 ! in [kW m-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, mask_is_fire_intense_enough)! in [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_FUEL_SF_, pm_prop_ck)           ! out [-]
@@ -444,7 +444,7 @@ CONTAINS
                                     dbh * dsl4jsb_Config(Q_DFIRE_SF_)%tree_diameter_factor, &
                                     i_surface, & ! Fire intensity
                                     w_oi(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
-                                    dead_frac_consumption(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
+                                    frac_consump_fcl(:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), &
                                     prob_mort, & ! output
                                     mask_opt=is_fire_intense_enough)
 
@@ -479,7 +479,7 @@ CONTAINS
     END IF
 
     !< Recalculate dead fuel consumption at a PFT level
-    fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract_pft, dead_frac_consumption, &
+    fc_dead_cls = sf_calc_dead_fuel_consumption(area_burned_fract_pft, frac_consump_fcl, &
                                                 dead_fuel_fcl, mask=is_fire_intense_enough)
 
     !< Units conversion of Dead fuel consumption into molX/m2

@@ -58,8 +58,6 @@ MODULE mo_q_dfire_sf_memory_class
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_100hr !< [g DM m-2]
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1000hr !< [g DM m-2]
 
-    TYPE(t_jsb_var_real3d)               :: dead_frac_consumption !< [-]
-
     TYPE(t_jsb_var_real2d)               :: area_burned_fract   !< Fraction of the area burned [% ts-1]
     TYPE(t_jsb_var_real2d)               :: area_burned         !< Area burned in a gridcell [ha ts-1]
     TYPE(t_jsb_var_real2d)               :: i_surface           !< Fire intensity [kW m-1]
@@ -350,17 +348,6 @@ CONTAINS
     CALL mem%Add_var('dead_fuel_consumption_1000hr', mem%dead_fuel_consumption_1000hr, &
         & hgrid, vgrid_dead_fuel_pools, &
         & t_cf('dead_fuel_consumption_1000hr', 'g DM m-2', '1000 hour dead fuel consumption'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('dead_frac_consumption', mem%dead_frac_consumption, &
-        & hgrid, vgrid_fuel_classes, &
-        & t_cf('dead_frac_consumption', '-', 'Dead fuel fraction of consumption'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

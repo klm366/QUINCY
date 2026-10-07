@@ -228,7 +228,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: area_burned_fract         ! out [% ts-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_output        ! out [ha s-1]
     dsl4jsb_Real2D_onChunk                :: area_burned_fract_output  ! out [% s-1]
-    dsl4jsb_Real3D_onChunk                :: dead_frac_consumption     ! out [-]
     dsl4jsb_Real2D_onChunk                :: i_surface                 ! out [kW m-1]
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
@@ -325,7 +324,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract)         ! out [% ts-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_output)        ! out [ha s-1]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, area_burned_fract_output)  ! out [% s-1]
-    dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, dead_frac_consumption)     ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, i_surface)                 ! out [kW m-1]
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, frac_consump_fcl)          ! out [-]
@@ -401,7 +399,7 @@ CONTAINS
     sf_dynamics = t_sf_dynamics(nc, df_sf_fc_full_nr, sf_fuel_dead_fuel_nr, &
                                 fdi, &
                                 area_burned, area_burned_fract, &
-                                dead_frac_consumption, i_surface)
+                                frac_consump_fcl, i_surface)
 
     sf_config = t_sf_config(nc, df_sf_fc_spread_nr, df_sf_fc_full_nr, &
                             sf_fuel_dead_fuel_nr, &
@@ -435,8 +433,6 @@ CONTAINS
     mask_is_fire_intense_enough = logical2real(sf_dynamics % is_fire_intense_enough)
     area_burned_fract_output = sf_dynamics % area_burned_fract / dtime !< to seconds
     area_burned_output = sf_dynamics % area_burned / dtime !< to seconds
-    ! todo: remove due to duplicity with 'dead_frac_consumption'
-    frac_consump_fcl = sf_dynamics % dead_frac_consump
 
 #ifdef __QUINCY_STANDALONE__
     DEALLOCATE(grid_cell_area)
