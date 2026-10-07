@@ -913,14 +913,14 @@ CONTAINS
     IMPLICIT NONE
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(INOUT)             :: c_acid        !< yasso acid pool
-    REAL(wp), INTENT(INOUT)             :: c_water       !< yasso water pool
-    REAL(wp), INTENT(INOUT)             :: c_ethanol     !< yasso ethanol pool
-    REAL(wp), INTENT(INOUT)             :: c_nonsoluble  !< yasso nonsoluble pool
-    REAL(wp), INTENT(INOUT)             :: c_humus       !< yasso humus pool
-    REAL(wp), INTENT(IN)                :: litter        !< litter input (above and belowground) [mol(C) m-2 day-1]
-    REAL(wp), INTENT(IN)                :: fraction      !< fraction of litter put into yasso pools []
-    REAL(wp), DIMENSION(5), INTENT(IN)  :: coefficients  !< litter coefficient (acid vs water vs ...) [ ]
+    REAL(wp), INTENT(inout)             :: c_acid        !< yasso acid pool
+    REAL(wp), INTENT(inout)             :: c_water       !< yasso water pool
+    REAL(wp), INTENT(inout)             :: c_ethanol     !< yasso ethanol pool
+    REAL(wp), INTENT(inout)             :: c_nonsoluble  !< yasso nonsoluble pool
+    REAL(wp), INTENT(inout)             :: c_humus       !< yasso humus pool
+    REAL(wp), INTENT(in)                :: litter        !< litter input (above and belowground) [mol(C) m-2 day-1]
+    REAL(wp), INTENT(in)                :: fraction      !< fraction of litter put into yasso pools []
+    REAL(wp), DIMENSION(5), INTENT(in)  :: coefficients  !< litter coefficient (acid vs water vs ...) [ ]
     ! -------------------------------------------------------------------------------------------------- !
 
     CALL add_litter_to_yasso_pool(c_acid,       litter, fraction, coefficients(LCT_ACID))
@@ -942,10 +942,10 @@ CONTAINS
     !$ACC ROUTINE SEQ
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp), INTENT(INOUT) :: this_pool     !< target yasso pool
-    REAL(wp), INTENT(IN)    :: litter        !< litter input  (above and belowground) [mol(C) m-2 day-1]
-    REAL(wp), INTENT(IN)    :: fraction      !< fraction of litter put into this pool (BG vs AG) [ ]
-    REAL(wp), INTENT(IN)    :: coefficient   !< litter coefficient (acid vs water vs ...) [ ]
+    REAL(wp), INTENT(inout) :: this_pool     !< target yasso pool
+    REAL(wp), INTENT(in)    :: litter        !< litter input  (above and belowground) [mol(C) m-2 day-1]
+    REAL(wp), INTENT(in)    :: fraction      !< fraction of litter put into this pool (BG vs AG) [ ]
+    REAL(wp), INTENT(in)    :: coefficient   !< litter coefficient (acid vs water vs ...) [ ]
     ! -------------------------------------------------------------------------------------------------- !
     this_pool           = MAX(0.0_wp, this_pool + (fraction * coefficient * litter))
 
@@ -961,11 +961,11 @@ CONTAINS
     & veg_fract_correction, & ! in
     & fract_fpc_max)          ! in
 
-    REAL(wp), INTENT(IN), DIMENSION(:) :: &
+    REAL(wp), INTENT(in), DIMENSION(:) :: &
       & Cpool_per_canopy, &
       & fract_fpc_max,    &
       & veg_fract_correction
-    REAL(wp), INTENT(OUT), DIMENSION(:) :: &
+    REAL(wp), INTENT(out), DIMENSION(:) :: &
       & Cpool_per_tile
 
     INTEGER :: ic
