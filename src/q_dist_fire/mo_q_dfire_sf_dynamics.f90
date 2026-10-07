@@ -632,28 +632,28 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, & ! in
                   nesterov_index, &
-                  fuel_moisture, & ! inout
-                  ros, &
+                  sf_fuel_moisture, & ! inout
+                  sf_ros, &
                   mask) ! optional
 
-    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, & ! 1hr, 10hr, 100hr, cured live grass (dead)
-                                    ix_clvg => df_sf_ix_sigma_dd_clvg, &
-                                     ix_1hr => df_sf_ix_sigma_dd_1hr, &
-                                    ix_10hr => df_sf_ix_sigma_dd_10hr, &
-                                   ix_100hr => df_sf_ix_sigma_dd_100hr, &
-                                  ix_1000hr => df_sf_ix_sigma_dd_1000hr, &
-                                     ix_lvg => df_sf_ix_sigma_lv_lvg, &
-                                     ix_wdy => df_sf_ix_sigma_lv_wdy, &
-                                 nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
+    !USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, & ! 1hr, 10hr, 100hr, cured live grass (dead)
+    !                                ix_clvg => df_sf_ix_sigma_dd_clvg, &
+    !                                 ix_1hr => df_sf_ix_sigma_dd_1hr, &
+    !                                ix_10hr => df_sf_ix_sigma_dd_10hr, &
+    !                               ix_100hr => df_sf_ix_sigma_dd_100hr, &
+    !                              ix_1000hr => df_sf_ix_sigma_dd_1000hr, &
+    !                                 ix_lvg => df_sf_ix_sigma_lv_lvg, &
+    !                                 ix_wdy => df_sf_ix_sigma_lv_wdy, &
+    !                             nlitros => df_sf_sigma_dd_ros_litter_nr ! number of dead litter fuel classes involved in fire spread -1 to 100 hours-
 
-    USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens
-    USE mo_q_dfire_sf_ros_ober_class, ONLY: calc_weighting_factors, t_fwvar_r1d, t_sf_weighting_factors
+    !USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens
+    !USE mo_q_dfire_sf_ros_ober_class, ONLY: calc_weighting_factors, t_fwvar_r1d, t_sf_weighting_factors
 
     TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
-    TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture !< Fuel moisture
-    TYPE(t_sf_ros), INTENT(inout) :: ros !< Rate of spread [-]
+    TYPE(t_sf_mf), INTENT(inout) :: sf_fuel_moisture !< Fuel moisture
+    TYPE(t_sf_ros), INTENT(inout) :: sf_ros !< Rate of spread [-]
     LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
 
     !REAL(wp) :: woi_dd(sf_config%nc,fuel_moisture % sigma_dd_nr)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
@@ -702,14 +702,14 @@ CONTAINS
     !< only involved ROS fuel (and FM)
     CALL sf_calc_rate_of_spread_ober(&
         sf_config%nc, &
-        fuel_moisture % sigma_dd_ros_nr, &
-        fuel_moisture % sigma_lv_nr, &
-        fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
-        fuel_moisture % woi_dd(:,ixs_ros), fuel_moisture % woi_lv, & ! fuels
-        fuel_moisture % dead(:,ixs_ros), fuel_moisture % live, &
-        fuel_moisture % me_dd, fuel_moisture % me_lv, &
-        ros % fbd, & !fuel_bulk_density, &
-        ros % u_f_wind, &
+        sf_fuel_moisture % sigma_dd_ros_nr, &
+        sf_fuel_moisture % sigma_lv_nr, &
+        sf_fuel_moisture % sigmas_dead, sf_fuel_moisture % sigmas_live, &
+        sf_fuel_moisture % woi_dd(:,ixs_ros), sf_fuel_moisture % woi_lv, & ! fuels
+        sf_fuel_moisture % dead(:,ixs_ros), sf_fuel_moisture % live, &
+        sf_fuel_moisture % me_dd, sf_fuel_moisture % me_lv, &
+        sf_ros % fbd, & !fuel_bulk_density, &
+        sf_ros % u_f_wind, &
         mask, &
         ros)
 
