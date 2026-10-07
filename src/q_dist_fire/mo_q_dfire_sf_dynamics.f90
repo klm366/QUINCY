@@ -176,7 +176,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: mask_is_fire_intense_enough ! Mask relative to gridcell to define whether the current
                                                                ! fire is intense enough to exist  TRUE=1, FALSE=0 [-]
     dsl4jsb_Real2D_onChunk                :: nesterov_index    ! inout [Celsius 2]
-    dsl4jsb_Real2D_onChunk                :: ab_moisture_diag  ! out [-]
+    dsl4jsb_Real2D_onChunk                :: ab_moisture       ! out [-]
     dsl4jsb_Real3D_onChunk                :: fuel_moisture     ! out [-]
     dsl4jsb_Real2D_onChunk                :: fdi               ! out [%]
     dsl4jsb_Real2D_onChunk                :: ros_f             ! out [?]
@@ -270,7 +270,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_10m)                   ! in
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, nesterov_index)         ! inout [Celsius 2]
-    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, ab_moisture_diag)       ! out [-]
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, ab_moisture)            ! out [-]
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, fuel_moisture)          ! out [-]
 
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, fdi)                    ! out [%]
@@ -337,7 +337,7 @@ CONTAINS
     no_children = tile%Get_no_of_children()
 
     !< Init variables (set output variables to 0)
-    ab_moisture_diag = 0._wp
+    ab_moisture = 0._wp
     fuel_moisture = 0._wp
     i_surface = 0._wp
     frac_consump_fcl = 0._wp
@@ -386,12 +386,12 @@ CONTAINS
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
-    ! todo: change to ab_moisture_diag
-    ab_moisture_diag = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
+    ! todo: change to ab_moisture
+    ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
                                     mask=mask_is_tile_enabled)
 
     sf_fuel_moisture_all = t_sf_mf(nc, df_sf_fc_full_nr, moisture_extinction, & ! core
-                                df_sf_alpha_nr, df_sf_alphas, ab_moisture_diag, fuel_moisture, & ! thonicke
+                                df_sf_alpha_nr, df_sf_alphas, ab_moisture, fuel_moisture, & ! thonicke
                                 df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
                                 df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
                                 lvg_moisture)

@@ -109,7 +109,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: e_n_ignitions
     dsl4jsb_Real2D_onDomain      :: e_n_humans
     dsl4jsb_Real2D_onDomain      :: e_n_lightning
-    dsl4jsb_Real2D_onDomain      :: ab_moisture_diag
+    dsl4jsb_Real2D_onDomain      :: ab_moisture
 
     dsl4jsb_Real2D_onDomain      :: reaction_intensity
     dsl4jsb_Real2D_onDomain      :: prop_flux_ratio
@@ -165,7 +165,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, e_n_ignitions)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, e_n_humans)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, e_n_lightning)
-    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, ab_moisture_diag)
+    dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, ab_moisture)
 
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, reaction_intensity)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, prop_flux_ratio)
@@ -222,7 +222,7 @@ CONTAINS
     e_n_ignitions = 0._wp
     e_n_humans = 0._wp
     e_n_lightning = 0._wp
-    ab_moisture_diag = 0._wp
+    ab_moisture = 0._wp
 
     mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
     precip_daytime = 0._wp

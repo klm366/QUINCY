@@ -39,7 +39,7 @@ MODULE mo_q_dfire_sf_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_q_dfire_sf_memory
     TYPE(t_jsb_var_real3d)               :: fuel_moisture       !< moisture in fuel [0 to 1]
     ! diagnostic vars related to fuel moisture
-    TYPE(t_jsb_var_real2d)               :: ab_moisture_diag    !< Soil moisture of the top layers (average of the 1st and 2nd)
+    TYPE(t_jsb_var_real2d)               :: ab_moisture         !< Soil moisture of the top layers (average of the 1st and 2nd)
 
     TYPE(t_jsb_var_real2d)               :: t_air_max           !< Aproximation to daily max temp (from prev day) [k]
     TYPE(t_jsb_var_real2d)               :: t_air_min           !< Aproximation to daily min temp (from prev day) [k]
@@ -356,9 +356,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    CALL mem%Add_var('ab_moisture_diag', mem%ab_moisture_diag, &
+    CALL mem%Add_var('ab_moisture', mem%ab_moisture, &
         & hgrid, vgrid_surface, &
-        & t_cf('ab_moisture_diag', '-', '(Average of the 1st and 2nd) top soil moisture layers'), &
+        & t_cf('ab_moisture', '-', '(Average of the 1st and 2nd) top soil moisture layers'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

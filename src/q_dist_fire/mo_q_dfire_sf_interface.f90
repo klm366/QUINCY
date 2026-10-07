@@ -124,7 +124,7 @@ CONTAINS
 
     ! Q_DFIRE_SF_ 2D
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, fuel_moisture , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, ab_moisture_diag, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, ab_moisture, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, t_air_max, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, t_air_min, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_SF_, dead_fuel_consumption_1hr, weighted_by_fract)
