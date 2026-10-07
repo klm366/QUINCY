@@ -33,7 +33,7 @@ MODULE mo_q_dfire_sf_ros_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: sf_calc_rate_of_spread, t_sf_veget_cover_frac, calc_mean_fire_area
+  PUBLIC :: sf_calc_rate_of_spread_main, t_sf_veget_cover_frac, calc_mean_fire_area
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_ros_class'
 
@@ -55,7 +55,7 @@ CONTAINS
   !> Calculate rate of spread common all sub fire models
   !>
   !>
-  SUBROUTINE sf_calc_rate_of_spread(nc, &
+  SUBROUTINE sf_calc_rate_of_spread_main(nc, &
                   sf_config, &
                   u_f_wind, &
                   fdi, &
@@ -132,7 +132,7 @@ CONTAINS
       sf_ros%mean_fire_area(inc) = calc_mean_fire_area(sf_ros%l2b_ratio(inc), sf_ros%distance_travelled(inc)) !< [ha]
     ENDDO
 
-  END SUBROUTINE sf_calc_rate_of_spread
+  END SUBROUTINE sf_calc_rate_of_spread_main
 
 
   ! ======================================================================================================= !

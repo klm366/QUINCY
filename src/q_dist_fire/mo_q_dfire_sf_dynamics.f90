@@ -68,8 +68,7 @@ MODULE mo_q_dfire_sf_dynamics
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_main
   USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
-  USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread
-  USE mo_q_dfire_sf_ros_ober_class,     ONLY: sf_calc_rate_of_spread_ober, calc_live_me
+  USE mo_q_dfire_sf_ros_class,          ONLY: t_sf_veget_cover_frac, sf_calc_rate_of_spread_main
   USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf, t_sf_atm, t_sf_fuel_load, t_sf_config
   USE mo_q_dfire_sf_frac_consump_class, ONLY: sf_calc_frac_consump
   USE mo_q_dfire_sf_fuel_consump_class, ONLY: sf_calc_dead_fuel_consumption
@@ -505,7 +504,7 @@ CONTAINS
 
     CALL calc_fire_danger_index_main(sf_config, sf_fuel_moisture, spitfire % fdi, has_fire_conditions)
 
-    CALL sf_calc_rate_of_spread(sf_config%nc, &
+    CALL sf_calc_rate_of_spread_main(sf_config%nc, &
                   sf_config, &
                   sf_ros % u_f_wind, &
                   spitfire % fdi, &
