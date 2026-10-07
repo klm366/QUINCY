@@ -14,7 +14,7 @@
 MODULE mo_jsb_math_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_math_constants,        ONLY: pi, deg2rad
 
   IMPLICIT NONE
@@ -22,21 +22,21 @@ MODULE mo_jsb_math_constants
 
 
   ! QUINCY simplified time control
-  REAL(wp), PARAMETER   :: one_year  = 365._wp                !< length of one year in days
-  REAL(wp), PARAMETER   :: one_month = 30._wp                 !< length of one month in days (rounded value of '365/12')
-  REAL(wp), PARAMETER   :: one_day   = 86400._wp              !< length of one day in seconds (identical with 'seconds_per_day')
+  REAL(lp), PARAMETER   :: one_year  = 365._lp                !< length of one year in days
+  REAL(lp), PARAMETER   :: one_month = 30._lp                 !< length of one month in days (rounded value of '365/12')
+  REAL(lp), PARAMETER   :: one_day   = 86400._lp              !< length of one day in seconds (identical with 'seconds_per_day')
   ! conversion of degree to radians
-  REAL(wp), PARAMETER   :: degcircle = 360._wp                !< degrees per circle
+  REAL(lp), PARAMETER   :: degcircle = 360._lp                !< degrees per circle
 
-  REAL(wp), PARAMETER   :: hourday         = 24.0_wp   !< hours per day
-  REAL(wp), PARAMETER   :: seconds_per_day = 86400._wp !< seconds per day
+  REAL(lp), PARAMETER   :: hourday         = 24.0_lp   !< hours per day
+  REAL(lp), PARAMETER   :: seconds_per_day = 86400._lp !< seconds per day
 
   ! QUINCY math helpers
-  REAL(wp), PARAMETER   :: eps12 = 0.000000000001_wp
-  REAL(wp), PARAMETER   :: eps8  = 0.00000001_wp
-  REAL(wp), PARAMETER   :: eps4  = 0.0001_wp
-  REAL(wp), PARAMETER   :: eps1  = 0.1_wp
-  REAL(wp), PARAMETER   :: zero  = 0.0_wp           !< just zero
+  REAL(lp), PARAMETER   :: eps12 = 0.000000000001_lp
+  REAL(lp), PARAMETER   :: eps8  = 0.00000001_lp
+  REAL(lp), PARAMETER   :: eps4  = 0.0001_lp
+  REAL(lp), PARAMETER   :: eps1  = 0.1_lp
+  REAL(lp), PARAMETER   :: zero  = 0.0_lp           !< just zero
 
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_math_constants'

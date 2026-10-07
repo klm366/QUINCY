@@ -14,7 +14,7 @@
 MODULE mo_l2a_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: LAKE_TYPE
@@ -115,7 +115,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('t_eff_srf', mem%t_eff_srf, &
       & hgrid, surface, &
@@ -125,7 +125,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('qsat_srf', mem%qsat_srf, &
       & hgrid, surface, &
@@ -135,7 +135,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('zh_srf', mem%zh_srf, &
       & hgrid, surface, &
@@ -145,7 +145,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('zm_srf', mem%zm_srf, &
       & hgrid, surface, &
@@ -155,7 +155,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('alb_vis_dif', mem%alb_vis_dif, &
       & hgrid, surface, &
@@ -165,7 +165,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('alb_nir_dif', mem%alb_nir_dif, &
       & hgrid, surface, &
@@ -175,7 +175,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('alb_vis_dir', mem%alb_vis_dir, &
       & hgrid, surface, &
@@ -185,7 +185,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     CALL mem%Add_var('alb_nir_dir', mem%alb_nir_dir, &
       & hgrid, surface, &
@@ -195,7 +195,7 @@ CONTAINS
       & prefix, suffix, &
       & loutput = .TRUE., &
       & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
+      & initval_r = 0.0_lp)
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
       CALL mem%Add_var('q_total_c', mem%q_total_c, &
@@ -207,7 +207,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('q_c_conservation_test', mem%q_c_conservation_test, &
         & hgrid, surface, &
@@ -218,7 +218,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = -999.0_wp)
+        & initval_r = -999.0_lp)
     ELSE
 #ifdef __QUINCY_STANDALONE__
 #else
@@ -230,7 +230,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput = .TRUE., output_level=BASIC, lrestart=.TRUE., lrestart_cont=.TRUE., &
-          & initval_r=-999.0_wp )
+          & initval_r=-999.0_lp )
 
         CALL mem%Add_var( 'yday_c_state_sum', mem%yday_c_state_sum,                                  &
           & hgrid, surface,                                                                          &
@@ -238,7 +238,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
           & prefix, suffix,                                                                          &
           & loutput = .TRUE., lrestart=.TRUE., lrestart_cont=.TRUE.,                                 &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_lp )
       END IF ! CARBON_ active
 #endif
     END IF  ! QUINCY / JSBACH
@@ -254,7 +254,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('sensible_hflx_wtr', mem%sensible_hflx_wtr, &
         & hgrid, surface, &
@@ -264,7 +264,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('latent_hflx_ice', mem%latent_hflx_ice, &
         & hgrid, surface, &
@@ -274,7 +274,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('sensible_hflx_ice', mem%sensible_hflx_ice, &
         & hgrid, surface, &
@@ -284,7 +284,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     END IF ! lake
 

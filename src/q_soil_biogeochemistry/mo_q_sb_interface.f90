@@ -18,7 +18,7 @@
 MODULE mo_q_sb_interface
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: lp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model
@@ -600,23 +600,23 @@ CONTAINS
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: scaling(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: sb_pool_total_c_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: total_soil_inorg_n_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
-    REAL(wp) :: het_respiration_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(lp) :: scaling(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(lp) :: sb_pool_total_c_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(lp) :: total_soil_inorg_n_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(lp) :: het_respiration_2d(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    REAL(wp), POINTER      :: total_som_c_gsum(:)
-    REAL(wp), POINTER      :: total_inorg_n_gsum(:)
-    REAL(wp), POINTER      :: rh_gsum(:)
-    REAL(wp), POINTER      :: nbp_gsum(:)
-    REAL(wp), POINTER      :: fnloss_gsum(:)
-    REAL(wp), POINTER      :: fn2o_gsum(:)
+    REAL(lp), POINTER      :: total_som_c_gsum(:)
+    REAL(lp), POINTER      :: total_inorg_n_gsum(:)
+    REAL(lp), POINTER      :: rh_gsum(:)
+    REAL(lp), POINTER      :: nbp_gsum(:)
+    REAL(lp), POINTER      :: fnloss_gsum(:)
+    REAL(lp), POINTER      :: fn2o_gsum(:)
     INTEGER                :: nsoil, is
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_q_sb_diagnostics'
@@ -666,9 +666,9 @@ CONTAINS
 #endif
 
     ! Sum soil layers
-    sb_pool_total_c_2d(:,:) = 0._wp
-    total_soil_inorg_n_2d(:,:) = 0._wp
-    het_respiration_2d(:,:) = 0._wp
+    sb_pool_total_c_2d(:,:) = 0._lp
+    total_soil_inorg_n_2d(:,:) = 0._lp
+    het_respiration_2d(:,:) = 0._lp
     DO is = 1, nsoil
       sb_pool_total_c_2d(:,:)    = sb_pool_total_c_2d(:,:) + sb_pool_total_c(:,is,:)*soil_depth_sl(:,is,:)
       total_soil_inorg_n_2d(:,:) = total_soil_inorg_n_2d(:,:) + total_soil_inorg_n(:,is,:)*soil_depth_sl(:,is,:)
@@ -678,13 +678,13 @@ CONTAINS
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(C)/m^2] to [PgC]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-15_wp
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-15_lp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
         & total_som_c_gsum = global_sum_array(sb_pool_total_c_2d(:,:) * scaling(:,:))
     ! Calculate global carbon inventories, if requested for output
     !  => Conversion from [mol(N)/m^2] to [TgN]
     !     1 mol N = molar_mass_N g N   => 1 Pg N = molar_mass_N * e-12
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-12_wp
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-12_lp
     IF (SB__mem%total_som_c_gsum%is_in_output) &
         & total_inorg_n_gsum = global_sum_array(total_soil_inorg_n_2d(:,:) * scaling(:,:))
 
@@ -692,7 +692,7 @@ CONTAINS
     !  => Conversion from [mumol(C)/m^2/s] to [PgC/yr]
     !     1 mol C = molar_mass_C g C   => 1 Pg C = molar_mass_C * e-15 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-21_wp * one_day * one_year
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_C * 1.e-21_lp * one_day * one_year
     IF (SB__mem%rh_gsum%is_in_output) &
         & rh_gsum  = global_sum_array(het_respiration_2d(:,:) * scaling(:,:))
     IF (SB__mem%nbp_gsum%is_in_output) &
@@ -700,7 +700,7 @@ CONTAINS
     !  => Conversion from [mumol(N)/m^2/s] to [TgN/yr]
     !     1 mol N = molar_mass_N g N   => 1 Tg N = molar_mass_N * e-12 * e-6
     !     1 s times one_day (60*60*24) time one_year (365)
-    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-18_wp * one_day * one_year
+    scaling(:,:) = land_area_scaling(:,:) * molar_mass_N * 1.e-18_lp * one_day * one_year
     IF (SB__mem%fnloss_gsum%is_in_output) &
         & fnloss_gsum = global_sum_array(ecosystem_total_n_loss(:,:) * scaling(:,:))
     IF (SB__mem%fn2o_gsum%is_in_output) &
