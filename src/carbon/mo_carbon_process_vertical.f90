@@ -47,7 +47,7 @@ CONTAINS
     &  max_depth,                             &
     &  max_depth_sl,                          &
     &  thaw_depth,                            &
-    &  permafrost_layer,                      &
+    &  permafrost_period_sl,                  &
        ! Litter inputs
     &  woodLitter,                            &
     &  leafLitter,                            &
@@ -123,7 +123,7 @@ CONTAINS
     REAL(wp),  INTENT(in)    :: max_depth                !< maximum available depth [m], either soil or thaw
     REAL(wp),  INTENT(in)    :: max_depth_sl(:)          !< maximum available depth [m], either soil or thaw, per layer
     REAL(wp),  INTENT(in)    :: thaw_depth               !< thaw depth [m]
-    REAL(wp),  INTENT(in)    :: permafrost_layer(:)      !< permafrost status of soil layer
+    REAL(wp),  INTENT(in)    :: permafrost_period_sl(:)  !< Length of consecutive frozen ground for each soil layer [yr]
 
     REAL(wp),  INTENT(inout) :: root_dist_sl(:)          !< root distribution, per layer
 
@@ -193,7 +193,7 @@ CONTAINS
     soilResp_oxic_sl(:)   = 0._wp
     soilResp_anox_sl(:)   = 0._wp
 
-    root_dist_sl = determine_root_dist(max_depth_sl, layer_depth, MiscPar(ROOT_DIST_BETA), t_soil_sl, permafrost_layer)
+    root_dist_sl = determine_root_dist(max_depth_sl, layer_depth, MiscPar(ROOT_DIST_BETA), t_soil_sl, permafrost_period_sl)
 
     frac_inun_loc = frac_inun
 
@@ -424,7 +424,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------
     ! vertical mixing
 
-    CALL move_ag_2_bg(max_depth, layer_thick, permafrost_layer,                                       &
+    CALL move_ag_2_bg(max_depth, layer_thick, permafrost_period_sl,                                 &
       &               c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
       &               c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
       &               c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
@@ -432,17 +432,17 @@ CONTAINS
       &               c_humus_1_sl, c_humus_2_sl)
 
     CALL set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
-      &                  wtr_soil_rel_sl, n_thaw_cycle, permafrost_layer, diff_coeff)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_acid_bg1_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_acid_bg2_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_water_bg1_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_water_bg2_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_ethanol_bg1_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_ethanol_bg2_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_nonsoluble_bg1_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_nonsoluble_bg2_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_humus_1_sl)
-    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_layer, c_humus_2_sl)
+      &                  wtr_soil_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_acid_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_acid_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_water_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_water_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_ethanol_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_ethanol_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_nonsoluble_bg1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_nonsoluble_bg2_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_humus_1_sl)
+    CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, c_humus_2_sl)
 
     ! remove any C that might be below bedrock boundary
     CALL remove_C_below_bedrock(soil_depth, layer_thick, c_acid_bg1_sl)
@@ -690,15 +690,15 @@ CONTAINS
   !> Note: The root distribution assumed here is only used to determine the vertical profile of root litter components.
   !>       It has no direct affect on the plant hydrology.
   !
-  FUNCTION determine_root_dist(max_thick, layer_depth, root_dist_beta, t_soil_sl, permafrost_layer) RESULT(root_dist)
+  FUNCTION determine_root_dist(max_thick, layer_depth, root_dist_beta, t_soil_sl, permafrost_period_sl) RESULT(root_dist)
     USE mo_carbon_constants,       ONLY: permafrost_threshold
     USE mo_jsb_physical_constants, ONLY: tmelt
 
-    REAL(wp), INTENT(in)  :: max_thick(:)         !< Active layer thickness [m]
-    REAL(wp), INTENT(in)  :: layer_depth(:)       !< Model layer depth [m]
-    REAL(wp), INTENT(in)  :: root_dist_beta       !< PFT dependent factor for root decay with depth
-    REAL(wp), INTENT(in)  :: t_soil_sl(:)         !< Soil temperature [K]
-    REAL(wp), INTENT(in)  :: permafrost_layer(:)  !< permafrost status of soil layers [??]
+    REAL(wp), INTENT(in)  :: max_thick(:)            !< Active layer thickness [m]
+    REAL(wp), INTENT(in)  :: layer_depth(:)          !< Model layer depth [m]
+    REAL(wp), INTENT(in)  :: root_dist_beta          !< PFT dependent factor for root decay with depth
+    REAL(wp), INTENT(in)  :: t_soil_sl(:)            !< Soil temperature [K]
+    REAL(wp), INTENT(in)  :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
 
 
     ! locals
@@ -713,7 +713,7 @@ CONTAINS
     root_dist_cum(:) = 0._wp
 
     DO is = 1, nsoil
-      IF ((nsoil_p == nsoil) .AND. ((permafrost_layer(is) > permafrost_threshold) .OR. (t_soil_sl(is) < tmelt))) THEN
+      IF ((nsoil_p == nsoil) .AND. ((permafrost_period_sl(is) > permafrost_threshold) .OR. (t_soil_sl(is) < tmelt))) THEN
         nsoil_p = MAX(is-1, 1)
       END IF
     END DO
@@ -730,7 +730,7 @@ CONTAINS
     END IF
 
     DO is = 1, nsoil
-      IF (permafrost_layer(is) > permafrost_threshold) THEN
+      IF (permafrost_period_sl(is) > permafrost_threshold) THEN
         root_dist(is) = 0._wp
       END IF
     END DO
@@ -885,15 +885,15 @@ CONTAINS
   END FUNCTION get_modifier_precip
 
   ! ---------------------------------------------------------------------------------------------------------
-  SUBROUTINE vertical_C_transport(act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_layer, cpool_bg_sl)
+  SUBROUTINE vertical_C_transport(act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_period_sl, cpool_bg_sl)
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
-    REAL(wp), INTENT(in)    :: act_depth_sl(:)      !< actual layer thickness, considering soil depth and active layer thickness
-    REAL(wp), INTENT(in)    :: diff_coeff(:)        !< diffusivity
-    REAL(wp), INTENT(in)    :: delta_time_C         !< Carbon time step [s]
-    REAL(wp), INTENT(in)    :: dz(:)                !< layer thickness [m]
-    REAL(wp), INTENT(in)    :: permafrost_layer(:)  !< permafrost indicator [yr]
-    REAL(wp), INTENT(inout) :: cpool_bg_sl(:)       !< bg C pools on soil layers
+    REAL(wp), INTENT(in)    :: act_depth_sl(:)         !< actual layer thickness, considering soil and active layer depth [m]
+    REAL(wp), INTENT(in)    :: diff_coeff(:)           !< diffusivity
+    REAL(wp), INTENT(in)    :: delta_time_C            !< Carbon time step [s]
+    REAL(wp), INTENT(in)    :: dz(:)                   !< layer thickness [m]
+    REAL(wp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
+    REAL(wp), INTENT(inout) :: cpool_bg_sl(:)          !< below ground C pools on soil layers
 
     ! layer counters, # soil layers
     INTEGER :: is, nsoil, nsoil_loc
@@ -932,7 +932,7 @@ CONTAINS
     IF (C_before > 0._wp) THEN
       C_conc(:) = 0._wp
       DO is = 1, nsoil
-        IF ((act_depth_sl(is) > minimum_layer_thickness) .AND. (permafrost_layer(is) < permafrost_threshold)) THEN
+        IF ((act_depth_sl(is) > minimum_layer_thickness) .AND. (permafrost_period_sl(is) < permafrost_threshold)) THEN
           ! only do this, if layer is thick enough and non-permafrost
           C_conc(is) = cpool_bg_sl(is) / act_depth_sl(is)
         ELSE
@@ -1033,7 +1033,7 @@ CONTAINS
       C_conc = rhs
 
       DO is = 1, nsoil_loc
-        IF ((act_depth_sl(is) > minimum_layer_thickness) .AND. (permafrost_layer(is) < permafrost_threshold)) THEN
+        IF ((act_depth_sl(is) > minimum_layer_thickness) .AND. (permafrost_period_sl(is) < permafrost_threshold)) THEN
           ! only do this, if layer is thick enough and non-permafrost
           cpool_bg_sl(is) = C_conc(is) * act_depth_sl(is)
         END IF
@@ -1055,7 +1055,7 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   SUBROUTINE set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
-    &                        wtr_rel_sl, n_thaw_cycle, permafrost_layer, diff_coeff)
+    &                        wtr_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
@@ -1066,7 +1066,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: t_soil_sl(:)
     REAL(wp), INTENT(in)    :: wtr_rel_sl(:)
     REAL(wp), INTENT(in)    :: n_thaw_cycle
-    REAL(wp), INTENT(in)    :: permafrost_layer(:)
+    REAL(wp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
     REAL(wp), INTENT(out)   :: diff_coeff(:)
     INTEGER :: is, isp1, nsoil
 
@@ -1094,8 +1094,8 @@ CONTAINS
     IF (thaw_depth < soil_depth) THEN    ! active layer depth < soil depth --> permafrost
       DO is = 1,nsoil
         isp1 = MIN(is+1,nsoil)
-        IF (  (permafrost_layer(is)   < permafrost_threshold) .AND. &
-          &   (permafrost_layer(isp1) < permafrost_threshold) .AND. &
+        IF (  (permafrost_period_sl(is)   < permafrost_threshold) .AND. &
+          &   (permafrost_period_sl(isp1) < permafrost_threshold) .AND. &
           &   (t_soil_sl(is)          > tmelt)) THEN
           diff_coeff(is) = cryo_max *                               &
             &             MIN(1._wp, wtr_rel_sl(is)) *              &
@@ -1122,7 +1122,7 @@ CONTAINS
   ! move_ag_2_bg
   ! check column C amounts, ensure that C makes sense.
   ! Idea: peat column defines maximum C possible, if more C in 1 layer, it needs to be moved down.
-    SUBROUTINE move_ag_2_bg(max_depth, layer_thick, permafrost_layer,                                     &
+    SUBROUTINE move_ag_2_bg(max_depth, layer_thick, permafrost_period_sl,                                     &
       &                     c_acid_ag1, c_acid_bg1_sl, c_acid_ag2, c_acid_bg2_sl,                         &
       &                     c_water_ag1, c_water_bg1_sl, c_water_ag2, c_water_bg2_sl,                     &
       &                     c_ethanol_ag1, c_ethanol_bg1_sl, c_ethanol_ag2, c_ethanol_bg2_sl,             &
@@ -1134,7 +1134,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)    :: max_depth
     REAL(wp), INTENT(in)    :: layer_thick(:)
-    REAL(wp), INTENT(in)    :: permafrost_layer(:)
+    REAL(wp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
     REAL(wp), INTENT(inout) :: c_acid_ag1
     REAL(wp), INTENT(inout) :: c_acid_bg1_sl(:)
     REAL(wp), INTENT(inout) :: c_acid_ag2
@@ -1214,8 +1214,8 @@ CONTAINS
     depth_upper = 0._wp
     DO is = 1,nsoil-1
       isp1 = MIN(is+1, nsoil)
-      IF ((depth_upper < max_depth) .AND. (permafrost_layer(is) < permafrost_threshold) &
-        & .AND. (permafrost_layer(isp1) < permafrost_threshold)) THEN
+      IF ((depth_upper < max_depth) .AND. (permafrost_period_sl(is) < permafrost_threshold) &
+        & .AND. (permafrost_period_sl(isp1) < permafrost_threshold)) THEN
         depth_upper = depth_upper + layer_thick(is)
         cpool_tot = c_acid_bg1_sl(is)       + c_acid_bg2_sl(is)       +      &
           &         c_water_bg1_sl(is)      + c_water_bg2_sl(is)      +      &
