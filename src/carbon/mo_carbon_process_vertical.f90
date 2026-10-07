@@ -19,7 +19,7 @@ MODULE mo_carbon_process_vertical
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_vertical_soil_c, depth_to_layers, relocate_carbon_vertical_fire, relocate_carbon_vertical_damage, &
+  PUBLIC :: calc_vertical_soil_c, relocate_carbon_vertical_fire, relocate_carbon_vertical_damage, &
     &       determine_root_dist
 
   CHARACTER(*), PARAMETER :: modname = 'mo_carbon_process_vertical'
@@ -883,39 +883,6 @@ CONTAINS
     d_precip = 1.0_wp - EXP(precip_p1*(precip*sec_per_year/1000._wp))      ! YASSO formulation for precipitation dependence
 
   END FUNCTION get_modifier_precip
-
-  ! ---------------------------------------------------------------------------------------------------------
-  !>
-  !> This function return the actual thickness of each soil layer, given the total soil depth (e.g. until bedrock or
-  !> until permafrost boundary) and the thickness of each layer.
-  !>
-  FUNCTION depth_to_layers(depth, dz) RESULT(depth_l)
-
-    REAL(wp), INTENT(in) :: depth(:)
-    REAL(wp), INTENT(in) :: dz(:)
-    REAL(wp)             :: depth_l(SIZE(depth), SIZE(dz))
-
-    REAL(wp) :: bottom, bottom_m1
-    INTEGER  :: nsoil, is
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':depth_to_layers'
-
-    nsoil = SIZE(dz)
-
-    depth_l(:,:) = 0._wp
-    bottom = 0._wp
-    bottom_m1 = 0._wp
-    DO is = 1,nsoil
-      bottom = bottom + dz(is)
-      WHERE (depth(:) >= bottom)
-        depth_l(:,is) = dz(is)
-      ELSEWHERE (depth(:) > bottom_m1)
-        depth_l(:,is) = depth(:) - bottom_m1
-      END WHERE
-      bottom_m1 = bottom_m1 + dz(is)
-    END DO
-
-  END FUNCTION depth_to_layers
 
   ! ---------------------------------------------------------------------------------------------------------
   SUBROUTINE vertical_C_transport(act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_layer, cpool_bg_sl)

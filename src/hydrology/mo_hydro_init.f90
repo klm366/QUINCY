@@ -400,7 +400,7 @@ CONTAINS
   !>#### Set initial and boundary conditions for the hydrology process - quincy standalone
   !>
   SUBROUTINE qs_hydro_init_ic_bc(tile)
-    USE mo_util,                  ONLY: soil_depth_to_layers_2d
+    USE mo_util,                  ONLY: soil_depth_to_layers
     USE mo_hydro_util,            ONLY: get_amount_in_rootzone
     USE mo_hydro_process,         ONLY: calc_orographic_features
     USE mo_hydro_constants,       ONLY: &
@@ -508,8 +508,8 @@ CONTAINS
 
     !> calc actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
     !>
-    ! NOTE: soil_depth_to_layers_2d() returns a 3D variable
-    soil_depth_sl(:,:,:) = soil_depth_to_layers_2d(soil_depth(:,:), &   ! Total soil depth until bedrock (from textures), 2D variable
+    ! NOTE: soil_depth_to_layers() returns a 3D variable
+    soil_depth_sl(:,:,:) = soil_depth_to_layers(soil_depth(:,:), &   ! Total soil depth until bedrock (from textures), 2D variable
       &                                            soil_w%dz(:))        ! Soil layer thicknesses from namelist
     ! pass these values to a HYDRO_ variable with an improved name
     soil_lay_width_sl(:,:,:) = soil_depth_sl(:,:,:)
@@ -625,7 +625,7 @@ CONTAINS
     !> Root depth within the soil layers:
     !> calculated from the total root depth and the layer thicknesses
     !>
-    dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
+    dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers( &
       & root_depth(:,:), &      ! Total rooting depth
       & soil_w%dz(:))           ! Soil layer thicknesses from vertical grid
 
@@ -1263,7 +1263,7 @@ CONTAINS
   !
   SUBROUTINE hydro_init_bc(tile)
 
-    USE mo_util,                ONLY: soil_depth_to_layers_2d
+    USE mo_util,                ONLY: soil_depth_to_layers
     USE mo_hydro_process,       ONLY: calc_orographic_features
     USE mo_jsb_math_constants,  ONLY: eps8
 
@@ -1390,7 +1390,7 @@ CONTAINS
       !>     - Soil depth within each soil layer:
       !>       calculated from total soil depth until bedrock and the fixed layer thicknesses of the
       !>       vertical grid.
-      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
+      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers( &
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), & ! Total soil depth until bedrock
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
@@ -1543,7 +1543,7 @@ CONTAINS
 
       !>     - Root depth within the soil layers:
       !>       calculated from the total root depth and the layer thicknesses
-      dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
+      dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers( &
         & dsl4jsb_var2D_onDomain(HYDRO_, root_depth), & ! Total rooting depth
         & soil_w%dz(:))                                 ! Soil layer thicknesses from vertical grid
 
@@ -2058,7 +2058,7 @@ CONTAINS
   !>
   SUBROUTINE hydro_sanitize_state(tile)
 
-    USE mo_util, ONLY: soil_depth_to_layers_2d
+    USE mo_util, ONLY: soil_depth_to_layers
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -2134,7 +2134,7 @@ CONTAINS
       ! in the root zone. The might not add up to the total root depth for the same reason. Fix by recomputing.
       soil_w => Get_vgrid('soil_depth_water')
       root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
-      root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
+      root_depth_sl(:,:,:) = soil_depth_to_layers(root_depth(:,:), soil_w%dz(:))
 
       !$ACC UPDATE DEVICE(root_depth, root_depth_sl) ASYNC(1)
     END IF

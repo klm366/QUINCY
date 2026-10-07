@@ -25,7 +25,7 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, read_bc_data, one_of, &
+  PUBLIC :: soil_depth_to_layers, soil_depth_to_layers_1d, soil_depth_to_layers_2d, ifs2soil, read_bc_data, one_of, &
     &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
@@ -38,6 +38,11 @@ MODULE mo_util
     MODULE PROCEDURE one_of_int
   END INTERFACE one_of
 
+  INTERFACE soil_depth_to_layers
+    MODULE PROCEDURE soil_depth_to_layers_1d
+    MODULE PROCEDURE soil_depth_to_layers_2d
+  END INTERFACE soil_depth_to_layers
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_util'
 
 CONTAINS
@@ -46,9 +51,39 @@ CONTAINS
   !>
   !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
   !>
+  FUNCTION soil_depth_to_layers_1d(depth, dz) RESULT(depth_l)
+
+    REAL(wp), INTENT(in) :: depth(:)             !< The bedrock or active layer depth [m]
+    REAL(wp), INTENT(in) :: dz(:)                !< Vertical dimension
+    REAL(wp)             :: depth_l(SIZE(depth), SIZE(dz)) !< Actual soil layer depth
+
+    REAL(wp) :: bottom, bottom_m1  !< Helper variables
+    INTEGER  :: nsoil, i
+
+    nsoil = SIZE(dz)
+
+    depth_l(:,:) = 0._wp  ! Init
+    bottom = 0._wp
+    bottom_m1 = 0._wp
+    DO i=1,nsoil            ! From top layer to lowest layer
+      bottom = bottom + dz(i)
+      WHERE (depth(:) >= bottom)              ! When the depth is larger than the soil layer: i
+        depth_l(:,i) = dz(i)
+      ELSEWHERE (depth(:) > bottom_m1)        ! When the depth is larger than the top of the next layer
+        depth_l(:,i) = depth(:) - bottom_m1
+      END WHERE
+      bottom_m1 = bottom_m1 + dz(i)            ! Update the bottom_m1 to the next soil layer
+    END DO
+
+  END FUNCTION soil_depth_to_layers_1d
+
+  ! ======================================================================================================= !
+  !>
+  !> Compute soil layer depths from (fixed) layer thicknesses and total depth until bedrock
+  !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
-    REAL(wp), INTENT(in) :: depth(:,:)             !< The bedrock depth
+    REAL(wp), INTENT(in) :: depth(:,:)             !< The bedrock or active layer depth [m]
     REAL(wp), INTENT(in) :: dz(:)                  !< Vertical dimension
     REAL(wp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2)) !< Actual soil layer depth
 

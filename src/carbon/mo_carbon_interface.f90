@@ -158,7 +158,8 @@ CONTAINS
     ! Use declarations
     USE mo_carbon_shared,            ONLY: calc_plant_c
     USE mo_carbon_process,           ONLY: calc_soil_c
-    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c, depth_to_layers
+    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c
+    USE mo_util,                     ONLY: soil_depth_to_layers
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
     USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
@@ -647,7 +648,7 @@ CONTAINS
     ! Get information about the maximum thaw depth on soil layers
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
-      max_layer_sl = depth_to_layers(soil_depth_thaw, layer_thick)
+      max_layer_sl = soil_depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
     END IF
 
