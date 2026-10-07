@@ -506,13 +506,21 @@ CONTAINS
     CALL calc_sf_fuel_moisture(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, has_fire_conditions)
 
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
+      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+      CALL calc_fire_danger_index(sf_config % nc, sf_fuel_moisture % omegas_thon(:, df_sf_omega_o_idx), sf_fuel_moisture % moisture_extinction, spitfire % fdi, mask=has_fire_conditions)
+    ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
+      !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+      CALL calc_fire_danger_index(sf_config % nc, sf_fuel_moisture % val, sf_fuel_moisture % moisture_extinction, spitfire % fdi, mask=has_fire_conditions)
+    ENDIF
+
+    IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
 
       CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
                                     nesterov_index, &
                                     sf_fuel_moisture, & ! inout
                                     spitfire % fdi, & !< outputs
                                     sf_ros, &
-                                    mask=has_fire_conditions) !< optional
+                                    mask=(has_fire_conditions .AND. spitfire % fdi > 1.e-6_wp))
     ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
 
       CALL calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, &
@@ -594,13 +602,13 @@ CONTAINS
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in)        :: nesterov_index(:)      !< [deg C2]
     TYPE(t_sf_mf), INTENT(inout):: sf_mf
-    REAL(wp), INTENT(out)       :: fdi(:)                 !< Fire dange index [%]
+    REAL(wp), INTENT(in)       :: fdi(:)                 !< Fire dange index [%]
     TYPE(t_sf_ros), INTENT(inout) :: sf_ros
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)              !< True: gridcell is enabled
 
     LOGICAL :: has_fire_conditions(sf_config%nc)
 
-    fdi = 0._wp
+    !fdi = 0._wp
     !sf_mf % omegas_thon = 0._wp
     has_fire_conditions = .TRUE.
     IF (PRESENT(mask)) has_fire_conditions = mask
@@ -608,10 +616,10 @@ CONTAINS
     !CALL wrap_calc_sf_fuel_moisture_for_thonicke(sf_config, nesterov_index, sf_fuel_load, sf_mf)
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    CALL calc_fire_danger_index(sf_config % nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
+    !CALL calc_fire_danger_index(sf_config % nc, sf_mf % omegas_thon(:, df_sf_omega_o_idx), sf_mf % moisture_extinction, fdi, mask=has_fire_conditions)
 
     !< It accounts for 1, 10 and 100 hours fuel classes
-    has_fire_conditions = has_fire_conditions .AND. (fdi > 1.e-6_wp)
+    !has_fire_conditions = has_fire_conditions .AND. (fdi > 1.e-6_wp)
 
     CALL sf_calc_rate_of_spread_thon(sf_config % nc, sf_config % nfcl_ros, & ! in
                       sf_ros % fbd, &
@@ -651,19 +659,19 @@ CONTAINS
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture !< Fuel moisture
-    REAL(wp), INTENT(out) :: fdi(:) !< Fire danger index [%]
+    REAL(wp), INTENT(in) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(inout) :: ros !< Rate of spread [-]
     LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
 
-    REAL(wp) :: woi_dd(sf_config%nc,fuel_moisture % sigma_dd_nr)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
-    REAL(wp) :: woi_lv(sf_config%nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
-    REAL(wp) :: me_dd(sf_config%nc)             !< Dead moisture of extinction [-] (#nc)
-    REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
-    TYPE(t_sf_weighting_factors) :: wfactors    !< Weighting factors based on fuel moisture classes
-    TYPE(t_fwvar_r1d) :: weigthed_fm !< weighted fuel moisture content [-]
-    INTEGER :: ic
+    !REAL(wp) :: woi_dd(sf_config%nc,fuel_moisture % sigma_dd_nr)        !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    !REAL(wp) :: woi_lv(sf_config%nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    !REAL(wp) :: me_dd(sf_config%nc)             !< Dead moisture of extinction [-] (#nc)
+    !REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
+    !TYPE(t_sf_weighting_factors) :: wfactors    !< Weighting factors based on fuel moisture classes
+    !TYPE(t_fwvar_r1d) :: weigthed_fm !< weighted fuel moisture content [-]
+    !INTEGER :: ic
 
-    fdi = 0._wp
+    !fdi = 0._wp
 
     !CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
 
@@ -698,7 +706,7 @@ CONTAINS
     !fuel_moisture%val = weigthed_fm%total
 
     !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    CALL calc_fire_danger_index(sf_config%nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
+    !CALL calc_fire_danger_index(sf_config%nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
 
     !< only involved ROS fuel (and FM)
     CALL sf_calc_rate_of_spread_ober(&
@@ -713,7 +721,6 @@ CONTAINS
         ros % u_f_wind, &
         mask, &
         ros)
-
 
   END SUBROUTINE calc_sf_dynamics_for_oberhagemann
 
