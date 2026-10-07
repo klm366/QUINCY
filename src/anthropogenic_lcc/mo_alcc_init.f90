@@ -16,7 +16,7 @@
 MODULE mo_alcc_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -77,7 +77,6 @@ CONTAINS
     USE mo_jsb_time_iface,      ONLY: t_datetime
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
     USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
     USE mo_alcc_util,           ONLY: scale_anthro_fractions_for_nlcc
 
@@ -92,23 +91,22 @@ CONTAINS
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_memory(ALCC_)
     dsl4jsb_Real3D_onDomain :: cf_target_year
-    REAL(wp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
-    REAL(wp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
+    REAL(lp),       POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(lp), ALLOCATABLE   :: cf_correction(:,:) ! In case of relative fracts in map files: cf of the veg tile
 
-    REAL(wp), ALLOCATABLE   :: target_cf(:)
+    REAL(lp), ALLOCATABLE   :: target_cf(:)
     LOGICAL, ALLOCATABLE    :: nlcc_tile(:)
     INTEGER                 :: i_max_area
-    REAL(wp)                :: cf_sum, diff
+    REAL(lp)                :: cf_sum, diff
 
     INTEGER :: target_year, iblk, ic
-    INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
+    INTEGER :: current_year, i_tile, npft, itile, nproma, nblks
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_land_use_data
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
-    no_omp_thread = Get_omp_thread()
     hgrid => Get_grid(model%grid_id)
 
     nproma = hgrid%nproma
@@ -119,17 +117,13 @@ CONTAINS
 
     ! Alcc is expected to run on the veg tile
     ! -> search for the veg tile
-    CALL model%Get_top_tile(tile)
-    DO WHILE (ASSOCIATED(tile))
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
+    tile => NULL()
+    DO itile=1,SIZE(model%tiles)
       ! JN-TODO: should such often required tile names be constants somewhere?
-      IF (tile%name .EQ. 'veg') EXIT
-
-      CALL model%Goto_next_tile(tile)
+      IF (model%tiles(itile)%p%name == 'veg') THEN
+        tile => model%tiles(itile)%p
+        EXIT
+      END IF
     END DO
 
     !>
@@ -157,7 +151,7 @@ CONTAINS
       CALL tile%Get_fraction(fract=cf_correction(:,:))   ! veg tile fraction
     ELSE
       ! With absolute fractions, scaling is not required
-      cf_correction(:,:) = 1.0_wp
+      cf_correction(:,:) = 1.0_lp
     END IF
 
     ! Read land use data
@@ -198,16 +192,16 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), fill_array = cf_target_year(:,i_tile,:))
 
         ! Scale target fractions (required in case of relative fractions (default),
-        ! - in case of absolute fractions the cf_correction has been set to 1.0_wp above)
+        ! - in case of absolute fractions the cf_correction has been set to 1.0_lp above)
         cf_target_year(:,i_tile,:) = cf_target_year(:,i_tile,:) * cf_correction
 
         ! Assert: fractions >= 0 and < 1
-        IF (ANY(cf_target_year(:,i_tile,:) < 0.0_wp)) THEN
+        IF (ANY(cf_target_year(:,i_tile,:) < 0.0_lp)) THEN
           CALL finish(TRIM(routine), &
             & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions <0 for ' &
             & // TRIM(current_tile%name)//'. Please check.')
         END IF
-        IF (ANY(cf_target_year(:,i_tile,:) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+        IF (ANY(cf_target_year(:,i_tile,:) > 1.0_lp + max_tolerated_cf_mismatch)) THEN
           CALL finish(TRIM(routine), &
             & 'Violation of assertion: Alcc land use data '//TRIM(filename_land_use_data)//' leads to fractions >1 for ' &
             & // TRIM(current_tile%name)//'. Please check.')
@@ -245,28 +239,28 @@ CONTAINS
         DEALLOCATE(nlcc_tile)
       END IF
 
-      ! Cover fractions must not exceed 1.0_wp
-      cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_wp)
+      ! Cover fractions must not exceed 1.0_lp
+      cf_target_year(:,:,:) = MIN(cf_target_year(:,:,:), 1.0_lp)
 
       CALL input_file%Close()
 
       ! Assert: sum of absolute fractions needs to be <=1
       ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
-      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp + max_tolerated_cf_mismatch)) THEN
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_lp + max_tolerated_cf_mismatch)) THEN
         CALL finish(TRIM(routine), &
           & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
-          & // ' sum to > 1.0_wp. Please check.')
+          & // ' sum to > 1.0_lp. Please check.')
       END IF
       ! Correct remaining mismatches
-      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_wp)) THEN
+      IF (ANY(SUM(cf_target_year(:,:,:),DIM=2) > 1.0_lp)) THEN
         ALLOCATE(target_cf(npft))
         DO iblk = 1, nblks
           DO ic = 1, nproma
             target_cf(:) = cf_target_year(ic,:,iblk)
             cf_sum = SUM(target_cf(:))
-            IF (cf_sum > 1.0_wp) THEN
+            IF (cf_sum > 1.0_lp) THEN
               i_max_area = MAXLOC(target_cf(:), DIM=1)
-              cf_target_year(ic,i_max_area,iblk) = cf_target_year(ic,i_max_area,iblk) - (cf_sum - 1.0_wp)
+              cf_target_year(ic,i_max_area,iblk) = cf_target_year(ic,i_max_area,iblk) - (cf_sum - 1.0_lp)
             END IF
           END DO
         END DO

@@ -18,7 +18,7 @@ MODULE mo_nlcc_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ MODULE mo_nlcc_config_class
     LOGICAL             :: &
       & init_running_means, &
       & init_nlcc
-    REAL(wp)            :: &
+    REAL(lp)            :: &
       & accelerate_nlcc
 
    CONTAINS
@@ -59,7 +59,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     LOGICAL                     :: init_nlcc
-    REAL(wp)                    :: accelerate_nlcc
+    REAL(lp)                    :: accelerate_nlcc
 
     NAMELIST /jsb_nlcc_nml/  &
       &  active,             &
@@ -83,7 +83,7 @@ CONTAINS
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
     init_nlcc           = .FALSE.
-    accelerate_nlcc     = 1._wp
+    accelerate_nlcc     = 1._lp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -101,7 +101,7 @@ CONTAINS
     config%init_nlcc         = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
     config%accelerate_nlcc   = accelerate_nlcc
-    IF (accelerate_nlcc /= 1._wp) THEN
+    IF (accelerate_nlcc /= 1._lp) THEN
       WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
       CALL message(TRIM(routine), message_text)
     END IF

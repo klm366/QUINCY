@@ -20,7 +20,7 @@ MODULE mo_sb_config_class
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 
@@ -83,8 +83,8 @@ MODULE mo_sb_config_class
     INTEGER               :: sb_model_spinup_accelerator_max_executions
     INTEGER               :: sb_model_spinup_accelerator_forcing_years
     INTEGER               :: sb_model_spinup_accelerator_max_relaxation_years
-    REAL(wp)              :: sb_model_spinup_accelerator_timestep_days
-    REAL(wp)              :: sb_model_spinup_accelerator_convergence_rel_tol
+    REAL(lp)              :: sb_model_spinup_accelerator_timestep_days
+    REAL(lp)              :: sb_model_spinup_accelerator_convergence_rel_tol
     INTEGER               :: sb_model_spinup_accelerator_convergence_years
     ! P sorption
     LOGICAL               :: flag_sb_double_langmuir
@@ -92,13 +92,13 @@ MODULE mo_sb_config_class
     !!
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
-    REAL(wp)              :: soil_p_depth
-    REAL(wp)              :: soil_p_labile
-    REAL(wp)              :: soil_p_slow
-    REAL(wp)              :: soil_p_occluded
-    REAL(wp)              :: soil_p_primary
-    REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(lp)              :: soil_ph                  !< soil pH - site specific from forcing info file
+    REAL(lp)              :: soil_p_depth
+    REAL(lp)              :: soil_p_labile
+    REAL(lp)              :: soil_p_slow
+    REAL(lp)              :: soil_p_occluded
+    REAL(lp)              :: soil_p_primary
+    REAL(lp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: sb_analytical_init_filename !< deprecated compatibility member; no longer read
@@ -109,17 +109,17 @@ MODULE mo_sb_config_class
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
-    REAL(wp)         :: nml_temp_freeze_thres_bio
-    REAL(wp)         :: nml_temp_freeze_window_bio
-    REAL(wp)         :: nml_frac_woody2dec_litter
-    REAL(wp)         :: nml_frac_litter2fast_som
-    REAL(wp)         :: nml_f_nit_noy
-    REAL(wp)         :: nml_f_nit_n2o
-    REAL(wp)         :: nml_vmax_nitrification
-    REAL(wp)         :: nml_vmax_denitrification
-    REAL(wp)         :: nml_t_ref_decomposition
-    REAL(wp)         :: nml_ea_decomposition
-    REAL(wp)         :: nml_ed_decomposition
+    REAL(lp)         :: nml_temp_freeze_thres_bio
+    REAL(lp)         :: nml_temp_freeze_window_bio
+    REAL(lp)         :: nml_frac_woody2dec_litter
+    REAL(lp)         :: nml_frac_litter2fast_som
+    REAL(lp)         :: nml_f_nit_noy
+    REAL(lp)         :: nml_f_nit_n2o
+    REAL(lp)         :: nml_vmax_nitrification
+    REAL(lp)         :: nml_vmax_denitrification
+    REAL(lp)         :: nml_t_ref_decomposition
+    REAL(lp)         :: nml_ea_decomposition
+    REAL(lp)         :: nml_ed_decomposition
 
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -207,31 +207,31 @@ CONTAINS
     INTEGER                     :: sb_model_spinup_accelerator_max_executions
     INTEGER                     :: sb_model_spinup_accelerator_forcing_years
     INTEGER                     :: sb_model_spinup_accelerator_max_relaxation_years
-    REAL(wp)                    :: sb_model_spinup_accelerator_timestep_days
-    REAL(wp)                    :: sb_model_spinup_accelerator_convergence_rel_tol
+    REAL(lp)                    :: sb_model_spinup_accelerator_timestep_days
+    REAL(lp)                    :: sb_model_spinup_accelerator_convergence_rel_tol
     INTEGER                     :: sb_model_spinup_accelerator_convergence_years
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
-    REAL(wp)                    :: soil_ph
-    REAL(wp)                    :: soil_p_depth,        &
+    REAL(lp)                    :: soil_ph
+    REAL(lp)                    :: soil_p_depth,        &
                                    soil_p_labile,       &
                                    soil_p_slow,         &
                                    soil_p_occluded,     &
                                    soil_p_primary
-    REAL(wp)                    :: qmax_org_fine_particle
+    REAL(lp)                    :: qmax_org_fine_particle
     LOGICAL                     :: flag_apply_nml_parameters
-    REAL(wp)                    :: nml_temp_freeze_thres_bio
-    REAL(wp)                    :: nml_temp_freeze_window_bio
-    REAL(wp)                    :: nml_frac_woody2dec_litter
-    REAL(wp)                    :: nml_frac_litter2fast_som
-    REAL(wp)                    :: nml_f_nit_noy
-    REAL(wp)                    :: nml_f_nit_n2o
-    REAL(wp)                    :: nml_vmax_nitrification
-    REAL(wp)                    :: nml_vmax_denitrification
-    REAL(wp)                    :: nml_t_ref_decomposition
-    REAL(wp)                    :: nml_ea_decomposition
-    REAL(wp)                    :: nml_ed_decomposition
+    REAL(lp)                    :: nml_temp_freeze_thres_bio
+    REAL(lp)                    :: nml_temp_freeze_window_bio
+    REAL(lp)                    :: nml_frac_woody2dec_litter
+    REAL(lp)                    :: nml_frac_litter2fast_som
+    REAL(lp)                    :: nml_f_nit_noy
+    REAL(lp)                    :: nml_f_nit_n2o
+    REAL(lp)                    :: nml_vmax_nitrification
+    REAL(lp)                    :: nml_vmax_denitrification
+    REAL(lp)                    :: nml_t_ref_decomposition
+    REAL(lp)                    :: nml_ea_decomposition
+    REAL(lp)                    :: nml_ed_decomposition
 
     NAMELIST /lnd_sb_nml/                     &
                       active                    , &
@@ -339,19 +339,19 @@ CONTAINS
     sb_model_spinup_accelerator_max_executions = 5
     sb_model_spinup_accelerator_forcing_years = 30
     sb_model_spinup_accelerator_max_relaxation_years = 10000
-    sb_model_spinup_accelerator_timestep_days = 1.0_wp
-    sb_model_spinup_accelerator_convergence_rel_tol = 1.e-5_wp
+    sb_model_spinup_accelerator_timestep_days = 1.0_lp
+    sb_model_spinup_accelerator_convergence_rel_tol = 1.e-5_lp
     sb_model_spinup_accelerator_convergence_years = 10
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
-    soil_ph                     = 6.5_wp
-    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
-    soil_p_labile               = 50._wp
-    soil_p_slow                 = 70._wp
-    soil_p_occluded             = 150._wp
-    soil_p_primary              = 100._wp
-    qmax_org_fine_particle      = 6.5537_wp
+    soil_ph                     = 6.5_lp
+    soil_p_depth                = 0.5_lp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
+    soil_p_labile               = 50._lp
+    soil_p_slow                 = 70._lp
+    soil_p_occluded             = 150._lp
+    soil_p_primary              = 100._lp
+    qmax_org_fine_particle      = 6.5537_lp
     flag_apply_nml_parameters   = .FALSE.
     nml_temp_freeze_thres_bio   = def_parameters
     nml_temp_freeze_window_bio  = def_parameters
@@ -454,8 +454,8 @@ CONTAINS
           & sb_model_spinup_accelerator_max_executions <= 0 .OR. &
           & sb_model_spinup_accelerator_forcing_years <= 0 .OR. &
           & sb_model_spinup_accelerator_max_relaxation_years <= 0 .OR. &
-          & sb_model_spinup_accelerator_timestep_days <= 0.0_wp .OR. &
-          & sb_model_spinup_accelerator_convergence_rel_tol <= 0.0_wp .OR. &
+          & sb_model_spinup_accelerator_timestep_days <= 0.0_lp .OR. &
+          & sb_model_spinup_accelerator_convergence_rel_tol <= 0.0_lp .OR. &
           & sb_model_spinup_accelerator_convergence_years <= 0) THEN
         CALL finish(TRIM(routine), 'Forward SB spin-up accelerator controls must be greater than zero.')
       END IF
@@ -504,7 +504,7 @@ CONTAINS
     ! Create vertical axis
     ! - this grid might be useful in other contexts, too?
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
-      & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
+      & levels=(/ (REAL(i_month, kind=lp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
 
     SELECT CASE (TRIM(config%sb_model_spinup_accelerator_forcing_interval))
@@ -521,18 +521,18 @@ CONTAINS
     END SELECT
 
     sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, n_forcing_bins, &
-      & levels=(/ (REAL(i_forcing_bin, kind=wp), i_forcing_bin = 1, n_forcing_bins) /), units='')
+      & levels=(/ (REAL(i_forcing_bin, kind=lp), i_forcing_bin = 1, n_forcing_bins) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_forcing_vgrid)
 
     n_litter_entries = n_forcing_bins * (Get_number_of_veg_compartments() + 1) * LAST_ELEM_ID
     sb_spinup_accelerator_litter_vgrid => new_vgrid('sb_accel_litter', ZAXIS_GENERIC, n_litter_entries, &
-      & levels=(/ (REAL(i_litter_entry, kind=wp), i_litter_entry = 1, n_litter_entries) /), units='')
+      & levels=(/ (REAL(i_litter_entry, kind=lp), i_litter_entry = 1, n_litter_entries) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_litter_vgrid)
 
     vgrid_soil_w => Get_vgrid('soil_depth_water')
     n_profile_entries = n_forcing_bins * vgrid_soil_w%n_levels
     sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
-      & levels=(/ (REAL(i_profile_entry, kind=wp), i_profile_entry = 1, n_profile_entries) /), units='')
+      & levels=(/ (REAL(i_profile_entry, kind=lp), i_profile_entry = 1, n_profile_entries) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
 
   END SUBROUTINE Init_sb_config

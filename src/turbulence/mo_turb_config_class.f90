@@ -16,7 +16,7 @@ MODULE mo_turb_config_class
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_control,       ONLY: debug_on
@@ -29,7 +29,7 @@ MODULE mo_turb_config_class
   PUBLIC :: t_turb_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_turb_config
-    REAL(wp) :: &
+    REAL(lp) :: &
       & blending_height,             & !< Blending height [m]
       & roughness_snow,              & !< Roughness length of snow-covered surfaces [m]
       & roughness_bare,              & !< Roughness length of bare land surfaces [m]
@@ -60,7 +60,7 @@ CONTAINS
 
     LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    REAL(wp) :: &
+    REAL(lp) :: &
       & blending_height, roughness_snow, roughness_bare, roughness_water, &
       & roughness_lai_saturation, roughness_momentum_to_heat, max_ini_rough_m
     LOGICAL :: l_roughness_lai
@@ -90,13 +90,13 @@ CONTAINS
     lrestart_cont              = .FALSE.     ! TRUE: Continue although TURB variables are missing in restart file
     bc_filename                = 'bc_land_phys.nc'
     ic_filename                = 'ic_land_phys.nc'
-    blending_height            = 100._wp
-    roughness_snow             = 0.001_wp
-    roughness_bare             = 0.005_wp
-    roughness_water            = 0.0002_wp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
-    roughness_lai_saturation   = 0.4_wp
-    roughness_momentum_to_heat = 10._wp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
-    max_ini_rough_m            = -1._wp      ! No limit
+    blending_height            = 100._lp
+    roughness_snow             = 0.001_lp
+    roughness_bare             = 0.005_lp
+    roughness_water            = 0.0002_lp   ! Claussen, 1991: Estimation of areally-averaged surface fluxes
+    roughness_lai_saturation   = 0.4_lp
+    roughness_momentum_to_heat = 10._lp      ! FAO, 1998; but in reality shouldn't be constant but depend on surface features
+    max_ini_rough_m            = -1._lp      ! No limit
     l_roughness_lai            = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))

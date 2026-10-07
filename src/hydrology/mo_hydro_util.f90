@@ -15,7 +15,7 @@ MODULE mo_hydro_util
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: acc_stream
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_exception,   ONLY: finish
 
   IMPLICIT NONE
@@ -34,13 +34,13 @@ CONTAINS
 
   SUBROUTINE get_amount_in_rootzone_1d(ws, dz, dz_root, ws_root)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & ws     (:),       &        !< Water content of soil layers
       & dz     (:),       &        !< Thicknesses of soil layers
       & dz_root(:)                 !< Thicknesses of root layers
-    REAL(wp) :: ws_root            !< Water content in root zone
+    REAL(lp) :: ws_root            !< Water content in root zone
 
-    REAL(wp) ::                       &
+    REAL(lp) ::                       &
       & bottom    , &   !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  , &  !< Cumulative depth of soil down to previous layer
       & root_depth      !< Total depth of root zone
@@ -55,13 +55,13 @@ CONTAINS
     bottom    = SUM(dz (:))
     root_depth = SUM(dz_root(:))
 #ifndef _OPENACC
-    IF (root_depth > bottom + EPSILON(1._wp)) THEN
+    IF (root_depth > bottom + EPSILON(1._lp)) THEN
       CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
     ELSE
 #endif
-      bottom    = 0._wp
-      bottom_m1 = 0._wp
-      ws_root   = 0._wp
+      bottom    = 0._lp
+      bottom_m1 = 0._lp
+      ws_root   = 0._lp
       DO is = 1, nsoil
         bottom    = bottom + dz(is)
         IF (root_depth >= bottom) THEN                ! Root zone extends to below current layer
@@ -81,14 +81,14 @@ CONTAINS
 
   SUBROUTINE get_amount_in_rootzone_2d(ws, dz, dz_root, ws_root)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & ws     (:,:),       &        !< Water content of soil layers
       & dz     (:,:),       &        !< Thicknesses of soil layers
       & dz_root(:,:)                 !< Thicknesses of root layers
 
-    REAL(wp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
+    REAL(lp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
 
-    REAL(wp) ::                       &
+    REAL(lp) ::                       &
       & bottom     (SIZE(ws     ,1)), & !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
       & root_depth (SIZE(ws,1))         !< Total depth of root zone
@@ -104,10 +104,10 @@ CONTAINS
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      root_depth(ic) = 0._wp
-      bottom(ic)     = 0._wp
-      bottom_m1(ic)  = 0._wp
-      ws_root(ic)    = 0._wp
+      root_depth(ic) = 0._lp
+      bottom(ic)     = 0._lp
+      bottom_m1(ic)  = 0._lp
+      ws_root(ic)    = 0._lp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -142,7 +142,7 @@ CONTAINS
 
 #ifndef _OPENACC
     DO ic = 1, SIZE(ws, 1)
-      IF (root_depth(ic) > bottom(ic) + EPSILON(1._wp)) THEN
+      IF (root_depth(ic) > bottom(ic) + EPSILON(1._lp)) THEN
         CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
       END IF
     END DO

@@ -14,7 +14,7 @@
 MODULE mo_jsb_time
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,           ONLY: wp
+  USE mo_kind,           ONLY: lp
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_control,    ONLY: jsbach_runs_standalone
   USE mo_jsb_time_iface, ONLY: & ! Uses the mtime library
@@ -93,7 +93,7 @@ CONTAINS
     CHARACTER(len=*), OPTIONAL, INTENT(IN) :: model_shortname   !< Jsbach model
     LOGICAL, OPTIONAL, INTENT(IN) :: restart_jsbach             !< Restart state
 
-    REAL(wp) :: eps
+    REAL(lp) :: eps
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_time'
 
@@ -133,7 +133,7 @@ CONTAINS
 
       ! Check if Asselin time filter is used and print message
       eps = get_asselin_coef()
-      IF (eps > 0._wp) THEN
+      IF (eps > 0._lp) THEN
         WRITE(message_text,*) 'Using Asselin time filter for surface temperature: eps =', eps
       ELSE
         WRITE(message_text,*) 'Not using Asselin time filter for surface temperature'
@@ -151,7 +151,7 @@ CONTAINS
   LOGICAL FUNCTION is_newday(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(lp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -174,7 +174,7 @@ CONTAINS
   LOGICAL FUNCTION is_newmonth(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(lp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -197,7 +197,7 @@ CONTAINS
   LOGICAL FUNCTION is_newyear(current, dt)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: current
-    REAL(wp),                  INTENT(in) :: dt
+    REAL(lp),                  INTENT(in) :: dt
 
     TYPE(t_datetime), POINTER :: previous
 
@@ -262,7 +262,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Returns the number of seconds elapsed between start of a day and the provided datetime variable
-  REAL(wp) FUNCTION get_secs_of_day(this_datetime)
+  REAL(lp) FUNCTION get_secs_of_day(this_datetime)
 
     TYPE(t_datetime), POINTER, INTENT(in) :: this_datetime
 
@@ -270,7 +270,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, hour=hour, minute=minute, second=second, ms=ms)
 
-    get_secs_of_day = 3600._wp * REAL(hour,wp) + 60._wp * REAL(minute,wp) + REAL(second,wp) + REAL(ms)/1000._wp
+    get_secs_of_day = 3600._lp * REAL(hour,lp) + 60._lp * REAL(minute,lp) + REAL(second,lp) + REAL(ms)/1000._lp
 
   END FUNCTION get_secs_of_day
 
@@ -286,10 +286,10 @@ CONTAINS
 
     CALL get_date_components(this_datetime, month=month, year=year)
     IF (month == 1) THEN
-      get_previous_month_length = NINT(31._wp * REAL(get_day_length(),wp))
+      get_previous_month_length = NINT(31._lp * REAL(get_day_length(),lp))
     ELSE
       prev_month = month-1
-      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),wp) * REAL(get_day_length(),wp))
+      get_previous_month_length = NINT(REAL(get_month_length(year,prev_month),lp) * REAL(get_day_length(),lp))
     END IF
 
   END FUNCTION get_previous_month_length
@@ -306,7 +306,7 @@ CONTAINS
 
     CALL get_date_components(this_datetime, year=year)
     prev_year = year - 1
-    get_previous_year_length = NINT(REAL(get_year_length(prev_year),wp) * REAL(get_day_length(),wp))
+    get_previous_year_length = NINT(REAL(get_year_length(prev_year),lp) * REAL(get_day_length(),lp))
 
   END FUNCTION get_previous_year_length
 
@@ -348,12 +348,12 @@ CONTAINS
   !>
   !> Returns the time step in days (as fraction of day)
   !> e.g. two and a half days would yield 2.5
-  REAL(wp) FUNCTION timestep_in_days(dt, model_id)
+  REAL(lp) FUNCTION timestep_in_days(dt, model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
+    REAL(lp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: dt_loc
+    REAL(lp) :: dt_loc
     CHARACTER(len=*), PARAMETER :: routine = modname//':timestep_in_days'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN
@@ -364,7 +364,7 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timestep_in_days = dt_loc / 86400._wp ! dt by number of seconds in a day
+    timestep_in_days = dt_loc / 86400._lp ! dt by number of seconds in a day
 
   END FUNCTION timestep_in_days
 
@@ -373,10 +373,10 @@ CONTAINS
   !> Returns the number of time steps per day
   INTEGER FUNCTION timesteps_per_day(dt, model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
+    REAL(lp), OPTIONAL, INTENT(in) :: dt        !< Timestep in seconds
     INTEGER,  OPTIONAL, INTENT(in) :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: dt_loc
+    REAL(lp) :: dt_loc
     CHARACTER(len=*), PARAMETER :: routine = modname//':timesteps_per_day'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (PRESENT(dt)) THEN
@@ -387,8 +387,8 @@ CONTAINS
       CALL finish(routine, 'Must provide either dt oder model_id')
     END IF
 
-    timesteps_per_day = NINT(86400._wp/dt_loc) ! Assert that day length is an integer multiple of the time step
-    IF (ABS(timesteps_per_day * dt_loc - 86400._wp) > EPSILON(1._wp)) &
+    timesteps_per_day = NINT(86400._lp/dt_loc) ! Assert that day length is an integer multiple of the time step
+    IF (ABS(timesteps_per_day * dt_loc - 86400._lp) > EPSILON(1._lp)) &
       & CALL finish(routine, 'Time step must fit into day length')
 
   END FUNCTION timesteps_per_day

@@ -18,7 +18,7 @@
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: lp
 
   IMPLICIT NONE
   PRIVATE
@@ -40,7 +40,7 @@ CONTAINS
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in) ::     &
+    REAL(lp), INTENT(in) ::     &
       & fire_rel_hum_threshold, &  ! Maximum relative humidity for fire
       & fire_litter_threshold,  &  ! Minimum amount of litter necessary for fire [mol(C)/m^2(grid box)]
       & fire_minimum,           &  ! Minimum fraction woody PFTs burning every year
@@ -49,12 +49,12 @@ CONTAINS
       & fuel(:)                    ! Amount of fuel [mol(C)/m^2(grid box)]
 
     ! Output Arguments
-    REAL(wp), INTENT(inout) :: burned_fract(:)
+    REAL(lp), INTENT(inout) :: burned_fract(:)
 
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(lp), PARAMETER :: delta_time_yr = 1._lp / 365._lp
 
     nc = SIZE(fuel)
 
@@ -86,28 +86,28 @@ CONTAINS
     & )
 
     ! Arguments
-    REAL(wp), INTENT(in) ::       &
+    REAL(lp), INTENT(in) ::       &
       & wind_threshold,           &
       & wind_damage_scale,        &
       & cover_fract_pot(:),       &
       & max_wind_yDay(:),         &
       & max_wind_clim(:)
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(lp), INTENT(inout) :: &
       & damaged_fract(:)
 
     ! Locals
     INTEGER  :: ic, nc
 
-    REAL(wp), PARAMETER :: delta_time_yr = 1._wp / 365._wp
+    REAL(lp), PARAMETER :: delta_time_yr = 1._lp / 365._lp
 
     nc = SIZE(max_wind_clim)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      IF (cover_fract_pot(ic) > EPSILON(1._wp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
-        damaged_fract(ic) = MIN( 1._wp - EPSILON(1._wp) / cover_fract_pot(ic),                                          &
-        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._wp / max_wind_clim(ic) )
+      IF (cover_fract_pot(ic) > EPSILON(1._lp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
+        damaged_fract(ic) = MIN( 1._lp - EPSILON(1._lp) / cover_fract_pot(ic),                                          &
+        &                        delta_time_yr * wind_damage_scale * max_wind_yDay(ic) ** 3._lp / max_wind_clim(ic) )
       ENDIF
     END DO
     !$ACC END PARALLEL LOOP

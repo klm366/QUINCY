@@ -17,7 +17,7 @@ MODULE mo_hd_config_class
 
   USE mo_exception,         ONLY: message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -131,13 +131,13 @@ CONTAINS
       CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
     END SELECT
 
-    hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._lp/), units='')
     CALL Register_vgrid(hd_o)
 
-    hd_b  => new_vgrid('hd_nres_baseflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    hd_b  => new_vgrid('hd_nres_baseflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._lp/), units='')
     CALL Register_vgrid(hd_b)
 
-    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
+    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._lp,2._lp,3._lp,4._lp,5._lp/), units='')
     CALL Register_vgrid(hd_r)
 
   END SUBROUTINE Init_hd_config

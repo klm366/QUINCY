@@ -22,7 +22,7 @@
 MODULE mo_sb_spinup_accelerator
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: finish, message, message_text
   USE mo_jsb_class,       ONLY: Get_model
   USE mo_jsb_model_class, ONLY: t_jsb_model
@@ -45,50 +45,50 @@ MODULE mo_sb_spinup_accelerator
     INTEGER :: n_soil_layers = 0
     INTEGER :: n_litter_sources = 0
     INTEGER :: n_elements = 0
-    REAL(wp), ALLOCATABLE :: forcing_time(:,:)     !< sampled time by cell and bin [s]
-    REAL(wp), ALLOCATABLE :: litterfall_rate(:,:)  !< mean litterfall rate, flattened by bin/source/element [mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: fine_root_c(:,:)       !< mean fine-root carbon by cell and bin [mol C m-2]
-    REAL(wp), ALLOCATABLE :: f_n_demand(:,:)        !< mean plant nitrogen-demand fraction by cell and bin [-]
-    REAL(wp), ALLOCATABLE :: f_p_demand(:,:)        !< mean plant phosphorus-demand fraction by cell and bin [-]
-    REAL(wp), ALLOCATABLE :: nhx_deposition(:,:)    !< mean reduced-N deposition by cell and bin [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: noy_deposition(:,:)    !< mean oxidized-N deposition by cell and bin [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: nhx_n15_deposition(:,:) !< mean reduced-15N deposition [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: noy_n15_deposition(:,:) !< mean oxidized-15N deposition [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: p_deposition(:,:)      !< mean phosphorus deposition by cell and bin [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: growth_p_limit(:,:)    !< mean plant P limitation based on N demand by cell and bin [-]
-    REAL(wp), ALLOCATABLE :: root_fraction(:,:)    !< mean root fraction, flattened by bin/layer [-]
-    REAL(wp), ALLOCATABLE :: wtr_down(:,:)         !< mean downward water-transfer fraction, flattened by bin/layer [-]
-    REAL(wp), ALLOCATABLE :: wtr_lat_loss(:,:)     !< mean lateral water-loss fraction, flattened by bin/layer [-]
-    REAL(wp), ALLOCATABLE :: t_soil(:,:)           !< mean soil temperature, flattened by bin/layer [K]
-    REAL(wp), ALLOCATABLE :: wtr_soil(:,:)         !< mean liquid soil water, flattened by bin/layer [m]
-    REAL(wp), ALLOCATABLE :: ice_soil(:,:)         !< mean soil ice, flattened by bin/layer [m]
-    REAL(wp), ALLOCATABLE :: wtr_pot(:,:)          !< mean soil water potential, flattened by bin/layer [MPa]
+    REAL(lp), ALLOCATABLE :: forcing_time(:,:)     !< sampled time by cell and bin [s]
+    REAL(lp), ALLOCATABLE :: litterfall_rate(:,:)  !< mean litterfall rate, flattened by bin/source/element [mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: fine_root_c(:,:)       !< mean fine-root carbon by cell and bin [mol C m-2]
+    REAL(lp), ALLOCATABLE :: f_n_demand(:,:)        !< mean plant nitrogen-demand fraction by cell and bin [-]
+    REAL(lp), ALLOCATABLE :: f_p_demand(:,:)        !< mean plant phosphorus-demand fraction by cell and bin [-]
+    REAL(lp), ALLOCATABLE :: nhx_deposition(:,:)    !< mean reduced-N deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: noy_deposition(:,:)    !< mean oxidized-N deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: nhx_n15_deposition(:,:) !< mean reduced-15N deposition [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: noy_n15_deposition(:,:) !< mean oxidized-15N deposition [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: p_deposition(:,:)      !< mean phosphorus deposition by cell and bin [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: growth_p_limit(:,:)    !< mean plant P limitation based on N demand by cell and bin [-]
+    REAL(lp), ALLOCATABLE :: root_fraction(:,:)    !< mean root fraction, flattened by bin/layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_down(:,:)         !< mean downward water-transfer fraction, flattened by bin/layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)     !< mean lateral water-loss fraction, flattened by bin/layer [-]
+    REAL(lp), ALLOCATABLE :: t_soil(:,:)           !< mean soil temperature, flattened by bin/layer [K]
+    REAL(lp), ALLOCATABLE :: wtr_soil(:,:)         !< mean liquid soil water, flattened by bin/layer [m]
+    REAL(lp), ALLOCATABLE :: ice_soil(:,:)         !< mean soil ice, flattened by bin/layer [m]
+    REAL(lp), ALLOCATABLE :: wtr_pot(:,:)          !< mean soil water potential, flattened by bin/layer [MPa]
   END TYPE t_sb_spinup_forcing_climatology
 
   !> Coupled-model forcing values preserved while the soil-only replay is active.
   TYPE :: t_sb_spinup_live_forcing
-    REAL(wp), ALLOCATABLE :: litterfall(:,:,:) !< vegetation litterfall by source, element, and cell [mol m-2 timestep-1]
-    REAL(wp), ALLOCATABLE :: seed_litterfall(:,:) !< seed-bed litterfall by element and cell [mol m-2 timestep-1]
-    REAL(wp), ALLOCATABLE :: fine_root_c(:)       !< fine-root carbon by cell [mol C m-2]
-    REAL(wp), ALLOCATABLE :: f_n_demand(:)        !< plant nitrogen-demand fraction by cell [-]
-    REAL(wp), ALLOCATABLE :: f_p_demand(:)        !< plant phosphorus-demand fraction by cell [-]
-    REAL(wp), ALLOCATABLE :: nhx_deposition(:)    !< reduced-N deposition by cell [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: noy_deposition(:)    !< oxidized-N deposition by cell [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: nhx_n15_deposition(:) !< reduced-15N deposition by cell [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: noy_n15_deposition(:) !< oxidized-15N deposition by cell [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: p_deposition(:)      !< phosphorus deposition by cell [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: growth_p_limit(:)    !< plant P limitation based on N demand by cell [-]
-    REAL(wp), ALLOCATABLE :: root_fraction(:,:) !< root fraction by cell and soil layer [-]
-    REAL(wp), ALLOCATABLE :: wtr_down(:,:)      !< downward water-transfer fraction by cell and layer [-]
-    REAL(wp), ALLOCATABLE :: wtr_lat_loss(:,:)  !< lateral water-loss fraction by cell and layer [-]
-    REAL(wp), ALLOCATABLE :: t_soil(:,:)        !< soil temperature by cell and layer [K]
-    REAL(wp), ALLOCATABLE :: wtr_soil(:,:)      !< liquid soil water by cell and layer [m]
-    REAL(wp), ALLOCATABLE :: ice_soil(:,:)      !< soil ice by cell and layer [m]
-    REAL(wp), ALLOCATABLE :: wtr_pot(:,:)       !< soil water potential by cell and layer [MPa]
-    REAL(wp), ALLOCATABLE :: net_biosphere_production(:) !< host-timestep net biosphere production [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: net_biosphere_production_c13(:) !< host-timestep 13C NBP [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: net_biosphere_production_c14(:) !< host-timestep 14C NBP [micro-mol m-2 s-1]
-    REAL(wp), ALLOCATABLE :: biological_n_fixation(:) !< host-timestep biological N fixation [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: litterfall(:,:,:) !< vegetation litterfall by source, element, and cell [mol m-2 timestep-1]
+    REAL(lp), ALLOCATABLE :: seed_litterfall(:,:) !< seed-bed litterfall by element and cell [mol m-2 timestep-1]
+    REAL(lp), ALLOCATABLE :: fine_root_c(:)       !< fine-root carbon by cell [mol C m-2]
+    REAL(lp), ALLOCATABLE :: f_n_demand(:)        !< plant nitrogen-demand fraction by cell [-]
+    REAL(lp), ALLOCATABLE :: f_p_demand(:)        !< plant phosphorus-demand fraction by cell [-]
+    REAL(lp), ALLOCATABLE :: nhx_deposition(:)    !< reduced-N deposition by cell [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: noy_deposition(:)    !< oxidized-N deposition by cell [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: nhx_n15_deposition(:) !< reduced-15N deposition by cell [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: noy_n15_deposition(:) !< oxidized-15N deposition by cell [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: p_deposition(:)      !< phosphorus deposition by cell [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: growth_p_limit(:)    !< plant P limitation based on N demand by cell [-]
+    REAL(lp), ALLOCATABLE :: root_fraction(:,:) !< root fraction by cell and soil layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_down(:,:)      !< downward water-transfer fraction by cell and layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)  !< lateral water-loss fraction by cell and layer [-]
+    REAL(lp), ALLOCATABLE :: t_soil(:,:)        !< soil temperature by cell and layer [K]
+    REAL(lp), ALLOCATABLE :: wtr_soil(:,:)      !< liquid soil water by cell and layer [m]
+    REAL(lp), ALLOCATABLE :: ice_soil(:,:)      !< soil ice by cell and layer [m]
+    REAL(lp), ALLOCATABLE :: wtr_pot(:,:)       !< soil water potential by cell and layer [MPa]
+    REAL(lp), ALLOCATABLE :: net_biosphere_production(:) !< host-timestep net biosphere production [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: net_biosphere_production_c13(:) !< host-timestep 13C NBP [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: net_biosphere_production_c14(:) !< host-timestep 14C NBP [micro-mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: biological_n_fixation(:) !< host-timestep biological N fixation [micro-mol m-2 s-1]
   END TYPE t_sb_spinup_live_forcing
 
 CONTAINS
@@ -155,7 +155,7 @@ CONTAINS
     INTEGER  :: current_year
     INTEGER  :: day_index
     INTEGER  :: year_length
-    REAL(wp) :: year_day
+    REAL(lp) :: year_day
 
     SELECT CASE (TRIM(forcing_interval))
     CASE ('yearly')
@@ -175,13 +175,13 @@ CONTAINS
     year_day = get_year_day(options%current_datetime)
 #ifdef __QUINCY_STANDALONE__
     ! The standalone adapter reports a zero-based day, whereas mtime reports a one-based day of year.
-    year_day = year_day + 1.0_wp
+    year_day = year_day + 1.0_lp
 #endif
 
     ! Map whole model days with integer arithmetic. Dividing and multiplying the
     ! floating-point year phase can place exact day boundaries just below an
     ! integer and leave daily climatology bins unsampled.
-    day_index = MAX(0, MIN(year_length - 1, FLOOR(year_day - 1.0_wp)))
+    day_index = MAX(0, MIN(year_length - 1, FLOOR(year_day - 1.0_lp)))
     forcing_bin = MIN(n_forcing_bins, day_index * n_forcing_bins / year_length + 1)
 
   END SUBROUTINE get_sb_spinup_accelerator_forcing_bin
@@ -487,7 +487,7 @@ CONTAINS
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
 
-    sb_spinup_accelerator_execution_count(:) = REAL(execution_index, wp)
+    sb_spinup_accelerator_execution_count(:) = REAL(execution_index, lp)
 
   END SUBROUTINE mark_sb_spinup_accelerator_execution
 
@@ -550,24 +550,24 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_ice_soil_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_pot_sum)
 
-    sb_spinup_accelerator_forcing_time(:,:) = 0.0_wp
-    sb_spinup_accelerator_litterfall_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_fine_root_c_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_f_n_demand_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_f_p_demand_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_nhx_deposition_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_noy_deposition_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_nhx_n15_deposition_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_noy_n15_deposition_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_p_deposition_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_growth_p_limit_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_root_fraction_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_wtr_down_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_wtr_lat_loss_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_t_soil_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_wtr_soil_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_ice_soil_sum(:,:) = 0.0_wp
-    sb_spinup_accelerator_wtr_pot_sum(:,:) = 0.0_wp
+    sb_spinup_accelerator_forcing_time(:,:) = 0.0_lp
+    sb_spinup_accelerator_litterfall_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_fine_root_c_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_f_n_demand_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_f_p_demand_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_nhx_deposition_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_noy_deposition_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_nhx_n15_deposition_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_noy_n15_deposition_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_p_deposition_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_growth_p_limit_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_root_fraction_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_wtr_down_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_wtr_lat_loss_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_t_soil_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_wtr_soil_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_ice_soil_sum(:,:) = 0.0_lp
+    sb_spinup_accelerator_wtr_pot_sum(:,:) = 0.0_lp
 
   END SUBROUTINE reset_sb_spinup_accelerator_forcing
 
@@ -591,11 +591,11 @@ CONTAINS
     LOGICAL :: l_converged
     INTEGER :: execution_index
     INTEGER :: represented_years
-    REAL(wp) :: max_relative_change
-    REAL(wp) :: max_total_c_absolute_change
-    REAL(wp) :: max_total_c_relative_change
-    REAL(wp), ALLOCATABLE :: pool_before(:,:,:,:)
-    REAL(wp), ALLOCATABLE :: pool_after(:,:,:,:)
+    REAL(lp) :: max_relative_change
+    REAL(lp) :: max_total_c_absolute_change
+    REAL(lp) :: max_total_c_relative_change
+    REAL(lp), ALLOCATABLE :: pool_before(:,:,:,:)
+    REAL(lp), ALLOCATABLE :: pool_after(:,:,:,:)
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
@@ -664,9 +664,9 @@ CONTAINS
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme
     INTEGER,                    INTENT(in)    :: execution_index
     INTEGER,                    INTENT(out)   :: represented_years
-    REAL(wp),                   INTENT(out)   :: max_relative_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_relative_change
+    REAL(lp),                   INTENT(out)   :: max_relative_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
     LOGICAL,                    INTENT(out)   :: l_converged
 
     TYPE(t_sb_spinup_forcing_climatology) :: forcing
@@ -825,7 +825,7 @@ CONTAINS
     END IF
     forcing%n_soil_layers = SIZE(sb_spinup_accelerator_root_fraction_sum, 2) / forcing%n_forcing_bins
 
-    IF (ANY(sb_spinup_accelerator_forcing_time <= 0.0_wp)) THEN
+    IF (ANY(sb_spinup_accelerator_forcing_time <= 0.0_lp)) THEN
       CALL finish(TRIM(routine), 'At least one climatological forcing bin has no sampled model time.')
     END IF
 
@@ -921,9 +921,9 @@ CONTAINS
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
     INTEGER,                    INTENT(in)    :: execution_index
     INTEGER,                    INTENT(out)   :: represented_years
-    REAL(wp),                   INTENT(out)   :: max_relative_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_relative_change
+    REAL(lp),                   INTENT(out)   :: max_relative_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
     LOGICAL,                    INTENT(out)   :: l_converged
 
     dsl4jsb_Def_config(SB_)
@@ -932,7 +932,7 @@ CONTAINS
     INTEGER :: consecutive_converged_years
     INTEGER :: i_year
     INTEGER :: last_debug_year
-    REAL(wp), ALLOCATABLE :: previous_pool(:,:,:,:)
+    REAL(lp), ALLOCATABLE :: previous_pool(:,:,:,:)
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
@@ -947,9 +947,9 @@ CONTAINS
 
     represented_years = 0
     consecutive_converged_years = 0
-    max_relative_change = HUGE(1.0_wp)
-    max_total_c_absolute_change = HUGE(1.0_wp)
-    max_total_c_relative_change = HUGE(1.0_wp)
+    max_relative_change = HUGE(1.0_lp)
+    max_total_c_absolute_change = HUGE(1.0_lp)
+    max_total_c_relative_change = HUGE(1.0_lp)
     l_converged = .FALSE.
 
     DO i_year = 1, dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_max_relaxation_years
@@ -1030,18 +1030,18 @@ CONTAINS
     INTEGER :: forcing_bin
     INTEGER :: i_step
     INTEGER :: n_steps_per_bin
-    REAL(wp) :: bin_duration
-    REAL(wp) :: requested_dtime
+    REAL(lp) :: bin_duration
+    REAL(lp) :: requested_dtime
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
 
     requested_dtime = dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_timestep_days * one_day
-    bin_duration = one_year * one_day / REAL(forcing%n_forcing_bins, wp)
+    bin_duration = one_year * one_day / REAL(forcing%n_forcing_bins, lp)
     n_steps_per_bin = MAX(1, CEILING(bin_duration / requested_dtime))
 
     replay_options = options
-    replay_options%dtime = bin_duration / REAL(n_steps_per_bin, wp)
+    replay_options%dtime = bin_duration / REAL(n_steps_per_bin, lp)
 
     DO forcing_bin = 1, forcing%n_forcing_bins
       DO i_step = 1, n_steps_per_bin
@@ -1297,16 +1297,16 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options
     INTEGER, INTENT(in) :: execution_index
     INTEGER, INTENT(in) :: represented_year
-    REAL(wp), OPTIONAL, INTENT(in) :: max_relative_change
-    REAL(wp), OPTIONAL, INTENT(in) :: max_total_c_absolute_change
-    REAL(wp), OPTIONAL, INTENT(in) :: max_total_c_relative_change
+    REAL(lp), OPTIONAL, INTENT(in) :: max_relative_change
+    REAL(lp), OPTIONAL, INTENT(in) :: max_total_c_absolute_change
+    REAL(lp), OPTIONAL, INTENT(in) :: max_total_c_relative_change
     LOGICAL, OPTIONAL, INTENT(in) :: l_converged
 
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_snapshot_debug'
-    REAL(wp), ALLOCATABLE :: pool_snapshot(:,:,:,:)
+    REAL(lp), ALLOCATABLE :: pool_snapshot(:,:,:,:)
     INTEGER :: lun
     INTEGER :: ios
     INTEGER :: ics
@@ -1384,7 +1384,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(wp), ALLOCATABLE,      INTENT(out)   :: pool_snapshot(:,:,:,:)
+    REAL(lp), ALLOCATABLE,      INTENT(out)   :: pool_snapshot(:,:,:,:)
 
     dsl4jsb_Def_mt2L3D :: sb_pool_mt
 
@@ -1415,8 +1415,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     INTEGER,                    INTENT(in)    :: execution_index
     INTEGER,                    INTENT(in)    :: represented_years
-    REAL(wp),                   INTENT(in)    :: pool_before(:,:,:,:)
-    REAL(wp),                   INTENT(in)    :: pool_after(:,:,:,:)
+    REAL(lp),                   INTENT(in)    :: pool_before(:,:,:,:)
+    REAL(lp),                   INTENT(in)    :: pool_after(:,:,:,:)
 
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -1428,10 +1428,10 @@ CONTAINS
     INTEGER :: ic
     INTEGER :: is
     INTEGER :: n_active_layers
-    REAL(wp) :: layer_c_before
-    REAL(wp) :: layer_c_after
-    REAL(wp) :: total_c_before
-    REAL(wp) :: total_c_after
+    REAL(lp) :: layer_c_before
+    REAL(lp) :: layer_c_after
+    REAL(lp) :: total_c_before
+    REAL(lp) :: total_c_after
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
@@ -1446,8 +1446,8 @@ CONTAINS
       CALL finish(TRIM(routine), 'Before and after SB pool dimensions differ.')
     END IF
 
-    total_c_before = 0.0_wp
-    total_c_after = 0.0_wp
+    total_c_before = 0.0_lp
+    total_c_after = 0.0_lp
     DO ic = 1, SIZE(pool_before, 3)
       n_active_layers = MIN(SIZE(pool_before, 4), NINT(num_sl_above_bedrock(ic)))
       DO is = 1, n_active_layers
@@ -1495,11 +1495,11 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(wp), ALLOCATABLE,      INTENT(inout) :: previous_pool(:,:,:,:)
+    REAL(lp), ALLOCATABLE,      INTENT(inout) :: previous_pool(:,:,:,:)
     INTEGER,                    INTENT(inout) :: consecutive_converged_years
-    REAL(wp),                   INTENT(out)   :: max_relative_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(wp),                   INTENT(out)   :: max_total_c_relative_change
+    REAL(lp),                   INTENT(out)   :: max_relative_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
+    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
     LOGICAL,                    INTENT(out)   :: l_converged
 
     dsl4jsb_Def_config(SB_)
@@ -1512,8 +1512,8 @@ CONTAINS
     INTEGER :: ics
     INTEGER :: ice
     INTEGER :: iblk
-    REAL(wp), ALLOCATABLE :: current_total_c(:)
-    REAL(wp), ALLOCATABLE :: previous_total_c(:)
+    REAL(lp), ALLOCATABLE :: current_total_c(:)
+    REAL(lp), ALLOCATABLE :: previous_total_c(:)
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
     ics = options%ics
@@ -1685,7 +1685,7 @@ END MODULE mo_sb_spinup_accelerator
 MODULE mo_sb_spinup_qsoil_forcing
 #ifndef __NO_QUINCY__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: zero
@@ -1728,24 +1728,24 @@ MODULE mo_sb_spinup_qsoil_forcing
     INTEGER :: cached_timestep = -HUGE(0)
     CHARACTER(len=:), ALLOCATABLE :: soilphysics_filename
     CHARACTER(len=:), ALLOCATABLE :: veglitterfall_filename
-    REAL(wp), ALLOCATABLE :: root_fraction_sl_preload(:,:,:,:,:)      ! nproma, nsoil, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: demand_uptake_n_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: demand_uptake_p_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: frac_wtr_transp_down_sl_preload(:,:,:,:) ! nproma, nsoil, nblks, ntime
-    REAL(wp), ALLOCATABLE :: frac_w_lat_loss_sl_preload(:,:,:,:)      ! nproma, nsoil, nblks, ntime
-    REAL(wp), ALLOCATABLE :: wtr_soil_sl_preload(:,:,:,:)             ! nproma, nsoil, nblks, ntime
-    REAL(wp), ALLOCATABLE :: vol_porosity_sl_preload(:,:,:,:)         ! nproma, nsoil, nblks, ntime
-    REAL(wp), ALLOCATABLE :: t_soil_sl_preload(:,:,:,:)               ! nproma, nsoil, nblks, ntime
-    REAL(wp), ALLOCATABLE :: nhx_deposition_preload(:,:,:)            ! nproma, nblks, ntime
-    REAL(wp), ALLOCATABLE :: noy_deposition_preload(:,:,:)            ! nproma, nblks, ntime
-    REAL(wp), ALLOCATABLE :: nhx_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
-    REAL(wp), ALLOCATABLE :: noy_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
-    REAL(wp), ALLOCATABLE :: p_deposition_preload(:,:,:)              ! nproma, nblks, ntime
-    REAL(wp), ALLOCATABLE :: veg_pool_fine_root_c_preload(:,:,:,:)    ! nproma, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: veg_litterfall_preload(:,:,:,:,:,:)      ! part, elem, nproma, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: seed_bed_litterfall_preload(:,:,:,:,:)   ! elem, nproma, nblks, npft, ntime
-    REAL(wp), ALLOCATABLE :: scratch_3d(:,:,:)                        ! nproma, nblks, 1
-    REAL(wp), ALLOCATABLE :: scratch_4d(:,:,:,:)                      ! nproma, nsoil, nblks, 1
+    REAL(lp), ALLOCATABLE :: root_fraction_sl_preload(:,:,:,:,:)      ! nproma, nsoil, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: demand_uptake_n_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: demand_uptake_p_preload(:,:,:,:)         ! nproma, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: frac_wtr_transp_down_sl_preload(:,:,:,:) ! nproma, nsoil, nblks, ntime
+    REAL(lp), ALLOCATABLE :: frac_w_lat_loss_sl_preload(:,:,:,:)      ! nproma, nsoil, nblks, ntime
+    REAL(lp), ALLOCATABLE :: wtr_soil_sl_preload(:,:,:,:)             ! nproma, nsoil, nblks, ntime
+    REAL(lp), ALLOCATABLE :: vol_porosity_sl_preload(:,:,:,:)         ! nproma, nsoil, nblks, ntime
+    REAL(lp), ALLOCATABLE :: t_soil_sl_preload(:,:,:,:)               ! nproma, nsoil, nblks, ntime
+    REAL(lp), ALLOCATABLE :: nhx_deposition_preload(:,:,:)            ! nproma, nblks, ntime
+    REAL(lp), ALLOCATABLE :: noy_deposition_preload(:,:,:)            ! nproma, nblks, ntime
+    REAL(lp), ALLOCATABLE :: nhx_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
+    REAL(lp), ALLOCATABLE :: noy_n15_deposition_preload(:,:,:)        ! nproma, nblks, ntime
+    REAL(lp), ALLOCATABLE :: p_deposition_preload(:,:,:)              ! nproma, nblks, ntime
+    REAL(lp), ALLOCATABLE :: veg_pool_fine_root_c_preload(:,:,:,:)    ! nproma, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: veg_litterfall_preload(:,:,:,:,:,:)      ! part, elem, nproma, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: seed_bed_litterfall_preload(:,:,:,:,:)   ! elem, nproma, nblks, npft, ntime
+    REAL(lp), ALLOCATABLE :: scratch_3d(:,:,:)                        ! nproma, nblks, 1
+    REAL(lp), ALLOCATABLE :: scratch_4d(:,:,:,:)                      ! nproma, nsoil, nblks, 1
   END TYPE t_soil_forcing_cache
 
   TYPE(t_soil_forcing_cache), SAVE :: soil_forcing_cache
@@ -1757,7 +1757,7 @@ CONTAINS
   SUBROUTINE log_soil_forcing_timing(caller, label, dt, detail)
 
     CHARACTER(len=*), INTENT(in) :: caller, label
-    REAL(wp),         INTENT(in) :: dt
+    REAL(lp),         INTENT(in) :: dt
     CHARACTER(len=*), INTENT(in), OPTIONAL :: detail
 
     CHARACTER(len=256) :: line
@@ -1801,14 +1801,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER :: model            !< the model
     TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store       !< the bgcm store of this tile
-    REAL(wp)                        :: dtime, year_instant
+    REAL(lp)                        :: dtime, year_instant
     INTEGER                         :: iblk             !< Dimensions of the horizontal grid
     INTEGER                         :: pft_idx, npft
     INTEGER                         :: year, month, day, hour, minute, second, yearday, forcing_yearday, &
                                     &  ith_timestep, cache_itimestep     !< forcing record index in file / cache
     CHARACTER(len=:), ALLOCATABLE   :: soilphysics_forcing_file, veglitterfall_forcing_file
     LOGICAL                         :: cache_hit, trace_timing, skip_forcing_isotopes_after_init
-    REAL(wp)                        :: t_total_start, t_stage_start, t_stage_end
+    REAL(lp)                        :: t_total_start, t_stage_start, t_stage_end
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_read_soil_forcing'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1942,7 +1942,7 @@ CONTAINS
   !>
   INTEGER FUNCTION get_soil_forcing_preload_nsteps(dtime)
 
-    REAL(wp), INTENT(in) :: dtime
+    REAL(lp), INTENT(in) :: dtime
 
     IF (NINT(dtime) == 86400) THEN
       get_soil_forcing_preload_nsteps = 1
@@ -2050,16 +2050,16 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER, INTENT(in) :: model
     TYPE(t_lnd_bgcm_store),  POINTER, INTENT(in) :: bgcm_store
-    REAL(wp),                        INTENT(in) :: root_fraction_sl(:,:,:)
+    REAL(lp),                        INTENT(in) :: root_fraction_sl(:,:,:)
     CHARACTER(len=*),                INTENT(in) :: soilphysics_filename, veglitterfall_filename, caller
     INTEGER,                         INTENT(in) :: year, yearday, itimestep, npft
-    REAL(wp),                        INTENT(in) :: dtime
+    REAL(lp),                        INTENT(in) :: dtime
     LOGICAL,                         INTENT(in) :: skip_forcing_isotopes_after_init
     LOGICAL, OPTIONAL,               INTENT(out) :: cache_hit_out
 
     LOGICAL :: cache_hit, skip_isotope_reload
     INTEGER :: preload_nsteps, cache_start_timestep
-    REAL(wp) :: t_stage_start, t_stage_end
+    REAL(lp) :: t_stage_start, t_stage_end
 
     preload_nsteps = get_soil_forcing_preload_nsteps(dtime)
     IF (preload_nsteps == 1) THEN
@@ -2120,7 +2120,7 @@ CONTAINS
   SUBROUTINE ensure_soil_forcing_cache_shape(bgcm_store, root_fraction_sl, npft, preload_nsteps, caller)
 
     TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
-    REAL(wp),                      INTENT(in) :: root_fraction_sl(:,:,:)
+    REAL(lp),                      INTENT(in) :: root_fraction_sl(:,:,:)
     INTEGER,                       INTENT(in) :: npft
     INTEGER,                       INTENT(in) :: preload_nsteps
     CHARACTER(len=*),              INTENT(in) :: caller
@@ -2303,7 +2303,7 @@ CONTAINS
 
     INTEGER :: ipft, itimestep, source_timestep
     CHARACTER(len=5) :: tile_name
-    REAL(wp) :: t_total_start, t_total_end
+    REAL(lp) :: t_total_start, t_total_end
 
     IF (debug_on()) CALL cpu_time(t_total_start)
     DO itimestep = 1, nsteps
@@ -2410,7 +2410,7 @@ CONTAINS
     INTEGER :: veg_litter_idx, seed_bed_idx
     INTEGER :: veg_litter_store_idx, seed_bed_store_idx
     CHARACTER(len=5) :: tile_name
-    REAL(wp) :: t_total_start, t_total_end
+    REAL(lp) :: t_total_start, t_total_end
 
     tile_name = get_pft_tile_name(1)
     veg_litter_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile_name, caller)
@@ -2472,7 +2472,7 @@ CONTAINS
     INTEGER :: veg_pool_idx, veg_litter_idx, seed_bed_idx
     INTEGER :: veg_pool_store_idx, veg_litter_store_idx, seed_bed_store_idx
     INTEGER :: i_part, i_elem
-    REAL(wp) :: t_total_start, t_total_end
+    REAL(lp) :: t_total_start, t_total_end
 
     IF (debug_on() .AND. TRIM(tile_name) == 'pft01') CALL cpu_time(t_total_start)
 
@@ -2515,7 +2515,7 @@ CONTAINS
 
       CHARACTER(len=*),           INTENT(in)  :: base_filename
       INTEGER,                    INTENT(in)  :: yearday, hour, minute, second
-      REAL(wp),                   INTENT(in)  :: dtime
+      REAL(lp),                   INTENT(in)  :: dtime
       CHARACTER(len=:), ALLOCATABLE, INTENT(out) :: resolved_filename
       INTEGER,                    INTENT(out) :: itimestep
 

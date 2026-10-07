@@ -18,7 +18,7 @@
 MODULE mo_sb_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: zero
@@ -242,7 +242,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER   :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_w         !< Vertical grid
     INTEGER                           :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
-    REAL(wp)                          :: dtime                !< timestep length
+    REAL(lp)                          :: dtime                !< timestep length
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     INTEGER                           :: current_year, next_jump_year, i_jump, jump_year
     LOGICAL                           :: collect_analytical_forcing
@@ -500,7 +500,7 @@ CONTAINS
     !> Litter formation in the BGCM store is timestep-integrated; all analytical
     !> forcing means use rate units so that they are independent of model timestep.
     collect_analytical_forcing = .FALSE.
-    IF (model%config%flag_analytical_ss_spinup_accelerator .AND. model%config%l_spinup .AND. dtime > 0.0_wp) THEN
+    IF (model%config%flag_analytical_ss_spinup_accelerator .AND. model%config%l_spinup .AND. dtime > 0.0_lp) THEN
       current_year = get_year(options%current_datetime)
       next_jump_year = HUGE(next_jump_year)
       DO i_jump = 0, model%config%analytical_ss_spinup_accelerator_max_executions - 1
@@ -558,12 +558,12 @@ CONTAINS
   !> update a layer-wise running mean using the elapsed averaging time
   SUBROUTINE update_analytical_forcing_mean(dtime, elapsed_time, sample, running_mean)
 
-    REAL(wp), INTENT(in)    :: dtime
-    REAL(wp), INTENT(in)    :: elapsed_time(:)
-    REAL(wp), INTENT(in)    :: sample(:,:)
-    REAL(wp), INTENT(inout) :: running_mean(:,:)
+    REAL(lp), INTENT(in)    :: dtime
+    REAL(lp), INTENT(in)    :: elapsed_time(:)
+    REAL(lp), INTENT(in)    :: sample(:,:)
+    REAL(lp), INTENT(inout) :: running_mean(:,:)
 
-    REAL(wp) :: weight(SIZE(elapsed_time))
+    REAL(lp) :: weight(SIZE(elapsed_time))
     INTEGER  :: is
 
     weight(:) = dtime / MAX(elapsed_time(:), dtime)
@@ -578,10 +578,10 @@ CONTAINS
   !>
   ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
 
-    REAL(wp), INTENT(in) :: qmax_fine_particle    !< maximum sorption capacity of fine soil particle [mol / kg fine particle (silt or clay)]
-    REAL(wp), INTENT(in) :: silt_sl               !< silt content of the mineral soil [kg silt / kg mineral soil]
-    REAL(wp), INTENT(in) :: clay_sl               !< clay content of the mineral soil [kg clay / kg mineral soil]
-    REAL(wp)             :: qmax_texture          !< maximum sorption capacity of the soil [mol / kg]
+    REAL(lp), INTENT(in) :: qmax_fine_particle    !< maximum sorption capacity of fine soil particle [mol / kg fine particle (silt or clay)]
+    REAL(lp), INTENT(in) :: silt_sl               !< silt content of the mineral soil [kg silt / kg mineral soil]
+    REAL(lp), INTENT(in) :: clay_sl               !< clay content of the mineral soil [kg clay / kg mineral soil]
+    REAL(lp)             :: qmax_texture          !< maximum sorption capacity of the soil [mol / kg]
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_texture'
 

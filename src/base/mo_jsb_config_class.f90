@@ -22,7 +22,7 @@ MODULE mo_jsb_config_class
   !> @TODO `filename_max` and explicit string length definitions should not be needed with
   !>       `CHARACTER(len=:), ALLOCATABLE :: ` syntax.
   !>
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish, message_text
@@ -39,8 +39,6 @@ MODULE mo_jsb_config_class
   !> @TODO Are `nr_of_elements`, `nr_of_used_elements`, `elements_index_map(:)`, and `is_element_used(:)` needed in the model config? They are not configurable!
   !>
   !> @TODO Check if `grid_filename` and `grid_name` variables are needed at all.
-  !>
-  !> @TODO State machine will be removed, this will affect `hsm_mode` variable.
   !>
   !> @TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
   !>      fractions are used elsewhere in the code.
@@ -76,9 +74,6 @@ MODULE mo_jsb_config_class
     INTEGER                        :: qmodel_id           !< Identifier for the quincy model configuration
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< Switch for Terraplanet setup: Handling of water
                                                           !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode            !< State machine mode
-                                                          ! TODO State machine will be removed, this
-                                                          ! will affect `hsm_mode` variable
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  !< List of the tiles for which output will
                                                                    !< be generated (default: 'box')
     LOGICAL                        :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
@@ -129,7 +124,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: is_single_site        !< Single site model
     CHARACTER(len=:), ALLOCATABLE  :: single_site_name      !< Single site name
     CHARACTER(len=:), ALLOCATABLE  :: single_site_shortname !< Single site short name
-    REAL(wp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
+    REAL(lp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
 
   END TYPE t_jsb_model_config
 
@@ -220,7 +215,6 @@ CONTAINS
     INTEGER                       :: npft                         !< Number of PFTs
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme                   !< Terraplanet setup: Handling of water
                                                                   !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode                     !< State machine mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)             !< List of the output tiles
     LOGICAL                       :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
                                                                   !< are relative to the parent tiles.
@@ -250,7 +244,7 @@ CONTAINS
     LOGICAL                       :: is_single_site
     CHARACTER(len=filename_max)   :: single_site_name
     CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
-    REAL(wp)                      :: single_site_lonlat(2)
+    REAL(lp)                      :: single_site_lonlat(2)
 
     ! Definition of the namelist
     NAMELIST /jsb_model_nml/  &
@@ -265,7 +259,6 @@ CONTAINS
       usecase, &
       npft, &
       tpe_scheme, &
-      hsm_mode, &
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
@@ -332,7 +325,6 @@ CONTAINS
     usecase                    = ''
     npft                       = 0
     tpe_scheme                 = ''
-    hsm_mode                   = 'simple'
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
@@ -361,7 +353,7 @@ CONTAINS
     is_single_site             = .FALSE.
     single_site_name           = ''
     single_site_shortname      = ''
-    single_site_lonlat         = [0._wp, 0._wp]
+    single_site_lonlat         = [0._lp, 0._lp]
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -418,7 +410,6 @@ CONTAINS
     model_config%usecase                    = usecase
     model_config%npft                       = npft
     model_config%tpe_scheme                 = tpe_scheme
-    model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%force_c_isotopes           = force_c_isotopes
     ! organise bgcm elements
