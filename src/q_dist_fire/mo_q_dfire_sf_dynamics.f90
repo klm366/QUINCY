@@ -659,43 +659,46 @@ CONTAINS
     REAL(wp) :: woi_lv(sf_config%nc,fuel_moisture % sigma_lv_nr)        !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
     REAL(wp) :: me_dd(sf_config%nc)             !< Dead moisture of extinction [-] (#nc)
     REAL(wp) :: me_lv(sf_config%nc)             !< Live moisture of extinction [-] (#nc)
-    TYPE(t_sf_weighting_factors) :: wfactors
-    TYPE(t_fwvar_r1d) :: mf !< moisture content [-]
+    TYPE(t_sf_weighting_factors) :: wfactors    !< Weighting factors based on fuel moisture classes
+    TYPE(t_fwvar_r1d) :: weigthed_fm !< weighted fuel moisture content [-]
     INTEGER :: ic
 
     fdi = 0._wp
 
     !CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
 
-    woi_dd = 0._wp
-    woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_100hr) = sf_fuel_load % dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
-    woi_dd(:,ix_clvg) = sf_fuel_load % tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
+    !woi_dd = 0._wp
+    !woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
+    !woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
+    !woi_dd(:,ix_100hr) = sf_fuel_load % dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
+    !woi_dd(:,ix_clvg) = sf_fuel_load % tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
-    woi_lv = 0._wp
-    woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
-    woi_lv(:,ix_wdy) = sf_fuel_load % tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
+    !woi_lv = 0._wp
+    !woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
+    !woi_lv(:,ix_wdy) = sf_fuel_load % tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
 
-    me_dd = fuel_moisture % moisture_extinction
-    me_lv = calc_live_me(sf_config%nc, fuel_moisture % sigma_dd_ros_nr, fuel_moisture % sigma_lv_nr, &
-                          fuel_moisture%dead(:,ixs_ros), &
-                          me_dd, woi_dd(:,ixs_ros), woi_lv, &
-                          fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
-                          mask)
+    !me_dd = fuel_moisture % moisture_extinction
+    !me_lv = calc_live_me(sf_config%nc, fuel_moisture % sigma_dd_ros_nr, fuel_moisture % sigma_lv_nr, &
+    !                      fuel_moisture%dead(:,ixs_ros), &
+    !                      me_dd, woi_dd(:,ixs_ros), woi_lv, &
+    !                      fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
+    !                      mask)
 
-    wfactors = calc_weighting_factors(fuel_moisture % sigmas_dead, woi_dd(:,ixs_ros), &
-                                      fuel_moisture % sigmas_live, woi_lv, &
-                                      df_sf_oven_dry_part_dens)
+    !wfactors = calc_weighting_factors(fuel_moisture % sigmas_dead, woi_dd(:,ixs_ros), &
+    !                                  fuel_moisture % sigmas_live, woi_lv, &
+    !                                  df_sf_oven_dry_part_dens)
 
-    mf = t_fwvar_r1d(sf_config % nc, has_total=.TRUE.)
-    DO ic = 1, sf_config % nc
-      IF (.NOT. mask(ic))  CYCLE
-      mf%d(ic) = SUM(wfactors%fij%d(ic,:) * fuel_moisture%dead(ic,ixs_ros))
-      mf%l(ic) = SUM(wfactors%fij%l(ic,:) * fuel_moisture%live(ic,:))
-      mf%total(ic) = wfactors%fi%l(ic) * mf%l(ic) + wfactors%fi%d(ic) * mf%d(ic)
-    END  DO
-    fuel_moisture%val = mf%total
+    !weigthed_fm = t_fwvar_r1d(sf_config % nc, has_total=.TRUE.)
+    !DO ic = 1, sf_config % nc
+    !  IF (.NOT. mask(ic))  CYCLE
+    !  weigthed_fm%d(ic) = SUM(wfactors%fij%d(ic,:) * fuel_moisture%dead(ic,ixs_ros))
+    !  weigthed_fm%l(ic) = SUM(wfactors%fij%l(ic,:) * fuel_moisture%live(ic,:))
+    !  weigthed_fm%total(ic) = wfactors%fi%l(ic) * weigthed_fm%l(ic) + wfactors%fi%d(ic) * weigthed_fm%d(ic)
+    !END  DO
+    !fuel_moisture%val = weigthed_fm%total
+
+    !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
+    CALL calc_fire_danger_index(sf_config%nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
 
     !< only involved ROS fuel (and FM)
     CALL sf_calc_rate_of_spread_ober(&
@@ -703,16 +706,14 @@ CONTAINS
         fuel_moisture % sigma_dd_ros_nr, &
         fuel_moisture % sigma_lv_nr, &
         fuel_moisture % sigmas_dead, fuel_moisture % sigmas_live, &
-        woi_dd(:,ixs_ros), woi_lv, & ! fuels
-        fuel_moisture%dead(:,ixs_ros), fuel_moisture%live, &
-        me_dd, me_lv, &
+        fuel_moisture % woi_dd(:,ixs_ros), fuel_moisture % woi_lv, & ! fuels
+        fuel_moisture % dead(:,ixs_ros), fuel_moisture % live, &
+        fuel_moisture % me_dd, fuel_moisture % me_lv, &
         ros % fbd, & !fuel_bulk_density, &
         ros % u_f_wind, &
         mask, &
         ros)
 
-    !> Fire danger is defined as zero in the absence of fuel or for wet fuel, and unity for completely dry fuel.
-    CALL calc_fire_danger_index(sf_config%nc, fuel_moisture%val, fuel_moisture%moisture_extinction, fdi, mask=mask)
 
   END SUBROUTINE calc_sf_dynamics_for_oberhagemann
 

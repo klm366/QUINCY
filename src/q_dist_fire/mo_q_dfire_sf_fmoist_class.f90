@@ -236,12 +236,28 @@ CONTAINS
   !>
   SUBROUTINE wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
     USE mo_q_dfire_sf_constants, ONLY: df_sf_sigma_dd_ros_litter_nr
+    USE mo_q_dfire_sf_constants,  ONLY: df_sf_oven_dry_part_dens
+    USE mo_q_dfire_sf_ros_ober_class, ONLY: calc_weighting_factors, t_fwvar_r1d, t_sf_weighting_factors, calc_live_me
+
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_units_g_to_kg
+    USE mo_q_dfire_sf_constants, ONLY: ixs_ros => df_sf_ix_sigma_dd_ros, & ! 1hr, 10hr, 100hr, cured live grass (dead)
+                                    ix_clvg => df_sf_ix_sigma_dd_clvg, &
+                                     ix_1hr => df_sf_ix_sigma_dd_1hr, &
+                                    ix_10hr => df_sf_ix_sigma_dd_10hr, &
+                                   ix_100hr => df_sf_ix_sigma_dd_100hr, &
+                                  ix_1000hr => df_sf_ix_sigma_dd_1000hr, &
+                                     ix_lvg => df_sf_ix_sigma_lv_lvg, &
+                                     ix_wdy => df_sf_ix_sigma_lv_wdy
 
     TYPE(t_sf_config), INTENT(in)           :: sf_config
     REAL(wp), INTENT(in)                    :: nesterov_index(:)
     TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
     TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture
-    LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
+    LOGICAL, INTENT(in)                     :: mask(:) !< True: gridcell enabled
+
+    TYPE(t_sf_weighting_factors) :: wfactors    !< Weighting factors based on fuel moisture classes
+    TYPE(t_fwvar_r1d) :: weigthed_fm !< weighted fuel moisture content [-]
+    INTEGER :: ic
 
     CALL calc_sf_fuel_moisture_for_oberhagemann(sf_config % nc, &
                       sf_fuel_moisture % sigma_dd_nr, & ! 5 = 1, 10, 100, 1000 hours and cured live grass
@@ -255,8 +271,42 @@ CONTAINS
                       mask, &
                       sf_fuel_moisture)
 
+    !< fuel moisture by fuel class
     sf_fuel_moisture % fuel_moisture_for_fc = sf_fuel_moisture%dead
+
+    !< calculate mixed fuel moisture weighted by fuel moisture classes
+    sf_fuel_moisture % woi_dd = 0._wp
+    sf_fuel_moisture % woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
+    sf_fuel_moisture % woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
+    sf_fuel_moisture % woi_dd(:,ix_100hr) = sf_fuel_load % dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
+    sf_fuel_moisture % woi_dd(:,ix_clvg) = sf_fuel_load % tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
+
+    sf_fuel_moisture % woi_lv = 0._wp
+    sf_fuel_moisture % woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
+    sf_fuel_moisture % woi_lv(:,ix_wdy) = sf_fuel_load % tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
+
+    sf_fuel_moisture % me_dd = sf_fuel_moisture % moisture_extinction
+    sf_fuel_moisture % me_lv = calc_live_me(sf_config%nc, &
+                                      sf_fuel_moisture % sigma_dd_ros_nr, sf_fuel_moisture % sigma_lv_nr, &
+                                      sf_fuel_moisture%dead(:,ixs_ros), &
+                                      sf_fuel_moisture % me_dd, sf_fuel_moisture % woi_dd(:,ixs_ros), sf_fuel_moisture % woi_lv, &
+                                      sf_fuel_moisture % sigmas_dead, sf_fuel_moisture % sigmas_live, &
+                                      mask)
+
+    wfactors = calc_weighting_factors(sf_fuel_moisture % sigmas_dead, sf_fuel_moisture % woi_dd(:,ixs_ros), &
+                                      sf_fuel_moisture % sigmas_live, sf_fuel_moisture % woi_lv, &
+                                      df_sf_oven_dry_part_dens)
+
+    weigthed_fm = t_fwvar_r1d(sf_config % nc, has_total=.TRUE.)
+    DO ic = 1, sf_config % nc
+      IF (.NOT. mask(ic))  CYCLE
+      weigthed_fm%d(ic) = SUM(wfactors%fij%d(ic,:) * sf_fuel_moisture%dead(ic,ixs_ros))
+      weigthed_fm%l(ic) = SUM(wfactors%fij%l(ic,:) * sf_fuel_moisture%live(ic,:))
+      weigthed_fm%total(ic) = wfactors%fi%l(ic) * weigthed_fm%l(ic) + wfactors%fi%d(ic) * weigthed_fm%d(ic)
+    END  DO
+    sf_fuel_moisture%val = weigthed_fm%total
   END SUBROUTINE wrap_calc_sf_fuel_moisture_for_oberhagemann
+
 
   ! ======================================================================================================= !
   !>

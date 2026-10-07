@@ -170,6 +170,10 @@ MODULE mo_q_dfire_sf_classes
     REAL(wp), ALLOCATABLE :: alphas_dead(:) !<
     REAL(wp), ALLOCATABLE :: sigmas_dead(:) !<
     REAL(wp), ALLOCATABLE :: sigmas_live(:) !<
+    REAL(wp), ALLOCATABLE :: woi_dd(:,:) !< [kg DM m-2] (#nc, #sigma classes-1,10,100hrs,cured lvg-) Note: in kg
+    REAL(wp), ALLOCATABLE :: woi_lv(:,:) !< [kg DM m-2] (#nc, #sigma classes-lvg, woody-) Note: in kg
+    REAL(wp), ALLOCATABLE :: me_dd(:) !< Dead moisture of extinction [-] (#nc)
+    REAL(wp), ALLOCATABLE :: me_lv(:) !< Live moisture of extinction [-] (#nc)
     REAL(wp), POINTER :: lvg_moisture(:) => NULL() !< livegrass fuel moisture [30% to 250%]
     REAL(wp), ALLOCATABLE :: dead(:,:) !< dead fuel moisture (#nc,#dead fuel moisture -1hr, 10hrs, 100hrs, 1000hrs, dry livegrass- )
     REAL(wp), ALLOCATABLE :: live(:,:) !< live fuel moisture (#nc, -wet livegrass, woody-)
@@ -518,6 +522,16 @@ MODULE mo_q_dfire_sf_classes
     mf%dead = 0._wp
     mf%live = 0._wp
     mf%val = 0._wp
+
+    ALLOCATE(mf%woi_dd(nc, sigma_dd_nr))
+    ALLOCATE(mf%woi_lv(nc, sigma_lv_nr))
+    ALLOCATE(mf%me_dd(nc))
+    ALLOCATE(mf%me_lv(nc))
+    mf%woi_dd = 0._wp
+    mf%woi_lv = 0._wp
+    mf%me_dd = 0._wp
+    mf%me_lv = 0._wp
+
   END FUNCTION create_new_sf_mf
 
 
