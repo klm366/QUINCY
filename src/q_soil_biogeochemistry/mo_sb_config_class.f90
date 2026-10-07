@@ -20,7 +20,7 @@ MODULE mo_sb_config_class
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 
@@ -79,32 +79,32 @@ MODULE mo_sb_config_class
     !!
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
-    REAL(wp)              :: soil_ph                  !< soil pH - site specific from forcing info file
-    REAL(wp)              :: soil_p_depth
-    REAL(wp)              :: soil_p_labile
-    REAL(wp)              :: soil_p_slow
-    REAL(wp)              :: soil_p_occluded
-    REAL(wp)              :: soil_p_primary
-    REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
-    REAL(wp)              :: min_mineral_volume_fraction_surface !< minimum mineral volume fraction in the first soil layer
-    REAL(wp)              :: min_mineral_volume_fraction_gradient !< increase of minimum mineral volume fraction with depth [m-1]
+    REAL(lp)              :: soil_ph                  !< soil pH - site specific from forcing info file
+    REAL(lp)              :: soil_p_depth
+    REAL(lp)              :: soil_p_labile
+    REAL(lp)              :: soil_p_slow
+    REAL(lp)              :: soil_p_occluded
+    REAL(lp)              :: soil_p_primary
+    REAL(lp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(lp)              :: min_mineral_volume_fraction_surface !< minimum mineral volume fraction in the first soil layer
+    REAL(lp)              :: min_mineral_volume_fraction_gradient !< increase of minimum mineral volume fraction with depth [m-1]
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
-    REAL(wp)         :: nml_temp_freeze_thres_bio
-    REAL(wp)         :: nml_temp_freeze_window_bio
-    REAL(wp)         :: nml_frac_woody2dec_litter
-    REAL(wp)         :: nml_frac_litter2fast_som
-    REAL(wp)         :: nml_f_nit_noy
-    REAL(wp)         :: nml_f_nit_n2o
-    REAL(wp)         :: nml_vmax_nitrification
-    REAL(wp)         :: nml_vmax_denitrification
-    REAL(wp)         :: nml_t_ref_decomposition
-    REAL(wp)         :: nml_ea_decomposition
-    REAL(wp)         :: nml_ed_decomposition
+    REAL(lp)         :: nml_temp_freeze_thres_bio
+    REAL(lp)         :: nml_temp_freeze_window_bio
+    REAL(lp)         :: nml_frac_woody2dec_litter
+    REAL(lp)         :: nml_frac_litter2fast_som
+    REAL(lp)         :: nml_f_nit_noy
+    REAL(lp)         :: nml_f_nit_n2o
+    REAL(lp)         :: nml_vmax_nitrification
+    REAL(lp)         :: nml_vmax_denitrification
+    REAL(lp)         :: nml_t_ref_decomposition
+    REAL(lp)         :: nml_ea_decomposition
+    REAL(lp)         :: nml_ed_decomposition
 
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
@@ -187,27 +187,27 @@ CONTAINS
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
-    REAL(wp)                    :: soil_ph
-    REAL(wp)                    :: soil_p_depth,        &
+    REAL(lp)                    :: soil_ph
+    REAL(lp)                    :: soil_p_depth,        &
                                    soil_p_labile,       &
                                    soil_p_slow,         &
                                    soil_p_occluded,     &
                                    soil_p_primary
-    REAL(wp)                    :: qmax_org_fine_particle
-    REAL(wp)                    :: min_mineral_volume_fraction_surface
-    REAL(wp)                    :: min_mineral_volume_fraction_gradient
+    REAL(lp)                    :: qmax_org_fine_particle
+    REAL(lp)                    :: min_mineral_volume_fraction_surface
+    REAL(lp)                    :: min_mineral_volume_fraction_gradient
     LOGICAL                     :: flag_apply_nml_parameters
-    REAL(wp)                    :: nml_temp_freeze_thres_bio
-    REAL(wp)                    :: nml_temp_freeze_window_bio
-    REAL(wp)                    :: nml_frac_woody2dec_litter
-    REAL(wp)                    :: nml_frac_litter2fast_som
-    REAL(wp)                    :: nml_f_nit_noy
-    REAL(wp)                    :: nml_f_nit_n2o
-    REAL(wp)                    :: nml_vmax_nitrification
-    REAL(wp)                    :: nml_vmax_denitrification
-    REAL(wp)                    :: nml_t_ref_decomposition
-    REAL(wp)                    :: nml_ea_decomposition
-    REAL(wp)                    :: nml_ed_decomposition
+    REAL(lp)                    :: nml_temp_freeze_thres_bio
+    REAL(lp)                    :: nml_temp_freeze_window_bio
+    REAL(lp)                    :: nml_frac_woody2dec_litter
+    REAL(lp)                    :: nml_frac_litter2fast_som
+    REAL(lp)                    :: nml_f_nit_noy
+    REAL(lp)                    :: nml_f_nit_n2o
+    REAL(lp)                    :: nml_vmax_nitrification
+    REAL(lp)                    :: nml_vmax_denitrification
+    REAL(lp)                    :: nml_t_ref_decomposition
+    REAL(lp)                    :: nml_ea_decomposition
+    REAL(lp)                    :: nml_ed_decomposition
 
     NAMELIST /lnd_sb_nml/                     &
                       active                    , &
@@ -299,15 +299,15 @@ CONTAINS
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
-    soil_ph                     = 6.5_wp
-    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
-    soil_p_labile               = 50._wp
-    soil_p_slow                 = 70._wp
-    soil_p_occluded             = 150._wp
-    soil_p_primary              = 100._wp
-    qmax_org_fine_particle      = 6.5537_wp
-    min_mineral_volume_fraction_surface = 0.05_wp
-    min_mineral_volume_fraction_gradient = 0.01_wp
+    soil_ph                     = 6.5_lp
+    soil_p_depth                = 0.5_lp        ! these soil_p* values are valid for DE-Hainich ?! and are used as default
+    soil_p_labile               = 50._lp
+    soil_p_slow                 = 70._lp
+    soil_p_occluded             = 150._lp
+    soil_p_primary              = 100._lp
+    qmax_org_fine_particle      = 6.5537_lp
+    min_mineral_volume_fraction_surface = 0.05_lp
+    min_mineral_volume_fraction_gradient = 0.01_lp
     flag_apply_nml_parameters   = .FALSE.
     nml_temp_freeze_thres_bio   = def_parameters
     nml_temp_freeze_window_bio  = def_parameters
@@ -387,11 +387,11 @@ CONTAINS
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
 
-    IF (min_mineral_volume_fraction_surface < 0.0_wp .OR. &
-        & min_mineral_volume_fraction_surface >= 1.0_wp) THEN
+    IF (min_mineral_volume_fraction_surface < 0.0_lp .OR. &
+        & min_mineral_volume_fraction_surface >= 1.0_lp) THEN
       CALL finish(TRIM(routine), 'min_mineral_volume_fraction_surface must be in the range [0, 1).')
     END IF
-    IF (min_mineral_volume_fraction_gradient < 0.0_wp) THEN
+    IF (min_mineral_volume_fraction_gradient < 0.0_lp) THEN
       CALL finish(TRIM(routine), 'min_mineral_volume_fraction_gradient must not be negative.')
     END IF
 
@@ -413,24 +413,24 @@ CONTAINS
     ! Create vertical axis
     ! - this grid might be useful in other contexts, too?
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
-      & levels=(/ (REAL(i_month, kind=wp), i_month = 1,12) /), units='')
+      & levels=(/ (REAL(i_month, kind=lp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
 
     sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, &
       & sb_spinup_accelerator_n_forcing_bins, &
-      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, sb_spinup_accelerator_n_forcing_bins) /), units='')
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, sb_spinup_accelerator_n_forcing_bins) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_forcing_vgrid)
 
     n_litter_entries = sb_spinup_accelerator_n_forcing_bins * &
       & (Get_number_of_veg_compartments() + 1) * LAST_ELEM_ID
     sb_spinup_accelerator_litter_vgrid => new_vgrid('sb_accel_litter', ZAXIS_GENERIC, n_litter_entries, &
-      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, n_litter_entries) /), units='')
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, n_litter_entries) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_litter_vgrid)
 
     soil_water_vgrid => Get_vgrid('soil_depth_water')
     n_profile_entries = sb_spinup_accelerator_n_forcing_bins * soil_water_vgrid%n_levels
     sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
-      & levels=(/ (REAL(i_entry, kind=wp), i_entry = 1, n_profile_entries) /), units='')
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, n_profile_entries) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
 
   END SUBROUTINE Init_sb_config

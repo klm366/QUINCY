@@ -21,7 +21,7 @@ MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -200,7 +200,7 @@ CONTAINS
 
     INTEGER :: day_of_year
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(lp), DIMENSION(options%nc) :: &
       & t_air_in_Celcius,              &
       & LaiMax_corrected,              &
       & veg_fract_correction_old,      &
@@ -266,14 +266,14 @@ CONTAINS
 
     ! Local variables
     LOGICAL :: l_newday
-    REAL(wp) :: timestep  ! Timestep in days
+    REAL(lp) :: timestep  ! Timestep in days
     INTEGER :: i
-    REAL(wp) :: MaxLAI
-    REAL(wp) :: LAI_negligible_tmp
+    REAL(lp) :: MaxLAI
+    REAL(lp) :: LAI_negligible_tmp
 
     LOGICAL :: &
       & ForestFlag_param
-    REAL(wp) :: &
+    REAL(lp) :: &
       & alpha_nr_ind_param,       &
       & beta_nr_ind_param,        &
       & alpha_leaf_param,         &
@@ -408,7 +408,7 @@ CONTAINS
     !    calc_XXX_phenology procedures the is_newday-variable decides when to do the update_growth_phase stuff.
 
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
-    !    once for the whole hsm (tile%name == 'box'):
+    !    once for the whole tile tree (tile%name == 'box'):
 
     ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
     ! after this routine. At the start of a new day, we here divide the sum by the day length to get
@@ -416,8 +416,8 @@ CONTAINS
     IF (l_newday) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
-        previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._wp
-        day_NPP_sum(ic) = 0._wp
+        previous_day_NPP_pot_rate_ca(ic) = day_NPP_sum(ic) / 86400._lp
+        day_NPP_sum(ic) = 0._lp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -459,7 +459,7 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          dummy_flux(ic) = 0._wp
+          dummy_flux(ic) = 0._lp
         END DO
         !$ACC END PARALLEL LOOP
         CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
@@ -538,7 +538,7 @@ CONTAINS
     DO i = 1, nc
       IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
         LaiMax_corrected(i) = LAI_negligible_tmp
-        lai(i) = LAI_negligible_tmp - EPSILON(1.0_wp)
+        lai(i) = LAI_negligible_tmp - EPSILON(1.0_lp)
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -687,14 +687,14 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: wgt1, wgt2
+    REAL(lp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: lai
-    REAL(wp), POINTER      :: lai_mon(:,:)
+    REAL(lp), POINTER      :: lai_mon(:,:)
 
     CHARACTER(len=*), PARAMETER            :: routine = modname//':update_phenology_climatology'
 
@@ -719,7 +719,7 @@ CONTAINS
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2, acc_stream)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      lai(ic) = REAL(wgt1,wp) * lai_mon(ic,nmw1) + REAL(wgt2,wp) * lai_mon(ic,nmw2)
+      lai(ic) = REAL(wgt1,lp) * lai_mon(ic,nmw1) + REAL(wgt2,lp) * lai_mon(ic,nmw2)
     END DO
     !$ACC END PARALLEL LOOP
     !$ACC END DATA
@@ -808,11 +808,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
-    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    REAL(lp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(wp) :: wgt1, wgt2, ClumpinessFactor
+    REAL(lp) :: wgt1, wgt2, ClumpinessFactor
     INTEGER  :: nmw1,nmw2
 
     TYPE(t_jsb_model), POINTER :: model
@@ -849,7 +849,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(wgt1, nmw1, wgt2, nmw2) GANG VECTOR ASYNC(acc_stream)
 
       DO ic = 1, nc
-        fract_fpc(ic) = REAL(wgt1,wp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(ic,nmw2)
+        fract_fpc(ic) = REAL(wgt1,lp) * fract_fpc_mon(ic,nmw1) + REAL(wgt2,lp) * fract_fpc_mon(ic,nmw2)
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC END DATA
@@ -914,7 +914,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: target     !< target age class
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: source     !< source age class
     TYPE(t_jsb_task_options),        INTENT(in)    :: options    !< Additional run-time parameters
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
+    REAL(lp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
 
@@ -928,7 +928,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: day_npp_sum_source
     dsl4jsb_Real2D_onChunk :: day_npp_sum_target
 
-    REAL(wp), DIMENSION(options%nc) :: old_veg_fract_correction_target, target_fract
+    REAL(lp), DIMENSION(options%nc) :: old_veg_fract_correction_target, target_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':merge_pheno_variables_upon_ageing'
     ! -------------------------------------------------------------------------------------------------- !
@@ -993,8 +993,8 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(lp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(PHENO_)
 
@@ -1002,8 +1002,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: lai_ta
     dsl4jsb_Real2D_onDomain :: fract_fpc
-    REAL(wp), POINTER       :: lai_ta_gmean(:)
-    REAL(wp), POINTER       :: fract_fpc_gmean(:)
+    REAL(lp), POINTER       :: lai_ta_gmean(:)
+    REAL(lp), POINTER       :: fract_fpc_gmean(:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_var2D_onDomain(PHENO_,  lai_ta)             ! in
@@ -1017,12 +1017,12 @@ CONTAINS
 
     ! Calculate global land means phenology variables, if requested for output
     IF (PHENO__mem%lai_ta_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(lai_ta_gmean, lai_ta, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(lai_ta_gmean, lai_ta, land_area_scaling, 1.0_lp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%lai_ta_gmean%ptr(:))
     END IF
 
     IF (PHENO__mem%fract_fpc_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_lp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(PHENO__mem%fract_fpc_gmean%ptr(:))
     END IF
 

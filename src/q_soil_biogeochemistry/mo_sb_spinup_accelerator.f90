@@ -17,7 +17,7 @@
 MODULE mo_sb_spinup_accelerator
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: finish, message
   USE mo_jsb_class,       ONLY: Get_model
   USE mo_jsb_model_class, ONLY: t_jsb_model
@@ -370,7 +370,7 @@ CONTAINS
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
 
-    IF (ANY(sb_spinup_accelerator_forcing_time(:, forcing_bin) <= 0.0_wp)) THEN
+    IF (ANY(sb_spinup_accelerator_forcing_time(:, forcing_bin) <= 0.0_lp)) THEN
       CALL finish(TRIM(routine), 'The QSOIL restart has no sampled forcing for the current calendar month.')
     END IF
 

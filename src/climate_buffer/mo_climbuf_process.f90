@@ -19,7 +19,7 @@
 MODULE mo_climbuf_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   IMPLICIT NONE
@@ -54,7 +54,7 @@ CONTAINS
       & new_month,              & !< This is the first time step of the month
       & new_year                  !< This is the first time step of the year
 
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
       & seconds_day,            & !< Length of a day [s]
       & seconds_month,          & !< Length of the previous month [s]
@@ -64,7 +64,7 @@ CONTAINS
       & wind_10m,               & !< 10m wind speed [m/s]
       & q_rel_air                 !< Relative humidity [%]
 
-    REAL(wp), INTENT(inout) :: &
+    REAL(lp), INTENT(inout) :: &
       & temp_sum_day,           & !< Current temperature sum of the day [K]
       & temp_sum_month,         & !< Current temperature sum of the month [K]
       & min_mmtemp_of_yr,       & !< Current minimum monthly mean temperature of the year [K]
@@ -84,15 +84,15 @@ CONTAINS
       & q_rel_air_14d_yDay        !< Previous day value of smoothed relative humidity [%]
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(lp) :: &
       & prev_day_mean_temp,     & !< Air temperature of previous day [K]
       & prev_month_mean_temp,   & !< Air temperature of previous month [K]
       & persist,                & !< Persistence factor adapted to model time step
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
-    REAL(wp), PARAMETER :: persist_wind     = 0.9995_wp   ! ~4 years
-    REAL(wp), PARAMETER :: persist_rel_hum  = 0.95_wp     ! ~14 days
+    REAL(lp), PARAMETER :: persist_wind     = 0.9995_lp   ! ~4 years
+    REAL(lp), PARAMETER :: persist_rel_hum  = 0.95_lp     ! ~14 days
     ! ------------------------------------------------------------------------------------------------------ !
 
     IF (.NOT. new_day .OR. lstart) THEN
@@ -113,10 +113,10 @@ CONTAINS
     !  ---------------------
     IF (new_year) THEN
       gdd5_prev_year = gdd5_sum_year
-      gdd5_sum_year = 0._wp
+      gdd5_sum_year = 0._lp
     END IF
     IF (new_day .AND. .NOT. lstart) THEN
-      gdd5_sum_year = gdd5_sum_year + MAX(0._wp, prev_day_mean_temp - tmelt - 5._wp)
+      gdd5_sum_year = gdd5_sum_year + MAX(0._lp, prev_day_mean_temp - tmelt - 5._lp)
     END IF
 
     !-- Multi-year minimum and maximum monthly mean temperatures
@@ -132,19 +132,19 @@ CONTAINS
           min_mmtemp_20yr = min_mmtemp_of_yr
           max_mmtemp_20yr = max_mmtemp_of_yr
         ELSE
-          min_mmtemp_20yr = (min_mmtemp_20yr * 19._wp + min_mmtemp_of_yr) / 20._wp
-          max_mmtemp_20yr = (max_mmtemp_20yr * 19._wp + max_mmtemp_of_yr) / 20._wp
+          min_mmtemp_20yr = (min_mmtemp_20yr * 19._lp + min_mmtemp_of_yr) / 20._lp
+          max_mmtemp_20yr = (max_mmtemp_20yr * 19._lp + max_mmtemp_of_yr) / 20._lp
         ENDIF
         ! --- reset for current year
-        min_mmtemp_of_yr =  1000._wp
-        max_mmtemp_of_yr = -1000._wp
+        min_mmtemp_of_yr =  1000._lp
+        max_mmtemp_of_yr = -1000._lp
       END IF ! new_year
     END IF
 
     !-- 15-day smoothing of temperature and precipitation (needed with yasso)
     !  ---------------------
-    F_15d = EXP(-dtime / (15._wp * seconds_day))
-    N_15d = 1._wp - F_15d
+    F_15d = EXP(-dtime / (15._lp * seconds_day))
+    N_15d = 1._lp - F_15d
 
     temp_15d   = t_air         * N_15d  +  F_15d * temp_15d
     precip_15d = (rain + snow) * N_15d  +  F_15d * precip_15d
@@ -163,14 +163,14 @@ CONTAINS
     ELSE
       max_wind_yDay = max_wind_of_day
       ! Maximum wind speed smoothed in time
-      max_wind_4yr = max_wind_4yr * persist_wind + max_wind_of_day * (1._wp - persist_wind)
+      max_wind_4yr = max_wind_4yr * persist_wind + max_wind_of_day * (1._lp - persist_wind)
       max_wind_of_day = wind_10m
     END IF
 
     !-- Relative humidity
     !  ---------------------
     persist = persist_rel_hum ** (dtime/seconds_day)
-    q_rel_air_14d = q_rel_air_14d * persist + q_rel_air * (1._wp - persist)
+    q_rel_air_14d = q_rel_air_14d * persist + q_rel_air * (1._lp - persist)
     ! Save previous day variables
     IF (new_day .AND. .NOT. lstart) THEN
       q_rel_air_14d_yDay = q_rel_air_14d
@@ -195,7 +195,7 @@ CONTAINS
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_mixed
 
     !$ACC ROUTINE SEQ
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & air_moisture,       & !< Specific humidity of air [kg kg-1]
       & air_temperature,    & !< Temperature of air [K]
       & air_press             !< Pressure of air [Pa]
@@ -203,7 +203,7 @@ CONTAINS
       & use_tmx               !< Turbulent mixing scheme 'tmx' is used in coupling to the atmosphere:
                               !< if true, we use qsat_water, else qsat_mixed
 
-    REAL(wp) :: &
+    REAL(lp) :: &
       & air_qsat,           & !< Saturation specific humidity []
       & relative_humidity_air !< Relative humidity [%]
 
@@ -212,10 +212,10 @@ CONTAINS
     ELSE
       air_qsat = qsat_mixed(air_temperature, air_press)
     END IF
-    relative_humidity_air = 100._wp * air_moisture                                           &
-                           * (  (1._wp - rd / rv) * air_qsat + (rd / rv) )                   &
-                           / ( ((1._wp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
-    relative_humidity_air = MIN(100._wp, relative_humidity_air)
+    relative_humidity_air = 100._lp * air_moisture                                           &
+                           * (  (1._lp - rd / rv) * air_qsat + (rd / rv) )                   &
+                           / ( ((1._lp - rd / rv) * air_moisture + (rd / rv)) * air_qsat )
+    relative_humidity_air = MIN(100._lp, relative_humidity_air)
 
   END FUNCTION get_relative_humidity_air
 #endif

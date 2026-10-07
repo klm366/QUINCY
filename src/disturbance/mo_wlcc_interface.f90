@@ -15,7 +15,7 @@ MODULE mo_wlcc_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -106,10 +106,10 @@ CONTAINS
 
     INTEGER  :: i, j, i_tile, iblk, ics, ice, nc
     INTEGER  :: nr_of_tiles, nr_of_lcc_events, nr_of_combined_tiles
-    REAL(wp) :: dtime, conversion_fact
-    REAL(wp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
+    REAL(lp) :: dtime, conversion_fact
+    REAL(lp), POINTER :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
 
-    REAL(wp), DIMENSION(options%nc) :: current_fract
+    REAL(lp), DIMENSION(options%nc) :: current_fract
 
     LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
     INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
@@ -162,9 +162,9 @@ CONTAINS
     dsl4jsb_Get_lcc_area_matrix(initial_area)
     dsl4jsb_Get_lcc_area_matrix(lost_area)
     dsl4jsb_Get_lcc_area_matrix(gained_area)
-    initial_area(:,:) = 0.0_wp
-    lost_area(:,:) = 0.0_wp
-    gained_area(:,:) = 0.0_wp
+    initial_area(:,:) = 0.0_lp
+    lost_area(:,:) = 0.0_lp
+    gained_area(:,:) = 0.0_lp
 
     !>
     !> 2. Two possibilities:
@@ -211,8 +211,8 @@ CONTAINS
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! init gained and lost area
-      lost_area(:,:) = 0.0_wp
-      gained_area(:,:) = 0.0_wp
+      lost_area(:,:) = 0.0_lp
+      gained_area(:,:) = 0.0_lp
 
       ! Collect lost and gained area of involved tiles
       DO j =1,nr_of_combined_tiles ! < inner loop collecting lcc movements within this lcc-cycle
@@ -241,10 +241,10 @@ CONTAINS
 
         lost_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
         WHERE(lost_area(:,i_tile) < min_daily_cf_change)
-          lost_area(:,i_tile) = 0.0_wp
+          lost_area(:,i_tile) = 0.0_lp
         END WHERE
 
-        IF (ANY(lost_area(:,i_tile) > 0._wp)) THEN
+        IF (ANY(lost_area(:,i_tile) > 0._lp)) THEN
           ! - care for the gained area  -> @todo change when bare land tile available
           ! ... if forest age classes are used the area of any disturbed age class is added to the first class
           IF (d_tile_is_ac) THEN
@@ -274,7 +274,7 @@ CONTAINS
       END DO ! inner loop collecting lcc movements within this lcc-cycle
 
       ! Only needs to be executed if there is area to be moved
-      IF (ANY(lost_area(:, :) > 0._wp)) THEN
+      IF (ANY(lost_area(:, :) > 0._lp)) THEN
 
         !>
         !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
@@ -300,12 +300,12 @@ CONTAINS
         DO WHILE (i_tile < nr_of_tiles)
 
           i_tile = i_tile + 1
-          IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+          IF (ANY(lost_area(:, i_tile) > 0.0_lp)) THEN
             ! 4a -- 'special transfer'
             IF (current_tile%Has_process_memory(CARBON_)) THEN
               ! treat vegetation pools: copy matter for diagnostics
               ! -> matter itself will be actively transferred to soils by the generic routine in the carbon interface
-              conversion_fact = 1.0_wp / sec_per_day
+              conversion_fact = 1.0_lp / sec_per_day
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
                 & 'c_woods', 'cflux_dist_woods_2_soil', conversion_fact = conversion_fact )
               CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &

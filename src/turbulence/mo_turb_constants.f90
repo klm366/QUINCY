@@ -14,13 +14,13 @@
 MODULE mo_turb_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
 
   IMPLICIT NONE
   PUBLIC
 
   ! vegetation parameters for turbulence calculations
-  REAL(wp), SAVE :: &
+  REAL(lp), SAVE :: &
     & veg_height_to_rough_momentum, &   !< factor for vegetation height to momentum [unitless]
     & veg_min_roughness                 !< minimum vegetation roughness, similar to 'lctlib_MinVegRoughness' of jsbach
 
@@ -44,8 +44,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_turb_constants'
 
     ! turbulence calculations
-    veg_height_to_rough_momentum  = 10.0_wp           !< expert knowledge
-    veg_min_roughness             = 0.1_wp            !< expert knowledge
+    veg_height_to_rough_momentum  = 10.0_lp           !< expert knowledge
+    veg_min_roughness             = 0.1_lp            !< expert knowledge
 
 
     !$ACC UPDATE DEVICE(veg_height_to_rough_momentum, veg_min_roughness)

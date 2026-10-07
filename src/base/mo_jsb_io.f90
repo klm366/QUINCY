@@ -14,7 +14,7 @@
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp, dp
+  USE mo_kind, ONLY: lp, dp
   USE mo_jsb_io_iface, ONLY:                                           &
     Get_netcdf_precision,                                              &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
