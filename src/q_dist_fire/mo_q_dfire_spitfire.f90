@@ -650,7 +650,7 @@ CONTAINS
     has_fire_conditions = mask_tile_enabled .AND. has_dead_fuel
 
     sf_ignitions = t_q_sf_ignitions(nc)
-    spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_live_fuel_nr)
+    spitfire = t_sf_spitfire(nc, ndeadpools, sf_fuel_dead_fuel_nr)
 
     !> Calculate whether there are conditions for fire based on the Nesterov Index,
     !> following Thonicke et al. (2010) with modifications from Pfeiffer et al. (2013)

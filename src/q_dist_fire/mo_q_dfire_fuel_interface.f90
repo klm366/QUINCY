@@ -112,6 +112,10 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel'
     LOGICAL                                   :: is_mask_enabled
+    LOGICAL, PARAMETER                        :: mask_grass_pfts(14) = [.false., .false., .false., .false., .false., .false., .true., .true., .false., .false., .false., .false., .false., .false.]
+    LOGICAL, PARAMETER                        :: mask_tree_pfts(14) = [.true., .true., .true., .true., .true., .true., .false., .false., .false., .false., .false., .false., .false., .false.]
+    LOGICAL, PARAMETER                        :: mask_burnable_pfts(14) = mask_grass_pfts .OR. mask_tree_pfts ! [.true., .true., .true., .true., .true., .true., .true., .true., .false., .false., .false., .false., .false., .false.]
+    CHARACTER(len=*), PARAMETER               :: mask_on_tile = "veg"
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_)
     dsl4jsb_Def_memory(Q_DFIRE_FUEL_)
@@ -134,9 +138,10 @@ CONTAINS
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, moisture_extinction  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fwd_wind_factor      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, fuel_bulk_density    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, moisture_extinction  , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, fwd_wind_factor      , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, fuel_bulk_density    , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, lvg_moisture         , weighted_by_fract, mask_grass_pfts,    mask_on_tile)
 
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp   , weighted_by_fract)
@@ -150,8 +155,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_10hr_lfp    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_100hr_lfp   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, live_tree_fuel_1000hr_lfp  , weighted_by_fract)
-
-    dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, lvg_moisture  , weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, forest_fract     , sum_agg)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, grass_fract      , sum_agg)
