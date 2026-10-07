@@ -66,7 +66,7 @@ MODULE mo_q_dfire_sf_dynamics
 
   USE mo_q_dfire_sf_fuel_class,   ONLY: t_sf_fuel_class, sf_calc_has_any_fuel, sf_calc_aggr_fuels
   USE mo_q_dfire_sf_fmoist_class, ONLY: calc_sf_fuel_moisture_main
-  USE mo_q_dfire_sf_ignition_class,     ONLY: wrap_calc_sf_ignitions
+  USE mo_q_dfire_sf_ignition_class,     ONLY: calc_sf_ignitions_main
   USE mo_q_dfire_sf_nesterov_class,     ONLY: calc_sf_nesterov_index
   USE mo_q_dfire_sf_ros_class,          ONLY: sf_calc_rate_of_spread_main
   USE mo_q_dfire_sf_classes,            ONLY: t_sf_ros, t_sf_dynamics, t_sf_ignitions, t_sf_mf, &
@@ -515,7 +515,7 @@ CONTAINS
                   has_fire_conditions)
 
     !< Calculate fire ignition probability based on population and lightning, following Thonicke et al. (2010)
-    CALL wrap_calc_sf_ignitions(sf_config, sf_ignitions)
+    CALL calc_sf_ignitions_main(sf_config, sf_ignitions)
 
     !< no ignitions events, no fire conditions
     has_fire_conditions = has_fire_conditions .AND. (sf_ignitions%e_n_ignitions > 0._wp)

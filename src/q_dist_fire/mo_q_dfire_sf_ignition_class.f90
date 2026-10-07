@@ -25,7 +25,7 @@ MODULE mo_q_dfire_sf_ignition_class
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_sf_ignitions, wrap_calc_sf_ignitions
+  PUBLIC :: calc_sf_ignitions, calc_sf_ignitions_main
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_ignition_class'
 
@@ -36,7 +36,7 @@ CONTAINS
   !>
   !> Call main ignition method and applies time scaling to ignition events.
   !>
-  SUBROUTINE wrap_calc_sf_ignitions(sf_config, sf_ignitions)
+  SUBROUTINE calc_sf_ignitions_main(sf_config, sf_ignitions)
     TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_ignitions), INTENT(inout) :: sf_ignitions
 
@@ -50,7 +50,7 @@ CONTAINS
     sf_ignitions%e_n_ignitions = sf_ignitions%e_n_ignitions * (sf_config%dtime / sf_config%one_day)
     sf_ignitions%e_n_humans = sf_ignitions%e_n_humans * (sf_config%dtime / sf_config%one_day)
     sf_ignitions%e_n_lightning = sf_ignitions%e_n_lightning * (sf_config%dtime / sf_config%one_day)
-  END SUBROUTINE wrap_calc_sf_ignitions
+  END SUBROUTINE calc_sf_ignitions_main
 
 
   ! ======================================================================================================= !
