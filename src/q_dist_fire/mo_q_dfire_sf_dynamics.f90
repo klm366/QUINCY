@@ -518,7 +518,6 @@ CONTAINS
       CALL calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, &
                                     nesterov_index, &
                                     sf_fuel_moisture, & ! inout
-                                    spitfire % fdi, & !< outputs
                                     sf_ros, &
                                     mask=(has_fire_conditions .AND. spitfire % fdi > 1.e-6_wp))
     ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
@@ -526,9 +525,8 @@ CONTAINS
       CALL calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, &
                                     nesterov_index, &
                                     sf_fuel_moisture, & ! inout
-                                    spitfire % fdi, & ! out
                                     sf_ros, &
-                                    mask = has_fire_conditions) ! optional
+                                    mask = has_fire_conditions)
     ELSE
       CALL finish("calc_sf_dynamics", "Unexpected fire sub-model found")
     END IF
@@ -589,7 +587,6 @@ CONTAINS
   SUBROUTINE calc_sf_dynamics_for_thonicke(sf_config, sf_fuel_load, & ! in
                                     nesterov_index, &
                                     sf_mf, & ! inout
-                                    fdi, & ! out
                                     sf_ros, &
                                     mask) !< optional
 
@@ -602,13 +599,11 @@ CONTAINS
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in)        :: nesterov_index(:)      !< [deg C2]
     TYPE(t_sf_mf), INTENT(inout):: sf_mf
-    REAL(wp), INTENT(in)       :: fdi(:)                 !< Fire dange index [%]
     TYPE(t_sf_ros), INTENT(inout) :: sf_ros
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)              !< True: gridcell is enabled
 
     LOGICAL :: has_fire_conditions(sf_config%nc)
 
-    !fdi = 0._wp
     !sf_mf % omegas_thon = 0._wp
     has_fire_conditions = .TRUE.
     IF (PRESENT(mask)) has_fire_conditions = mask
@@ -638,7 +633,6 @@ CONTAINS
   SUBROUTINE calc_sf_dynamics_for_oberhagemann(sf_config, sf_fuel_load, & ! in
                   nesterov_index, &
                   fuel_moisture, & ! inout
-                  fdi, & ! out
                   ros, &
                   mask) ! optional
 
@@ -659,7 +653,6 @@ CONTAINS
     TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load
     REAL(wp), INTENT(in) :: nesterov_index(:) !< Dryness index [deg C2]
     TYPE(t_sf_mf), INTENT(inout) :: fuel_moisture !< Fuel moisture
-    REAL(wp), INTENT(in) :: fdi(:) !< Fire danger index [%]
     TYPE(t_sf_ros), INTENT(inout) :: ros !< Rate of spread [-]
     LOGICAL, INTENT(in) :: mask(:) !< True: gridcell enabled
 
@@ -670,8 +663,6 @@ CONTAINS
     !TYPE(t_sf_weighting_factors) :: wfactors    !< Weighting factors based on fuel moisture classes
     !TYPE(t_fwvar_r1d) :: weigthed_fm !< weighted fuel moisture content [-]
     !INTEGER :: ic
-
-    !fdi = 0._wp
 
     !CALL wrap_calc_sf_fuel_moisture_for_oberhagemann(sf_config, nesterov_index, sf_fuel_load, fuel_moisture, mask)
 
