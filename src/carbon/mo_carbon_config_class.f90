@@ -122,9 +122,9 @@ CONTAINS
       & nml_unit,                  &   !< IO unit of the namelist file
       & istat                          !< Status flag
     TYPE(t_input_file) :: input_file   !< Input file
-    REAL(wp), POINTER :: ptr_1D(:)     !< Pointer to a one dimensional variable
-    REAL(wp), ALLOCATABLE :: depths(:) !< Upper/lower bounds of soil layers
-    REAL(wp), ALLOCATABLE :: mids(:)   !< Mid soil layer depth
+    REAL(lp), POINTER :: ptr_1D(:)     !< Pointer to a one dimensional variable
+    REAL(lp), ALLOCATABLE :: depths(:) !< Upper/lower bounds of soil layers
+    REAL(lp), ALLOCATABLE :: mids(:)   !< Mid soil layer depth
     INTEGER :: nsoil                   !< Number of soil layers
 
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_c !< Vertical grid used for soil layers of CARBON process
@@ -181,9 +181,9 @@ CONTAINS
       ! calculate mid-points of each soil layer
       ALLOCATE(depths(nsoil+1))                                     ! Upper/lower bounds of soil layers
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp                                             ! lower bounds == top of the soil layer
+      depths(1) = 0._lp                                             ! lower bounds == top of the soil layer
       depths(2:nsoil+1) = ptr_1D(1:nsoil)                           ! upper bounds == bottom of the soil layer
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp ! center depth of a layer
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._lp ! center depth of a layer
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()

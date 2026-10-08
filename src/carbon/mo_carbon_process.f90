@@ -164,16 +164,6 @@ CONTAINS
     !REAL(lp) :: minNflux_litter_wood_ag_pot,minNflux_litter_wood_bg_pot
     !REAL(lp) :: N2O_emissions_litter_pot
 
-    REAL(lp)                :: leafLitter      ! amount of leafLitter
-    REAL(lp)                :: sizeZero
-
-    !REAL(lp) :: Nflux_NPP_2_green_pot,Nflux_NPP_2_wood_pot
-    !REAL(lp) :: Nflux_litterGreen_ag_2_slow_pot, Nflux_litterGreen_bg_2_slow_pot
-    !REAL(lp) :: Nflux_litter_wood_ag_2_slow_pot,Nflux_litter_wood_bg_2_slow_pot
-    !REAL(lp) :: minNflux_litter_green_ag_pot,minNflux_litter_green_bg_pot
-    !REAL(lp) :: minNflux_litter_wood_ag_pot,minNflux_litter_wood_bg_pot
-    !REAL(lp) :: N2O_emissions_litter_pot
-
     !REAL(lp) :: minN_plant_demand,minN_soil_demand,total_minN_demand
     !REAL(lp) :: NPP_2_green_via_mobileN, NPP_2_wood_via_mobileN
     !REAL(lp) :: Nmobile_2_green, Nmobile_2_wood, Nmobile_2_green_pot, Nmobile_2_wood_pot

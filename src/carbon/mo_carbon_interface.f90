@@ -1814,20 +1814,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
-
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
-
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
-
     REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)

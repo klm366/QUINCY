@@ -530,7 +530,7 @@ CONTAINS
     REAL(lp)    :: grass_sum(nidx)
     REAL(lp)    :: non_woody_fpc(nidx)
     REAL(lp)    :: theta, veg_inc, tau_pft
-    REAL(lp), PARAMETER  ::  min_dist_woody = 0.002_lp / 365._wp !! mortality of woody plants (not caused by fire/windthrow,
+    REAL(lp), PARAMETER  ::  min_dist_woody = 0.002_lp / 365._lp !! mortality of woody plants (not caused by fire/windthrow,
                                                                  !! but by other unresolved processes)
     REAL(lp), PARAMETER  ::  grass_mortality = 0.01_lp / 365._lp !! grass mortality (not caused by fire, but by other
                                                                  !! unresolved processes)

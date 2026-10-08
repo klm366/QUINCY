@@ -134,7 +134,7 @@ CONTAINS
        max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
     ELSE
        max_snow_prev_year = max_snow_of_yr
-       max_snow_of_yr = 0._wp
+       max_snow_of_yr = 0._lp
        max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
     END IF
 
@@ -144,7 +144,7 @@ CONTAINS
       max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
     ELSE
       max_thaw_prev_year = max_thaw_of_yr
-      max_thaw_of_yr = 0._wp
+      max_thaw_of_yr = 0._lp
       max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
     END IF
 
@@ -226,13 +226,13 @@ CONTAINS
       & new_day,                & !< This is the first time step of the day
       & new_year                  !< This is the first time step of the year
 
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & dtime,                  & !< Time step length [s]
       & seconds_day,            & !< Length of a day [s]
       & t_soil,                 & !< Soil layer temperature [K]
       & wtr_soil_rel              !< Relative soil water content on layers [-]
 
-    REAL(wp), INTENT(inout) ::  &
+    REAL(lp), INTENT(inout) ::  &
       & t_soil_15d,             & !< 15-day smoothed soil layer temperature [K]
       & t_soil_15d_yDay,        & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
       & wtr_soil_rel_15d,       & !< 15-day smoothed relative soil layer moisture [-]
@@ -241,7 +241,7 @@ CONTAINS
       & permafrost_period         !< Number of years of consecutively frozen soil layer [yr]
 
     ! Local variables
-    REAL(wp) :: &
+    REAL(lp) :: &
       & F_15d,                  & !< Factor for 15-day smoothing
       & N_15d                     !< Factor for 15-day smoothing
 
@@ -249,8 +249,8 @@ CONTAINS
 
     !-- 15-day smoothing of soil layer temperature and moisture (needed with vertical yasso)
     !  ---------------------
-    F_15d = EXP(-dtime / (15._wp * seconds_day))
-    N_15d = 1._wp - F_15d
+    F_15d = EXP(-dtime / (15._lp * seconds_day))
+    N_15d = 1._lp - F_15d
 
     t_soil_15d = t_soil * N_15d  +  F_15d * t_soil_15d
     wtr_soil_rel_15d = wtr_soil_rel * N_15d  +  F_15d * wtr_soil_rel_15d
@@ -265,9 +265,9 @@ CONTAINS
     !  ---------------------
     IF (new_year) THEN
       IF (max_t_soil_year < tmelt) THEN
-        permafrost_period = permafrost_period + 1._wp
+        permafrost_period = permafrost_period + 1._lp
       ELSE
-        permafrost_period = 0._wp
+        permafrost_period = 0._lp
       END IF
       max_t_soil_year = t_soil
     ELSE

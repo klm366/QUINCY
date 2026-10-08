@@ -134,7 +134,7 @@ CONTAINS
     INTEGER :: table
 
     INTEGER  :: nsoil                        !< Number of soil layers
-    REAL(wp) :: max_depth                    !< lower boundary of deepest soil layer
+    REAL(lp) :: max_depth                    !< lower boundary of deepest soil layer
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_climbuf_memory'
 

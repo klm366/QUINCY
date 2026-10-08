@@ -79,13 +79,13 @@ MODULE mo_carbon_constants
   !$ACC DECLARE COPYIN(sec_per_year)
 
   ! Parameters for Yasso peat
-  REAL(wp), parameter :: rho_YCpool_acro          = 3.5e4_wp !< Bulk density of acrotelm peat: 0.035 g/cm3, based on
+  REAL(lp), parameter :: rho_YCpool_acro          = 3.5e4_lp !< Bulk density of acrotelm peat: 0.035 g/cm3, based on
                                                              !< Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
                                                              !<  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
-  REAL(wp), parameter :: rho_YCpool_cato          = 9.1e4_wp !< Bulk density of catotelm peat: 0.091 g/cm3, based on
+  REAL(lp), parameter :: rho_YCpool_cato          = 9.1e4_lp !< Bulk density of catotelm peat: 0.091 g/cm3, based on
                                                              !< Clymo (1983); Turunen (2002)
-  REAL(wp), parameter :: Cfrac_YCpool_acro        = 0.50_wp  !< C fraction in acrotelm peat Malmer and Wallen (2004)
-  REAL(wp), parameter :: Cfrac_YCpool_cato        = 0.52_wp  !< Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_acro        = 0.50_lp  !< C fraction in acrotelm peat Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_cato        = 0.52_lp  !< Malmer and Wallen (2004)
 
   ! Definitions for lcc
 
@@ -113,53 +113,53 @@ MODULE mo_carbon_constants
 
   ! Yasso parameters (Tuomi 2011)
   !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
-  REAL(wp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !<  ... acid-soluble fraction
-  REAL(wp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !<  ... water-soluble fraction
-  REAL(wp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !<  ... ethanol-soluble fraction
-  REAL(wp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !<  ... nonsoluble-soluble fraction
-  REAL(wp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !<  ... humus
+  REAL(lp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_lp    !<  ... acid-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_water      = -5.9_lp     !<  ... water-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_lp    !<  ... ethanol-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_lp   !<  ... nonsoluble-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_lp  !<  ... humus
 
   ! ------------------------------------------------------------------------------------------
   ! Parameters for vertical YASSO
   !
 
   ! decomposition modifier parameters for temperature and depth modifier
-  REAL(wp), PARAMETER :: Q10     = 1.5_wp           !< Q10 for deep soil C decomposition, based on CLM
-  REAL(wp), PARAMETER :: ref_dep = 1000._wp         !< reference depth to remove depth dependence of decomposition
+  REAL(lp), PARAMETER :: Q10     = 1.5_lp           !< Q10 for deep soil C decomposition, based on CLM
+  REAL(lp), PARAMETER :: ref_dep = 1000._lp         !< reference depth to remove depth dependence of decomposition
 
   ! decomposition modifiers for oxic / anoxic soils
-  REAL(wp), PARAMETER :: d_anox = 0.35_wp           !< decomposition modifier for anaerobic decomposition
-  REAL(wp), PARAMETER :: d_oxic = 1.0_wp            !< decomposition modifier for oxic decomposition
+  REAL(lp), PARAMETER :: d_anox = 0.35_lp           !< decomposition modifier for anaerobic decomposition
+  REAL(lp), PARAMETER :: d_oxic = 1.0_lp            !< decomposition modifier for oxic decomposition
 
   ! Yasso parameters (Tuomi 2011)
   ! Parameters for temperature dependence
-  REAL(wp), PARAMETER   :: temp_p1     = 0.095_wp   !< first  order temperature dependence [1/C]
-  REAL(wp), PARAMETER   :: temp_p2     = -0.0014_wp !< second order temperature dependence [1/C]
+  REAL(lp), PARAMETER   :: temp_p1     = 0.095_lp   !< first  order temperature dependence [1/C]
+  REAL(lp), PARAMETER   :: temp_p2     = -0.0014_lp !< second order temperature dependence [1/C]
   ! Parameter for precipitation dependence
-  REAL(wp), PARAMETER   :: precip_p1   = -1.21_wp   !< first  order precipitation dependence [yr/m]
+  REAL(lp), PARAMETER   :: precip_p1   = -1.21_lp   !< first  order precipitation dependence [yr/m]
   ! Parameters for size dependence
-  REAL(wp), PARAMETER   :: size_p1     = -1.71_wp   !< first  order size dependence [1/cm]
-  REAL(wp), PARAMETER   :: size_p2     = 0.86_wp    !< second order size dependence [1/cm]
-  REAL(wp), PARAMETER   :: size_p3     = -0.306_wp  !< size dependence power [ ]
-  REAL(wp), PARAMETER   :: d_size_leaf = 1.0_wp     !< leaf litter is not size dependent
+  REAL(lp), PARAMETER   :: size_p1     = -1.71_lp   !< first  order size dependence [1/cm]
+  REAL(lp), PARAMETER   :: size_p2     = 0.86_lp    !< second order size dependence [1/cm]
+  REAL(lp), PARAMETER   :: size_p3     = -0.306_lp  !< size dependence power [ ]
+  REAL(lp), PARAMETER   :: d_size_leaf = 1.0_lp     !< leaf litter is not size dependent
 
   ! Parameters for moisture dependence, DAYCENT formulation
-  REAL(wp), PARAMETER   :: moist_p_a = 0.575_wp
-  REAL(wp), PARAMETER   :: moist_p_b = 1.5_wp
-  REAL(wp), PARAMETER   :: moist_p_d = 3.0_wp
+  REAL(lp), PARAMETER   :: moist_p_a = 0.575_lp
+  REAL(lp), PARAMETER   :: moist_p_b = 1.5_lp
+  REAL(lp), PARAMETER   :: moist_p_d = 3.0_lp
 
-  REAL(wp), PARAMETER   :: minimum_layer_thickness = 0.05_wp !< minimum unfrozen soil layer thickness threshold [m]
-  REAL(wp), PARAMETER   :: permafrost_threshold    = 1._wp   !< length threshold to consider a layer permafrost [yr]
+  REAL(lp), PARAMETER   :: minimum_layer_thickness = 0.05_lp !< minimum unfrozen soil layer thickness threshold [m]
+  REAL(lp), PARAMETER   :: permafrost_threshold    = 1._lp   !< length threshold to consider a layer permafrost [yr]
 
   ! ------------------------------------------------------------------------------------------
   ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)
-  REAL(wp),  PARAMETER :: C_2_biomass_ratio = 0.5_wp !< Conversion factor between SOC and SOM (Pribyl, 2010)
+  REAL(lp),  PARAMETER :: C_2_biomass_ratio = 0.5_lp !< Conversion factor between SOC and SOM (Pribyl, 2010)
 
   ! organic matter [litter/duff?] bulk densities for below above and ground [kg/m3],
   ! see Chojnacky (2009), 0'Donnell (2009), (https://philbusey.com/sports_turf/organic_matter.html#table), Ahn (2009)
-  REAL(wp), PARAMETER ::  rho_org    = 100._wp
-  REAL(wp), PARAMETER ::  rho_org_ag =  75._wp
-  REAL(wp), PARAMETER ::  rho_org_bg = 150._wp
+  REAL(lp), PARAMETER ::  rho_org    = 100._lp
+  REAL(lp), PARAMETER ::  rho_org_ag =  75._lp
+  REAL(lp), PARAMETER ::  rho_org_bg = 150._lp
 
 #endif
 END MODULE mo_carbon_constants

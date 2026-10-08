@@ -2309,11 +2309,11 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          IF ( wtr_soil_avail_max_sl(ic,is) > 0._wp) THEN
-            wtr_soil_rel_sl(ic,is) =  MIN(wtr_soil_avail_sl(ic,is) / wtr_soil_avail_max_sl(ic,is), 1._wp)
+          IF ( wtr_soil_avail_max_sl(ic,is) > 0._lp) THEN
+            wtr_soil_rel_sl(ic,is) =  MIN(wtr_soil_avail_sl(ic,is) / wtr_soil_avail_max_sl(ic,is), 1._lp)
           ELSE
             ! weq_rootzone_max is zero for glacier tiles
-            wtr_soil_rel_sl(ic,is) = 0._wp
+            wtr_soil_rel_sl(ic,is) = 0._lp
           END IF
         END DO
       END DO

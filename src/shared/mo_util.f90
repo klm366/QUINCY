@@ -53,18 +53,18 @@ CONTAINS
   !>
   FUNCTION soil_depth_to_layers_1d(depth, dz) RESULT(depth_l)
 
-    REAL(wp), INTENT(in) :: depth(:)             !< The bedrock or active layer depth [m]
-    REAL(wp), INTENT(in) :: dz(:)                !< Vertical dimension
-    REAL(wp)             :: depth_l(SIZE(depth), SIZE(dz)) !< Actual soil layer depth
+    REAL(lp), INTENT(in) :: depth(:)             !< The bedrock or active layer depth [m]
+    REAL(lp), INTENT(in) :: dz(:)                !< Vertical dimension
+    REAL(lp)             :: depth_l(SIZE(depth), SIZE(dz)) !< Actual soil layer depth
 
-    REAL(wp) :: bottom, bottom_m1  !< Helper variables
+    REAL(lp) :: bottom, bottom_m1  !< Helper variables
     INTEGER  :: nsoil, i
 
     nsoil = SIZE(dz)
 
-    depth_l(:,:) = 0._wp  ! Init
-    bottom = 0._wp
-    bottom_m1 = 0._wp
+    depth_l(:,:) = 0._lp  ! Init
+    bottom = 0._lp
+    bottom_m1 = 0._lp
     DO i=1,nsoil            ! From top layer to lowest layer
       bottom = bottom + dz(i)
       WHERE (depth(:) >= bottom)              ! When the depth is larger than the soil layer: i

@@ -556,14 +556,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
       & output_level=BASIC,                                                    &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('soil_respiration_anox', mem%soil_respiration_anox,       &
       & hgrid, surface,                                                        &
       & t_cf('soil_respiration_anox', 'mol m-2(canopy) s-1', 'Soil respiration from anoxic soils.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('npp_flux_correction', mem%NPP_flux_correction,                                 &
       & hgrid, surface,                                                                              &
@@ -914,7 +914,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
       & prefix, suffix,                                                            &
       & output_level=BASIC,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('soil_respiration_anox_ta', mem%soil_respiration_anox_ta,     &
       & hgrid, surface,                                                            &
@@ -922,7 +922,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
       & prefix, suffix,                                                            &
       & output_level=BASIC,                                                        &
-      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
+      & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     CALL mem%Add_var('npp_flux_corr_ta', mem%NPP_flux_correction_ta,                                 &
       & hgrid, surface,                                                                              &
@@ -1074,7 +1074,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_water_bg1_sl', mem%c_water_bg1_sl,                      &
         & hgrid, soil_c,                                                          &
@@ -1083,7 +1083,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_ethanol_bg1_sl', mem%c_ethanol_bg1_sl,                  &
         & hgrid, soil_c,                                                          &
@@ -1092,7 +1092,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_nonsoluble_bg1_sl', mem%c_nonsoluble_bg1_sl,            &
         & hgrid, soil_c,                                                          &
@@ -1101,7 +1101,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_humus_1_sl', mem%c_humus_1_sl,                          &
         & hgrid, soil_c,                                                          &
@@ -1110,7 +1110,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       ! Yasso 2: Woody carbon pools
       CALL mem%Add_var('c_acid_bg2_sl', mem%c_acid_bg2_sl,                        &
@@ -1120,7 +1120,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_water_bg2_sl', mem%c_water_bg2_sl,                      &
         & hgrid, soil_c,                                                          &
@@ -1129,7 +1129,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_ethanol_bg2_sl', mem%c_ethanol_bg2_sl,                  &
         & hgrid, soil_c,                                                          &
@@ -1138,7 +1138,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_nonsoluble_bg2_sl', mem%c_nonsoluble_bg2_sl,            &
         & hgrid, soil_c,                                                          &
@@ -1147,7 +1147,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_humus_2_sl', mem%c_humus_2_sl,                          &
         & hgrid, soil_c,                                                          &
@@ -1156,7 +1156,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('soil_respiration_oxic_sl', mem%soil_respiration_oxic_sl,  &
         & hgrid, soil_c,                                                          &
@@ -1165,7 +1165,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('soil_respiration_anox_sl', mem%soil_respiration_anox_sl,  &
         & hgrid, soil_c,                                                          &
@@ -1174,7 +1174,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
-        & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       ! Soil level pools for vertical C separation
       ! Tile-aggregated variant
@@ -1186,7 +1186,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_water_bg1_sl_ta', mem%c_water_bg1_sl_ta,                &
         & hgrid, soil_c,                                                          &
@@ -1195,7 +1195,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_ethanol_bg1_sl_ta', mem%c_ethanol_bg1_sl_ta,            &
         & hgrid, soil_c,                                                          &
@@ -1204,7 +1204,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_nonsoluble_bg1_sl_ta', mem%c_nonsoluble_bg1_sl_ta,      &
         & hgrid, soil_c,                                                          &
@@ -1213,7 +1213,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_humus_1_sl_ta', mem%c_humus_1_sl_ta,                    &
         & hgrid, soil_c,                                                          &
@@ -1221,7 +1221,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       ! Yasso 2: Woody carbon pools
       CALL mem%Add_var('c_acid_bg2_sl_ta', mem%c_acid_bg2_sl_ta,                  &
@@ -1231,7 +1231,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_water_bg2_sl_ta', mem%c_water_bg2_sl_ta,                &
         & hgrid, soil_c,                                                          &
@@ -1240,7 +1240,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_ethanol_bg2_sl_ta', mem%c_ethanol_bg2_sl_ta,            &
         & hgrid, soil_c,                                                          &
@@ -1249,7 +1249,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_nonsoluble_bg2_sl_ta', mem%c_nonsoluble_bg2_sl_ta,      &
         & hgrid, soil_c,                                                          &
@@ -1258,7 +1258,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('c_humus_2_sl_ta', mem%c_humus_2_sl_ta,                    &
         & hgrid, soil_c,                                                          &
@@ -1266,7 +1266,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('soil_respiration_oxic_sl_ta', mem%soil_respiration_oxic_sl_ta,  &
         & hgrid, soil_c,                                                          &
@@ -1274,7 +1274,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('soil_respiration_anox_sl_ta', mem%soil_respiration_anox_sl_ta,  &
         & hgrid, soil_c,                                                          &
@@ -1282,7 +1282,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=MEDIUM,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('root_dist_sl', mem%root_dist_sl,                          &
         & hgrid, soil_c,                                                          &
@@ -1290,7 +1290,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('max_layer_sl', mem%max_layer_sl,                          &
         & hgrid, soil_c,                                                          &
@@ -1298,7 +1298,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & output_level=FULL,                                                      &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     END IF
 

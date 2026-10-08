@@ -1178,22 +1178,22 @@ CONTAINS
     LOGICAL,  INTENT(in)    ::  lstart                   !< if T, start of experiment
     LOGICAL,  INTENT(in)    ::  new_year                 !< start of new year
     LOGICAL,  INTENT(in)    ::  new_day                  !< start of new day
-    REAL(wp), INTENT(in)    ::  t_soil_sl(:,:)           !< soil temperature [K]
+    REAL(lp), INTENT(in)    ::  t_soil_sl(:,:)           !< soil temperature [K]
 
-    REAL(wp), INTENT(inout) ::  t_soil_sl_max(:,:)       !< soil temperature daily maximum [K]
-    REAL(wp), INTENT(inout) ::  t_soil_sl_min(:,:)       !< soil temperature daily minimum [K]
-    REAL(wp), INTENT(inout) ::  n_thaw_cycle(:)          !< number of freeze-thaw cycles
-    REAL(wp), INTENT(inout) ::  n_thaw_cycle_prev(:)     !< number of freeze-thaw cycles in previous year
+    REAL(lp), INTENT(inout) ::  t_soil_sl_max(:,:)       !< soil temperature daily maximum [K]
+    REAL(lp), INTENT(inout) ::  t_soil_sl_min(:,:)       !< soil temperature daily minimum [K]
+    REAL(lp), INTENT(inout) ::  n_thaw_cycle(:)          !< number of freeze-thaw cycles
+    REAL(lp), INTENT(inout) ::  n_thaw_cycle_prev(:)     !< number of freeze-thaw cycles in previous year
 
     !------------------------------------------------------------------
     !  local Variables
 
     INTEGER  :: ic, is
-    REAL(wp) :: tmin, tmax
+    REAL(lp) :: tmin, tmax
 
     IF (new_year) THEN
       IF (.NOT. lstart) n_thaw_cycle_prev(:) = n_thaw_cycle(:)
-      n_thaw_cycle(:) = 0._wp
+      n_thaw_cycle(:) = 0._lp
     END IF
 
     IF (new_day) THEN
@@ -1201,8 +1201,8 @@ CONTAINS
       DO ic = 1,nc
         tmax = MAXVAL(t_soil_sl_max(ic,:))
         tmin = MINVAL(t_soil_sl_min(ic,:))
-        IF ((tmax >= tmelt) .AND. (tmin <= tmelt) .AND. (tmax-tmin > 0.01_wp)) THEN
-          n_thaw_cycle(ic) = n_thaw_cycle(ic) + 1._wp
+        IF ((tmax >= tmelt) .AND. (tmin <= tmelt) .AND. (tmax-tmin > 0.01_lp)) THEN
+          n_thaw_cycle(ic) = n_thaw_cycle(ic) + 1._lp
         END IF
       END DO
       ! Reset temperatures for actual day

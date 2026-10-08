@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: lp
-  USE mo_exception,    ONLY: message_text, finish
+  USE mo_exception,    ONLY: message_text, finish, message
   USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
@@ -1217,14 +1217,14 @@ CONTAINS
            CALL message('init_lctlib', 'No data for BCLIMIT_MIN_SNOW found in ' &
              & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
            DO i=1,nlct
-             lctLib(i)%bclimit_min_snow = -999._wp
+             lctLib(i)%bclimit_min_snow = -999._lp
            END DO
          END IF
          IF(.NOT. exists_root_dist_beta) THEN
            CALL message('init_lctlib','No data for ROOT_DIST_BETA found in ' &
              & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
            DO i=1,nlct
-             lctLib(i)%root_dist_beta = -999._wp
+             lctLib(i)%root_dist_beta = -999._lp
            END DO
          END IF
        END IF

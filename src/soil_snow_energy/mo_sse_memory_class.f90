@@ -345,28 +345,28 @@ CONTAINS
       & hgrid, surface,                                                      &
       & t_cf('n_thaw_cycle', '', 'Number of freeze-thaw cycles'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & prefix, suffix, initval_r = 0.0_lp,                                  &
       & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
     CALL mem%Add_var( 'n_thaw_cycle_prev', mem%n_thaw_cycle_prev,            &
       & hgrid, surface,                                                      &
       & t_cf('n_thaw_cycle_prev', '', 'Number of freeze-thaw cycles in previous year'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & prefix, suffix, initval_r = 0.0_lp,                                  &
       & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
     CALL mem%Add_var( 't_soil_sl_max', mem%t_soil_sl_max,                    &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_max', 'K', 'soil temperature daily maximum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & prefix, suffix, initval_r = 0.0_lp,                                  &
       & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
     CALL mem%Add_var( 't_soil_sl_min', mem%t_soil_sl_min,                    &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_min', 'K', 'soil temperature daily minimum'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_wp,                                  &
+      & prefix, suffix, initval_r = 0.0_lp,                                  &
       & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
   END SUBROUTINE Init_sse_memory
