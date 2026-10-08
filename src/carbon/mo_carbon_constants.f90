@@ -111,6 +111,14 @@ MODULE mo_carbon_constants
     & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,              &
     & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS  /)
 
+  ! Yasso parameters (Tuomi 2011)
+  !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
+  REAL(wp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !<  ... acid-soluble fraction
+  REAL(wp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !<  ... water-soluble fraction
+  REAL(wp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !<  ... ethanol-soluble fraction
+  REAL(wp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !<  ... nonsoluble-soluble fraction
+  REAL(wp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !<  ... humus
+
   ! ------------------------------------------------------------------------------------------
   ! Parameters for vertical YASSO
   !
@@ -123,7 +131,7 @@ MODULE mo_carbon_constants
   REAL(wp), PARAMETER :: d_anox = 0.35_wp           !< decomposition modifier for anaerobic decomposition
   REAL(wp), PARAMETER :: d_oxic = 1.0_wp            !< decomposition modifier for oxic decomposition
 
-  ! Yasso parameters (Tuomi '11)
+  ! Yasso parameters (Tuomi 2011)
   ! Parameters for temperature dependence
   REAL(wp), PARAMETER   :: temp_p1     = 0.095_wp   !< first  order temperature dependence [1/C]
   REAL(wp), PARAMETER   :: temp_p2     = -0.0014_wp !< second order temperature dependence [1/C]

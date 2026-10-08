@@ -434,6 +434,10 @@ CONTAINS
       & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG,             &
       & REL_FLUX_AWEN, FLUX_FROM_HUMUS, FLUX_LITTER_2_HUMUS
     USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_carbon_constants, ONLY: ref_decomp_rate_acid, ref_decomp_rate_water,      &
+      & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble,  ref_decomp_rate_humus, &
+      & temp_p1, temp_p2, precip_p1, size_p1, size_p2, size_p3
+
     IMPLICIT NONE
 
     REAL(wp),                INTENT(in)  :: delta_time_C       !< Carbon time step [s]
@@ -460,23 +464,6 @@ CONTAINS
 
     ! Possibilities to overwrite (some of) the default exchange coefficients (AWEN2H for backward compatibility)
     REAL(wp), OPTIONAL,      INTENT(in)  :: A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H
-
-    ! Yasso parameters (Tuomi '11)
-    !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
-    REAL(wp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !<  ... acid-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !<  ... water-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !<  ... ethanol-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !<  ... nonsoluble-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !<  ... humus
-    !   parameters for temperature dependence
-    REAL(wp), PARAMETER   :: temp_p1                    =  0.095_wp   !< first  order temperature dependence [K-1]
-    REAL(wp), PARAMETER   :: temp_p2                    = -0.0014_wp  !< second order temperature dependence [K-1]
-    !   parameter for precipitation dependence
-    REAL(wp), PARAMETER   :: precip_p1                  = -1.21_wp    !< first  order precipitation dependence [yr m-1]
-    !   parameters for size dependence
-    REAL(wp), PARAMETER   :: size_p1                    = -1.71_wp    !< first  order size dependence [cm-1]
-    REAL(wp), PARAMETER   :: size_p2                    =  0.86_wp    !< second order size dependence [cm-1]
-    REAL(wp), PARAMETER   :: size_p3                    = -0.306_wp   !< size dependence power [ ]
 
     ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
     ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,

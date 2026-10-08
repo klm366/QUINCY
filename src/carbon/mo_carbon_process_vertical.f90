@@ -466,8 +466,9 @@ CONTAINS
     &                      Y_out_pools, Y_out_fluxes)
 
     USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
-      &                            F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP,           &
-      &                            M_LITTER, M_HUMUS, sec_per_year
+      &  F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP, ref_decomp_rate_acid,               &
+      &  ref_decomp_rate_water, ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble,  &
+      &  ref_decomp_rate_humus, M_LITTER, M_HUMUS, sec_per_year
 
     REAL(wp), INTENT(in)                 :: delta_time_C     !< Carbon time step [s]
     REAL(wp), DIMENSION(5),  INTENT(in)  :: Y_in_pools       !< Yasso pools IN [mol(c)/m2]
@@ -539,14 +540,6 @@ CONTAINS
     ! Alternative pathway for N pool which enters the humus pool [ ]
     REAL(wp)   :: N_2_H
     REAL(wp)   :: AWE_2_H
-
-    ! Yasso parameters (Tuomi '11)
-    !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
-    REAL(wp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_wp    !<  ... acid-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_water      = -5.9_wp     !<  ... water-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_wp    !<  ... ethanol-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_wp   !<  ... nonsoluble-soluble fraction
-    REAL(wp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_wp  !<  ... humus
 
     ! time stepping; the parameterization of yasso is done on a annual time
     ! step, thus the fluxes have to be scaled up to annual rates.
@@ -712,9 +705,12 @@ CONTAINS
     root_dist(:) = 0._wp
     root_dist_cum(:) = 0._wp
 
+    ! Determine which soil layers belong to the active layer depth limited by either permafrost
+    ! diagnostics or temperatures below zero.
     DO is = 1, nsoil
-      IF ((nsoil_p == nsoil) .AND. ((permafrost_period_sl(is) > permafrost_threshold) .OR. (t_soil_sl(is) < tmelt))) THEN
+      IF ((permafrost_period_sl(is) > permafrost_threshold) .OR. (t_soil_sl(is) < tmelt)) THEN
         nsoil_p = MAX(is-1, 1)
+        EXIT
       END IF
     END DO
 
@@ -729,6 +725,7 @@ CONTAINS
       END DO
     END IF
 
+    ! No root distribution is computed for permafrost affected soil layers
     DO is = 1, nsoil
       IF (permafrost_period_sl(is) > permafrost_threshold) THEN
         root_dist(is) = 0._wp
@@ -1053,6 +1050,12 @@ CONTAINS
   END SUBROUTINE vertical_C_transport
 
   ! ---------------------------------------------------------------------------------------------------------
+  !>
+  !> Computes the diffusivity for the vertical carbon transport through the soil column. Permafrost
+  !> regions are dominated by cryoturbation and the diffusivity computation is limited to the
+  !> active layer depth. In regions not affected by permafrost, the vertical transport is
+  !> facilitated by bioturbation.
+  !>
   SUBROUTINE set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
     &                        wtr_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
     USE mo_jsb_physical_constants, ONLY: tmelt
