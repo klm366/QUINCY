@@ -14,7 +14,7 @@
 MODULE mo_carbon_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -139,7 +139,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     !INTEGER :: icarbon
-    REAL(wp), POINTER ::          &
+    REAL(lp), POINTER ::          &
       & return_pointer  (:,  :) , &  !< temporary pointer just used to "call" the reading
       & return_pointer3d(:,:,:) , &  !< temporary 3D pointer just used to "call" the reading
       & memory_pointer  (:,  :) , &  !< pointer the memory of the current variable of the current tile
@@ -250,7 +250,7 @@ CONTAINS
           & variable_name = invar_name,              &
           & fill_array = memory_pointer )
 
-        memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+        memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
 
         !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
       END DO
@@ -321,14 +321,14 @@ CONTAINS
             & variable_name = invar_name,              &
             & fill_array = memory_pointer )
           memory_pointer(:,:) = &
-            & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+            & MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
         ELSE
           __acc_attach(memory_pointer3d)
           DO is=1,nsoil
             return_pointer3d => input_file%Read_2d_extdim( &
               & variable_name = invar_name,     &
               & start_extdim = is, end_extdim = is, extdim_name='soillev')
-            memory_pointer3d(:,is,:) = MERGE(return_pointer3d(:,:,1), 0._wp, return_pointer3d(:,:,1) >= 0._wp)
+            memory_pointer3d(:,is,:) = MERGE(return_pointer3d(:,:,1), 0._lp, return_pointer3d(:,:,1) >= 0._lp)
           END DO
         END IF
 

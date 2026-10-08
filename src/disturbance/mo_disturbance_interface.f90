@@ -22,7 +22,7 @@ MODULE mo_disturb_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -177,7 +177,7 @@ CONTAINS
     ! Locally allocated vectors
     !
 
-    REAL(wp) :: fire_minimum, fire_tau
+    REAL(lp) :: fire_minimum, fire_tau
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -234,8 +234,8 @@ CONTAINS
       ! Initialization (on all tiles)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
-        burned_fract(ic) = 0._wp
-        damaged_fract(ic) = 0._wp
+        burned_fract(ic) = 0._lp
+        damaged_fract(ic) = 0._lp
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -303,9 +303,9 @@ CONTAINS
     IF (tile%Has_process_memory(CARBON_) .AND. newday) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic = 1, nc
-        co2flux_fire_all_2_atm(ic) = 0._wp
-        cflux_dist_green_2_soil(ic) = 0._wp
-        cflux_dist_woods_2_soil(ic) = 0._wp
+        co2flux_fire_all_2_atm(ic) = 0._lp
+        cflux_dist_green_2_soil(ic) = 0._lp
+        cflux_dist_woods_2_soil(ic) = 0._lp
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -376,9 +376,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum_ta, cflux
-    REAL(wp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
-    REAL(wp)                                  :: delta_time_C    !< Carbon time step [s]
+    REAL(lp), DIMENSION(options%nc)           :: old_c_state_sum_ta, cflux
+    REAL(lp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
+    REAL(lp)                                  :: delta_time_C    !< Carbon time step [s]
 
     INTEGER :: iblk, ics, ice, ic, nc
 
@@ -664,10 +664,10 @@ CONTAINS
 
               END IF
               ! Check conservation of carbon windthrow carbon relocations
-              ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._wp
+              ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._lp
               !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
               DO ic = 1, nc
-                cflux(ic) = 0._wp
+                cflux(ic) = 0._lp
               END DO
               !$ACC END PARALLEL LOOP
               dsl4jsb_Get_var2D_onChunk(DISTURB_,   cconservation_wind)
@@ -684,7 +684,7 @@ CONTAINS
 
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
           DO ic = 1, nc
-            co2flux_fire_all_2_atm(ic) = 0._wp
+            co2flux_fire_all_2_atm(ic) = 0._lp
           END DO
           !$ACC END PARALLEL LOOP
 

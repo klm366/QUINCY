@@ -26,7 +26,7 @@ MODULE mo_carbon_config_class
 
   USE mo_exception,         ONLY: message, message_text
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ MODULE mo_carbon_config_class
                                    !< required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
     LOGICAL  :: vertical_yasso     !< T: Below ground carbon calculated on vertical grid (soil layers)
     LOGICAL  :: remove_permafrost_carbon !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
-    REAL(wp) :: fire_fract_wood_2_atmos !< Fraction of wood carbon emitted to the atm by fire.
+    REAL(lp) :: fire_fract_wood_2_atmos !< Fraction of wood carbon emitted to the atm by fire.
 
    CONTAINS
      PROCEDURE :: Init => Init_carbon_config
@@ -103,7 +103,7 @@ CONTAINS
                                      !< required for analytical humus pool equilibration (compare jsb3.2 svn rev 9934)
       & vertical_yasso,            & !< T: Below ground carbon calculated on vertical grid (soil layers)
       & remove_permafrost_carbon     !< T: Remove carbon from permafrost affected soil layers at simulation (re)start
-    REAL(wp) ::                    &
+    REAL(lp) ::                    &
       & fire_fract_wood_2_atmos      !< Fraction of wood carbon emitted to the atm by fire.
 
     NAMELIST /jsb_carbon_nml/      &

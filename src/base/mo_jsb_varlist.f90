@@ -14,7 +14,7 @@
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d, REAL2D, REAL3D
@@ -84,7 +84,7 @@ CONTAINS
 
     CHARACTER(len=*),     INTENT(in)           :: varlist_name
     CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
-    REAL(wp),             POINTER              :: ptr(:,:)            ! reference to field
+    REAL(lp),             POINTER              :: ptr(:,:)            ! reference to field
     TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
     TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
     TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
@@ -96,21 +96,21 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
+    REAL(lp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
     INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
+    REAL(lp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
     LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(wp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
+    REAL(lp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
-!!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+!!$    REAL(lp), POINTER :: ptr(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
     TYPE(t_grib2_var) :: grib2_loc
     LOGICAL           :: lmiss_loc
-    REAL(wp)          :: missval_r_loc
+    REAL(lp)          :: missval_r_loc
     INTEGER           :: ldims(2), gdims(2)
     INTEGER           :: n_groups
     CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     ! groups to which this variable belongs to

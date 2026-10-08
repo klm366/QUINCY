@@ -28,7 +28,7 @@ MODULE mo_assimi_interface
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start, get_previous_year_length
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
@@ -256,11 +256,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     TYPE(t_jsb_grid),  POINTER   :: grid
     INTEGER                      :: iblk, ics, ice, nc, ic
-    REAL(wp),          POINTER   :: lat(:)
-    REAL(wp)                     :: declination ! Solar Declination angle
+    REAL(lp),          POINTER   :: lat(:)
+    REAL(lp)                     :: declination ! Solar Declination angle
     INTEGER                      :: i
     INTEGER                      :: ncanopy          ! number of canopy layers
-    REAL(wp),          POINTER   :: canopy_bound_lai(:)
+    REAL(lp),          POINTER   :: canopy_bound_lai(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':assimilation_scaling_factors'
 
@@ -328,7 +328,7 @@ CONTAINS
       DO i=1,ncanopy
         !$ACC LOOP GANG VECTOR
         DO ic=1,nc
-          scaling_fact_cl(ic,i) = 1._wp
+          scaling_fact_cl(ic,i) = 1._lp
         END DO
       END DO
       !$ACC END PARALLEL
@@ -400,7 +400,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
-    !REAL(wp)                                  :: dtime
+    !REAL(lp)                                  :: dtime
     INTEGER                                   :: iblk, ics, ice, nc, ic
     INTEGER                                   :: icanopy
 
@@ -416,7 +416,7 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     INTEGER :: ncanopy              ! number of canopy layers
-    REAL(wp) :: &
+    REAL(lp) :: &
       & CarboxRate, &
       & ETransport
     LOGICAL :: C4Flag
@@ -475,7 +475,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = 0._wp
+      canopy_cond_unlimited(ic) = 0._lp
     END DO
 
     !$ACC LOOP SEQ
@@ -501,7 +501,7 @@ CONTAINS
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      canopy_cond_unlimited(ic) = MAX(1.e-20_wp, canopy_cond_unlimited(ic))
+      canopy_cond_unlimited(ic) = MAX(1.e-20_lp, canopy_cond_unlimited(ic))
     END DO
     !$ACC END PARALLEL
 
@@ -594,7 +594,7 @@ CONTAINS
 
     INTEGER :: iblk, ics, ice, nc, ic
     INTEGER :: icanopy, ncanopy
-    REAL(wp) :: ratio_lim_over_unlim(options%nc)
+    REAL(lp) :: ratio_lim_over_unlim(options%nc)
     LOGICAL :: q_air_gt_qsat_tmp
     LOGICAL :: use_tmx
 
@@ -732,7 +732,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice, nc, ic
-    REAL(wp)                   :: dtime
+    REAL(lp)                   :: dtime
     INTEGER                    :: icanopy
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_assimilation'
@@ -860,8 +860,8 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      gross_assimilation_ca(ic) = 0._wp
-      dark_respiration_ca(ic) = 0._wp
+      gross_assimilation_ca(ic) = 0._lp
+      dark_respiration_ca(ic) = 0._lp
     END DO
 
     !$ACC LOOP SEQ
@@ -974,8 +974,8 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice !, nc
-    REAL(wp)                   :: seconds_year   ! Number of seconds in previous year
-    REAL(wp)                   :: dtime
+    REAL(lp)                   :: seconds_year   ! Number of seconds in previous year
+    REAL(lp)                   :: dtime
     LOGICAL                    :: lstart, init_running_means, new_year
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_npp_buffer'
@@ -1042,7 +1042,7 @@ CONTAINS
                      seconds_year, NPP_sum_year, NPP_mean_5year)
 
     ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
-    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), wp)
+    land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass), lp)
     bclimit_min_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp)
     bclimit_max_cold_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp)
     bclimit_max_warm_mmtemp(:) = dsl4jsb_Lctlib_param(bclimit_max_warm_mmtemp)

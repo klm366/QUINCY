@@ -26,7 +26,7 @@
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -104,14 +104,14 @@ CONTAINS
     !X    & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
     !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
+    !X    & initval_r=280.0_lp )
 
     !X  CALL mem%Add_var( 't_old', mem%t_old,                                            &
     !X    & hgrid, surface,                                                              &
     !X    & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
     !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
+    !X    & initval_r=280.0_lp )
 
     ! Additional variables for LAND lct
     !X add your LAND-lct variables here e.g:
@@ -122,14 +122,14 @@ CONTAINS
     !X    & t_cf('sfc_dry_static_energy', 'm2 s-2', 'surface dry static energy'),              &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
     !X    & prefix, suffix,                                                                    &
-    !X    & initval_r=2.9E5_wp )
+    !X    & initval_r=2.9E5_lp )
 
     !X  CALL mem%Add_var( 'qsat_sfc', mem%qsat_star,                                           &
     !X    & hgrid, surface,                                                                    &
     !X    & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
     !X    & prefix, suffix,                                                                    &
-    !X    & initval_r=0.0075_wp )
+    !X    & initval_r=0.0075_lp )
 
     !X END IF
 
@@ -142,7 +142,7 @@ CONTAINS
     !X    & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
     !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
+    !X    & initval_r=280.0_lp )
 
     !X  CALL mem%Add_var( 't_ice', mem%t_ice,                                            &
     !X    & hgrid, surface,                                                              &

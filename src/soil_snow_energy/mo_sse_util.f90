@@ -19,7 +19,7 @@
 MODULE mo_sse_util
 #ifndef __NO_JSBACH__
 
-  !USE mo_kind,      ONLY: wp
+  !USE mo_kind,      ONLY: lp
   !USE mo_exception, ONLY: finish
 
   IMPLICIT NONE

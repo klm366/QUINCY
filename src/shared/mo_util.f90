@@ -16,7 +16,7 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
   USE mo_util_string,     ONLY: toupper, tolower, int2string, real2string, logical2string, separator, one_of_str => one_of
   USE mo_math_utilities,  ONLY: tdma_solver_vec ! TODO from ICON, mo_math_utilities should be replaced once
@@ -83,20 +83,20 @@ CONTAINS
   !>
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
-    REAL(wp), INTENT(in) :: depth(:,:)             !< The bedrock or active layer depth [m]
-    REAL(wp), INTENT(in) :: dz(:)                  !< Vertical dimension
-    REAL(wp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2)) !< Actual soil layer depth
+    REAL(lp), INTENT(in) :: depth(:,:)             !< The bedrock or active layer depth [m]
+    REAL(lp), INTENT(in) :: dz(:)                  !< Vertical dimension
+    REAL(lp)             :: depth_l(SIZE(depth,1), SIZE(dz), SIZE(depth,2)) !< Actual soil layer depth
 
-    REAL(wp) :: bottom, bottom_m1  !< Helper variables
+    REAL(lp) :: bottom, bottom_m1  !< Helper variables
     INTEGER  :: nsoil, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
 
-    depth_l(:,:,:) = 0._wp  ! Init
-    bottom = 0._wp
-    bottom_m1 = 0._wp
+    depth_l(:,:,:) = 0._lp  ! Init
+    bottom = 0._lp
+    bottom_m1 = 0._lp
     DO i=1,nsoil            ! From top layer to lowest layer
       bottom = bottom + dz(i)
       WHERE (depth(:,:) >= bottom)             ! When the depth is larger than the soil layer: i
@@ -115,18 +115,18 @@ CONTAINS
   !>
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
-    REAL(wp), INTENT(in) :: &
+    REAL(lp), INTENT(in) :: &
       & ifs_3d (:,:,:),     &
       & ifs_depth(:),       &           !< Depth in ifs model
       & soil_depth(:)                   !< soil depth in ICON-Land
-    REAL(wp), OPTIONAL, INTENT(in) :: &
+    REAL(lp), OPTIONAL, INTENT(in) :: &
       & ifs_sfc(:,:)
 
-    REAL(wp), INTENT(out) :: &
+    REAL(lp), INTENT(out) :: &
       & soil_3d(:,:,:)
 
-    REAL(wp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
-    REAL(wp) :: zwt, zwt_sum
+    REAL(lp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
+    REAL(lp) :: zwt, zwt_sum
     INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out, ik1
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':ifs2soil'
@@ -135,9 +135,9 @@ CONTAINS
     nsoil_out = SIZE(soil_depth)
 
     zsoil(1:nsoil_out) = soil_depth(:)
-    zsoil(0)           = 0._wp
+    zsoil(0)           = 0._lp
     zifs(1:nsoil_in) = ifs_depth(:)
-    zifs(0)          = 0._wp
+    zifs(0)          = 0._lp
     zifs(nsoil_in+1) = soil_depth(nsoil_out)
     ifs(:,1:nsoil_in,:) = ifs_3d(:,:,:)
     IF (PRESENT(ifs_sfc)) THEN
@@ -147,7 +147,7 @@ CONTAINS
     END IF
     ifs(:,nsoil_in+1,:) = ifs_3d(:,nsoil_in,:)
 
-    soil_3d(:,:,:) = 0._wp
+    soil_3d(:,:,:) = 0._lp
 
     IF (PRESENT(ifs_sfc)) THEN
       soil_3d(:,1,:) = ifs_sfc(:,:)
@@ -156,16 +156,16 @@ CONTAINS
       ik1 = 1
     END IF
     DO isoil_out = ik1, nsoil_out
-      zwt_sum        = 0._wp
+      zwt_sum        = 0._lp
       DO isoil_in = 1,nsoil_in+1
         IF (zifs(isoil_in) <= zsoil(isoil_out-1)) THEN
           ! Do nothing
-          zwt = 0._wp
+          zwt = 0._lp
         ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out)) THEN
           ! Do nothing
-          zwt = 0._wp
+          zwt = 0._lp
         ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
-          zwt = 1._wp
+          zwt = 1._lp
           zwt_sum = zwt_sum + zwt
           soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
         ELSE IF (zifs(isoil_in) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
@@ -179,7 +179,7 @@ CONTAINS
         END IF
         ! print*, 'AAA isoil_out, isoil_in, zwt, zwt_sum', isoil_out, isoil_in, zwt, zwt_sum
       END DO
-      IF (zwt_sum < EPSILON(1._wp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
+      IF (zwt_sum < EPSILON(1._lp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
       soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) / zwt_sum
     END DO
 
@@ -199,19 +199,19 @@ CONTAINS
     & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
     & parameter_from_texture)
 
-    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
-    REAL(wp), INTENT(in)  ::                                      &
+    REAL(lp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(lp), INTENT(in)  ::                                      &
       fraction_sand, fraction_silt, fraction_clay,                &
       fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
-    REAL(wp), INTENT(out)  ::  parameter_from_texture
+    REAL(lp), INTENT(out)  ::  parameter_from_texture
 
     ! Compute texture based soil parameter
     parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
-      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      * 0.5_lp * parameter_sand) +                  &
       &                      ((fraction_silt + fraction_silt_deep)         &
-      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      * 0.5_lp * parameter_silt) +                  &
       &                      ((fraction_clay + fraction_clay_deep)         &
-      &                      * 0.5_wp * parameter_clay)
+      &                      * 0.5_lp * parameter_clay)
 
     ! Ensure the parameter is within the correct bounds
     parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
@@ -235,17 +235,17 @@ CONTAINS
     TYPE(t_input_file)           :: input_file     !< File containing input data to be read
     CHARACTER(len=*), INTENT(IN) :: varname        !< Name of the variable to read
     CHARACTER(len=*), INTENT(IN) :: tilename       !< Name of the actual tile to read the variable for
-    REAL(wp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
+    REAL(lp), INTENT(INOUT), TARGET :: datafield(:,:) !< Data field to be filled with boundary condition data
 
     LOGICAL,  INTENT(IN), OPTIONAL :: l_organic    !< T: read the '_mineral' version of the variable
-    REAL(wp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
-    REAL(wp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
-    REAL(wp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
-    REAL(wp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if a variable is not found
+    REAL(lp), INTENT(IN), OPTIONAL :: default      !< Default value for missing data
+    REAL(lp), INTENT(IN), OPTIONAL :: llimit       !< Set lower bound for the variable to read
+    REAL(lp), INTENT(IN), OPTIONAL :: ulimit       !< Set Upper bound for the variable to read
+    REAL(lp), INTENT(IN), OPTIONAL :: fallback     !< Fallback value to be used globally if a variable is not found
     INTEGER,  INTENT(IN), OPTIONAL :: ilay         !< Layer index for multi-layer variables
     CHARACTER(len=*), INTENT(IN), OPTIONAL :: layer_name !< Name of the vertical layer
 
-    REAL(wp), POINTER            :: &
+    REAL(lp), POINTER            :: &
       & ptr_2D(:,:),                &              !< Pointer to 2d variable
       & ptr_3D(:,:,:)                              !< Pointer to 3d variable
     LOGICAL :: read_from_file                      !< T: read data from file, F: use fallback value or fail
@@ -302,7 +302,7 @@ CONTAINS
       END IF
       IF (PRESENT(default)) THEN
         ! Set missing values to a default value
-        datafield(:,:) = MERGE(datafield(:,:), default, ABS(datafield(:,:) - missval) > 1.0E-10_wp)
+        datafield(:,:) = MERGE(datafield(:,:), default, ABS(datafield(:,:) - missval) > 1.0E-10_lp)
       END IF
       IF (PRESENT(llimit)) THEN
         ! If a lower limit is given, set all values < llimit to the lower limit.
@@ -399,13 +399,13 @@ CONTAINS
 
     USE mo_sync,                    ONLY: global_sum_array
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
-    REAL(wp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
-    REAL(wp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
-    REAL(wp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
+    REAL(lp),          INTENT(out) :: scaled_global_sum(:) !< Scaled variable
+    REAL(lp),          INTENT(in)  :: var(:,:)             !< Variable that should be scaled and summed up
+    REAL(lp),          INTENT(in)  :: scaling_2D(:,:)      !< 2D scaling factor
+    REAL(lp),          INTENT(in)  :: scaling_factor       !< Additional scaling factor
     INTEGER,           INTENT(in)  :: acc_stream           !< ACC stream - passed to avoid cyclic dependencies
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
+    REAL(lp) :: scaled_variable(SIZE(scaling_2D,1), SIZE(scaling_2D,2))
     INTEGER  :: blk, jc, nblks, nproma
     ! ----------------------------------------------------------------------------------------------------- !
     nblks  = SIZE(scaling_2D,2)
@@ -437,10 +437,10 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_input_file),      INTENT(INOUT) :: input_file !< File to read passed var from
-    REAL(wp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< Var pointer
+    REAL(lp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< Var pointer
     CHARACTER(*),            INTENT(IN)    :: var_name   !< Name of the variable in the file
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), POINTER :: return_2D(:,:)   !< Temporary pointer used to "call" the netcdf reading routine
+    REAL(lp), POINTER :: return_2D(:,:)   !< Temporary pointer used to "call" the netcdf reading routine
     ! ----------------------------------------------------------------------------------------------------- !
 
     return_2D => input_file%Read_2d(variable_name = var_name)
@@ -457,13 +457,13 @@ CONTAINS
     USE mo_jsb_io_netcdf,           ONLY: t_input_file
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_input_file),      INTENT(INOUT) :: input_file   !< File to read passed var from
-    REAL(wp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< Var pointer
+    REAL(lp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< Var pointer
     CHARACTER(*),            INTENT(IN)    :: var_name     !< Name of the variable in the file
     CHARACTER(*),            INTENT(IN)    :: name_extdim  !< Name of the variable in the file
     INTEGER,                 INTENT(IN)    :: size_extdim  !< Size of additional dim
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER           :: i_dim3            !< Third dim index
-    REAL(wp), POINTER :: return_3D(:,:, :) !< Temporary pointer used to "call" the netcdf reading routine
+    REAL(lp), POINTER :: return_3D(:,:, :) !< Temporary pointer used to "call" the netcdf reading routine
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO i_dim3 = 1,size_extdim
