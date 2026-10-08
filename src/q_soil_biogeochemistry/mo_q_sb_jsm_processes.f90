@@ -1903,7 +1903,7 @@ CONTAINS
   !>
   SUBROUTINE calc_Psorption_parameter( &
     & flag_sb_double_langmuir, &
-    & clay_sl, silt_sl, soil_water, soil_ph_sl, &
+    & clay_sl, silt_sl, soil_water, ph_sl, &
     & bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
     & bulk_dens_sl, volume_min_sl, po4_solute, &
     & qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &             ! inout
@@ -1918,7 +1918,7 @@ CONTAINS
     REAL(lp),     INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]
     REAL(lp),     INTENT(in)    :: silt_sl                      !< silt content of soil layer [-]
     REAL(lp),     INTENT(in)    :: soil_water                   !< soil water content of soil layer [L/m3]
-    REAL(lp),     INTENT(in)    :: soil_ph_sl                   !< ph of soil layer [-]
+    REAL(lp),     INTENT(in)    :: ph_sl                        !< ph of soil layer [-]
     REAL(lp),     INTENT(in)    :: bulk_soil_carbon_sl          !< bulk soil carbon content of soil layer [mol C/m3]
     REAL(lp),     INTENT(in)    :: soil_litter_carbon_sl        !< soil litter carbon content of soil layer [mol C/m3]
     REAL(lp),     INTENT(in)    :: woody_litter_carbon_sl       !< woody litter carbon content of soil layer [mol C/m3]
@@ -1978,22 +1978,22 @@ CONTAINS
       !>  1.2 calculate km based on soil texture
       !>
       ! km for the OM-Fe/Al pool, fast pool
-      hlp2 = qmax_fast_po4 - hlp1                          ! qmax for non-adsorbed Fe/Al [mol P/m3]
-      hlp3 = km_po4_ph * soil_ph_sl * km_adsorpt_clay_po4  ! km for Fe/Al, mol P/m3
-      hlp4 = km_po4_ph * soil_ph_sl * km_adsorpt_OM_po4    ! km for OM, mol P/m3
+      hlp2 = qmax_fast_po4 - hlp1                        ! qmax for non-adsorbed Fe/Al [mol P/m3]
+      hlp3 = km_po4_ph * ph_sl * km_adsorpt_clay_po4     ! km for Fe/Al, mol P/m3
+      hlp4 = km_po4_ph * ph_sl * km_adsorpt_OM_po4       ! km for OM, mol P/m3
       km_fast_po4 = calc_km_qmax_correction(po4_solute, hlp1, hlp2, hlp3, hlp4, w_soil=soil_water)
       ! km for the clay-silt-sand pool, slow pool
       IF (qmax_slow_po4 < eps8) THEN
         qmax_slow_po4 = 0._lp
-        hlp3        = km_po4_ph * soil_ph_sl * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
-        hlp4        = km_po4_ph * soil_ph_sl * km_adsorpt_sand_po4    ! km for sand [mol P/L]
+        hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
+        hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4    ! km for sand [mol P/L]
         km_slow_po4 = MAX(hlp3, hlp4)
       ELSE
         hlp1        = qmax_slow_po4 * MIN(calc_qmax_texture(qmax_po4_silt, clay_sl, silt_sl) * &
           & Qmax_AlFe_cor / qmax_po4_min_sl, (1._lp - min_fraction_default_sb)) ! qmax for clay/silt
         hlp2        = qmax_slow_po4 - hlp1                                      ! qmax for sand
-        hlp3        = km_po4_ph * soil_ph_sl * km_adsorpt_silt_po4              ! km for clay/silt [mol P/L]
-        hlp4        = km_po4_ph * soil_ph_sl * km_adsorpt_sand_po4              ! km for sand [mol P/L]
+        hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4                   ! km for clay/silt [mol P/L]
+        hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4                   ! km for sand [mol P/L]
         km_slow_po4 = calc_km_qmax_correction(po4_solute, hlp1, hlp2, hlp3, hlp4, w_soil=soil_water)
       END IF
       ! km for the whole soil layer

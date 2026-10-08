@@ -326,7 +326,7 @@ MODULE mo_sb_memory_class
     !>3D soil properties
     !>
     TYPE(t_jsb_var_real3d)  :: &
-      & soil_ph_sl, &              !< pH per soil layer [unitless]
+      & ph_sl, &                   !< pH per soil layer [unitless]
       & vmax_weath_mineral_sl, &   !< weathering coefficient of mineral soil [mol P m-3 s-1]
       & Qmax_AlFe_cor, &           !< correction factor for phosphate Qmax due to the unknown Al/Fe [unitless]
       & enzyme_frac_poly, &        !< fraction of depolymerisation enzyme which depolymerises poly litter [unitless]
@@ -3066,9 +3066,9 @@ CONTAINS
           & l_aggregate_all = .TRUE.)
       END IF
 
-      CALL mem%Add_var('soil_ph_sl', mem%soil_ph_sl, &
+      CALL mem%Add_var('ph_sl', mem%ph_sl, &
         & hgrid, vgrid_soil_w, &
-        & t_cf('soil_ph_sl', unitless, 'pH per soil layer'), &
+        & t_cf('ph_sl', unitless, 'pH per soil layer'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

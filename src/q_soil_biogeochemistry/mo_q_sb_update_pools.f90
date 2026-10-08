@@ -320,7 +320,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
     dsl4jsb_Real3D_onChunk :: dom_cn
     dsl4jsb_Real3D_onChunk :: dom_cp
-    dsl4jsb_Real3D_onChunk :: soil_ph_sl
+    dsl4jsb_Real3D_onChunk :: ph_sl
     dsl4jsb_Real3D_onChunk :: Qmax_AlFe_cor
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
@@ -608,8 +608,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       km_adsorpt_nh4_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn)                      ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp)                      ! inout
-    dsl4jsb_Get_var3D_onChunk(SB_,       soil_ph_sl)                  ! in
-    dsl4jsb_Get_var3D_onChunk(SB_,       Qmax_AlFe_cor)               ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       ph_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_,       Qmax_AlFe_cor)
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       soil_litter_carbon_sl)       ! inout
@@ -897,18 +897,18 @@ CONTAINS
     DO ic = 1,nc
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
         CALL calc_Psorption_parameter( &
-          & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &  ! in
+          & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
           & clay_sl(ic, isoil), &
           & silt_sl(ic, isoil), &
           & rmm_sorption(ic, isoil) * 1000._lp, &
-          & soil_ph_sl(ic, isoil), &
+          & ph_sl(ic, isoil), &
           & bulk_soil_carbon_sl(ic, isoil), &
           & soil_litter_carbon_sl(ic, isoil), &
           & sb_pool_mt(ix_woody_litter,ixC,ic, isoil), &
           & bulk_dens_sl(ic, isoil), &
           & volume_min_sl(ic, isoil), &
-          & po4_solute(ic, isoil), &                        ! in
-          & qmax_po4_min_sl(ic, isoil), &                   ! inout
+          & po4_solute(ic, isoil), &
+          & qmax_po4_min_sl(ic, isoil), &
           & qmax_po4_om_sl(ic, isoil), &
           & qmax_po4(ic, isoil), &
           & km_adsorpt_po4_sl(ic, isoil), &
@@ -916,7 +916,7 @@ CONTAINS
           & qmax_slow_po4(ic, isoil), &
           & km_fast_po4(ic, isoil), &
           & km_slow_po4(ic, isoil), &
-          & Qmax_AlFe_cor(ic, isoil))                       ! inout
+          & Qmax_AlFe_cor(ic, isoil))
       ENDDO
     ENDDO
     !! nh4

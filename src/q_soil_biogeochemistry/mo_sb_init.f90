@@ -189,7 +189,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: po4_assoc_fast
     dsl4jsb_Real3D_onDomain :: po4_assoc_slow
     dsl4jsb_Real3D_onDomain :: po4_occluded
-    dsl4jsb_Real3D_onDomain :: soil_ph_sl
+    dsl4jsb_Real3D_onDomain :: ph_sl
     dsl4jsb_Real3D_onDomain :: Qmax_AlFe_cor
     dsl4jsb_Real3D_onDomain :: po4_primary
     dsl4jsb_Real3D_onDomain :: microbial_cue_eff_tmic_mavg
@@ -271,7 +271,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    po4_assoc_fast)
     dsl4jsb_Get_var3D_onDomain(SB_,    po4_assoc_slow)
     dsl4jsb_Get_var3D_onDomain(SB_,    po4_occluded)
-    dsl4jsb_Get_var3D_onDomain(SB_,    soil_ph_sl)
+    dsl4jsb_Get_var3D_onDomain(SB_,    ph_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    Qmax_AlFe_cor)
     dsl4jsb_Get_var3D_onDomain(SB_,    po4_primary)
     dsl4jsb_Get_var3D_onDomain(SB_,    microbial_cue_eff_tmic_mavg)
@@ -410,7 +410,7 @@ CONTAINS
 
     !>  1.2 init site-specific soil properties
     !>
-    soil_ph_sl(:,:,:)         = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_w)
+    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_w)
     Qmax_AlFe_cor(:,:,:)      = 1._lp                           !< ... docu ...
 
     !>  1.3 init SB_ variables from constants
@@ -455,7 +455,7 @@ CONTAINS
         & silt_sl(:,:,:), &
         & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
-        & soil_ph_sl(:,:,:), &                        ! inout
+        & ph_sl(:,:,:), &                             ! inout
         & bulk_soil_carbon_sl(:,:,:), &
         & soil_litter_carbon_sl(:,:,:), &
         & po4_solute(:,:,:), &
@@ -515,7 +515,7 @@ CONTAINS
         & silt_sl(:,:,:), &
         & vol_porosity_sl(:,:,:), &
         & bulk_dens_sl(:,:,:), &                      ! in
-        & soil_ph_sl(:,:,:), &                        ! inout
+        & ph_sl(:,:,:), &                             ! inout
         & qmax_po4_min_sl(:,:,:), &
         & qmax_po4_om_sl(:,:,:), &
         & volume_min_sl(:,:,:), &
@@ -579,7 +579,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(soil_litter_carbon_sl(:,:,:), bulk_dens_corr_sl(:,:,:), qmax_org(:,:,:), qmax_po4(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(qmax_nh4(:,:,:), qmax_fast_po4(:,:,:), qmax_slow_po4(:,:,:), km_fast_po4(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(km_slow_po4(:,:,:), km_adsorpt_po4_sl(:,:,:), km_adsorpt_nh4_sl(:,:,:), k_bioturb(:,:,:)) ASYNC(1)
-    !$ACC UPDATE DEVICE(po4_assoc_fast(:,:,:), po4_assoc_slow(:,:,:), po4_occluded(:,:,:), soil_ph_sl(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(po4_assoc_fast(:,:,:), po4_assoc_slow(:,:,:), po4_occluded(:,:,:), ph_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(Qmax_AlFe_cor(:,:,:), po4_primary(:,:,:), microbial_cue_eff_tmic_mavg(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(microbial_nue_eff_tmic_mavg(:,:,:), microbial_pue_eff_tmic_mavg(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(vmax_weath_mineral_sl(:,:,:), enzyme_frac_poly(:,:,:), enzyme_frac_residue(:,:,:)) ASYNC(1)
@@ -754,7 +754,7 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
 
 
     !> USDA taxonomy soil class
@@ -851,7 +851,7 @@ CONTAINS
     & silt_sl, &
     & vol_porosity_sl, &
     & bulk_dens_sl, &
-    & soil_ph_sl, &
+    & ph_sl, &
     & bulk_soil_carbon_sl, &
     & soil_litter_carbon_sl, &
     & po4_solute, &
@@ -927,7 +927,7 @@ CONTAINS
     REAL(lp),                   INTENT(in)    :: silt_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
-    REAL(lp),                   INTENT(inout) :: soil_ph_sl(:,:,:)
+    REAL(lp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: bulk_soil_carbon_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: soil_litter_carbon_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: po4_solute(:,:,:)
@@ -1107,7 +1107,7 @@ CONTAINS
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
             & vol_porosity_sl(ic, is, iblk) * 1000._lp, &
-            & soil_ph_sl(ic, is, iblk), &
+            & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
             & sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk), &
@@ -1291,7 +1291,7 @@ CONTAINS
     & silt_sl, &
     & vol_porosity_sl, &
     & bulk_dens_sl, &
-    & soil_ph_sl, &
+    & ph_sl, &
     & qmax_po4_min_sl, &
     & qmax_po4_om_sl, &
     & volume_min_sl, &
@@ -1364,7 +1364,7 @@ CONTAINS
     REAL(lp),                   INTENT(in)    :: silt_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: vol_porosity_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: bulk_dens_sl(:,:,:)
-    REAL(lp),                   INTENT(inout) :: soil_ph_sl(:,:,:)
+    REAL(lp),                   INTENT(inout) :: ph_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: qmax_po4_min_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: qmax_po4_om_sl(:,:,:)
     REAL(lp),                   INTENT(inout) :: volume_min_sl(:,:,:)
@@ -1668,7 +1668,7 @@ CONTAINS
             & clay_sl(ic, is, iblk), &
             & silt_sl(ic, is, iblk), &
             & vol_porosity_sl(ic, is, iblk) * 1000._lp, &
-            & soil_ph_sl(ic, is, iblk), &
+            & ph_sl(ic, is, iblk), &
             & bulk_soil_carbon_sl(ic, is, iblk), &
             & soil_litter_carbon_sl(ic, is, iblk), &
             & sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk), &
