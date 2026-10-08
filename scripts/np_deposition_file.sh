@@ -45,7 +45,7 @@ else
 fi
 
 # Paths and filenames
-input_path_n="/work/mj0143/icon_land_data_pool/preprocessing/np_depositions/cmip7/"
+input_path_n="/work/bb1469/b383102/CMIP7_forcings/RAW_DATA/nitrogen/v2-0/"
 input_path_p="/work/mj0143/icon_land_data_pool/preprocessing/np_depositions/p_dep_files/"
 output_path="./"
 mkdir -p ${output_path}/temp
@@ -63,8 +63,8 @@ dep_unit="kg/m2/s"
 # set -vx
 # ---- Process NHx deposition ----
 # Combine wet and dry NHx deposition
-cdo --no_history -b F64 -add ${input_path_n}/wetnhx_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-1-2_gn_185001-202212.nc \
-                ${input_path_n}/drynhx_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-1-2_gn_185001-202212.nc \
+cdo --no_history -b F64 -add ${input_path_n}/wetnhx_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-2-0_gn_185001-202212.nc \
+                ${input_path_n}/drynhx_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-2-0_gn_185001-202212.nc \
                 ${temp_path}/foo.nc
 # Fix missing values
 cdo --no_history -b F64 -setmissval,-9.e33 -setmisstoc,0 -setmissval,Infinity -setmisstoc,0 -setmissval,nan ${temp_path}/foo.nc ${temp_path}/foo1.nc
@@ -85,8 +85,8 @@ rm ${temp_path}/foo*
 
 # ---- Process NOy deposition ----
 # Combine wet and dry NOy deposition
-cdo --no_history -b F64 -add  ${input_path_n}/wetnoy_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-1-2_gn_185001-202212.nc \
-                 ${input_path_n}/drynoy_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-1-2_gn_185001-202212.nc \
+cdo --no_history -b F64 -add  ${input_path_n}/wetnoy_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-2-0_gn_185001-202212.nc \
+                 ${input_path_n}/drynoy_input4MIPs_surfaceFluxes_CMIP_FZJ-CMIP-nitrogen-2-0_gn_185001-202212.nc \
                 ${temp_path}/foo.nc
 # Fix missing values
 cdo --no_history -b F64 -setmissval,-9.e33 -setmisstoc,0 -setmissval,Infinity -setmisstoc,0 -setmissval,nan ${temp_path}/foo.nc ${temp_path}/foo1.nc
@@ -116,8 +116,8 @@ year=${start_year}
 while [ ${year} -le ${n_dep_end_year} ]; do
   # Define input and output paths
   ndep_in="${temp_path}/ndep_${year}.nc"
-  npdep_out_pre="${temp_path}/bc_land_npdep_quincy_${year}_pre.nc"
-  npdep_out="${output_path}/bc_land_npdep_quincy_${year}.nc"
+  npdep_out_pre="${temp_path}/bc_land_npdep_${year}_pre.nc"
+  npdep_out="${output_path}/bc_land_npdep_${year}.nc"
   if [ ${year} -gt ${p_dep_end_year} ]; then
     pdep_in="${input_path_p}/bc_land_npdep_quincy_2019.nc"
   else

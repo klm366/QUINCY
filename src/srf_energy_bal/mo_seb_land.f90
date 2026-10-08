@@ -105,6 +105,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: heat_cap
     dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: le_phase_change
+    dsl4jsb_Real2D_onChunk :: le_pc_remain
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
@@ -267,6 +268,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, le_pc_remain)   ! in
     IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)      ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)        ! in
@@ -422,7 +424,9 @@ CONTAINS
       ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
       ! This is the heat capacity from the previous time step used in the surface energy balance; grnd_hflx will
       ! be updated later in the SSE_ process.
-      forc_hflx(ic) = grnd_hflx(ic)
+      ! Furthermore, their might be residual latent energy from the phase change computation. This needs
+      ! to be added to the ground heat flux.
+      forc_hflx(ic) = grnd_hflx(ic) + le_pc_remain(ic) / dtime
 
       ! Old dry static energy
       s_old(ic) = surface_dry_static_energy( &
@@ -1214,7 +1218,9 @@ CONTAINS
     & wtr_soil_top, wtr_soil_pot_scool_top, ice_soil_top, &
     & wtr_pond, ice_pond, weq_snow_soil)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi, alf, dens_snow
+    USE mo_sse_constants,          ONLY: snow_depth_min
+
 
     CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile  !< Current tile
     TYPE(t_jsb_task_options), INTENT(IN) :: options    !< Runtime options
@@ -1248,7 +1254,16 @@ CONTAINS
       !   considered in the surface energy balance but given to the atmosphere instead.
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(acc_stream) PRIVATE(hlp1, hlp2)
       DO ic = 1, nc
-        IF (l_freeze_config) THEN
+        IF (weq_snow_soil(ic) * rhoh2o / dens_snow > snow_depth_min .OR. .NOT. l_freeze_config) THEN
+          ! If some snow is present or soil moisture phase change is disabled, only the snow pack
+          ! takes part in the phase change contribution to the surface energy balance.
+          ! Note: more accurate would be to consider only the top layer of snow,
+          ! but this is not implemented yet.
+          le_freeze_pot(ic) = 0._wp
+          le_melt_pot(ic)   = -weq_snow_soil(ic) * hlp3
+        ELSE IF (l_freeze_config) THEN
+          ! If no or only very little snow is present, and soil moisture phase change is enabled,
+          ! the available water and ice in the soil and ponding areas are considered
           IF (l_supercool_config) THEN
             hlp1 = MAX(wtr_soil_top(ic) - wtr_soil_pot_scool_top(ic), 0._wp)
           ELSE
@@ -1258,9 +1273,10 @@ CONTAINS
           le_freeze_pot(ic) =  (                    wtr_pond(ic) + hlp1) * hlp3
           le_melt_pot(ic)   = -(weq_snow_soil(ic) + ice_pond(ic) + hlp2) * hlp3
         ELSE
-          ! Without freezing, the only phase change is snowmelt
+          ! If no snow pack exists and soil moisture phase change is not enabled,
+          ! the melt and freeze potentials are set to zero
           le_freeze_pot(ic) = 0._wp
-          le_melt_pot(ic)   = -weq_snow_soil(ic) * hlp3
+          le_melt_pot(ic)   = 0._wp
         END IF
       END DO
       !$ACC END PARALLEL LOOP

@@ -2365,7 +2365,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Usually green, reserve and wood are distributed to ag and bg pools according to given fractions
     this_fract_green_aboveGround = fract_green_aboveGround
     this_fract_wood_aboveGround = fract_wood_aboveGround
-    IF(lcc_relocations%name .EQ. 'flcc_lcc') THEN
+    IF (lcc_relocations%name .EQ. 'flcc_lcc') THEN
       ! In case of fire there is no C transferred from green and reserve pools to ag litter pools, since it burned.
       this_fract_green_aboveGround = 0.0_wp
       ! Besides, part of the ag wood C is burned and has already been added to the atmosphere flux (vg: where????)
