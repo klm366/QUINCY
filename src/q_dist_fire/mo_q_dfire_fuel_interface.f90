@@ -138,10 +138,10 @@ CONTAINS
     ! Go aggregate
     ! ----------------------------------------------------------------------------------------------------- !
 
-    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, moisture_extinction  , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
-    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, fwd_wind_factor      , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
-    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, fuel_bulk_density    , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
-    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_SF_, lvg_moisture         , weighted_by_fract, mask_grass_pfts,    mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, moisture_extinction  , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, fwd_wind_factor      , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, fuel_bulk_density    , weighted_by_fract, mask_burnable_pfts, mask_on_tile)
+    dsl4jsb_Aggregate_onChunk_masked(Q_DFIRE_FUEL_, lvg_moisture         , weighted_by_fract, mask_grass_pfts,    mask_on_tile)
 
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_1hr_dfp    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(Q_DFIRE_FUEL_, dead_fuel_10hr_dfp   , weighted_by_fract)
