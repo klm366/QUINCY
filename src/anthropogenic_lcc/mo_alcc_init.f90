@@ -77,7 +77,6 @@ CONTAINS
     USE mo_jsb_time_iface,      ONLY: t_datetime
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_io_units,            ONLY: filename_max
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
     USE mo_jsb_lcc_class,       ONLY: max_tolerated_cf_mismatch
     USE mo_alcc_util,           ONLY: scale_anthro_fractions_for_nlcc
 
@@ -101,14 +100,13 @@ CONTAINS
     REAL(lp)                :: cf_sum, diff
 
     INTEGER :: target_year, iblk, ic
-    INTEGER :: current_year, i_tile, npft, no_omp_thread, nproma, nblks
+    INTEGER :: current_year, i_tile, npft, itile, nproma, nblks
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_land_use_data
     CHARACTER(len=VARNAME_LEN)  :: varname_within_file
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_land_use_data'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
-    no_omp_thread = Get_omp_thread()
     hgrid => Get_grid(model%grid_id)
 
     nproma = hgrid%nproma
@@ -119,17 +117,13 @@ CONTAINS
 
     ! Alcc is expected to run on the veg tile
     ! -> search for the veg tile
-    CALL model%Get_top_tile(tile)
-    DO WHILE (ASSOCIATED(tile))
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
+    tile => NULL()
+    DO itile=1,SIZE(model%tiles)
       ! JN-TODO: should such often required tile names be constants somewhere?
-      IF (tile%name .EQ. 'veg') EXIT
-
-      CALL model%Goto_next_tile(tile)
+      IF (model%tiles(itile)%p%name == 'veg') THEN
+        tile => model%tiles(itile)%p
+        EXIT
+      END IF
     END DO
 
     !>

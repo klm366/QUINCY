@@ -40,8 +40,6 @@ MODULE mo_jsb_config_class
   !>
   !> @TODO Check if `grid_filename` and `grid_name` variables are needed at all.
   !>
-  !> @TODO State machine will be removed, this will affect `hsm_mode` variable.
-  !>
   !> @TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
   !>      fractions are used elsewhere in the code.
   !>
@@ -75,9 +73,6 @@ MODULE mo_jsb_config_class
     INTEGER                        :: qmodel_id           !< Identifier for the quincy model configuration
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< Switch for Terraplanet setup: Handling of water
                                                           !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode            !< State machine mode
-                                                          ! TODO State machine will be removed, this
-                                                          ! will affect `hsm_mode` variable
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  !< List of the tiles for which output will
                                                                    !< be generated (default: 'box')
     LOGICAL                        :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
@@ -210,7 +205,6 @@ CONTAINS
     INTEGER                       :: npft                         !< Number of PFTs
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme                   !< Terraplanet setup: Handling of water
                                                                   !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode                     !< State machine mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)             !< List of the output tiles
     LOGICAL                       :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
                                                                   !< are relative to the parent tiles.
@@ -246,7 +240,6 @@ CONTAINS
       usecase, &
       npft, &
       tpe_scheme, &
-      hsm_mode, &
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
@@ -304,7 +297,6 @@ CONTAINS
     usecase                    = ''
     npft                       = 0
     tpe_scheme                 = ''
-    hsm_mode                   = 'simple'
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
@@ -378,7 +370,6 @@ CONTAINS
     model_config%usecase                    = usecase
     model_config%npft                       = npft
     model_config%tpe_scheme                 = tpe_scheme
-    model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%force_c_isotopes           = force_c_isotopes
     ! organise bgcm elements

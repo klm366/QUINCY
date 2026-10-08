@@ -33,7 +33,7 @@ MODULE mo_jsb_tile_class
   USE mo_io_units,            ONLY: filename_max
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
+  USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
@@ -52,7 +52,7 @@ MODULE mo_jsb_tile_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_tile_abstract
+  PUBLIC :: t_jsb_tile_abstract, t_jsb_tile_abstract_p
   PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, t_jsb_aggregator_weighted_by_fract
 
   ! Declarations for aggregators
@@ -83,7 +83,7 @@ MODULE mo_jsb_tile_class
     REAL(lp), POINTER :: p(:,:,:) => NULL()
   END TYPE
   !
-  TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
+  TYPE, ABSTRACT, EXTENDS(t_jsb_tile_tree_node) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct), ALLOCATABLE    :: lcts(:) !< List of land cover types for tile;
                                                !< The first entry is always the primary LCT for this tile;
                                                !< The remaining lcts are those inherited for aggregation
@@ -118,8 +118,12 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_memory_p),         POINTER :: mem(:)                        !< Memory for all processes on the tile
     !
     CLASS(t_jsb_tile_abstract),   POINTER :: self_tile           => NULL() !< Pointer to the tile to enable assigning it as target
-    ! The next three pointers basically repeat what's already in the base type, but they save "SELECT TYPE"s
-    CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< Pointer to the parent file
+    ! The next three pointers point to the same tiles as `parent`, `first_child` and `next_sibling` of the
+    ! base type (t_jsb_tile_tree_node), but they are of the tile type: the components and methods of these
+    ! tiles can be accessed through them directly, whereas the pointers of the base type would need a
+    ! "SELECT TYPE". Both sets are set when a tile is constructed, and both can be used to navigate the
+    ! tile tree.
+    CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< Pointer to the parent tile
     CLASS(t_jsb_tile_abstract),   POINTER :: first_child_tile    => NULL() !< Pointer to the first child tile
     CLASS(t_jsb_tile_abstract),   POINTER :: next_sibling_tile   => NULL() !< Pointer to the next sibling tile
     !
@@ -161,12 +165,16 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
-    PROCEDURE(Handler_interface),        DEFERRED :: Handler
     PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
     PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
     PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
+
+  !> A type to hold vectors of pointers to tiles
+  TYPE t_jsb_tile_abstract_p
+    CLASS(t_jsb_tile_abstract), POINTER :: p => NULL()
+  END TYPE t_jsb_tile_abstract_p
 
   ! Deferred subroutine interfaces.
   ! Implementations are located in the [[mo_jsb_tile]] module.
@@ -207,14 +215,6 @@ MODULE mo_jsb_tile_class
       CLASS(t_jsb_tile_abstract), INTENT(in) :: this
       INTEGER, INTENT(in) :: iproc
     END FUNCTION Check_on_process
-
-    !> Interface for deferred function [[t_jsb_tile_abstract:Handler]] of [[t_jsb_tile_abstract]] type
-    FUNCTION Handler_interface(this, msg_in) RESULT(return_ptr)
-      IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
-      CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
-      CLASS(t_Message),            INTENT(in)    :: msg_in
-      CLASS(t_Message),            POINTER       :: return_ptr
-    END FUNCTION Handler_interface
 
     !> Interface for deferred subroutine [[t_jsb_tile_abstract:Print]] of [[t_jsb_tile_abstract]] type
     SUBROUTINE Print_interface(this)
@@ -425,7 +425,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< Tile whose parent is to be considered
     TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< The landcover type to add to the parent tiles
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_State), POINTER :: current
+    CLASS(t_jsb_tile_tree_node), POINTER :: current
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct_to_parents'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1219,7 +1219,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER     :: return_ptr
 
-    CLASS(t_State), POINTER :: next
+    CLASS(t_jsb_tile_tree_node), POINTER :: next
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_first_child_tile'
 
@@ -1232,8 +1232,6 @@ CONTAINS
     SELECT TYPE (next)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -1250,7 +1248,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-    CLASS(t_State), POINTER :: next
+    CLASS(t_jsb_tile_tree_node), POINTER :: next
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_next_sibling_tile'
 
@@ -1263,8 +1261,6 @@ CONTAINS
     SELECT TYPE (next)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -1285,7 +1281,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-    CLASS(t_State), POINTER :: prev
+    CLASS(t_jsb_tile_tree_node), POINTER :: prev
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
 
@@ -1298,8 +1294,6 @@ CONTAINS
     SELECT TYPE (prev)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => prev
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
