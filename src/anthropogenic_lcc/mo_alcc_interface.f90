@@ -721,7 +721,8 @@ CONTAINS
 
       ! If demanded: handle dynamic (natural) PFTs of the NLCC process in maps/transition scheme
       IF (model%Is_process_enabled(NLCC_)) THEN
-        CALL handle_nlcc_pfts(tile, options, initial_area, gained_area, lost_area)
+        CALL handle_nlcc_pfts(tile, options, initial_area, gained_area, lost_area, &
+          &                   book_anthro_changes=(TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'transition'))
       END IF
 
       ! Assertion: the total gained area needs to equal the total lost area to enable matter conservation
@@ -729,7 +730,7 @@ CONTAINS
       ! Check for violations outside of the tolerated range (which are probably rather due to errors than precision)
       IF (ANY(ABS(cf_diff(:)) > max_tolerated_cf_mismatch)) THEN
         WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
-          & // 'Max difference of: ', MAXVAL(cf_diff(:)), ' MAXLOC: ', MAXLOC(cf_diff)
+          & // 'Max difference of: ', MAXVAL(ABS(cf_diff(:))), ' MAXLOC: ', MAXLOC(ABS(cf_diff))
         CALL finish(TRIM(routine), TRIM(message_text))
       END IF
       IF (model%config%check_child_cf) THEN
@@ -1255,7 +1256,7 @@ CONTAINS
   !>  called below, where the natural vegetation fractions are scaled corresponding to the total change of
   !>  anthropogenic PFT fractions taking into account the pasture rule.
   !
-  SUBROUTINE handle_nlcc_pfts(tile, options, initial_area, gained_area, lost_area)
+  SUBROUTINE handle_nlcc_pfts(tile, options, initial_area, gained_area, lost_area, book_anthro_changes)
 
     USE mo_nlcc_process,      ONLY: calc_cover_fract_inst
     dsl4jsb_Use_memory(NLCC_)
@@ -1266,8 +1267,12 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Initial area matrix for lcc calculations
     REAL(wp),         INTENT(inout), OPTIONAL :: gained_area(:,:)  !< Gained area matrix for lcc calculations
     REAL(wp),         INTENT(inout), OPTIONAL :: lost_area(:,:)    !< Lost area matrix for lcc calculations
+    LOGICAL,          INTENT(in),    OPTIONAL :: book_anthro_changes !< Book NLCC-induced changes of anthropogenic
+                                                                   !< tiles in gained/lost area and write them back
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: i_tile, iblk                                 !< Looping indices
+    INTEGER  :: i_tile, iblk, ic                             !< Looping indices
+    LOGICAL  :: book_anthro                                  !< Anthropogenic changes by NLCC are booked
+    REAL(wp) :: delta, taken                                 !< Area change by NLCC / part covered by existing gain or loss
     INTEGER  :: ics, ice                                     !< First and last grid cell in current vector
     INTEGER  :: ndynamic                                     !< Number of PFTs handled in NLCC
     TYPE(t_jsb_model), POINTER          :: model             !< Current instance of the model
@@ -1296,6 +1301,9 @@ CONTAINS
       & (PRESENT(lost_area) .AND. .NOT. PRESENT(gained_area))) THEN
       CALL finish(routine, 'Either both arguments, lost_area and gained_area, need to be presend or none.')
     END IF
+
+    book_anthro = .FALSE.
+    IF (PRESENT(book_anthro_changes) .AND. PRESENT(gained_area)) book_anthro = book_anthro_changes
 
     IF (PRESENT(gained_area)) THEN
       gained_area_loc(:,:) = gained_area(:,:)
@@ -1387,12 +1395,39 @@ CONTAINS
       END WHERE
     END IF
 
-    ! Update dynamic (natural) PFT fractions
+    ! NLCC (scale_cover_fract) can also reduce anthropogenic fractions, if these leave too little space for the
+    ! minimum fractions of the natural PFTs. Book such changes in the gained/lost areas, so that the area
+    ! balance holds (sum of new PFT fractions = veg tile fraction) and the matter translocation sees them.
+    IF (book_anthro) THEN
+      DO i_tile = 1, options%npft
+        DO ic = 1, options%nc
+          IF (is_dynamic(ic,i_tile)) CYCLE
+          delta = current_fract(ic,i_tile) &
+            &   - (initial_area(ic,i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile))
+          IF (ABS(delta) <= 10._wp * EPSILON(1._wp)) THEN
+            ! Only rounding noise: keep the tile fraction as set in update_alcc_translocation
+            current_fract(ic,i_tile) = initial_area(ic,i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile)
+          ELSE IF (delta < 0._wp) THEN
+            ! Area removed by NLCC: first reduce the gained area, then increase the lost area
+            taken = MIN(gained_area(ic,i_tile), -delta)
+            gained_area(ic,i_tile) = gained_area(ic,i_tile) - taken
+            lost_area(ic,i_tile)   = lost_area(ic,i_tile) + (-delta - taken)
+          ELSE
+            ! Area added by NLCC: first reduce the lost area, then increase the gained area
+            taken = MIN(lost_area(ic,i_tile), delta)
+            lost_area(ic,i_tile)   = lost_area(ic,i_tile) - taken
+            gained_area(ic,i_tile) = gained_area(ic,i_tile) + (delta - taken)
+          END IF
+        END DO
+      END DO
+    END IF
+
+    ! Update (dynamic) natural PFT fractions and, if demanded, the anthropogenic PFT fractions NLCC changed
     current_tile => tile%Get_first_child_tile()
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile))
       i_tile = i_tile + 1
-      IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile)) THEN
+      IF (dsl4jsb_Lctlib_param_tile(dynamic_PFT, current_tile) .OR. book_anthro) THEN
         CALL current_tile%Set_fraction(options%ics, options%ice, options%iblk, fract=current_fract(:,i_tile))
       END IF
       current_tile => current_tile%Get_next_sibling_tile()
