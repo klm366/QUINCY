@@ -23,11 +23,10 @@
 !>
 !> -calc_spitfire: spitfire subroutine which calls
 !>    - Initialize t_sf_dynamics, used to output data
-!>    - Calc Nesterov index (mo_q_dfire_sf_nesterov.f90)
-!>    - Calc Thonicke's / Oberhagemann implementation
-!>    -   Calc fuel moisture (mo_q_dfire_sf_fmoist_class.f90)
-!>    -   Calc Fire danger index (-)
-!>    -   Calc Rate of spread (mo_q_dfire_sf_ros_class.f90)
+!>    - Update Nesterov index (mo_q_dfire_sf_nesterov.f90)
+!>    - Calc fuel moisture (mo_q_dfire_sf_fmoist_class.f90)
+!>    - Calc Fire danger index (-)
+!>    - Calc Rate of spread (mo_q_dfire_sf_ros_class.f90)
 !>    - Calc Area Burned and its fraction (-)
 !>    - Calc ignition events (mo_q_difre_sf_ignition.f90)
 !>    - Calc dead fraction of consumption (mo_q_dfire_sf_frac_consump_class.f90)
