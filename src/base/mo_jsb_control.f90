@@ -43,7 +43,7 @@ MODULE mo_jsb_control
   PUBLIC :: model_base_dir
   ! t_jsb_model_nml needs to be public for the NEC compiler
   PUBLIC :: t_jsb_model_nml, jsb_models_nml, get_no_of_models
-  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
+  PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_forcing
   PUBLIC :: max_no_of_models, acc_stream, acc_async_sync
 
   ! Needed for inlining timer_on and debug_on on NEC.
@@ -71,7 +71,7 @@ MODULE mo_jsb_control
   !> Structure for JSBACH model namelist
   !>
   !> **Note**: while in ICON `timer_jsbach`, `timer_aggregate`,
-  !>`timer_integrate`, `timer_process_task`, `timer_process_msg`, and
+  !>`timer_integrate`, `timer_process_task`, and
   !>`timer_forcing` are hardcoded, they are not hardcoded in ICON-Land because
   !> we do not know in advance which processes will be active.
   !>
@@ -89,15 +89,14 @@ MODULE mo_jsb_control
 
 
   ! **Note**: while in ICON `timer_jsbach`, `timer_aggregate`,
-  ! `timer_integrate`, `timer_process_task`, `timer_process_msg`, and
+  ! `timer_integrate`, `timer_process_task`, and
   ! `timer_forcing` are hardcoded, they are not hardcoded in ICON-Land because
   ! we do not know in advance which processes will be active.
   INTEGER, SAVE, DIMENSION(max_no_of_models) :: &
     & timer_jsbach,       &  !< Timer for the whole land model
     & timer_aggregate,    &  !< Timer for aggregation
     & timer_integrate,    &  !< Timer for update routines
-    & timer_process_task, &  !< Timer for process tasks
-    & timer_process_msg,  &  !< Timer for process messages
+    & timer_process_task, &  !< Timer for processing tasks on the tile tree
     & timer_forcing          !< Time for forcing
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist' !< Name of the master namelist file
@@ -152,13 +151,11 @@ CONTAINS
           timer_aggregate(i)    = new_timer('jsb:aggregate_'//int2string(i))
           timer_integrate(i)    = new_timer('jsb:integrate_'//int2string(i))
           timer_process_task(i) = new_timer('jsb:process_task_'//int2string(i))
-          timer_process_msg(i)  = new_timer('jsb:process_msg_'//int2string(i))
         END DO
       ELSE
         timer_aggregate(1)    = new_timer('jsb:aggregate')
         timer_integrate(1)    = new_timer('jsb:integrate')
         timer_process_task(1) = new_timer('jsb:process_task')
-        timer_process_msg(1)  = new_timer('jsb:process_msg')
       END IF
     END IF
 
@@ -352,7 +349,7 @@ CONTAINS
         debug_on = debug_level >= 1
       CASE ('detail')
         debug_on = debug_level >= 2
-      CASE ('hsm')
+      CASE ('tasks')
         debug_on = debug_level >= 3
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unknown debug level')

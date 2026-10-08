@@ -408,7 +408,7 @@ CONTAINS
     !    calc_XXX_phenology procedures the is_newday-variable decides when to do the update_growth_phase stuff.
 
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
-    !    once for the whole hsm (tile%name == 'box'):
+    !    once for the whole tile tree (tile%name == 'box'):
 
     ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
     ! after this routine. At the start of a new day, we here divide the sum by the day length to get

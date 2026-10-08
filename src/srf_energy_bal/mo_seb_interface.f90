@@ -657,14 +657,13 @@ CONTAINS
   !! The routine is called at the beginning and at the end of each time step.
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE seb_check_temperature_range(model_id, no_omp_thread)
+  SUBROUTINE seb_check_temperature_range(model_id)
 
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
 
     ! Argument
-    INTEGER, INTENT(in) :: model_id, no_omp_thread
+    INTEGER, INTENT(in) :: model_id
 
     ! Local variables
     TYPE(t_jsb_model), POINTER           :: model
@@ -673,7 +672,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(SEB_)
 
-    INTEGER                       :: iblk, ic
+    INTEGER                       :: iblk, ic, itile
     REAL(lp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
 
@@ -686,17 +685,11 @@ CONTAINS
     lat   => grid%lat(:,:)
     lon   => grid%lon(:,:)
 
-    !vg no_omp_thread = Get_omp_thread()
 #ifndef __QUINCY_STANDALONE__
-    CALL model%Get_top_tile(tile)
-    DO WHILE (ASSOCIATED(tile))
-      IF ((tile%Has_children() .AND. .NOT. tile%visited(no_omp_thread)) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(model%tiles_postorder)
+      tile => model%tiles_postorder(itile)%p
+      IF (.NOT. tile%Is_process_active(SEB_)) CYCLE
 #endif
-
-      ! We're on a leaf or on the way up.
 
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
@@ -716,7 +709,6 @@ CONTAINS
         END DO
       END IF
 #ifndef __QUINCY_STANDALONE__
-      CALL model%Goto_next_tile(tile)
     ENDDO
 #endif
   END SUBROUTINE seb_check_temperature_range

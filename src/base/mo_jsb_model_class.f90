@@ -23,11 +23,11 @@ MODULE mo_jsb_model_class
   USE mo_jsb_parallel,      ONLY: Get_omp_no_of_threads, Get_omp_thread, Is_omp_inside_serial
 
   USE mo_jsb_control,       ONLY: debug_on
-  USE mo_hsm_class,         ONLY: t_Hsm, t_State, t_Message, t_Action
   USE mo_jsb_config_class,  ONLY: t_jsb_model_config
   USE mo_jsb_process_class, ONLY: t_jsb_process, t_jsb_process_p, Get_process_name
-  USE mo_jsb_task_class,    ONLY: t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+  USE mo_jsb_task_class,    ONLY: t_Task_queue, t_jsb_task_options, t_jsb_task_schedule, t_jsb_task_step, &
+    &                             TASK_INTEGRATE, TASK_AGGREGATE, Get_task_action_name
+  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract, t_jsb_tile_abstract_p
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
   USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
   !USE mo_util,              ONLY: report_memory_usage, toupper
@@ -44,15 +44,8 @@ MODULE mo_jsb_model_class
   !!
   !! This derived type defines one instance of the JSBACH model
   !!
-  TYPE, EXTENDS(t_Hsm) :: t_jsb_model
-    ! From base type:
-    ! CHARACTER(len=30)           :: name
-    ! CLASS(t_State), POINTER     :: top     => NULL()    !< Topmost state
-    ! CLASS(t_State), POINTER     :: current => NULL()    !< Current state
-    ! CLASS(t_State), POINTER     :: next    => NULL()    !< Next state (non_null if transition taken)
-    ! CLASS(t_State), POINTER     :: source  => NULL()    !< Source state during last transition
-    ! TYPE(t_Action)              :: actions(MAX_ACTIONS) !< List of possible actions (events)
-    ! Extensions:
+  TYPE :: t_jsb_model
+    CHARACTER(len=30)                  :: name              !< Model name
     INTEGER                            :: id                !< Model id
     CHARACTER(len=SHORT_NAME_LEN)      :: shortname         !< Model short name
     CHARACTER(len=132)                 :: description       !< Model description
@@ -62,33 +55,30 @@ MODULE mo_jsb_model_class
     INTEGER                            :: grid_id
     TYPE(t_jsb_process_p),     POINTER :: processes(:)
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
-    TYPE(t_jsb_process_task_p), ALLOCATABLE :: current_task(:)
+      !< Task queue: the tasks of the processes in the order in which they are executed in a time step, as
+      !< queued in `jsbach_init`. It only lists the tasks, without any information on tiles.
     TYPE(t_lctlib_element),    POINTER :: lctlib(:)
+    CLASS(t_jsb_tile_abstract), POINTER :: top => NULL()          !< Top (root) tile of the tile tree
+    TYPE(t_jsb_tile_abstract_p), ALLOCATABLE :: tiles(:)
+      !< All tiles of the tile tree in pre-order (parents before their children)
+    TYPE(t_jsb_tile_abstract_p), ALLOCATABLE :: tiles_postorder(:)
+      !< All tiles of the tile tree in post-order (children before their parents)
+    TYPE(t_jsb_task_schedule), ALLOCATABLE :: schedule(:)
+      !< Task schedule, derived once from the task queue and the tile tree: for each queued task of an active
+      !< process, the steps (tile and integrate/aggregate action) to execute the task on the tile tree
+    LOGICAL                            :: use_multiple_queues = .FALSE.
+      !< Use multiple OpenACC async queues for the integration of a task on different tiles
   CONTAINS
-    ! From base type:
-    ! PROCEDURE :: Get_current
-    ! PROCEDURE :: Get_levels_to_LCA
-    ! PROCEDURE :: Next_state
-    ! PROCEDURE :: Get_state
-    ! PROCEDURE :: Reset_state
-    ! PROCEDURE :: Register_action
-    ! PROCEDURE :: Print_actions
-    ! PROCEDURE :: Process_message
-    ! Extensions:
     PROCEDURE :: Configure_processes => Configure_model_processes
     PROCEDURE :: Do_fractions_change => Any_process_changes_fractions
     PROCEDURE :: Get_shortname       => Get_model_shortname
     PROCEDURE :: Get_top_tile
-    PROCEDURE :: Goto_next_tile
-    PROCEDURE :: Get_next_tile
-    PROCEDURE :: Reset
-    PROCEDURE :: Reset_tiles
-    PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
     PROCEDURE :: Is_process_enabled
     PROCEDURE :: Queue_task
-!!$    PROCEDURE :: Get_process_configs
-!!$    PROCEDURE :: Process_task
+    PROCEDURE :: Build_tile_lists
+    PROCEDURE :: Build_task_schedule
+    PROCEDURE :: Print_task_schedule
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
     PROCEDURE :: Set_subset
@@ -146,11 +136,7 @@ CONTAINS
 
     ALLOCATE(return_ptr)
 
-    CALL return_ptr%Init_hsm(name, debug=.FALSE.)
-
-    CALL return_ptr%Register_action(t_Action("INTEGRATE"), debug=.FALSE.)
-    CALL return_ptr%Register_action(t_Action("AGGREGATE"), debug=.FALSE.)
-
+    return_ptr%name              = TRIM(name)
     return_ptr%id                = id
     return_ptr%shortname         = TRIM(shortname)
     return_ptr%description       = TRIM(description)
@@ -159,9 +145,6 @@ CONTAINS
 
     nthreads = Get_omp_no_of_threads()
     ALLOCATE(return_ptr%options(nthreads))
-    ALLOCATE(return_ptr%current_task(nthreads))
-
-!!$    return_ptr%Hsm => return_ptr%t_Hsm
 
 !!$    ALLOCATE(return_ptr%processes(max_no_of_processes))
 !!$    DO iproc=1,max_no_of_processes
@@ -252,51 +235,309 @@ CONTAINS
   END FUNCTION Any_process_changes_fractions
 
 
+  ! ====================================================================================================== !
+  !>
+  !> Collect all tiles of the tile tree below `this%top` in pre-order (`this%tiles`) and post-order
+  !> (`this%tiles_postorder`)
+  !>
+  !> Must be called once after the tile tree has been completely set up (see
+  !> [[mo_jsb_base:jsbach_setup_tiles]]). Loops over all tiles then simply iterate over these lists.
+  !>
+  SUBROUTINE Build_tile_lists(this)
+
+    USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node_p
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+
+    TYPE(t_jsb_tile_tree_node_p), ALLOCATABLE :: preorder(:), postorder(:)
+    INTEGER :: i
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Build_tile_lists'
+
+    IF (.NOT. ASSOCIATED(this%top)) CALL finish(routine, 'Top tile not set')
+
+    CALL this%top%Get_subtree_nodes(preorder, postorder)
+
+    IF (ALLOCATED(this%tiles))           DEALLOCATE(this%tiles)
+    IF (ALLOCATED(this%tiles_postorder)) DEALLOCATE(this%tiles_postorder)
+    ALLOCATE(this%tiles(SIZE(preorder)), this%tiles_postorder(SIZE(postorder)))
+    DO i=1,SIZE(preorder)
+      this%tiles(i)%p           => As_tile(preorder(i)%p)
+      this%tiles_postorder(i)%p => As_tile(postorder(i)%p)
+    END DO
+
+  CONTAINS
+
+    FUNCTION As_tile(node) RESULT(tile)
+
+      USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node
+
+      CLASS(t_jsb_tile_tree_node), POINTER, INTENT(in) :: node
+      CLASS(t_jsb_tile_abstract),  POINTER             :: tile
+
+      SELECT TYPE (node)
+      CLASS IS (t_jsb_tile_abstract)
+        tile => node
+      CLASS DEFAULT
+        CALL finish(routine, 'Node '//TRIM(node%name)//' of tile tree is not a tile')
+      END SELECT
+
+    END FUNCTION As_tile
+
+  END SUBROUTINE Build_tile_lists
+
+  ! ====================================================================================================== !
+  !>
+  !> Build the schedule of all tasks in the task queue
+  !>
+  !> For each task whose process is active, the steps (tile, action) in which the task is executed on the
+  !> tile tree are determined once, so that [[Run_tasks]] only needs to iterate over them. The tile tree
+  !> is walked depth-first starting from the top tile; for each tile, depending on the action of the
+  !> task's process on the tile (`tile%process_action`):
+  !>
+  !> - `SKIP_`, `INHERIT_`: the tile and its sub-tree are skipped
+  !> - `ON_TILE_`, `ON_SUBTREE_`, or tile without children: the task is integrated on the tile
+  !> - otherwise (`AGGREGATE_`, `ON_LEAFS_`): the children are processed first, then the task is
+  !>   aggregated on the tile
+  !>
+  !> Must be called after the task queue has been set up and the tiles have been initialized, since the
+  !> tile initialization modifies the process actions (see [[mo_jsb_model_init:jsbach_init]]).
+  !>
+  SUBROUTINE Build_task_schedule(this)
+
+    USE mo_jsb_process_class, ONLY: AGGREGATE_, ON_TILE_, ON_SUBTREE_
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+
+    TYPE(t_Task_queue),    POINTER     :: queue_element
+    TYPE(t_jsb_task_step), ALLOCATABLE :: steps(:)
+    INTEGER :: ntasks, nsteps, iproc
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Build_task_schedule'
+
+    IF (.NOT. ALLOCATED(this%tiles)) CALL finish(routine, 'Tile lists not set up')
+
+    ! Each tile appears at most once in the steps of a task
+    ALLOCATE(steps(SIZE(this%tiles)))
+
+    ! First pass counts the scheduled tasks, second pass fills the schedule
+    IF (ALLOCATED(this%schedule)) DEALLOCATE(this%schedule)
+    ntasks = Scan_queue(.FALSE.)
+    ALLOCATE(this%schedule(ntasks))
+    ntasks = Scan_queue(.TRUE.)
+
+    DEALLOCATE(steps)
+
+    IF (debug_on()) CALL this%Print_task_schedule()
+
+  CONTAINS
+
+    !> Walk through the task queue, determine the tasks to be scheduled and their steps on the tile
+    !> tree, and (if `l_fill`) store them in `this%schedule`; returns the number of scheduled tasks
+    !>
+    !> For each task in the queue whose process is active, the steps of the task on the tile tree are
+    !> determined (in `steps`, see `Add_steps`). Tasks of inactive processes and tasks without any step
+    !> (process not active on any tile) are not scheduled. The scheduled tasks keep the order of the queue.
+    !>
+    !> The function is called twice: first with `l_fill = .FALSE.`, only to get the number of scheduled
+    !> tasks needed to allocate `this%schedule`, then with `l_fill = .TRUE.` to actually fill the schedule.
+    INTEGER FUNCTION Scan_queue(l_fill)
+
+      LOGICAL, INTENT(in) :: l_fill !< .FALSE.: only count the tasks, since `this%schedule` is not
+                                    !< allocated yet; .TRUE.: also store the tasks and their steps in it
+
+      Scan_queue = 0
+      queue_element => this%queue
+      DO WHILE (ASSOCIATED(queue_element))
+        IF (ASSOCIATED(queue_element%task)) THEN
+          iproc = queue_element%task%process_id
+          IF (this%processes(iproc)%p%config%active) THEN   ! Only if process this task belongs to is active
+            nsteps = 0
+            CALL Add_steps(this%top)
+            IF (nsteps > 0) THEN
+              Scan_queue = Scan_queue + 1
+              IF (l_fill) THEN
+                this%schedule(Scan_queue)%task => queue_element%task
+                ALLOCATE(this%schedule(Scan_queue)%steps(nsteps))
+                this%schedule(Scan_queue)%steps(:) = steps(1:nsteps)
+              END IF
+            END IF
+          END IF
+        END IF
+        queue_element => queue_element%next
+      END DO
+
+    END FUNCTION Scan_queue
+
+    !> Append the steps of the current task (process `iproc`) on `tile` and its sub-tree to `steps`
+    !>
+    !> Recursive depth-first walk: a tile on which the process is not active is skipped together with
+    !> its sub-tree; a tile on which the process is calculated (`ON_TILE_`, `ON_SUBTREE_`, or a leaf)
+    !> gets an integrate step and its sub-tree is not entered; for any other tile the steps of all
+    !> children are added first (in the order of the siblings), followed by an aggregate step for the
+    !> tile itself. The steps are thus ordered leaves first, so that each aggregation finds its
+    !> children already processed.
+    RECURSIVE SUBROUTINE Add_steps(tile)
+
+      CLASS(t_jsb_tile_abstract), POINTER, INTENT(in) :: tile !< Root tile of the sub-tree to be added
+
+      CLASS(t_jsb_tile_abstract), POINTER :: child  !< Child tile currently processed
+      INTEGER                             :: action !< Action of the process on `tile` (`SKIP_`, ...)
+
+      action = tile%process_action(iproc)
+
+      ! SKIP_ and INHERIT_: nothing to do on this tile and its sub-tree
+      IF (action < AGGREGATE_) RETURN
+
+      IF (tile%Has_children() .AND. action /= ON_TILE_ .AND. action /= ON_SUBTREE_) THEN
+        child => tile%first_child_tile
+        DO WHILE (ASSOCIATED(child))
+          CALL Add_steps(child)
+          child => child%next_sibling_tile
+        END DO
+        CALL Add_step(tile, TASK_AGGREGATE)
+      ELSE
+        CALL Add_step(tile, TASK_INTEGRATE)
+      END IF
+
+    END SUBROUTINE Add_steps
+
+    !> Append one step (execute `action` of the current task on `tile`) to `steps`
+    !>
+    !> Aborts if `steps` is full, which cannot happen as long as each tile gets at most one step per task.
+    SUBROUTINE Add_step(tile, action)
+
+      CLASS(t_jsb_tile_abstract), POINTER, INTENT(in) :: tile   !< Tile on which the task is to be executed
+      INTEGER,                             INTENT(in) :: action !< `TASK_INTEGRATE` or `TASK_AGGREGATE`
+
+      nsteps = nsteps + 1
+      IF (nsteps > SIZE(steps)) &
+        & CALL finish(routine, 'Too many steps for task '//TRIM(queue_element%task%name))
+      steps(nsteps)%tile   => tile
+      steps(nsteps)%action =  action
+
+    END SUBROUTINE Add_step
+
+  END SUBROUTINE Build_task_schedule
+
+  ! ====================================================================================================== !
+  !>
+  !> Print the task schedule
+  !>
+  SUBROUTINE Print_task_schedule(this)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+
+    INTEGER :: itask, istep
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Print_task_schedule'
+
+    IF (.NOT. ALLOCATED(this%schedule)) RETURN
+
+    CALL message(routine, 'Task schedule for model '//TRIM(this%name)//':')
+    DO itask=1,SIZE(this%schedule)
+      ASSOCIATE (task => this%schedule(itask)%task, steps => this%schedule(itask)%steps)
+        CALL message('', '  Task '//TRIM(Get_process_name(task%process_id))//':'//TRIM(task%name))
+        DO istep=1,SIZE(steps)
+          CALL message('', '    '//Get_task_action_name(steps(istep)%action)//' on '// &
+            &              TRIM(steps(istep)%tile%name))
+        END DO
+      END ASSOCIATE
+    END DO
+
+  END SUBROUTINE Print_task_schedule
+
+  ! ====================================================================================================== !
+  !>
+  !> Run all tasks on the current chunk by executing the steps of the task schedule
+  !>
+  !> With OpenACC and `use_multiple_queues`, consecutive `TASK_INTEGRATE` steps of a task (on different
+  !> tiles) are launched on separate async queues, which are joined into the base queue before the next
+  !> `TASK_AGGREGATE` step and at the end of the task.
+  !>
   SUBROUTINE Run_tasks(this, debug)
 
-    USE mo_jsb_control, ONLY: timer_on, timer_process_msg
+    USE mo_jsb_control, ONLY: timer_on, timer_process_task
     USE mo_timer,       ONLY: timer_start, timer_stop
+#ifdef _OPENACC
+    USE mo_jsb_control, ONLY: acc_stream
+#endif
 
     CLASS(t_jsb_model), INTENT(inout) :: this
     LOGICAL, OPTIONAL,  INTENT(in)    :: debug
 
-    CLASS(t_Task_queue),  POINTER :: current_queue_element
-    CLASS(t_Message), POINTER :: msg
-    LOGICAL :: l_debug
-    INTEGER :: no_omp_thread
+    LOGICAL :: l_debug, l_timer
+    INTEGER :: no_omp_thread, itask, istep
+#ifdef _OPENACC
+    INTEGER :: base_stream, n_forked
+#endif
 
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Run_tasks'
 
     no_omp_thread = Get_omp_thread()
 
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
+    l_timer = timer_on('all') .OR. (timer_on() .AND. l_debug)
 
-    msg => t_Message('', this%Get_action('INTEGRATE'))
+    IF (.NOT. ALLOCATED(this%schedule)) CALL finish(routine, 'Task schedule not set up')
 
-    ! loop over all tasks in the task queue
-    current_queue_element => this%queue
-    DO WHILE (ASSOCIATED(current_queue_element))
+    DO itask=1,SIZE(this%schedule)
+      ASSOCIATE (task => this%schedule(itask)%task, steps => this%schedule(itask)%steps)
 
-      ASSOCIATE(task => current_queue_element%task)
-        IF (this%processes(task%process_id)%p%config%active) THEN  ! Only if process this task belongs to is active
-          this%current_task(no_omp_thread)%p => task
-          CALL this%Start() ! Start state machine
-          !IF (ASSOCIATED(msg%action)) DEALLOCATE(msg%action)
-          !msg%action = this%Get_action('INTEGRATE')
-          IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_start(timer_process_msg(this%id))
-          CALL this%Process_message(msg, l_debug)
-          IF (timer_on('all') .OR. (timer_on() .AND. debug)) CALL timer_stop(timer_process_msg(this%id))
-          !CALL report_memory_usage(toupper(Get_process_name(task%process_id))//': '//task%name)
-        END IF
+        IF (l_timer) CALL timer_start(timer_process_task(this%id))
+#ifdef _OPENACC
+        base_stream = acc_stream
+        n_forked = 0
+#endif
+
+        DO istep=1,SIZE(steps)
+          IF (l_debug) CALL message(routine, 'Task '//TRIM(task%name)//': '// &
+            &   Get_task_action_name(steps(istep)%action)//' on tile '//TRIM(steps(istep)%tile%name))
+#ifdef _OPENACC
+          IF (this%use_multiple_queues) THEN
+            IF (steps(istep)%action == TASK_INTEGRATE) THEN
+              ! Launch integration on its own queue, after all previous work on the base queue
+              n_forked = n_forked + 1
+              acc_stream = base_stream + n_forked
+              !$ACC WAIT(base_stream) ASYNC(acc_stream)
+            ELSE
+              CALL Join_queues()
+            END IF
+          END IF
+#endif
+          CALL task%Do_it(steps(istep)%action, steps(istep)%tile, this%options(no_omp_thread))
+        END DO
+
+#ifdef _OPENACC
+        IF (this%use_multiple_queues) CALL Join_queues()
+#endif
+        IF (l_timer) CALL timer_stop(timer_process_task(this%id))
+
       END ASSOCIATE
-
-      ! go to the next task
-      current_queue_element => current_queue_element%next
-
     END DO
 
-    DEALLOCATE(msg)
+#ifdef _OPENACC
+  CONTAINS
+
+    !> Join all forked queues into the base queue and continue on the base queue
+    SUBROUTINE Join_queues()
+
+      INTEGER :: stream, dummy
+
+      IF (n_forked == 0) RETURN
+      DO stream = base_stream+1, base_stream+n_forked
+        !$ACC WAIT(stream) ASYNC(base_stream)
+      END DO
+      ! Dummy kernel for the faster graph dependency resolution
+      !$ACC PARALLEL ASYNC(base_stream)
+      dummy = 1
+      !$ACC END PARALLEL
+      acc_stream = base_stream
+      n_forked = 0
+
+    END SUBROUTINE Join_queues
+#endif
 
   END SUBROUTINE Run_tasks
 
@@ -323,122 +564,9 @@ CONTAINS
     CLASS(t_jsb_model), INTENT(in) :: this
     CLASS(t_jsb_tile_abstract), POINTER, INTENT(inout) :: return_ptr
 
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_model_top_tile'
-
-    return_ptr => NULL()
-
-    SELECT TYPE (top => this%top)
-    CLASS IS (t_jsb_tile_abstract)
-      return_ptr => top
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'tile is of type t_State, should be t_jsb_tile')
-    CLASS DEFAULT
-      CALL finish(TRIM(routine), 'Unkown type for tile')
-    END SELECT
+    return_ptr => this%top
 
   END SUBROUTINE Get_top_tile
-
-  ! Set current tile to top on current OMP thread and set %visited to .FALSE.
-  SUBROUTINE Reset(this)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Reset'
-
-    CALL this%Reset_state()
-
-  END SUBROUTINE Reset
-
-  ! Reset %visited(:) to .FALSE. for all tiles and OMP threads, and current tile to top for all threads
-  SUBROUTINE Reset_tiles(this)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-
-    ! CLASS(t_jsb_tile_abstract), POINTER :: top
-
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Reset_tiles'
-
-    CALL this%Reset_all()
-
-  END SUBROUTINE Reset_tiles
-
-  SUBROUTINE Goto_next_tile(this, return_ptr)
-
-    CLASS(t_jsb_model), INTENT(inout)  :: this
-    CLASS(t_jsb_tile_abstract), POINTER, INTENT(inout) :: return_ptr
-
-    CLASS(t_State), POINTER :: next
-
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Goto_next_tile'
-
-    next => this%Goto_next()
-    IF (.NOT. ASSOCIATED(next)) THEN
-      return_ptr => NULL()
-      RETURN
-    END IF
-
-    SELECT TYPE (next)
-    CLASS IS (t_jsb_tile_abstract)
-      return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
-    CLASS DEFAULT
-      CALL finish(TRIM(routine), 'Unkown type for tile')
-    END SELECT
-
-    NULLIFY(next)
-
-  END SUBROUTINE Goto_next_tile
-
-  FUNCTION Get_next_tile(this) RESULT(return_ptr)
-
-    CLASS(t_jsb_model), INTENT(inout)  :: this
-    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
-
-    CLASS(t_State), POINTER :: next
-
-    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Get_next_tile'
-
-    next => this%Get_next()
-    IF (.NOT. ASSOCIATED(next)) THEN
-      return_ptr => NULL()
-      RETURN
-    END IF
-
-    SELECT TYPE (next)
-    CLASS IS (t_jsb_tile_abstract)
-      return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
-    CLASS DEFAULT
-      CALL finish(TRIM(routine), 'Unkown type for tile')
-    END SELECT
-
-    NULLIFY(next)
-
-    IF (.NOT. ASSOCIATED(return_ptr)) &
-      & CALL finish(TRIM(routine), 'Could not find next tile')
-
-  END FUNCTION Get_next_tile
-
-  FUNCTION Get_tile(this, tile_id) RESULT(return_ptr)
-
-    CLASS(t_jsb_model), INTENT(in) :: this
-    INTEGER,            INTENT(in) :: tile_id(:)
-    CLASS(t_jsb_tile_abstract),  POINTER    :: return_ptr
-
-    CLASS(t_State), POINTER :: state
-
-    state => this%Get_state(tile_id)
-
-    SELECT TYPE (state)
-    CLASS IS (t_jsb_tile_abstract)
-      return_ptr => state
-    END SELECT
-
-    NULLIFY(state)
-
-  END FUNCTION Get_tile
 
   SUBROUTINE Set_options(this, current_datetime, dtime, alpha, iblk, ics, ice, nc, &
     &                    nsoil_e, nsoil_w, nsnow_e, npft)
@@ -562,23 +690,19 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     TYPE(t_jsb_grid),  POINTER          :: grid       ! Horizontal grid
-    INTEGER                             :: startblk, endblk, iblk, ics, ice
+    INTEGER                             :: startblk, endblk, iblk, ics, ice, itile
     CHARACTER(len=*), PARAMETER :: routine = modname//':Store_bgcms'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL this%Reset_tiles()
-    CALL this%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
     grid  => get_grid(this%grid_id)
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
 
-    DO WHILE (ASSOCIATED(tile))
+    DO itile=1,SIZE(this%tiles)
+      tile => this%tiles(itile)%p
       IF (ASSOCIATED(tile%bgcm_store)) THEN
         DO iblk = startblk, endblk
           ! index of gridcell at start of the chunk
@@ -588,8 +712,6 @@ CONTAINS
           CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, ics, ice, iblk)
         ENDDO
       ENDIF
-
-      CALL this%Goto_next_tile(tile)
     END DO
 
   END SUBROUTINE Write_back_to_bgcms
@@ -654,27 +776,18 @@ CONTAINS
 
     CLASS(t_jsb_memory), POINTER  :: mem
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    INTEGER                       :: iproc, i, no_omp_thread
+    INTEGER                       :: iproc, i, itile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Sync_vars_from_gpu_to_cpu'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Syncing variables from GPU to CPU '//TRIM(this%name))
 
-    no_omp_thread = Get_omp_thread()
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL this%Reset_tiles()
-    CALL this%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL this%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(this%tiles)
+      tile => this%tiles(itile)%p
 
       ! Loop over all processes and initialize memory for this tile
       DO iproc=1,SIZE(tile%mem)
@@ -702,8 +815,6 @@ CONTAINS
 
       END DO
 
-      CALL this%Goto_next_tile(tile)
-
     END DO
 
     !$ACC WAIT(1)
@@ -719,27 +830,18 @@ CONTAINS
 
     CLASS(t_jsb_memory), POINTER  :: mem
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    INTEGER                       :: iproc, i, no_omp_thread
+    INTEGER                       :: iproc, i, itile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Sync_vars_from_cpu_to_gpu'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Syncing variables from CPU to GPU '//TRIM(this%name))
 
-    no_omp_thread = Get_omp_thread()
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
 
-    CALL this%Reset_tiles()
-    CALL this%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL this%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(this%tiles)
+      tile => this%tiles(itile)%p
 
       ! Loop over all processes and initialize memory for this tile
       DO iproc=1,SIZE(tile%mem)
@@ -765,8 +867,6 @@ CONTAINS
         END DO
 
       END DO
-
-      CALL this%Goto_next_tile(tile)
 
     END DO
 

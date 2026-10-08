@@ -203,9 +203,8 @@ CONTAINS
         CALL init_time()
       END IF
 
-      CALL model%Set_mode(model%config%hsm_mode)
       ! Disable multi-queue processing for QUINCY while it's not ready
-      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
+      model%use_multiple_queues = model_scheme /= MODEL_QUINCY
 
       !>
       !> 8. Create and register surface grid, other grids are created by the processes that needs them.
@@ -502,6 +501,8 @@ CONTAINS
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
+      ! The tile tree is complete: collect its tiles once for all later loops over tiles
+      CALL model%Build_tile_lists()
     ELSE
       ! Explicit model configuration through namelist
       !>

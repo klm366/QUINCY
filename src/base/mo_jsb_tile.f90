@@ -18,7 +18,6 @@
 !> - Init => [[Init_tile]]
 !> - Init_fractions => [[Init_fractions_on_tile]]
 !> - Init_vars => [[Init_vars_on_tile]]
-!> - Handler => [[Process_task_on_tile]]
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -30,7 +29,7 @@ MODULE mo_jsb_tile
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
-  USE mo_hsm_class,           ONLY: t_State, t_Message
+  USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
@@ -72,7 +71,6 @@ MODULE mo_jsb_tile
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
     PROCEDURE :: Print                            => Print_tile
-    PROCEDURE :: Handler                          => Process_task_on_tile
   END TYPE t_jsb_tile
 
   !> Used to create a vector of tiles
@@ -116,22 +114,22 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),            POINTER :: model
     INTEGER                               :: i, j, iproc
-    CLASS(t_State),               POINTER :: parent_tmp   !< Temporary pointer to the parent tile
+    CLASS(t_jsb_tile_tree_node),  POINTER :: parent_tmp   !< Temporary pointer to the parent tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Starting construction of tile '//TRIM(name))
 
-    ! Allocate and initialize base structure (=state) for tile
+    ! Allocate and initialize base structure (=tile-tree node) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
 
     ! Add the parent tile to the actual tile (for all but the box tile)
-    ! init the parent with information (properties) from the state machine only
+    ! init the parent with information (properties) from the tile-tree structure only
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
-      CALL return_ptr%Init_state(name, description, parent_tmp)
+      CALL return_ptr%Init_node(name, description, parent_tmp)
     ELSE
-      CALL return_ptr%Init_state(name, description)
+      CALL return_ptr%Init_node(name, description)
     END IF
 
     ! Initialize further components of t_jsb_tile_abstract extended type
@@ -419,7 +417,8 @@ CONTAINS
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
             !$ACC ENTER DATA CREATE(parent_tile%mem(iproc)%p%children)
           END IF
-          child_no = this%path(this%level)                ! Index of the child (i.e. the current tile; comes from state machine)
+          ! Index of the child (i.e. the current tile; comes from tile-tree structure)
+          child_no = this%path(this%level)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
           !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
@@ -1179,174 +1178,6 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Task handler function for tile (HSM message handler)
-  !> Updates only one process on only one tile
-  !>
-  FUNCTION Process_task_on_tile(this, msg_in) RESULT(return_ptr)
-
-    USE mo_util, ONLY: one_of, logical2string, int2string
-    USE mo_jsb_parallel, ONLY: Get_omp_thread, Get_omp_no_of_threads
-    USE mo_jsb_control,  ONLY: timer_on, timer_process_task
-    USE mo_timer,        ONLY: timer_start, timer_stop
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile),  INTENT(inout) :: this
-    CLASS(t_Message),   INTENT(in)    :: msg_in
-    CLASS(t_Message),   POINTER       :: return_ptr
-    ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER :: model
-    !CLASS(t_jsb_task_msg), POINTER :: msg
-    TYPE(t_Message), POINTER :: msg
-    LOGICAL :: l_debug
-
-    CLASS(t_jsb_process_task), POINTER :: task
-
-    INTEGER :: iblk, no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_task_on_tile'
-    ! -------------------------------------------------------------------------------------------------- !
-    no_omp_thread = Get_omp_thread()
-
-    ! Start timer
-    IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
-
-    ! Build local variable msg
-    ALLOCATE(msg)
-    msg%name = msg_in%name
-    msg%action = msg_in%action
-
-    model => this%model
-
-    iblk = model%options(no_omp_thread)%iblk
-    ! Debug messages only on the first block
-    l_debug = debug_on('hsm') .AND. iblk == 1
-
-    task => model%current_task(no_omp_thread)%p
-
-    ! Write debug messages
-    IF (l_debug) THEN
-        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)//&
-          &                         '(visited='//logical2string(this%visited(no_omp_thread))//')')
-    ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
-      IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
-      END IF
-    END IF
-
-    !> Here the navigation through the tile tree is handled.
-    !> 1. INTEGRATE: On the way downward [from the top tile] to leave level all INTEGRATE actions are performed
-    !> this%visited TRUE marks the pathway downwards
-    !> INTEGRATE can also be performed 'on_tile'
-    !> After the last leave [of one sibling] is reached the direction is reversed [-> upward]
-    !> 2. AGGREGATE: On the way upward [to top tile] all AGGREATE actions are performed on parents
-    !> 1. and 2. are repeated until all siblings have been aggregated [no next_sibling -> finish]
-    !> FINISH: Setting return_ptr=>NULL marks return to state machine
-    SELECT CASE (TRIM(msg%action%name))
-    CASE ('START')      !< Is not used, model starts with 'INTEGRATE' instead
-      IF (.NOT. this%visited(no_omp_thread)) THEN ! i.e. on the way down
-        IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-          IF (this%Has_children() .AND. &
-            & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
-            & this%process_action(task%process_id) /= ON_TILE_) THEN
-            CALL model%Start_state(this%first_child_tile)
-          END IF
-        ELSE IF (ASSOCIATED(this%next_sibling_tile)) THEN
-          CALL model%Start_state(this%next_sibling_tile)
-        END IF
-      END IF
-    CASE ('INTEGRATE')
-      !@TODO: this test on "if we should do anything?" could be 'more' save/obvious e.g. using a function or the like
-      !       ++ is this == AGGREGATE_?
-      IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-        IF (this%Has_children() .AND. &
-          & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
-          & this%process_action(task%process_id) /= ON_TILE_) THEN
-          CALL model%Goto(this%first_child_tile, l_debug)
-        ELSE
-          CALL task%Do_it(msg, this, model%options(no_omp_thread))
-          IF (ASSOCIATED(this%next_sibling_tile)) THEN
-              CALL model%Goto(this%next_sibling_tile, l_debug)
-          ELSE IF (ASSOCIATED(this%parent_tile)) THEN
-            msg%action = model%Get_action('AGGREGATE')
-            CALL model%Goto(this%parent_tile, l_debug)
-          ELSE
-            this%visited(no_omp_thread) = .FALSE.
-            IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-            msg => NULL()
-          END IF
-        END IF
-      ELSE !< this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
-        IF (ASSOCIATED(this%next_sibling_tile)) THEN
-            CALL model%Goto(this%next_sibling_tile, l_debug)
-        ELSE IF (ASSOCIATED(this%parent_tile)) THEN
-          msg%action = model%Get_action('AGGREGATE')
-          CALL model%Goto(this%parent_tile, l_debug)
-        ELSE
-          this%visited(no_omp_thread) = .FALSE.
-          IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-          msg => NULL()
-        END IF
-      END IF
-    CASE ('AGGREGATE')
-      IF (this%process_action(task%process_id) >= AGGREGATE_ .AND. this%visited(no_omp_thread)) THEN
-        CALL task%Do_it(msg, this, model%options(no_omp_thread))
-      END IF
-      IF (ASSOCIATED(this%next_sibling_tile)) THEN
-        msg%action = model%Get_action('INTEGRATE')
-        CALL model%Goto(this%next_sibling_tile, l_debug)
-      ELSE IF (this == model%top) THEN
-        this%visited(no_omp_thread) = .FALSE.
-        IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-        msg => NULL()
-      ELSE
-        msg%action = model%Get_action('AGGREGATE')
-        CALL model%Goto(this%parent_tile, l_debug)
-      END IF
-    END SELECT
-
-    IF (ASSOCIATED(msg)) THEN !< Return message to state machine
-      return_ptr => msg
-    ELSE
-      return_ptr => NULL() !< else FINISH
-    END IF
-
-    !> Debug option: only output at 2. or 3. level
-    !> l_debug is TRUE if user-chosen debug level is 'hsm'
-    !> [3. level] Write info about action and openmp threat
-    !> [2. level] Write entry info for first block only
-    IF (l_debug) THEN
-      IF (ASSOCIATED(msg)) THEN
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished (new message action is '//TRIM(msg%action%name)//')'//&
-            &                                               ', thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished (new message action is '//TRIM(msg%action%name)//')')
-        END IF
-      ELSE
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished (new message is NULL)'//', thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished (new message is NULL)')
-        END IF
-      END IF
-    ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
-      IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished, thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished')
-        END IF
-      END IF
-    END IF
-
-    ! Stop timer
-    IF (timer_on('detail')) CALL timer_stop(timer_process_task(this%owner_model_id)) !< Stop the timer
-
-  END FUNCTION Process_task_on_tile
-
-  ! ======================================================================================================= !
-  !>
   !> Routine that prints information about the tile to the log-file
   !>
   SUBROUTINE Print_tile(this)
@@ -1360,7 +1191,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Print_tile'
     ! -------------------------------------------------------------------------------------------------- !
     ! Print for basic type
-    CALL this%Print_state() ! print position of the tile in the whole hierarchical tree of tiles as a series of integers
+    CALL this%Print_node() ! print position of the tile in the whole hierarchical tree of tiles as a series of integers
 
     IF (this%fract_filename /= '') THEN
       CALL message('     fract_filename', TRIM(this%fract_filename))
