@@ -218,7 +218,7 @@ CONTAINS
       CALL cpl_def_field(                                          &
         & land_comp_id, cell_point_id, modelTimeStep,              &
         & name, 1, field_id)
-      CALL cpl_def_field_metadata(routine, land_comp_name, grid_name, name, metadata)
+      CALL cpl_def_field_metadata(routine, field_id, metadata)
     END SUBROUTINE def_target_field
 
     SUBROUTINE def_source_field(name, metadata, field_id)
@@ -228,7 +228,7 @@ CONTAINS
       CALL cpl_def_field(                                          &
         & land_comp_id, cell_point_id, cell_mask_id, modelTimeStep, &
         & name, 1, field_id)
-      CALL cpl_def_field_metadata(routine, land_comp_name, grid_name, name, metadata)
+      CALL cpl_def_field_metadata(routine, field_id, metadata)
     END SUBROUTINE def_source_field
 
   END SUBROUTINE jsb_fdef_lice_fields
@@ -475,6 +475,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER      :: return_ptr
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER :: itile
 
     IF (ASSOCIATED(lice_tile)) THEN
       return_ptr => lice_tile
@@ -483,16 +484,14 @@ CONTAINS
 
     return_ptr => NULL()
 
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    DO WHILE (ASSOCIATED(tile))
+    ! model%tiles(:) is the precomputed pre-order list of the tile tree (parents first)
+    DO itile = 1, SIZE(model%tiles)
+      tile => model%tiles(itile)%p
       IF (tile%is_glacier .AND. tile%Is_process_calculated(LICE_)) THEN
         return_ptr => tile
         EXIT
       END IF
-      CALL model%Goto_next_tile(tile)
     END DO
-    CALL model%Reset_tiles()
 
     lice_tile => return_ptr
 
