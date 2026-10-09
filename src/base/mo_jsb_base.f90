@@ -104,13 +104,13 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, snow_e       !< Vertical soil and snow grids
-    TYPE(t_jsb_vgrid), POINTER :: surface                      !< Vertical grid for surface (only one layer)
-    TYPE(t_jsb_vgrid), POINTER :: pft_layer                    !< Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w, soil_c, snow_e !< Vertical soil and snow grids
+    TYPE(t_jsb_vgrid), POINTER :: surface                        !< Vertical grid for surface (only one layer)
+    TYPE(t_jsb_vgrid), POINTER :: pft_layer                      !< Vertical grid
 
-    INTEGER :: no_of_models, model_idx, iproc                  !< IDs of models and process
-    INTEGER :: nsoil_e, nsoil_w, nsnow_e                       !< Number of vertical soil and snow layers
-    INTEGER :: model_scheme                                    !< Choice of model (JSBACH or Quincy)
+    INTEGER :: no_of_models, model_idx, iproc                    !< IDs of models and process
+    INTEGER :: nsoil_e, nsoil_w, nsoil_c, nsnow_e                !< Number of vertical soil and snow layers
+    INTEGER :: model_scheme                                      !< Choice of model (JSBACH or Quincy)
     INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models' !< Name of this routine
@@ -285,6 +285,17 @@ CONTAINS
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
+
+        IF (model%Is_process_enabled(CARBON_)) THEN
+          IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+            soil_c => Get_vgrid('soil_depth_carbon')
+            nsoil_c = soil_c%n_levels
+          ELSE
+            soil_c => NULL()
+            nsoil_c = 1
+          END IF
+        END IF
+        CALL model%Set_options(nsoil_c=nsoil_c)
 
       END SELECT
 
