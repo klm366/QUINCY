@@ -156,9 +156,7 @@ CONTAINS
   SUBROUTINE update_C_NPP_pot_allocation(tile, options)
 
     ! Use declarations
-    USE mo_carbon_shared,            ONLY: calc_plant_c
-    USE mo_carbon_process,           ONLY: calc_soil_c
-    USE mo_carbon_process_vertical,  ONLY: calc_vertical_soil_c
+    USE mo_carbon_process,           ONLY: calc_plant_c, calc_soil_c, calc_vertical_soil_c
     USE mo_util,                     ONLY: soil_depth_to_layers
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
@@ -1778,7 +1776,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & c_humus_1_sl, c_humus_2_sl,                                             &
       & soil_respiration_oxic_sl, soil_respiration_anox_sl )
 
-    USE mo_carbon_shared, ONLY: get_per_tile
+    USE mo_carbon_process, ONLY: get_per_tile
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -2312,7 +2310,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
       &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
-    USE mo_carbon_shared,       ONLY: add_litter_to_yasso_pool
+    USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     ! -------------------------------------------------------------------------------------------------- !

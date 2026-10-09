@@ -145,9 +145,6 @@ CONTAINS
       & memory_pointer  (:,  :) , &  !< pointer the memory of the current variable of the current tile
       & memory_pointer3d(:,:,:)      !< 3D pointer the memory of the current variable of the current tile
 
-    !LOGICAL :: &
-    !  read_cpools
-
     TYPE(t_input_file) :: input_file
 
     INTEGER, PARAMETER :: npools = 21
@@ -184,6 +181,9 @@ CONTAINS
 
     ! Initialize the C Pools
     invar_3D = .false.
+
+    return_pointer   => NULL()
+    return_pointer3d => NULL()
 
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
@@ -338,10 +338,8 @@ CONTAINS
     CALL input_file%Close()
 
     ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(return_pointer3d)) CONTINUE
-    NULLIFY(return_pointer3d)
-    IF (ASSOCIATED(return_pointer)) CONTINUE
-    NULLIFY(return_pointer)
+    IF (.NOT. ASSOCIATED(return_pointer)) NULLIFY(return_pointer)
+    IF (.NOT. ASSOCIATED(return_pointer3d)) NULLIFY(return_pointer3d)
 
   END SUBROUTINE carbon_read_cpools
 

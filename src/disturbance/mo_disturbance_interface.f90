@@ -364,8 +364,8 @@ CONTAINS
   !
   SUBROUTINE update_natural_disturbances(tile, options)
 
-    USE mo_carbon_process,          ONLY: relocate_carbon_fire, relocate_carbon_damage
-    USE mo_carbon_process_vertical, ONLY: relocate_carbon_vertical_fire, relocate_carbon_vertical_damage
+    USE mo_carbon_process,          ONLY: relocate_carbon_fire, relocate_carbon_damage, &
+      &                                   relocate_carbon_vertical_fire, relocate_carbon_vertical_damage
     USE mo_carbon_interface,        ONLY: recalc_per_tile_vars, recalc_carbon_per_tile_vars, &
       &                                   calculate_current_c_ta_state_sum, check_carbon_conservation
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
