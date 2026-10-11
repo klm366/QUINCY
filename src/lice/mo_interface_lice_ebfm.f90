@@ -391,11 +391,9 @@ CONTAINS
       LOGICAL, OPTIONAL, INTENT(in)   :: first_get   !< first get of the time step (coupling timers)
       LOGICAL, OPTIONAL, INTENT(out)  :: received    !< data received by this call
 
-      LOGICAL :: lfirst_get, lreceived
+      LOGICAL :: lreceived
 
-      lfirst_get = .FALSE.
-      IF (PRESENT(first_get)) lfirst_get = first_get
-      CALL cpl_get_field(routine, field_id, name, grid%ntotal, var, first_get=lfirst_get, received_data=lreceived)
+      CALL cpl_get_field(routine, field_id, name, grid%ntotal, var, first_get=first_get, received_data=lreceived)
       IF (lreceived) THEN
         !$ACC UPDATE DEVICE(var) ASYNC(acc_stream)
         CALL message(routine, 'Received ' // name // ' from EBFM')
