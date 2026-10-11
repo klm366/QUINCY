@@ -143,11 +143,8 @@ CONTAINS
     model => Get_model(1)
 
     dsl4jsb_Get_config(LICE_)
-    IF (.NOT. dsl4jsb_Config(LICE_)%active) THEN
-      CALL message(routine, 'WARNING: coupled_to_ebfm_land is set, but the ICON-Land lice process is not active ' // &
-        &                   '(jsb_lice_nml: active=.FALSE.); no fields defined.')
-      RETURN
-    END IF
+    IF (.NOT. dsl4jsb_Config(LICE_)%active) CALL finish(routine, &
+      & 'coupled_to_ebfm_land is set, but the ICON-Land lice process is not active (jsb_lice_nml: active=.FALSE.)')
 
     IF (land_comp_id < 0) CALL finish(routine, &
       & 'The YAC component ' // land_comp_name // ' has not been defined (jsb_construct_coupling)')
@@ -211,6 +208,8 @@ CONTAINS
 
   CONTAINS
 
+    !> Field received from EBFM: defined without a mask, every cell of the ICON grid receives
+    !> (cells without EBFM data get the missing value of the coupling configuration)
     SUBROUTINE def_target_field(name, metadata, field_id)
       CHARACTER(len=*), INTENT(in)  :: name, metadata
       INTEGER,          INTENT(out) :: field_id
@@ -221,6 +220,8 @@ CONTAINS
       CALL cpl_def_field_metadata(routine, field_id, metadata)
     END SUBROUTINE def_target_field
 
+    !> Field sent to EBFM: defined with the cell mask of the lice tile fraction (cell_mask_id),
+    !> so that only cells with a lice tile contribute to the interpolation to the EBFM mesh
     SUBROUTINE def_source_field(name, metadata, field_id)
       CHARACTER(len=*), INTENT(in)  :: name, metadata
       INTEGER,          INTENT(out) :: field_id
@@ -244,7 +245,6 @@ CONTAINS
     LOGICAL,           INTENT(in)            :: l_experiment_start !< True: very first time step of the
                                                                    !< experiment (not of a restart leg)
 
-    dsl4jsb_Def_config(LICE_)
     dsl4jsb_Def_memory(LICE_)
     dsl4jsb_Def_memory(SEB_)
 
@@ -269,10 +269,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_lice_get'
 
     IF (.NOT. is_coupled_run() .OR. .NOT. is_coupled_to_ebfm_land()) RETURN
-    IF (.NOT. fields_defined) RETURN
-
-    dsl4jsb_Get_config(LICE_)
-    IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
+    ! The fields are defined by jsb_fdef_lice_fields (called from the ICON coupling frame when
+    ! coupled_to_ebfm_land is set), which aborts if the lice process is not active
+    IF (.NOT. fields_defined) CALL finish(routine, &
+      & 'coupled_to_ebfm_land is set, but the YAC fields of the ICON-Land/EBFM coupling are not defined')
 
     tile => get_lice_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
@@ -415,7 +415,6 @@ CONTAINS
 
     TYPE(t_jsb_model), INTENT(inout), TARGET :: model
 
-    dsl4jsb_Def_config(LICE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -432,10 +431,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_lice_put'
 
     IF (.NOT. is_coupled_run() .OR. .NOT. is_coupled_to_ebfm_land()) RETURN
-    IF (.NOT. fields_defined) RETURN
-
-    dsl4jsb_Get_config(LICE_)
-    IF (.NOT. dsl4jsb_Config(LICE_)%active) RETURN
+    ! The fields are defined by jsb_fdef_lice_fields (called from the ICON coupling frame when
+    ! coupled_to_ebfm_land is set), which aborts if the lice process is not active
+    IF (.NOT. fields_defined) CALL finish(routine, &
+      & 'coupled_to_ebfm_land is set, but the YAC fields of the ICON-Land/EBFM coupling are not defined')
 
     tile => get_lice_tile(model)
     IF (.NOT. ASSOCIATED(tile)) &
