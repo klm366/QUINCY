@@ -107,7 +107,7 @@ CONTAINS
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
     alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    alcc_transitions_filename_prefix = 'LUH_transitions_'
+    alcc_transitions_filename_prefix = 'bc_land_trans_'
     alcc_potential_cf_filename = 'bc_land_potential_cf.nc'
     scheme               = 'maps'        ! options: 'maps', 'transition'
     l_daily_alcc         = .TRUE.
