@@ -36,7 +36,8 @@ MODULE mo_carbon_interface
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,           &
                                  & LCT_ACID, LCT_WATER, LCT_ETHANOL,       &
                                  & LCT_NONSOLUBLE, LCT_HUMUS, WOODLITSIZE, &
-                                 & ROOT_DIST_BETA, permafrost_threshold
+                                 & ROOT_DIST_BETA, permafrost_threshold,   &
+                                 & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_, SSE_, HYDRO_
@@ -208,10 +209,14 @@ CONTAINS
     REAL(lp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
     REAL(lp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
-    ! Cleaner parameter transfer for vertical YASSO
-    REAL(lp) :: LeafLit_coefV(5)  !< Array with leaf litter coefficients
-    REAL(lp) :: WoodLit_coefV(5)  !< Array with woody litter coefficients
-    REAL(lp) :: MiscPar(2)        !< Array with additional coefficients
+    ! Pool and parameter transfer for YASSO scheme
+    REAL(lp) :: green_cpools_ag(4) !< Array with above ground green litter pools [mol(C) m-2]
+    REAL(lp) :: woody_cpools_ag(4) !< Array with above ground woody litter pools [mol(C) m-2]
+    REAL(lp) :: green_cpools_bg(5) !< Array with below ground green litter pools [mol(C) m-2]
+    REAL(lp) :: woody_cpools_bg(5) !< Array with below ground woody litter pools [mol(C) m-2]
+    REAL(lp) :: LeafLit_coef(5)    !< Array with leaf litter coefficients []
+    REAL(lp) :: WoodLit_coef(5)    !< Array with woody litter coefficients []
+    REAL(lp) :: MiscPar(2)         !< Array with additional coefficients
 
     REAL(lp), POINTER            :: tile_fract(:) !< Fraction of the tile (rel. to the grid cell) []
 
@@ -756,18 +761,18 @@ CONTAINS
       lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
 
       ! Set up parameter arrays for cleaner parameter transfer vertical YASSO
-      LeafLit_coefV(LCT_ACID)       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID))
-      LeafLit_coefV(LCT_WATER)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER))
-      LeafLit_coefV(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL))
-      LeafLit_coefV(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_NONSOLUBLE))
-      LeafLit_coefV(LCT_HUMUS)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_HUMUS))
-      WoodLit_coefV(LCT_ACID)       = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ACID))
-      WoodLit_coefV(LCT_WATER)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_WATER))
-      WoodLit_coefV(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ETHANOL))
-      WoodLit_coefV(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_NONSOLUBLE))
-      WoodLit_coefV(LCT_HUMUS)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_HUMUS))
-      MiscPar(WOODLITSIZE)          = dsl4jsb_Lctlib_param(WoodLitterSize)
-      MiscPar(ROOT_DIST_BETA)       = dsl4jsb_Lctlib_param(root_dist_beta)
+      LeafLit_coef(LCT_ACID)       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID))
+      LeafLit_coef(LCT_WATER)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER))
+      LeafLit_coef(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL))
+      LeafLit_coef(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_NONSOLUBLE))
+      LeafLit_coef(LCT_HUMUS)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_HUMUS))
+      WoodLit_coef(LCT_ACID)       = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ACID))
+      WoodLit_coef(LCT_WATER)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_WATER))
+      WoodLit_coef(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ETHANOL))
+      WoodLit_coef(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_NONSOLUBLE))
+      WoodLit_coef(LCT_HUMUS)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_HUMUS))
+      MiscPar(WOODLITSIZE)         = dsl4jsb_Lctlib_param(WoodLitterSize)
+      MiscPar(ROOT_DIST_BETA)      = dsl4jsb_Lctlib_param(root_dist_beta)
 
       ! Check whether optional values were read from lctlib
       IF (MiscPar(ROOT_DIST_BETA) < -990._lp .AND. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
@@ -856,58 +861,75 @@ CONTAINS
       ! Calculate soil carbon pools
       IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         DO ic = 1, nc
+          ! Prepare vectors of carbon pools and fluxes (above and below ground, green and woody litter, humus)
+          green_cpools_ag(Y_ACID) = c_acid_ag1(ic)
+          green_cpools_ag(Y_WATER) = c_water_ag1(ic)
+          green_cpools_ag(Y_ETHANOL) = c_ethanol_ag1(ic)
+          green_cpools_ag(Y_NONSOLUBLE) = c_nonsoluble_ag1(ic)
+          green_cpools_bg(Y_ACID) = c_acid_bg1(ic)
+          green_cpools_bg(Y_WATER) = c_water_bg1(ic)
+          green_cpools_bg(Y_ETHANOL) = c_ethanol_bg1(ic)
+          green_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg1(ic)
+          green_cpools_bg(Y_HUMUS) = c_humus_1(ic)
+          woody_cpools_ag(Y_ACID) = c_acid_ag2(ic)
+          woody_cpools_ag(Y_WATER) = c_water_ag2(ic)
+          woody_cpools_ag(Y_ETHANOL) = c_ethanol_ag2(ic)
+          woody_cpools_ag(Y_NONSOLUBLE) = c_nonsoluble_ag2(ic)
+          woody_cpools_bg(Y_ACID) = c_acid_bg2(ic)
+          woody_cpools_bg(Y_WATER) = c_water_bg2(ic)
+          woody_cpools_bg(Y_ETHANOL) = c_ethanol_bg2(ic)
+          woody_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg2(ic)
+          woody_cpools_bg(Y_HUMUS) = c_humus_2(ic)
+          ! Call the soil carbon calculation routine
           CALL calc_soil_c( &
-            & delta_time_C,                                                                 & ! in
-            & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID)),       & ! in
-            & LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER)),      & ! in
-            & LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL)),    & ! in
-            & LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_NONSOLUBLE)), & ! in
-            & LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_HUMUS)),      & ! in
-            & WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ACID)),       & ! in
-            & WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_WATER)),      & ! in
-            & WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ETHANOL)),    & ! in
-            & WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_NONSOLUBLE)), & ! in
-            & WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_HUMUS)),      & ! in
-            & WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize),               & ! in
+            & delta_time_C,                                          & ! in
+            & LeafLit_coef,                                          & ! in
+            & WoodLit_coef,                                          & ! in
+            & MiscPar,                                               & ! in
             !
-            & temp                    = temp_15d_yDay_climbuf(ic),                          & ! in
-            & precip                  = precip_15d_yDay_climbuf(ic),                        & ! in
+            & temp                    = temp_15d_yDay_climbuf(ic),   & ! in
+            & precip                  = precip_15d_yDay_climbuf(ic), & ! in
             !
-            & Cflx_wood_2_litter      = cflux_c_wood_2_litter(ic),                          & ! in
-            & Cflx_green_2_litter     = cflux_c_green_2_litter(ic),                         & ! in
-            & Cflx_2_root_exudates    = root_exudates(ic),                                  & ! in
+            & Cflx_wood_2_litter      = cflux_c_wood_2_litter(ic),   & ! in
+            & Cflx_green_2_litter     = cflux_c_green_2_litter(ic),  & ! in
+            & Cflx_2_root_exudates    = root_exudates(ic),           & ! in
             !
-            & c_acid_ag1              = c_acid_ag1(ic),                                     & ! inout
-            & c_water_ag1             = c_water_ag1(ic),                                    & ! inout
-            & c_ethanol_ag1           = c_ethanol_ag1(ic),                                  & ! inout
-            & c_nonsoluble_ag1        = c_nonsoluble_ag1(ic),                               & ! inout
-            & c_acid_bg1              = c_acid_bg1(ic),                                     & ! inout
-            & c_water_bg1             = c_water_bg1(ic),                                    & ! inout
-            & c_ethanol_bg1           = c_ethanol_bg1(ic),                                  & ! inout
-            & c_nonsoluble_bg1        = c_nonsoluble_bg1(ic),                               & ! inout
-            & c_humus_1               = c_humus_1(ic),                                      & ! inout
-            & c_acid_ag2              = c_acid_ag2(ic),                                     & ! inout
-            & c_water_ag2             = c_water_ag2(ic),                                    & ! inout
-            & c_ethanol_ag2           = c_ethanol_ag2(ic),                                  & ! inout
-            & c_nonsoluble_ag2        = c_nonsoluble_ag2(ic),                               & ! inout
-            & c_acid_bg2              = c_acid_bg2(ic),                                     & ! inout
-            & c_water_bg2             = c_water_bg2(ic),                                    & ! inout
-            & c_ethanol_bg2           = c_ethanol_bg2(ic),                                  & ! inout
-            & c_nonsoluble_bg2        = c_nonsoluble_bg2(ic),                               & ! inout
-            & c_humus_2               = c_humus_2(ic),                                      & ! inout
+            & green_cpools_ag         = green_cpools_ag(:),          & ! inout
+            & green_cpools_bg         = green_cpools_bg(:),          & ! inout
+            & woody_cpools_ag         = woody_cpools_ag(:),          & ! inout
+            & woody_cpools_bg         = woody_cpools_bg(:),          & ! inout
             !
-            & c_decomp_humus_1_sum    = c_decomp_humus_1_sum(ic),                           & ! out
-            & c_decomp_humus_2_sum    = c_decomp_humus_2_sum(ic),                           & ! out
-            & c_into_humus_1_sum      = c_into_humus_1_sum(ic),                             & ! out
-            & c_into_humus_2_sum      = c_into_humus_2_sum(ic),                             & ! out
-            & Cflx_soil_respiration   = soil_respiration(ic)                                & ! out
+            & c_decomp_humus_1_sum    = c_decomp_humus_1_sum(ic),    & ! out
+            & c_decomp_humus_2_sum    = c_decomp_humus_2_sum(ic),    & ! out
+            & c_into_humus_1_sum      = c_into_humus_1_sum(ic),      & ! out
+            & c_into_humus_2_sum      = c_into_humus_2_sum(ic),      & ! out
+            & Cflx_soil_respiration   = soil_respiration(ic)         & ! out
             & )
+          ! Update the carbon pools after the soil carbon calculation
+          c_acid_ag1(ic)       = green_cpools_ag(Y_ACID)
+          c_water_ag1(ic)      = green_cpools_ag(Y_WATER)
+          c_ethanol_ag1(ic)    = green_cpools_ag(Y_ETHANOL)
+          c_nonsoluble_ag1(ic) = green_cpools_ag(Y_NONSOLUBLE)
+          c_acid_bg1(ic)       = green_cpools_bg(Y_ACID)
+          c_water_bg1(ic)      = green_cpools_bg(Y_WATER)
+          c_ethanol_bg1(ic)    = green_cpools_bg(Y_ETHANOL)
+          c_nonsoluble_bg1(ic) = green_cpools_bg(Y_NONSOLUBLE)
+          c_humus_1(ic)        = green_cpools_bg(Y_HUMUS)
+          c_acid_ag2(ic)       = woody_cpools_ag(Y_ACID)
+          c_water_ag2(ic)      = woody_cpools_ag(Y_WATER)
+          c_ethanol_ag2(ic)    = woody_cpools_ag(Y_ETHANOL)
+          c_nonsoluble_ag2(ic) = woody_cpools_ag(Y_NONSOLUBLE)
+          c_acid_bg2(ic)       = woody_cpools_bg(Y_ACID)
+          c_water_bg2(ic)      = woody_cpools_bg(Y_WATER)
+          c_ethanol_bg2(ic)    = woody_cpools_bg(Y_ETHANOL)
+          c_nonsoluble_bg2(ic) = woody_cpools_bg(Y_NONSOLUBLE)
+          c_humus_2(ic)        = woody_cpools_bg(Y_HUMUS)
         END DO
       ELSE
         DO ic = 1, nc
           CALL calc_vertical_soil_c(delta_time_C, nsoil,                                & ! in
             &  layer_depth, layer_thick,                                                & ! in
-            &  LeafLit_coefV, WoodLit_coefV, MiscPar,                                   & ! in
+            &  LeafLit_coef, WoodLit_coef, MiscPar,                                   & ! in
                !
             &  temp                         = temp_15d_yDay_climbuf(ic),                & ! in
             &  precip                       = precip_15d_yDay_climbuf(ic),              & ! in
