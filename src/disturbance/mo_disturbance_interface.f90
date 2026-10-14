@@ -144,7 +144,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     LOGICAL :: newday
-    INTEGER :: iblk, ic, is, nc, nsoil, ics, ice
+    INTEGER :: iblk, ic, nc, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
@@ -185,7 +185,6 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    nsoil   = options%nsoil_c
 
     model => Get_model(tile%owner_model_id)
 

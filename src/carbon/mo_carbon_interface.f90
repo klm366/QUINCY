@@ -37,7 +37,7 @@ MODULE mo_carbon_interface
                                  & LCT_ACID, LCT_WATER, LCT_ETHANOL,       &
                                  & LCT_NONSOLUBLE, LCT_HUMUS, WOODLITSIZE, &
                                  & ROOT_DIST_BETA, permafrost_threshold,   &
-                                 & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
+                                 & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, CLIMBUF_, DISTURB_, NLCC_, L2A_, SSE_, HYDRO_
@@ -210,10 +210,10 @@ CONTAINS
     REAL(lp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
     ! Pool and parameter transfer for YASSO scheme
-    REAL(lp) :: green_cpools_ag(4) !< Array with above ground green litter pools [mol(C) m-2]
-    REAL(lp) :: woody_cpools_ag(4) !< Array with above ground woody litter pools [mol(C) m-2]
-    REAL(lp) :: green_cpools_bg(5) !< Array with below ground green litter pools [mol(C) m-2]
-    REAL(lp) :: woody_cpools_bg(5) !< Array with below ground woody litter pools [mol(C) m-2]
+    REAL(lp) :: green_cpools_ag(4) !< Array with above ground green AWEN litter pools [mol(C) m-2]
+    REAL(lp) :: woody_cpools_ag(4) !< Array with above ground woody AWEN litter pools [mol(C) m-2]
+    REAL(lp) :: green_cpools_bg(4) !< Array with below ground green AWEN litter pools [mol(C) m-2]
+    REAL(lp) :: woody_cpools_bg(4) !< Array with below ground woody AWEN litter pools [mol(C) m-2]
     REAL(lp) :: LeafLit_coef(5)    !< Array with leaf litter coefficients []
     REAL(lp) :: WoodLit_coef(5)    !< Array with woody litter coefficients []
     REAL(lp) :: MiscPar(2)         !< Array with additional coefficients
@@ -861,7 +861,7 @@ CONTAINS
       ! Calculate soil carbon pools
       IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         DO ic = 1, nc
-          ! Prepare vectors of carbon pools and fluxes (above and below ground, green and woody litter, humus)
+          ! Prepare vectors of carbon AWEN pools (above and below ground, green and woody litter)
           green_cpools_ag(Y_ACID) = c_acid_ag1(ic)
           green_cpools_ag(Y_WATER) = c_water_ag1(ic)
           green_cpools_ag(Y_ETHANOL) = c_ethanol_ag1(ic)
@@ -870,7 +870,6 @@ CONTAINS
           green_cpools_bg(Y_WATER) = c_water_bg1(ic)
           green_cpools_bg(Y_ETHANOL) = c_ethanol_bg1(ic)
           green_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg1(ic)
-          green_cpools_bg(Y_HUMUS) = c_humus_1(ic)
           woody_cpools_ag(Y_ACID) = c_acid_ag2(ic)
           woody_cpools_ag(Y_WATER) = c_water_ag2(ic)
           woody_cpools_ag(Y_ETHANOL) = c_ethanol_ag2(ic)
@@ -879,7 +878,6 @@ CONTAINS
           woody_cpools_bg(Y_WATER) = c_water_bg2(ic)
           woody_cpools_bg(Y_ETHANOL) = c_ethanol_bg2(ic)
           woody_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg2(ic)
-          woody_cpools_bg(Y_HUMUS) = c_humus_2(ic)
           ! Call the soil carbon calculation routine
           CALL calc_soil_c( &
             & delta_time_C,                                          & ! in
@@ -896,8 +894,10 @@ CONTAINS
             !
             & green_cpools_ag         = green_cpools_ag(:),          & ! inout
             & green_cpools_bg         = green_cpools_bg(:),          & ! inout
+            & green_cpools_humus      = c_humus_1(ic),               & ! inout
             & woody_cpools_ag         = woody_cpools_ag(:),          & ! inout
             & woody_cpools_bg         = woody_cpools_bg(:),          & ! inout
+            & woody_cpools_humus      = c_humus_2(ic),               & ! inout
             !
             & c_decomp_humus_1_sum    = c_decomp_humus_1_sum(ic),    & ! out
             & c_decomp_humus_2_sum    = c_decomp_humus_2_sum(ic),    & ! out
@@ -905,7 +905,7 @@ CONTAINS
             & c_into_humus_2_sum      = c_into_humus_2_sum(ic),      & ! out
             & Cflx_soil_respiration   = soil_respiration(ic)         & ! out
             & )
-          ! Update the carbon pools after the soil carbon calculation
+          ! Update the carbon AWEN pools after the soil carbon calculation
           c_acid_ag1(ic)       = green_cpools_ag(Y_ACID)
           c_water_ag1(ic)      = green_cpools_ag(Y_WATER)
           c_ethanol_ag1(ic)    = green_cpools_ag(Y_ETHANOL)
@@ -914,7 +914,6 @@ CONTAINS
           c_water_bg1(ic)      = green_cpools_bg(Y_WATER)
           c_ethanol_bg1(ic)    = green_cpools_bg(Y_ETHANOL)
           c_nonsoluble_bg1(ic) = green_cpools_bg(Y_NONSOLUBLE)
-          c_humus_1(ic)        = green_cpools_bg(Y_HUMUS)
           c_acid_ag2(ic)       = woody_cpools_ag(Y_ACID)
           c_water_ag2(ic)      = woody_cpools_ag(Y_WATER)
           c_ethanol_ag2(ic)    = woody_cpools_ag(Y_ETHANOL)
@@ -923,7 +922,6 @@ CONTAINS
           c_water_bg2(ic)      = woody_cpools_bg(Y_WATER)
           c_ethanol_bg2(ic)    = woody_cpools_bg(Y_ETHANOL)
           c_nonsoluble_bg2(ic) = woody_cpools_bg(Y_NONSOLUBLE)
-          c_humus_2(ic)        = woody_cpools_bg(Y_HUMUS)
         END DO
       ELSE
         DO ic = 1, nc

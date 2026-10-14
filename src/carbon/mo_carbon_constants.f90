@@ -40,6 +40,10 @@ MODULE mo_carbon_constants
     ENUMERATOR :: Y_ACID=1, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
   END ENUM
 
+  ! Yasso pool indicators for above and below ground carbon pools
+  ENUM, BIND(C)
+    ENUMERATOR :: ABOVE_GROUND=1, BELOW_GROUND
+  END ENUM
   ! Yasso flux indicators for flux out
   ENUM, BIND(C)
     ENUMERATOR :: F_RESP=1, F_2_HUMUS, F_F_HUMUS, F_LITRESP
@@ -127,7 +131,7 @@ MODULE mo_carbon_constants
   REAL(lp), PARAMETER :: Q10     = 1.5_lp           !< Q10 for deep soil C decomposition, based on CLM
   REAL(lp), PARAMETER :: ref_dep = 1000._lp         !< reference depth to remove depth dependence of decomposition
 
-  ! decomposition modifiers for oxic / anoxic soils
+  ! decomposition modifiers for oxic / anoxic soils (Wania et al. 2009, https://doi.org/10.1029/2008GB003413)
   REAL(lp), PARAMETER :: d_anox = 0.35_lp           !< decomposition modifier for anaerobic decomposition
   REAL(lp), PARAMETER :: d_oxic = 1.0_lp            !< decomposition modifier for oxic decomposition
 
