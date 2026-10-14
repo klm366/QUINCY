@@ -362,43 +362,42 @@ CONTAINS
 #endif
 
     sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
-                                  df_sf_fc_1hr_idx, df_sf_fc_100hr_idx, ixs_sf_dead_litter_fuel_pools, &
-                    dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
-                    live_tree_fuel_1hr_lfp, live_tree_fuel_10hr_lfp, live_tree_fuel_100hr_lfp, live_tree_fuel_1000hr_lfp, &
-                    live_grass_fuel_1hr_lfp, &
-                    cured_live_grass_fuel_1hr_dfp)
+                            df_sf_fc_1hr_idx, df_sf_fc_100hr_idx, ixs_sf_dead_litter_fuel_pools, &
+                            dead_fuel_1hr_dfp, dead_fuel_10hr_dfp, dead_fuel_100hr_dfp, dead_fuel_1000hr_dfp, &
+                            live_tree_fuel_1hr_lfp, live_tree_fuel_10hr_lfp, live_tree_fuel_100hr_lfp, live_tree_fuel_1000hr_lfp, &
+                            live_grass_fuel_1hr_lfp, &
+                            cured_live_grass_fuel_1hr_dfp)
 
     sf_ros = t_sf_ros(nc, fwd_wind_factor, &
-                             fuel_bulk_density, & ! in
-                             ros_f, ros_b, & ! inout
-                             distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
-                             reaction_intensity, prop_flux_ratio, &
-                             wind_factor, eff_heating_number, &
-                             preig_heat, &
-                             opt_react_velo, net_fuel_load, &
-                             moist_damp_coeff, mineral_damp_coeff)
+                            fuel_bulk_density, & ! in
+                            ros_f, ros_b, & ! inout
+                            distance_travelled, l2b_ratio, fire_duration, mean_fire_area, &
+                            reaction_intensity, prop_flux_ratio, &
+                            wind_factor, eff_heating_number, &
+                            preig_heat, &
+                            opt_react_velo, net_fuel_load, &
+                            moist_damp_coeff, mineral_damp_coeff)
 
     sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
     sf_ignitions = t_sf_ignitions(nc, ic_pop_dens, a_nd, a2l_lightning_events, &
-                                  e_n_humans, e_n_lightning, e_n_ignitions)
+                            e_n_humans, e_n_lightning, e_n_ignitions)
 
     !< Pack vegetation cover fraction
     veg_cover_frac = t_sf_veget_cover_frac(nc, forest_fract, grass_fract)
 
-    ! todo: change to ab_moisture
     ab_moisture = calc_ab_moisture(soil_depth_sl(:,sl_ixs), wtr_soil_sl(:,sl_ixs), wtr_soil_sat_sl(:,sl_ixs), &
-                                    mask=mask_is_tile_enabled)
+                            mask=mask_is_tile_enabled)
 
     sf_fuel_moisture_all = t_sf_mf(nc, df_sf_fc_full_nr, moisture_extinction, & ! core
-                                df_sf_alpha_nr, df_sf_alphas, ab_moisture, fuel_moisture, & ! thonicke
-                                df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
-                                df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
-                                lvg_moisture)
+                            df_sf_alpha_nr, df_sf_alphas, ab_moisture, fuel_moisture, & ! thonicke
+                            df_sf_sigma_dd_nr, df_sf_sigma_dd_ros_nr, df_sf_sigma_lv_nr, & ! oberhagemann
+                            df_alphas_dead, df_sigmas_dead, df_sigmas_live, & ! oberhagemann
+                            lvg_moisture)
 
     sf_dynamics = t_sf_dynamics(nc, df_sf_fc_full_nr, sf_fuel_dead_fuel_nr, &
-                                fdi, &
-                                area_burned, area_burned_fract, &
-                                frac_consump_fcl, i_surface)
+                            fdi, &
+                            area_burned, area_burned_fract, &
+                            frac_consump_fcl, i_surface)
 
     sf_config = t_sf_config(nc, df_sf_fc_spread_nr, df_sf_fc_full_nr, &
                             sf_fuel_dead_fuel_nr, &
@@ -408,16 +407,16 @@ CONTAINS
                             df_sf_calorific_heat_content, df_sf_isurface_extinc_th)
 
     CALL calc_sf_dynamics(sf_config, & ! in...
-                        burnable_area_ha, & ! soil properties
-                        veg_cover_frac, & ! soil properties
-                        sf_atm, & ! weather
-                        sf_fuel_load, &
-                        sf_ignitions, & ! inout...
-                        sf_ros, & ! rate of spread
-                        nesterov_index, & ! dryness
-                        sf_fuel_moisture_all, &
-                        sf_dynamics, &
-                        mask=mask_is_tile_enabled)
+                            burnable_area_ha, &
+                            veg_cover_frac, &
+                            sf_atm, & ! weather
+                            sf_fuel_load, &
+                            sf_ignitions, & ! inout...
+                            sf_ros, & ! rate of spread
+                            nesterov_index, & ! dryness
+                            sf_fuel_moisture_all, &
+                            sf_dynamics, &
+                            mask=mask_is_tile_enabled)
 
     IF (dsl4jsb_Config(Q_DFIRE_SF_)%has_diagnostics) THEN
       CALL run_diagnostics_at_tile(nc, iblk, burnable_area_ha, sf_dynamics)
@@ -444,7 +443,7 @@ CONTAINS
   !> Run science
   !>
   SUBROUTINE calc_sf_dynamics(sf_config, &
-                  grid_cell_area, & ! fuel properties
+                  grid_cell_area, &
                   veg_cover_frac, & ! in
                   sf_atm, & ! in
                   sf_fuel_load, & ! in
@@ -455,23 +454,22 @@ CONTAINS
                   sf_dynamics, & ! inout
                   mask) ! in
 
-    TYPE(t_sf_config), INTENT(in) :: sf_config
-    REAL(wp), INTENT(in)  :: grid_cell_area(sf_config%nc)                    !< Gridcell area [ha]
-    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac      !< Vegetation cover fraction [0 to 1]
-    TYPE(t_sf_atm), INTENT(in) :: sf_atm                           !< Weather
-    TYPE(t_sf_fuel_load), INTENT(in) :: sf_fuel_load               !< Fuel load
+    TYPE(t_sf_config), INTENT(in)           :: sf_config
+    REAL(wp), INTENT(in)                    :: grid_cell_area(sf_config%nc)  !< Gridcell area [ha]
+    TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac                !< Vegetation cover fraction [0 to 1]
+    TYPE(t_sf_atm), INTENT(in)              :: sf_atm                        !< Weather
+    TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load                  !< Fuel load
 
-    TYPE(t_sf_ignitions), INTENT(inout)  :: sf_ignitions
-    TYPE(t_sf_ros), INTENT(inout) :: sf_ros                        !< Rate of spread
-    REAL(wp), INTENT(INOUT) :: nesterov_index(sf_config%nc)                  !< Dryness index [Celsius^2]
-    TYPE(t_sf_mf), INTENT(inout) :: sf_fuel_moisture                  !< Fuel moisture
-    TYPE(t_sf_dynamics), INTENT(inout)  :: sf_dynamics                !< Spitfire dynamics
-    LOGICAL, INTENT(in), OPTIONAL       :: mask(sf_config%nc)                !< Gridcell can burn
-
-    LOGICAL :: mask_tile_enabled(sf_config%nc)
+    TYPE(t_sf_ignitions), INTENT(inout)     :: sf_ignitions                  !< Fire ignition
+    TYPE(t_sf_ros), INTENT(inout)           :: sf_ros                        !< Rate of spread
+    REAL(wp), INTENT(INOUT)                 :: nesterov_index(sf_config%nc)  !< Dryness index [Celsius^2]
+    TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture              !< Fuel moisture
+    TYPE(t_sf_dynamics), INTENT(inout)      :: sf_dynamics                   !< Spitfire dynamics
+    LOGICAL, INTENT(in), OPTIONAL           :: mask(sf_config%nc)            !< Gridcell can burn
 
     ! locals
-    LOGICAL                 :: has_fire_conditions(sf_config%nc)          !< 1, 10, 100 and 1000 hours
+    LOGICAL :: has_fire_conditions(sf_config%nc)
+    LOGICAL :: mask_tile_enabled(sf_config%nc)
 
     mask_tile_enabled = .TRUE.
     IF (PRESENT(mask)) THEN
@@ -491,8 +489,6 @@ CONTAINS
         o_tsfactor = (sf_config%dtime / sf_config%one_day), &
         mask= has_fire_conditions)
 
-    !> Fuel moisture and ROS
-    !
     !> Calculate wind speed (paragraph before eq. 10 from Thonicke et al. (2010))
     sf_ros % u_f_wind = sf_ros % fwd_wind_factor * sf_atm%wind_sf
 
