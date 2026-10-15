@@ -65,6 +65,8 @@ MODULE mo_sb_constants
   ! transport and sorption parameters
   REAL(lp), SAVE :: &
       k_diff_org, &                 !< diffusion coefficient for organic material due to bioturbation? [m2 (kg m-3) s-1]
+      rho_particle_mineral, &       !< mineral particle density [kg m-3]
+      rho_solid_maoc, &             !< organic solid density of MAOC [kg m-3]
       rho_bulk_org, &               !< bulk density of organic material [kg m-3]
       carbon_per_dryweight_SOM, &   !< C per unit dryweight SOM [gC / gOM]
       k_adsorpt_dom, &              !<
@@ -390,6 +392,9 @@ CONTAINS
     ! transport and sorption parameters (all B. Ahrens, pers. comm. 2016)
     k_diff_org                = 0.15_lp / one_year / one_day                                ! Koven et al. 2013, BG [m2 (kg m-3) s-1]
     rho_bulk_org              = 150.3935_lp                                                 ! textbook knowledge, or from field measurement
+    ! Reference densities of the available-pore formulation; provisional material assumptions.
+    rho_particle_mineral      = 2650.0_lp ! mineral solids [kg m-3]
+    rho_solid_maoc            = 1350.0_lp ! MAOC organic phase [kg m-3]
     carbon_per_dryweight_SOM  = 0.4271_lp                                                   ! COMISSION for Hainich
     k_adsorpt_dom             = 59.9610_lp / one_year / one_day * molar_mass_C  / 1000._lp  ! conversion to m3 / mol C / s, Bernhard 20180913
     k_desorpt_dom             = 508.2151_lp / one_year / one_day / 1000._lp                 ! Bernhard 20180913

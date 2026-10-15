@@ -66,6 +66,11 @@ CONTAINS
       & execute_quincy_sb_analytical_accelerator_this_timestep, get_year
     USE mo_jsb_math_constants,     ONLY: eps1, eps8
     USE mo_sb_constants
+
+    USE mo_q_sb_jsm_processes, ONLY: calc_available_pore_volume, &
+      & calc_bulk_soil_carbon_available_pore_volume, calc_bulk_density_correction_available_pore_volume
+    USE mo_q_sb_jsm_transport, ONLY: calc_particle_fluxrate_available_pore_volume, &
+      & calc_particle_transport_wrapper_available_pore_volume
     USE mo_q_sb_jsm_processes,     ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction, calc_Psorption_parameter, &
                                          calc_qmax_bulk_density_correction
     USE mo_q_sb_jsm_transport,     ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
@@ -362,6 +367,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_total_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_maoc_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_poc_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_free_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_maoc_excess_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_poc_excess_sl
+    dsl4jsb_Real3D_onChunk :: poc_displaceable_frac_sl
     dsl4jsb_Real3D_onChunk :: volume_min_sl
     dsl4jsb_Real3D_onChunk :: dom_cn_mavg
     dsl4jsb_Real3D_onChunk :: dom_cp_mavg
@@ -673,6 +685,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_om_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_total_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_maoc_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_poc_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_free_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_maoc_excess_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_poc_excess_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, poc_displaceable_frac_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,       volume_min_sl)               ! in
     IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
       dsl4jsb_Get_var2D_onChunk(SB_, analy_ss_forcing_time)            ! inout
@@ -826,6 +845,17 @@ CONTAINS
       !>  6.2 particle transport
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._lp
+      IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) THEN
+        ! Diagnose occupancy after reaction/bioturbation, before conservative POC displacement.
+        CALL calc_available_pore_volume(nc, nsoil_w, num_sl_above_bedrock, sb_pool_mt, &
+          & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, volume_pore_free_sl, &
+          & poc_displaceable_frac_sl, surface_burial_frac, volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+        particle_fluxrate = calc_particle_fluxrate_available_pore_volume( &
+          & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, poc_displaceable_frac_sl)
+        CALL calc_particle_transport_wrapper_available_pore_volume( &
+          & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, model%config%elements_index_map, &
+          & model%config%is_element_used, particle_fluxrate, sb_pool_mt, sb_particle_transport_hlp_mt)
+      ELSE
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_w, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
         &                                             surface_burial_frac(:,:), sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
       ! particle transport of organic and inorganic pools
@@ -845,6 +875,8 @@ CONTAINS
         & transport_nh4_n15_solute(:,:), transport_nh4_n15_assoc(:,:), &
         & transport_no3_n15_solute(:,:), &
         & sb_particle_transport_hlp_mt(:,:,:,:) )                                             ! inout
+      END IF
+
       ! update sb pools and transport with particle transport
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :)
@@ -1004,6 +1036,14 @@ CONTAINS
 
     !> 8.0 update diagnostics and other state variables depending on organic matter content
     !! OC
+    IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) THEN
+      CALL calc_bulk_soil_carbon_available_pore_volume(nc, nsoil_w, num_sl_above_bedrock, 'jsm', sb_pool_mt, &
+        & surface_burial_frac, bulk_soil_carbon_sl, soil_litter_carbon_sl, volume_min_sl, &
+        & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, volume_pore_free_sl, &
+        & poc_displaceable_frac_sl, volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+      bulk_dens_corr_sl = calc_bulk_density_correction_available_pore_volume( &
+        & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl)
+    ELSE
     CALL calc_bulk_soil_carbon( &
       & nc, &                                        ! in
       & nsoil_w, &
@@ -1016,11 +1056,16 @@ CONTAINS
       & soil_litter_carbon_sl, &                     ! inout
       & volume_min_sl)                               ! inout
     bulk_dens_corr_sl(:,:) = calc_bulk_density_correction(bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), bulk_dens_sl(:,:))
+    END IF
+
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-      &                                    0._lp, qmax_org_min_sl(:,:), qmax_org(:,:))
+      &                                    0._lp, qmax_org_min_sl(:,:), qmax_org(:,:), &
+      & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl), &
+      & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume))
     !!
     !! po4
     !!
+    IF (.NOT. dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) THEN
     ! Correct the first layer Qmax_AlFe_cor with the woody litter
     DO ic = 1,nc
       ! at the bare soil tile, the soil might not contain carbon
@@ -1032,6 +1077,7 @@ CONTAINS
         Qmax_AlFe_cor(ic,1) = 0.0_lp
       END IF
     END DO
+    END IF
     ! calc P sorption parameters
     DO ic = 1,nc
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
@@ -1055,14 +1101,20 @@ CONTAINS
           & qmax_slow_po4(ic, isoil), &
           & km_fast_po4(ic, isoil), &
           & km_slow_po4(ic, isoil), &
-          & Qmax_AlFe_cor(ic, isoil))
+          & Qmax_AlFe_cor(ic, isoil), &
+          & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,isoil)), &
+          & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume))
       ENDDO
     ENDDO
     !! nh4
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-      &                                    0.0_lp, qmax_nh4_min_sl(:,:), qmax_nh4(:,:))
+      &                                    0.0_lp, qmax_nh4_min_sl(:,:), qmax_nh4(:,:), &
+      & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl), &
+      & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume))
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-      &                                    km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:))
+      &                                    km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl(:,:), &
+      & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl), &
+      & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume))
 
     !> 9.0 atmospheric deposition and fertiliser
     !!

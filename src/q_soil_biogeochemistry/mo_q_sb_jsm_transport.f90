@@ -38,7 +38,102 @@ MODULE mo_q_sb_jsm_transport
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
 
+  PUBLIC :: calc_particle_fluxrate_available_pore_volume, &
+    & calc_particle_transport_wrapper_available_pore_volume
+
 CONTAINS
+
+  !> Convert excess POC fraction to a displacement length [m per timestep], not a velocity.
+  !! Only internal interfaces below L1 export POC; no bottom-of-column loss is allowed.
+  FUNCTION calc_particle_fluxrate_available_pore_volume( &
+    & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, poc_displaceable_frac_sl) &
+    & RESULT(particle_fluxrate)
+
+    INTEGER,                          INTENT(in) :: nc, nsoil_w
+    REAL(lp), DIMENSION(nc),          INTENT(in) :: num_sl_above_bedrock
+    REAL(lp), DIMENSION(nc,nsoil_w), INTENT(in) :: soil_depth_sl, poc_displaceable_frac_sl
+    REAL(lp), DIMENSION(nc,nsoil_w)             :: particle_fluxrate
+    INTEGER                                    :: ic, isoil, nsoil
+
+    particle_fluxrate(:,:) = 0.0_lp
+    ! Layer one excess remains at the surface. The last layer is a closed lower boundary.
+    DO ic = 1, nc
+      nsoil = MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+      DO isoil = 2, nsoil - 1
+        particle_fluxrate(ic,isoil) = soil_depth_sl(ic,isoil) * &
+          & MAX(0.0_lp, MIN(1.0_lp, poc_displaceable_frac_sl(ic,isoil)))
+      END DO
+    END DO
+  END FUNCTION calc_particle_fluxrate_available_pore_volume
+
+
+  !> Apply one carbon-diagnosed displacement fraction to all elements/isotopes of movable pools.
+  !! MAOC, dissolved DOM, woody litter and mineral nutrients remain outside this operator.
+  SUBROUTINE calc_particle_transport_wrapper_available_pore_volume( &
+    & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, elements_index_map, is_element_used, &
+    & particle_fluxrate, sb_pool_mt, sb_transport_mt)
+
+    INTEGER,                          INTENT(in)    :: nc, nsoil_w
+    REAL(lp), DIMENSION(nc),          INTENT(in)    :: num_sl_above_bedrock
+    REAL(lp), DIMENSION(nc,nsoil_w), INTENT(in)    :: soil_depth_sl, particle_fluxrate
+    INTEGER,                          INTENT(in)    :: elements_index_map(:)
+    LOGICAL,                          INTENT(in)    :: is_element_used(:)
+    REAL(lp),                         INTENT(in)    :: sb_pool_mt(:,:,:,:)
+    REAL(lp),                         INTENT(inout) :: sb_transport_mt(:,:,:,:)
+    INTEGER :: ielem, ix_elem
+
+    DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+      IF (is_element_used(ielem)) THEN
+        ix_elem = elements_index_map(ielem)
+        CALL calc_poc_displacement_transport(nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, &
+          & particle_fluxrate, sb_pool_mt(ix_soluable_litter,ix_elem,:,:), &
+          & sb_transport_mt(ix_soluable_litter,ix_elem,:,:))
+        CALL calc_poc_displacement_transport(nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, &
+          & particle_fluxrate, sb_pool_mt(ix_polymeric_litter,ix_elem,:,:), &
+          & sb_transport_mt(ix_polymeric_litter,ix_elem,:,:))
+        CALL calc_poc_displacement_transport(nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, &
+          & particle_fluxrate, sb_pool_mt(ix_mycorrhiza,ix_elem,:,:), &
+          & sb_transport_mt(ix_mycorrhiza,ix_elem,:,:))
+        CALL calc_poc_displacement_transport(nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, &
+          & particle_fluxrate, sb_pool_mt(ix_microbial,ix_elem,:,:), &
+          & sb_transport_mt(ix_microbial,ix_elem,:,:))
+        CALL calc_poc_displacement_transport(nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, &
+          & particle_fluxrate, sb_pool_mt(ix_residue,ix_elem,:,:), &
+          & sb_transport_mt(ix_residue,ix_elem,:,:))
+      END IF
+    END DO
+  END SUBROUTINE calc_particle_transport_wrapper_available_pore_volume
+
+
+  !> Conservative adjacent-layer redistribution using donor concentrations [mol m-3].
+  !! Transfer per area=donor fraction*concentration*thickness [mol m-2 per timestep].
+  !! Divide by each layer's own thickness for increments; newly received mass is not
+  !! exported again in this call. Existing transport increments are preserved.
+  SUBROUTINE calc_poc_displacement_transport( &
+    & nc, nsoil_w, soil_depth_sl, num_sl_above_bedrock, particle_fluxrate, pool, transport)
+
+    INTEGER,                          INTENT(in)    :: nc, nsoil_w
+    REAL(lp), DIMENSION(nc),          INTENT(in)    :: num_sl_above_bedrock
+    REAL(lp), DIMENSION(nc,nsoil_w), INTENT(in)    :: soil_depth_sl, particle_fluxrate, pool
+    REAL(lp), DIMENSION(nc,nsoil_w), INTENT(inout) :: transport
+    INTEGER  :: ic, isoil, nsoil
+    REAL(lp) :: displaced_fraction, displaced_amount
+
+    DO ic = 1, nc
+      nsoil = NINT(num_sl_above_bedrock(ic))
+      DO isoil = 2, nsoil - 1
+        IF (soil_depth_sl(ic,isoil) > eps8 .AND. soil_depth_sl(ic,isoil+1) > eps8) THEN
+          displaced_fraction = MAX(0.0_lp, MIN(1.0_lp, &
+            & particle_fluxrate(ic,isoil) / soil_depth_sl(ic,isoil)))
+          displaced_amount = displaced_fraction * MAX(0.0_lp, pool(ic,isoil)) * soil_depth_sl(ic,isoil)
+          transport(ic,isoil) = transport(ic,isoil) - displaced_amount / soil_depth_sl(ic,isoil)
+          transport(ic,isoil+1) = transport(ic,isoil+1) + displaced_amount / soil_depth_sl(ic,isoil+1)
+        END IF
+      END DO
+    END DO
+  END SUBROUTINE calc_poc_displacement_transport
+
+
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_jsm
@@ -256,6 +351,7 @@ CONTAINS
     & elements_index_map, &
     & is_element_used, &
     & k_bioturb, &
+    & flag_available_pore_volume, &
     & nh4_assoc, &
     & po4_assoc_fast, &
     & po4_assoc_slow, &
@@ -277,6 +373,7 @@ CONTAINS
     INTEGER,                            INTENT(in)    :: elements_index_map(:)      !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)         !< is element in 'elements_index_map' used
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb                  !< diffusion factor for bioturbation
+    LOGICAL,                            INTENT(in)    :: flag_available_pore_volume !< exclude MAOC bioturbation with fixed mineral geometry
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_assoc                  !< minerally associated NH4 pool [mol/m3]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_fast             !< fast minerally associated PO4 pool [mol/m3]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: po4_assoc_slow             !< slow minerally associated PO4 pool [mol/m3]
@@ -310,11 +407,14 @@ CONTAINS
           &                              sb_transport_mt(ix_polymeric_litter, ix_elem, :, :))
         !>  1.2 minerally associated dissolved organic matter (DOM)
         !>
-        CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
-          &                              k_bioturb(:,:), &
-          &                              soil_depth_sl(:,:), &
-          &                              sb_pool_mt(ix_dom_assoc, ix_elem, :, :), &
-          &                              sb_transport_mt(ix_dom_assoc, ix_elem, :, :))
+        ! Skip only the bioturbation contribution; retain any other accumulated transport.
+        IF (.NOT. flag_available_pore_volume) THEN
+          CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
+            &                              k_bioturb(:,:), &
+            &                              soil_depth_sl(:,:), &
+            &                              sb_pool_mt(ix_dom_assoc, ix_elem, :, :), &
+            &                              sb_transport_mt(ix_dom_assoc, ix_elem, :, :))
+        END IF
         !>  1.3 microbial biomass
         !>
         CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
@@ -331,11 +431,13 @@ CONTAINS
           &                              sb_transport_mt(ix_residue, ix_elem, :, :))
         !>  1.5 minerally associated microbial residue
         !>
-        CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
-          &                              k_bioturb(:,:), &
-          &                              soil_depth_sl(:,:), &
-          &                              sb_pool_mt(ix_residue_assoc, ix_elem, :, :), &
-          &                              sb_transport_mt(ix_residue_assoc, ix_elem, :, :))
+        IF (.NOT. flag_available_pore_volume) THEN
+          CALL calc_bioturbation_transport(nc, nsoil_w, dtime, num_sl_above_bedrock(:), &
+            &                              k_bioturb(:,:), &
+            &                              soil_depth_sl(:,:), &
+            &                              sb_pool_mt(ix_residue_assoc, ix_elem, :, :), &
+            &                              sb_transport_mt(ix_residue_assoc, ix_elem, :, :))
+        END IF
       END IF
     END DO
 
@@ -357,6 +459,7 @@ CONTAINS
     !                                  nh4_n15_assoc(:,:), &
     !                                  transport_nh4_n15_assoc(:,:))
   END SUBROUTINE calc_bioturbation_transport_wrapper_jsm
+
 
   ! ======================================================================================================= !
   !>calculates particile flux rate given the change in organic pools through formation and loss

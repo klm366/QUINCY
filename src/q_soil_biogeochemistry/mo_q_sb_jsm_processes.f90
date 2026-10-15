@@ -35,6 +35,15 @@ MODULE mo_q_sb_jsm_processes
     &       calc_fast_po4, calc_nitri_denitri_partitioning_rate, &
     &       calc_Psorption_parameter, calc_enzyme_allocation
 
+  PUBLIC :: init_available_pore_volume, calc_bulk_soil_carbon_available_pore_volume
+  PUBLIC :: calc_available_pore_carbon_components, calc_available_pore_volume
+  PUBLIC :: calc_bulk_density_correction_available_pore_volume, solve_pore_volume_for_bulk_density
+  INTEGER, PARAMETER, PUBLIC :: sb_density_solution_found = 0
+  INTEGER, PARAMETER, PUBLIC :: sb_density_target_above_maximum = 1
+  INTEGER, PARAMETER, PUBLIC :: sb_density_target_below_minimum = 2
+  INTEGER, PARAMETER, PUBLIC :: sb_density_maoc_capacity_violation = 3
+  INTEGER, PARAMETER, PUBLIC :: sb_density_non_finite_input = 4
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_jsm_processes'
 
 CONTAINS
@@ -1570,7 +1579,8 @@ CONTAINS
     & qmax_min, &
     & qmax, &
     & qmax_fast, &
-    & qmax_slow)
+    & qmax_slow, &
+    & mineral_mass_density_sl)
 
     USE mo_jsb_physical_constants, ONLY: molar_mass_C
     USE mo_sb_constants,           ONLY: carbon_per_dryweight_SOM, rho_bulk_org
@@ -1583,8 +1593,10 @@ CONTAINS
     REAL(lp),           INTENT(out) :: qmax                  !< maximum sorption capacity of the soil [mol / m3]
     REAL(lp), OPTIONAL, INTENT(out) :: qmax_fast             !< maximum sorption capacity of fast pool [mol / m3]
     REAL(lp), OPTIONAL, INTENT(out) :: qmax_slow             !< maximum sorption capacity of slow pool [mol / m3]
+    REAL(lp), OPTIONAL, INTENT(in)  :: mineral_mass_density_sl !< dry mineral mass per layer volume [kg / m3]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)                    :: vol_fraction_om
+    REAL(lp)                    :: mineral_qmax
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_bulk_density_correction'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1593,6 +1605,15 @@ CONTAINS
     !>
     vol_fraction_om = MIN(bulk_soil_carbon_sl * molar_mass_C / 1000._lp &
       &               / carbon_per_dryweight_SOM / rho_bulk_org, 1.0_lp)
+    IF (PRESENT(mineral_mass_density_sl)) THEN
+      IF (mineral_mass_density_sl >= 0.0_lp) THEN
+        mineral_qmax = qmax_min * mineral_mass_density_sl
+      ELSE
+        mineral_qmax = volume_min_sl * qmax_min * bulk_dens_sl
+      END IF
+    ELSE
+      mineral_qmax = volume_min_sl * qmax_min * bulk_dens_sl
+    END IF
 
     !>2.0 maximum sorption capacity per soil volume as the mix of OM and mineral sorption (mol/m3)
     !>
@@ -1600,11 +1621,12 @@ CONTAINS
       qmax_fast = vol_fraction_om * qmax_om  * rho_bulk_org
     ENDIF
     IF (PRESENT(qmax_slow)) THEN
-      qmax_slow = volume_min_sl   * qmax_min * bulk_dens_sl
+      qmax_slow = mineral_qmax
     ENDIF
     qmax = vol_fraction_om * qmax_om  * rho_bulk_org &
-      &    + volume_min_sl * qmax_min * bulk_dens_sl
+      &    + mineral_qmax
   END SUBROUTINE calc_qmax_bulk_density_correction
+
 
   ! ======================================================================================================= !
   !>calculates the km for phosphate of a soil layer
@@ -1795,6 +1817,385 @@ CONTAINS
   !>
   !>  Output: fast_assoc_po4
   !>
+  !> Diagnose layer C and burial with a fixed mineral matrix.
+  !! Pools are mol C per m3 TOTAL soil, including unburied L1 material. Only the
+  !! buried share contributes to bulk/litter diagnostics; no pool is rescaled.
+  !! volume_min_sl=1 denotes the full mineral-matrix reference, not mineral solids.
+  !! Mineral solids occupy 1-volume_pore_total_sl. Wood never occupies these pores.
+  SUBROUTINE calc_bulk_soil_carbon_available_pore_volume( &
+    & nc, nsoil_w, num_sl_above_bedrock, sb_model_scheme, sb_pool_mt, &
+    & surface_burial_frac, bulk_soil_carbon_sl, soil_litter_carbon_sl, volume_min_sl, &
+    & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, volume_pore_free_sl, &
+    & poc_displaceable_frac_sl, volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+
+    USE mo_jsb_math_constants,     ONLY: eps8
+
+    INTEGER,          INTENT(in)    :: nc, nsoil_w
+    REAL(lp),         INTENT(in)    :: num_sl_above_bedrock(:)
+    CHARACTER(len=*), INTENT(in)    :: sb_model_scheme
+    REAL(lp),         INTENT(in)    :: sb_pool_mt(:,:,:,:), volume_pore_total_sl(:,:)
+    REAL(lp),         INTENT(inout) :: surface_burial_frac(:,:), bulk_soil_carbon_sl(:,:)
+    REAL(lp),         INTENT(inout) :: soil_litter_carbon_sl(:,:), volume_min_sl(:,:)
+    REAL(lp),         INTENT(out)   :: volume_pore_maoc_sl(:,:)
+    REAL(lp),         INTENT(out)   :: volume_pore_poc_sl(:,:), volume_pore_free_sl(:,:)
+    REAL(lp),         INTENT(out)   :: poc_displaceable_frac_sl(:,:)
+    REAL(lp), OPTIONAL, INTENT(out) :: volume_pore_maoc_excess_sl(:,:), volume_pore_poc_excess_sl(:,:)
+
+    INTEGER  :: ic, isoil
+    REAL(lp) :: surface_partial_carbon, surface_fixed_carbon
+
+    bulk_soil_carbon_sl(:,:) = 0.0_lp
+    soil_litter_carbon_sl(:,:) = 0.0_lp
+    volume_min_sl(:,:) = 0.0_lp
+
+    ! The prescribed mineral bulk density is already expressed per unit layer volume. Therefore the
+    ! mineral matrix remains one full layer volume here; its internal pore space is diagnosed separately.
+    DO ic = 1, nc
+      DO isoil = 1, NINT(num_sl_above_bedrock(ic))
+        volume_min_sl(ic,isoil) = 1.0_lp
+        IF (isoil == 1 .AND. sb_model_scheme == 'jsm') THEN
+          surface_partial_carbon = sb_pool_mt(ix_dom, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_soluable_litter, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_mycorrhiza, ixC, ic, isoil) + sb_pool_mt(ix_microbial, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_residue, ixC, ic, isoil)
+          surface_fixed_carbon = sb_pool_mt(ix_dom_assoc, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_residue_assoc, ixC, ic, isoil)
+
+          ! This preliminary value is replaced below by the pore-capacity-based burial fraction.
+          surface_burial_frac(ic,isoil) = MERGE(1.0_lp, 0.0_lp, surface_partial_carbon > eps8)
+          bulk_soil_carbon_sl(ic,isoil) = sb_pool_mt(ix_dom, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_mycorrhiza, ixC, ic, isoil) + sb_pool_mt(ix_microbial, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_residue, ixC, ic, isoil) + surface_fixed_carbon
+          soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_soluable_litter, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
+        ELSE
+          surface_burial_frac(ic,isoil) = 1.0_lp
+          bulk_soil_carbon_sl(ic,isoil) = sb_pool_mt(ix_dom, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_mycorrhiza, ixC, ic, isoil) + sb_pool_mt(ix_microbial, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_residue, ixC, ic, isoil) + sb_pool_mt(ix_dom_assoc, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_residue_assoc, ixC, ic, isoil)
+          soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_soluable_litter, ixC, ic, isoil) + &
+            & sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
+        END IF
+      END DO
+    END DO
+
+    CALL calc_available_pore_volume(nc, nsoil_w, num_sl_above_bedrock, sb_pool_mt, &
+      & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, &
+      & volume_pore_free_sl, poc_displaceable_frac_sl, surface_burial_frac, &
+      & volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+
+    ! Only the buried share of non-associated surface pools contributes to mineral-layer diagnostics.
+    IF (sb_model_scheme == 'jsm') THEN
+      DO ic = 1, nc
+        IF (NINT(num_sl_above_bedrock(ic)) > 0) THEN
+          bulk_soil_carbon_sl(ic,1) = surface_burial_frac(ic,1) * &
+            & (sb_pool_mt(ix_dom, ixC, ic, 1) + sb_pool_mt(ix_mycorrhiza, ixC, ic, 1) + &
+            &  sb_pool_mt(ix_microbial, ixC, ic, 1) + sb_pool_mt(ix_residue, ixC, ic, 1)) + &
+            & sb_pool_mt(ix_dom_assoc, ixC, ic, 1) + &
+            & sb_pool_mt(ix_residue_assoc, ixC, ic, 1)
+          soil_litter_carbon_sl(ic,1) = surface_burial_frac(ic,1) * &
+            & (sb_pool_mt(ix_soluable_litter, ixC, ic, 1) + sb_pool_mt(ix_polymeric_litter, ixC, ic, 1))
+        END IF
+      END DO
+    END IF
+  END SUBROUTINE calc_bulk_soil_carbon_available_pore_volume
+
+
+  !> Initialize V_pore=1-rho_input/rho_mineral [m3 m-3], without changing SSE density.
+  !! The structural state is subsequently persisted in SB restart memory. This is
+  !! not hydrological porosity: HYDRO water/ice capacities remain unchanged.
+  SUBROUTINE init_available_pore_volume( &
+    & nc, nsoil_w, num_sl_above_bedrock, bulk_dens_sl, volume_pore_total_sl)
+
+    USE mo_sb_constants, ONLY: rho_particle_mineral
+
+    INTEGER,  INTENT(in)  :: nc, nsoil_w
+    REAL(lp), INTENT(in)  :: num_sl_above_bedrock(:), bulk_dens_sl(:,:)
+    REAL(lp), INTENT(out) :: volume_pore_total_sl(:,:)
+    INTEGER  :: ic, isoil
+    REAL(lp) :: initial_mineral_density !< initial mineral mass per layer volume [kg m-3]
+
+    volume_pore_total_sl(:,:) = 0.0_lp
+    DO ic = 1, nc
+      DO isoil = 1, NINT(num_sl_above_bedrock(ic))
+        initial_mineral_density = bulk_dens_sl(ic,isoil)
+        volume_pore_total_sl(ic,isoil) = MAX(0.0_lp, MIN(1.0_lp, &
+          & 1.0_lp - initial_mineral_density / rho_particle_mineral))
+      END DO
+    END DO
+  END SUBROUTINE init_available_pore_volume
+
+
+  !> Return MAOC and displaceable POC [mol C m-3 TOTAL soil].
+  !! DOM and wood do not occupy solid pore volume. Negative mass safeguards belong
+  !! to the pool update; clipping here only prevents negative diagnosed occupancy.
+  PURE SUBROUTINE calc_available_pore_carbon_components(sb_pool_mt, ic, isoil, maoc_carbon, poc_carbon)
+
+    REAL(lp), INTENT(in)  :: sb_pool_mt(:,:,:,:)
+    INTEGER,  INTENT(in)  :: ic, isoil
+    REAL(lp), INTENT(out) :: maoc_carbon, poc_carbon
+
+    ! Dissolved DOM is carried in pore water and contributes to bulk C, but it is not assigned a solid
+    ! organic volume. Woody litter remains above the mineral surface and is excluded from both groups.
+    maoc_carbon = MAX(0.0_lp, sb_pool_mt(ix_dom_assoc, ixC, ic, isoil)) + &
+      & MAX(0.0_lp, sb_pool_mt(ix_residue_assoc, ixC, ic, isoil))
+    poc_carbon = MAX(0.0_lp, sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)) + &
+      & MAX(0.0_lp, sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)) + &
+      & MAX(0.0_lp, sb_pool_mt(ix_mycorrhiza, ixC, ic, isoil)) + &
+      & MAX(0.0_lp, sb_pool_mt(ix_microbial, ixC, ic, isoil)) + &
+      & MAX(0.0_lp, sb_pool_mt(ix_residue, ixC, ic, isoil))
+  END SUBROUTINE calc_available_pore_carbon_components
+
+
+  !> Partition available pore volume with MAOC priority [m3 m-3 TOTAL soil].
+  !! V_organic=C*molar_mass_C/(1000*f_C*rho_organic). Residual pore space holds POC.
+  !! L1 excess stays above the layer (burial may increase again); deeper excess
+  !! is eligible for conservative displacement. Excess diagnostics never delete C.
+  SUBROUTINE calc_available_pore_volume( &
+    & nc, nsoil_w, num_sl_above_bedrock, sb_pool_mt, &
+    & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, volume_pore_free_sl, &
+    & poc_displaceable_frac_sl, surface_burial_frac, &
+    & volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+
+    USE mo_jsb_math_constants,     ONLY: eps8
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants,           ONLY: rho_solid_maoc, rho_bulk_org, carbon_per_dryweight_SOM
+
+    INTEGER,  INTENT(in)  :: nc, nsoil_w
+    REAL(lp), INTENT(in)  :: num_sl_above_bedrock(:), sb_pool_mt(:,:,:,:)
+    REAL(lp), INTENT(in)  :: volume_pore_total_sl(:,:)
+    REAL(lp), INTENT(out) :: volume_pore_maoc_sl(:,:)
+    REAL(lp), INTENT(out) :: volume_pore_poc_sl(:,:), volume_pore_free_sl(:,:)
+    REAL(lp), INTENT(out) :: poc_displaceable_frac_sl(:,:)
+    REAL(lp), INTENT(inout), OPTIONAL :: surface_burial_frac(:,:)
+    REAL(lp), INTENT(out), OPTIONAL :: volume_pore_maoc_excess_sl(:,:), volume_pore_poc_excess_sl(:,:)
+    INTEGER  :: ic, isoil, nsoil
+    REAL(lp) :: maoc_carbon, poc_carbon, maoc_volume, poc_volume, poc_capacity
+    REAL(lp) :: carbon_to_maoc_volume, carbon_to_poc_volume
+
+    volume_pore_maoc_sl(:,:) = 0.0_lp
+    volume_pore_poc_sl(:,:) = 0.0_lp
+    volume_pore_free_sl(:,:) = 0.0_lp
+    poc_displaceable_frac_sl(:,:) = 0.0_lp
+    IF (PRESENT(volume_pore_maoc_excess_sl)) volume_pore_maoc_excess_sl(:,:) = 0.0_lp
+    IF (PRESENT(volume_pore_poc_excess_sl)) volume_pore_poc_excess_sl(:,:) = 0.0_lp
+
+    carbon_to_maoc_volume = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_solid_maoc
+    carbon_to_poc_volume = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_bulk_org
+    DO ic = 1, nc
+      nsoil = NINT(num_sl_above_bedrock(ic))
+      DO isoil = 1, nsoil
+        CALL calc_available_pore_carbon_components(sb_pool_mt, ic, isoil, maoc_carbon, poc_carbon)
+        maoc_volume = maoc_carbon * carbon_to_maoc_volume
+        poc_volume = poc_carbon * carbon_to_poc_volume
+        volume_pore_maoc_sl(ic,isoil) = MIN(volume_pore_total_sl(ic,isoil), maoc_volume)
+        ! A nonzero value signals that the MAOC admissibility invariant was violated upstream.
+        ! It is diagnostic only; admissible sorption should keep it exactly zero.
+        IF (PRESENT(volume_pore_maoc_excess_sl)) volume_pore_maoc_excess_sl(ic,isoil) = &
+          & MAX(0.0_lp, maoc_volume - volume_pore_total_sl(ic,isoil))
+        poc_capacity = MAX(0.0_lp, volume_pore_total_sl(ic,isoil) - volume_pore_maoc_sl(ic,isoil))
+
+        IF (isoil == 1 .AND. PRESENT(surface_burial_frac)) THEN
+          IF (poc_volume > eps8) THEN
+            surface_burial_frac(ic,isoil) = MIN(1.0_lp, poc_capacity / poc_volume)
+          ELSE
+            surface_burial_frac(ic,isoil) = 1.0_lp
+          END IF
+          volume_pore_poc_sl(ic,isoil) = MIN(poc_capacity, &
+            & surface_burial_frac(ic,isoil) * poc_volume)
+          ! Surface excess remains above the mineral layer instead of entering vertical particle transport.
+          poc_displaceable_frac_sl(ic,isoil) = 0.0_lp
+        ELSE
+          volume_pore_poc_sl(ic,isoil) = MIN(poc_capacity, poc_volume)
+          IF (poc_volume > eps8) poc_displaceable_frac_sl(ic,isoil) = &
+            & MAX(0.0_lp, MIN(1.0_lp, (poc_volume - poc_capacity) / poc_volume))
+        END IF
+        IF (PRESENT(volume_pore_poc_excess_sl)) volume_pore_poc_excess_sl(ic,isoil) = &
+          & MAX(0.0_lp, poc_volume - volume_pore_poc_sl(ic,isoil))
+        volume_pore_free_sl(ic,isoil) = MAX(0.0_lp, volume_pore_total_sl(ic,isoil) - &
+          & volume_pore_maoc_sl(ic,isoil) - volume_pore_poc_sl(ic,isoil))
+      END DO
+    END DO
+  END SUBROUTINE calc_available_pore_volume
+
+
+  !> Dry bulk density [kg m-3 TOTAL soil] of mineral solids and occupied organic pores.
+  !! rho=rho_min*(1-V_pore)+rho_MAOC*V_MAOC+rho_POC*V_POC.
+  !! Free pores and unburied surface organic matter contribute no dry mass here.
+  ELEMENTAL FUNCTION calc_bulk_density_correction_available_pore_volume( &
+    & volume_pore_total_sl, &
+    & volume_pore_maoc_sl, volume_pore_poc_sl) RESULT(bulk_dens_corr_sl)
+
+    USE mo_sb_constants, ONLY: rho_particle_mineral, rho_solid_maoc, rho_bulk_org
+
+    REAL(lp), INTENT(in) :: volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl
+    REAL(lp)             :: bulk_dens_corr_sl
+
+    bulk_dens_corr_sl = rho_particle_mineral * (1.0_lp - volume_pore_total_sl) + &
+      & rho_solid_maoc * MAX(0.0_lp, volume_pore_maoc_sl) + &
+      & rho_bulk_org * MAX(0.0_lp, volume_pore_poc_sl)
+  END FUNCTION calc_bulk_density_correction_available_pore_volume
+
+
+  !> Solve bounded pore fraction for prescribed target density, holding organic C fixed.
+  !! MAOC requires V_pore>=V_MAOC and C_MAOC<=qmax_min*rho_min*(1-V_pore).
+  !! The monotone piecewise density is bisected only inside their common interval.
+  !! Infeasible density targets return the nearest admissible endpoint; incompatible
+  !! MAOC bounds return an error status. Neither case removes or creates material.
+  SUBROUTINE solve_pore_volume_for_bulk_density( &
+    & maoc_carbon, poc_carbon, qmax_org_per_mineral_mass, target_bulk_density, density_rel_tol, &
+    & admissible_pore_lower, admissible_pore_upper, solved_pore_volume, solved_bulk_density, &
+    & relative_residual, solver_status)
+
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants, ONLY: rho_particle_mineral, rho_solid_maoc, rho_bulk_org, &
+      & carbon_per_dryweight_SOM
+
+    REAL(lp), INTENT(in)  :: maoc_carbon            !< current MAOC concentration [mol C m-3]
+    REAL(lp), INTENT(in)  :: poc_carbon             !< current POC concentration [mol C m-3]
+    REAL(lp), INTENT(in)  :: qmax_org_per_mineral_mass !< organic C sorption capacity [mol C kg-1 mineral]
+    REAL(lp), INTENT(in)  :: target_bulk_density    !< target dry bulk density [kg m-3]
+    REAL(lp), INTENT(in)  :: density_rel_tol        !< relative density tolerance [-]
+    REAL(lp), INTENT(out) :: admissible_pore_lower  !< physical lower pore-volume bound [m3 m-3]
+    REAL(lp), INTENT(out) :: admissible_pore_upper  !< chemical upper pore-volume bound [m3 m-3]
+    REAL(lp), INTENT(out) :: solved_pore_volume     !< candidate fixed pore volume [m3 m-3]
+    REAL(lp), INTENT(out) :: solved_bulk_density    !< density at the returned pore volume [kg m-3]
+    REAL(lp), INTENT(out) :: relative_residual      !< relative target-density mismatch [-]
+    INTEGER,  INTENT(out) :: solver_status
+
+    INTEGER,  PARAMETER :: max_bisection_iterations = 100 !< bounded numerical work [-]
+    REAL(lp), PARAMETER :: pore_volume_abs_tol = 1.e-10_lp !< absolute bracket tolerance [m3 m-3]
+    REAL(lp), PARAMETER :: density_scale_floor = 1.0_lp !< residual normalization floor [kg m-3]
+    INTEGER  :: iteration
+    REAL(lp) :: pore_lower, pore_mid, pore_upper
+    REAL(lp) :: density_lower, density_mid, density_upper
+    REAL(lp) :: residual_mid
+    REAL(lp) :: maoc_potential_volume, poc_potential_volume
+    REAL(lp) :: carbon_to_maoc_volume, carbon_to_poc_volume
+    REAL(lp) :: maximum_chemical_capacity
+
+    admissible_pore_lower = 0.0_lp
+    admissible_pore_upper = 1.0_lp
+    solved_pore_volume = 0.0_lp
+    solved_bulk_density = 0.0_lp
+    relative_residual = HUGE(1.0_lp)
+    solver_status = sb_density_non_finite_input
+
+    IF (.NOT. ieee_is_finite(maoc_carbon) .OR. .NOT. ieee_is_finite(poc_carbon) .OR. &
+        & .NOT. ieee_is_finite(qmax_org_per_mineral_mass) .OR. &
+        & .NOT. ieee_is_finite(target_bulk_density) .OR. .NOT. ieee_is_finite(density_rel_tol)) RETURN
+    IF (maoc_carbon < 0.0_lp .OR. poc_carbon < 0.0_lp .OR. &
+        & qmax_org_per_mineral_mass < 0.0_lp .OR. target_bulk_density <= 0.0_lp .OR. &
+        & density_rel_tol <= 0.0_lp) RETURN
+
+    carbon_to_maoc_volume = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_solid_maoc
+    carbon_to_poc_volume = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_bulk_org
+    maoc_potential_volume = maoc_carbon * carbon_to_maoc_volume
+    poc_potential_volume = poc_carbon * carbon_to_poc_volume
+
+    IF (.NOT. ieee_is_finite(maoc_potential_volume) .OR. .NOT. ieee_is_finite(poc_potential_volume)) RETURN
+    ! Existing MAOC imposes two simultaneous structural bounds. Its solid volume sets the minimum
+    ! pore volume, while its chemical sorption capacity sets the maximum pore volume through the
+    ! remaining mineral mass, qmax_org = qmax_org_per_mineral_mass * rho_mineral * (1 - V_pore).
+    admissible_pore_lower = maoc_potential_volume
+    maximum_chemical_capacity = qmax_org_per_mineral_mass * rho_particle_mineral
+    IF (maoc_carbon > 0.0_lp) THEN
+      IF (maximum_chemical_capacity <= 0.0_lp) THEN
+        solver_status = sb_density_maoc_capacity_violation
+        RETURN
+      END IF
+      admissible_pore_upper = 1.0_lp - maoc_carbon / maximum_chemical_capacity
+    ELSE
+      admissible_pore_upper = 1.0_lp
+    END IF
+
+    IF (admissible_pore_lower > 1.0_lp + pore_volume_abs_tol .OR. &
+        & admissible_pore_upper < -pore_volume_abs_tol .OR. &
+        & admissible_pore_lower > admissible_pore_upper + pore_volume_abs_tol) THEN
+      solved_pore_volume = MIN(1.0_lp, MAX(0.0_lp, admissible_pore_lower))
+      solved_bulk_density = calc_density_at_pore_volume( &
+        & solved_pore_volume, maoc_potential_volume, poc_potential_volume)
+      relative_residual = ABS(solved_bulk_density - target_bulk_density) / &
+        & MAX(target_bulk_density, density_scale_floor)
+      solver_status = sb_density_maoc_capacity_violation
+      RETURN
+    END IF
+
+    admissible_pore_lower = MIN(1.0_lp, MAX(0.0_lp, admissible_pore_lower))
+    admissible_pore_upper = MIN(1.0_lp, MAX(admissible_pore_lower, admissible_pore_upper))
+    pore_lower = admissible_pore_lower
+    pore_upper = admissible_pore_upper
+    density_lower = calc_density_at_pore_volume(pore_lower, maoc_potential_volume, poc_potential_volume)
+    density_upper = calc_density_at_pore_volume(pore_upper, maoc_potential_volume, poc_potential_volume)
+
+    IF (target_bulk_density > density_lower) THEN
+      solved_pore_volume = pore_lower
+      solved_bulk_density = density_lower
+      relative_residual = (target_bulk_density - density_lower) / &
+        & MAX(target_bulk_density, density_scale_floor)
+      solver_status = sb_density_target_above_maximum
+      RETURN
+    ELSE IF (target_bulk_density < density_upper) THEN
+      solved_pore_volume = pore_upper
+      solved_bulk_density = density_upper
+      relative_residual = (density_upper - target_bulk_density) / &
+        & MAX(target_bulk_density, density_scale_floor)
+      solver_status = sb_density_target_below_minimum
+      RETURN
+    END IF
+
+    IF (pore_upper - pore_lower <= pore_volume_abs_tol) THEN
+      solved_pore_volume = pore_lower
+      solved_bulk_density = density_lower
+      relative_residual = ABS(solved_bulk_density - target_bulk_density) / &
+        & MAX(target_bulk_density, density_scale_floor)
+      solver_status = sb_density_solution_found
+      RETURN
+    END IF
+
+    DO iteration = 1, max_bisection_iterations
+      pore_mid = 0.5_lp * (pore_lower + pore_upper)
+      density_mid = calc_density_at_pore_volume(pore_mid, maoc_potential_volume, poc_potential_volume)
+      residual_mid = density_mid - target_bulk_density
+      relative_residual = ABS(residual_mid) / MAX(target_bulk_density, density_scale_floor)
+
+      IF (relative_residual <= density_rel_tol .OR. &
+          & pore_upper - pore_lower <= pore_volume_abs_tol) EXIT
+      IF (residual_mid > 0.0_lp) THEN
+        pore_lower = pore_mid
+      ELSE
+        pore_upper = pore_mid
+      END IF
+    END DO
+
+    solved_pore_volume = pore_mid
+    solved_bulk_density = density_mid
+    solver_status = sb_density_solution_found
+
+  CONTAINS
+
+    !> Piecewise density for MAOC-priority and subsequent POC pore occupancy.
+    ELEMENTAL FUNCTION calc_density_at_pore_volume( &
+      & pore_volume, maoc_volume_potential, poc_volume_potential) RESULT(bulk_density)
+
+      REAL(lp), INTENT(in) :: pore_volume
+      REAL(lp), INTENT(in) :: maoc_volume_potential
+      REAL(lp), INTENT(in) :: poc_volume_potential
+      REAL(lp) :: bulk_density
+      REAL(lp) :: maoc_volume_occupied, poc_volume_occupied
+
+      maoc_volume_occupied = MIN(pore_volume, maoc_volume_potential)
+      poc_volume_occupied = MIN(MAX(0.0_lp, pore_volume - maoc_volume_occupied), poc_volume_potential)
+      bulk_density = rho_particle_mineral * (1.0_lp - pore_volume) + &
+        & rho_solid_maoc * maoc_volume_occupied + rho_bulk_org * poc_volume_occupied
+    END FUNCTION calc_density_at_pore_volume
+
+  END SUBROUTINE solve_pore_volume_for_bulk_density
+
+
   FUNCTION calc_fast_po4(Labile_p, Qmax, km) RESULT (fast_po4)
 
     REAL(lp), INTENT(in) :: Labile_p                    !< labile P pool of the soil layer [mol P / m3]
@@ -1812,6 +2213,7 @@ CONTAINS
     ! Labile_p - fast_po4 = fast_po4 * km / (Labile_p * (Qmax - fast_po4))
     fast_po4 = (Labile_p + Qmax + km - SQRT((Labile_p + Qmax + km) ** 2._lp - 4._lp * Labile_p * Qmax)) / 2._lp
   END FUNCTION calc_fast_po4
+
 
   ! ======================================================================================================= !
   !>calculates potential enzyme allocation coefficient
@@ -1904,11 +2306,15 @@ CONTAINS
     & rmm_sorption, &
     & rtm_desorption, &
     & rmm_desorption, &
+    & flag_available_pore_volume, &
+    & volume_pore_total_sl, &
     & sb_pool_mt, &
     & sb_formation_mt, &
     & sb_loss_mt )
 
-    USE mo_sb_constants,          ONLY: k_adsorpt_dom, k_desorpt_dom, k_adsorpt_det, k_desorpt_det
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants,          ONLY: k_adsorpt_dom, k_desorpt_dom, k_adsorpt_det, k_desorpt_det, &
+      & rho_solid_maoc, carbon_per_dryweight_SOM
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc                       !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w                  !< number of soil layers
@@ -1920,6 +2326,8 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_sorption             !< moisture rate modifier [-]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_desorption           !< temperature rate modifier [-]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rmm_desorption           !< moisture rate modifier [-]
+    LOGICAL,                            INTENT(in)    :: flag_available_pore_volume !< constrain MAOC by fixed pore space
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: volume_pore_total_sl      !< fixed pore volume [m3 m-3]
     REAL(lp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< bgcm sb_pool: [mol/m3]
     REAL(lp),                           INTENT(inout) :: sb_formation_mt(:,:,:,:) !< bgcm flux: transport [mol/m3/timestep]
     REAL(lp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)      !< bgcm flux: transport [mol/m3/timestep]
@@ -1931,6 +2339,16 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w)      :: avail_soil_surface_sorption_capacity_sl
     REAL(lp), DIMENSION(nc, nsoil_w)      :: sorption_rate
     REAL(lp), DIMENSION(nc, nsoil_w)      :: desorption_rate
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: dom_sorption_fraction
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: residue_sorption_fraction
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: potential_dom_sorption_c
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: potential_residue_sorption_c
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: potential_sorption_c
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: chemical_capacity_scale
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: chemical_sorption_c
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: physical_sorption_capacity_c
+    REAL(lp), DIMENSION(nc, nsoil_w)      :: physical_capacity_scale
+    REAL(lp)                              :: carbon_to_maoc_volume
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sorption_desorption_of_org_material'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1940,11 +2358,49 @@ CONTAINS
       &                                            - (sb_pool_mt(ix_dom_assoc, ixC, :, :) &
       &                                            + sb_pool_mt(ix_residue_assoc, ixC, :, :)))
 
+    ! First diagnose potential sorption from chemical kinetics and mineral sorption sites only.
+    ! Pore volume is deliberately absent from this calculation.
+    dom_sorption_fraction(:,:) = MIN(1.0_lp, MAX(0.0_lp, k_adsorpt_dom * rtm_sorption(:,:) * &
+      & rmm_sorption(:,:) * avail_soil_surface_sorption_capacity_sl(:,:) * dtime))
+    residue_sorption_fraction(:,:) = MIN(1.0_lp, MAX(0.0_lp, k_adsorpt_det * rtm_sorption(:,:) * &
+      & rmm_sorption(:,:) * avail_soil_surface_sorption_capacity_sl(:,:) * dtime))
+    potential_dom_sorption_c(:,:) = dom_sorption_fraction(:,:) * &
+      & MAX(0.0_lp, sb_pool_mt(ix_dom, ixC, :, :))
+    potential_residue_sorption_c(:,:) = residue_sorption_fraction(:,:) * &
+      & MAX(0.0_lp, sb_pool_mt(ix_residue, ixC, :, :))
+    potential_sorption_c(:,:) = potential_dom_sorption_c(:,:) + potential_residue_sorption_c(:,:)
+
+    ! DOM and residue compete for the same chemical sites. Apply one chemical capacity scale before
+    ! considering physical admissibility, preserving the relative potential fluxes from both pools.
+    chemical_capacity_scale(:,:) = 1.0_lp
+    ! Divide only when capacity binds: the denominator is positive and the ratio is at most one.
+    WHERE (potential_sorption_c(:,:) > avail_soil_surface_sorption_capacity_sl(:,:))
+      chemical_capacity_scale(:,:) = &
+        & avail_soil_surface_sorption_capacity_sl(:,:) / potential_sorption_c(:,:)
+    END WHERE
+    dom_sorption_fraction(:,:) = dom_sorption_fraction(:,:) * chemical_capacity_scale(:,:)
+    residue_sorption_fraction(:,:) = residue_sorption_fraction(:,:) * chemical_capacity_scale(:,:)
+    chemical_sorption_c(:,:) = potential_sorption_c(:,:) * chemical_capacity_scale(:,:)
+
+    ! Apply a single physical admissibility limiter only after potential chemical sorption is known.
+    ! This limiter does not create sorption potential; it can only reduce chemically driven fluxes.
+    ! Legacy volume has no physical pore-space limiter. Do not represent this with HUGE():
+    ! HUGE()/sorption overflows for small positive fluxes even inside MIN(1, ...).
+    physical_capacity_scale(:,:) = 1.0_lp
+    IF (flag_available_pore_volume) THEN
+      carbon_to_maoc_volume = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_solid_maoc
+      physical_sorption_capacity_c(:,:) = MAX(0.0_lp, volume_pore_total_sl(:,:) / carbon_to_maoc_volume - &
+        & sb_pool_mt(ix_dom_assoc, ixC, :, :) - sb_pool_mt(ix_residue_assoc, ixC, :, :))
+      WHERE (chemical_sorption_c(:,:) > physical_sorption_capacity_c(:,:))
+        physical_capacity_scale(:,:) = physical_sorption_capacity_c(:,:) / chemical_sorption_c(:,:)
+      END WHERE
+    END IF
+
     !>2.0 mineral association of DOM
     !>
-    sorption_rate(:,:)   = k_adsorpt_dom * rtm_sorption(:,:)   * rmm_sorption(:,:) &
-      &                    * avail_soil_surface_sorption_capacity_sl(:,:) * dtime
-    desorption_rate(:,:) = k_desorpt_dom * rtm_desorption(:,:) * rmm_desorption(:,:) * dtime
+    sorption_rate(:,:) = dom_sorption_fraction(:,:) * physical_capacity_scale(:,:)
+    desorption_rate(:,:) = MIN(1.0_lp, MAX(0.0_lp, &
+      & k_desorpt_dom * rtm_desorption(:,:) * rmm_desorption(:,:) * dtime))
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -1960,9 +2416,9 @@ CONTAINS
 
     !>3.0 mineral association of microbial residue
     !>
-    sorption_rate(:,:)   = k_adsorpt_det * rtm_sorption(:,:)   * rmm_sorption(:,:) &
-      &                    * avail_soil_surface_sorption_capacity_sl(:,:) * dtime
-    desorption_rate(:,:) = k_desorpt_det * rtm_desorption(:,:) * rmm_desorption(:,:) * dtime
+    sorption_rate(:,:) = residue_sorption_fraction(:,:) * physical_capacity_scale(:,:)
+    desorption_rate(:,:) = MIN(1.0_lp, MAX(0.0_lp, &
+      & k_desorpt_det * rtm_desorption(:,:) * rmm_desorption(:,:) * dtime))
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN
@@ -1977,6 +2433,7 @@ CONTAINS
     END DO
   END SUBROUTINE calc_sorption_desorption_of_org_material
 
+
   ! ======================================================================================================= !
   !>calculate P sorption parameters, including both single and double Langmuir
   !>
@@ -1986,7 +2443,8 @@ CONTAINS
     & bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
     & bulk_dens_sl, volume_min_sl, po4_solute, &
     & qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &             ! inout
-    & qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor)      ! inout
+    & qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor, &    ! inout
+    & mineral_mass_density_sl)
 
     USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
       & km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
@@ -2013,8 +2471,10 @@ CONTAINS
     REAL(lp),     INTENT(inout) :: km_fast_po4                  !< half-saturation po4 concentration of fast associated pool [mol P/m3]
     REAL(lp),     INTENT(inout) :: km_slow_po4                  !< half-saturation po4 concentration of slow associated pool [mol P/m3]
     REAL(lp),     INTENT(inout) :: Qmax_AlFe_cor                !< qmax correlation factor of Al/Fe content [-]
+    REAL(lp), OPTIONAL, INTENT(in) :: mineral_mass_density_sl    !< dry mineral mass per layer volume [kg/m3]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)  :: hlp1, hlp2, hlp3, hlp4
+    REAL(lp)  :: mineral_mass_density
     REAL(lp)  :: sand_sl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_Psorption_parameter'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -2022,6 +2482,8 @@ CONTAINS
     !>0.8 initialize local variable
     !>
     sand_sl = 1._lp - clay_sl - silt_sl
+    mineral_mass_density = -1.0_lp
+    IF (PRESENT(mineral_mass_density_sl)) mineral_mass_density = mineral_mass_density_sl
 
     !>0.9 set Qmax_AlFe_cor zero if lower eps8
     !>
@@ -2047,9 +2509,14 @@ CONTAINS
         & qmax_po4_min_sl, &
         & qmax_po4, &
         & qmax_fast=qmax_fast_po4, &
-        & qmax_slow=qmax_slow_po4)
+        & qmax_slow=qmax_slow_po4, &
+        & mineral_mass_density_sl=mineral_mass_density)
       ! Fe/Al in OM [mol P/m3]
-      hlp1 = calc_qmax_texture(qmax_po4_clay, 0._lp, clay_sl) * volume_min_sl * bulk_dens_sl * Qmax_AlFe_cor
+      IF (mineral_mass_density >= 0.0_lp) THEN
+        hlp1 = calc_qmax_texture(qmax_po4_clay, 0._lp, clay_sl) * mineral_mass_density * Qmax_AlFe_cor
+      ELSE
+        hlp1 = calc_qmax_texture(qmax_po4_clay, 0._lp, clay_sl) * volume_min_sl * bulk_dens_sl * Qmax_AlFe_cor
+      END IF
       ! update qmax_fast_po4 and qmax_po4
       qmax_fast_po4 = qmax_fast_po4 + hlp1
       qmax_po4      = qmax_po4 + hlp1
@@ -2088,15 +2555,18 @@ CONTAINS
         &                                    qmax_po4_om_sl, qmax_po4_min_sl, &
         &                                    qmax_po4, &
         &                                    qmax_fast=qmax_fast_po4, &
-        &                                    qmax_slow=qmax_slow_po4)
+        &                                    qmax_slow=qmax_slow_po4, &
+        &                                    mineral_mass_density_sl=mineral_mass_density)
 
       CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
         &                                    km_adsorpt_OM_po4, km_adsorpt_mineral_po4, &
         &                                    km_adsorpt_po4_sl, &
         &                                    qmax_fast=km_fast_po4, &
-        &                                    qmax_slow=km_slow_po4)
+        &                                    qmax_slow=km_slow_po4, &
+        &                                    mineral_mass_density_sl=mineral_mass_density)
     END IF  ! double/single Langmuir
   END SUBROUTINE calc_Psorption_parameter
+
 
 #endif
 END MODULE mo_q_sb_jsm_processes

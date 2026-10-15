@@ -376,6 +376,13 @@ MODULE mo_sb_memory_class
 
     ! soil physical properties
     TYPE(t_jsb_var_real3d)  :: &
+      & volume_pore_total_sl, & !< pore volume per total soil volume [-]
+      & volume_pore_maoc_sl, & !< pore volume per total soil volume [-]
+      & volume_pore_poc_sl, & !< pore volume per total soil volume [-]
+      & volume_pore_free_sl, & !< pore volume per total soil volume [-]
+      & volume_pore_maoc_excess_sl, & !< pore volume per total soil volume [-]
+      & volume_pore_poc_excess_sl, & !< pore volume per total soil volume [-]
+      & poc_displaceable_frac_sl, & !< movable fraction of particulate organic matter [-]
       & volume_min_sl       , &  !< soil mineral volumetric fraction
       & qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
       & qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
@@ -2849,6 +2856,62 @@ CONTAINS
         & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
+      CALL mem%Add_var('volume_pore_total_sl', mem%volume_pore_total_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_total_sl', unitless, 'total pore volume within the mineral-soil matrix'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .TRUE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('volume_pore_maoc_sl', mem%volume_pore_maoc_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_maoc_sl', unitless, 'pore volume occupied by mineral-associated organic matter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('volume_pore_poc_sl', mem%volume_pore_poc_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_poc_sl', unitless, 'pore volume occupied by non-associated particulate organic matter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('volume_pore_free_sl', mem%volume_pore_free_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_free_sl', unitless, 'pore volume available for additional organic matter'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('volume_pore_maoc_excess_sl', mem%volume_pore_maoc_excess_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_maoc_excess_sl', unitless, 'MAOC volume exceeding fixed pore capacity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('volume_pore_poc_excess_sl', mem%volume_pore_poc_excess_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('volume_pore_poc_excess_sl', unitless, 'POC volume outside local pore capacity'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('poc_displaceable_frac_sl', mem%poc_displaceable_frac_sl, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('poc_displaceable_frac_sl', unitless, 'fraction of POC eligible for displacement from a saturated layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, output_level = FULL, loutput = .TRUE., lrestart = .FALSE., &
+        & initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
       CALL mem%Add_var('qmax_po4', mem%qmax_po4, &
         & hgrid, vgrid_soil_w, &
         & t_cf('qmax_po4', 'mol P m-3 soil', 'sorption capacity of po4 of mineral soil'), &
@@ -2987,8 +3050,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = NONE, &
-        & loutput = .FALSE., &
+        & output_level = FULL, &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
@@ -3580,7 +3643,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_lp)
 

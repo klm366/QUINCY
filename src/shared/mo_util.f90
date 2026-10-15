@@ -26,7 +26,8 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, read_bc_data, one_of, &
-    &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
+    &       report_memory_usage, soil_init_from_texture, soil_init_from_texture_layer, &
+    &       tdma_solver_vec, scaled_global_sum_2D
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
 #ifndef __QUINCY_STANDALONE__
@@ -184,6 +185,28 @@ CONTAINS
 
   END SUBROUTINE soil_init_from_texture
 
+  !> Calculate mineral soil parameters from layer-specific soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! parameter_oc is kept as a placeholder for consistency with soil_init_from_texture.
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture_layer(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &            ! Look up table values
+    & fraction_sand, fraction_silt, fraction_clay, &
+    & parameter_from_texture)
+
+    REAL(lp), INTENT(in)  :: parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(lp), INTENT(in)  :: fraction_sand, fraction_silt, fraction_clay
+    REAL(lp), INTENT(out) :: parameter_from_texture
+
+    parameter_from_texture = fraction_sand * parameter_sand &
+      &                    + fraction_silt * parameter_silt &
+      &                    + fraction_clay * parameter_clay
+
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand, parameter_silt, parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand, parameter_silt, parameter_clay))
+
+  END SUBROUTINE soil_init_from_texture_layer
   !>#### Read boundary conditions accounting for different options
   !>
   !> Boundary condition fields may depend on namelist settings (e.g. parameter [[t_hydro_config:l_organic]]

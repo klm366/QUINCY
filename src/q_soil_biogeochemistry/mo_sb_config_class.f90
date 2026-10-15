@@ -72,6 +72,10 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_mycorrhiza_org
     LOGICAL               :: flag_mycorrhiza_prim
     ! JSM
+    LOGICAL :: flag_sb_jsm_available_pore_volume !< fixed mineral matrix with organic pore occupancy [-]
+    REAL(lp) :: sb_bulk_density_target_fraction !< calibration target / input bulk density [-]
+    REAL(lp) :: sb_pore_volume_relaxation !< bounded structural adjustment fraction per replay year [-]
+
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
@@ -101,6 +105,7 @@ MODULE mo_sb_config_class
     REAL(lp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< Layer-resolved QUINCY soil input file
     CHARACTER(len=filename_max) :: sb_analytical_init_filename !< deprecated compatibility member; no longer read
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
@@ -179,6 +184,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
@@ -233,17 +239,24 @@ CONTAINS
     REAL(lp)                    :: nml_ea_decomposition
     REAL(lp)                    :: nml_ed_decomposition
 
+    LOGICAL :: flag_sb_jsm_available_pore_volume
+    REAL(lp) :: sb_bulk_density_target_fraction, sb_pore_volume_relaxation
+
     NAMELIST /lnd_sb_nml/                     &
                       active                    , &
                       lrestart_cont             , &
                       ic_filename               , &
                       bc_filename               , &
                       bc_quincy_soil_filename   , &
+                      bc_quincy_soil_filename_3d, &
                       soilphysics_forcing_filename,   &
                       veglitterfall_forcing_filename, &
                       deposition_filename_prefix, &
                       skip_forcing_isotopes_after_init, &
                       sb_model_scheme           , &
+                      flag_sb_jsm_available_pore_volume, &
+                      sb_bulk_density_target_fraction, &
+                      sb_pore_volume_relaxation, &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
                       sb_adsorp_scheme          , &
@@ -311,6 +324,7 @@ CONTAINS
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
     bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
+    bc_quincy_soil_filename_3d  = 'bc_land_soil_quincy_3d.nc'
     soilphysics_forcing_filename   = 'bc_qsoil_physics.nc'
     veglitterfall_forcing_filename = 'bc_qsoil_litterfall.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
@@ -365,6 +379,10 @@ CONTAINS
     nml_ea_decomposition        = def_parameters
     nml_ed_decomposition        = def_parameters
 
+    flag_sb_jsm_available_pore_volume = .FALSE.
+    sb_bulk_density_target_fraction = 0.95_lp
+    sb_pore_volume_relaxation = 0.25_lp
+
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
     nml_unit = position_nml('lnd_sb_nml', nml_handler, STATUS=istat)
@@ -372,12 +390,33 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
+    ! Resolve the scheme-dependent default, then reread explicit overrides.
+    ! This distinguishes an omitted selector from an invalid explicit true for simple_1d.
+    flag_sb_jsm_available_pore_volume = TRIM(sb_model_scheme) == 'jsm'
+    nml_handler = open_nml(TRIM(config%namelist_filename))
+    nml_unit = position_nml('lnd_sb_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, lnd_sb_nml)
+    CALL close_nml(nml_handler)
+    IF (flag_sb_jsm_available_pore_volume .AND. TRIM(sb_model_scheme) /= 'jsm') &
+      & CALL finish(TRIM(routine), 'Available pore volume requires sb_model_scheme=jsm.')
+    IF (.NOT. (sb_bulk_density_target_fraction > 0._lp .AND. sb_bulk_density_target_fraction <= 1._lp)) &
+      & CALL finish(TRIM(routine), 'sb_bulk_density_target_fraction must be in (0,1].')
+    IF (.NOT. (sb_pore_volume_relaxation > 0._lp .AND. sb_pore_volume_relaxation <= 1._lp)) &
+      & CALL finish(TRIM(routine), 'sb_pore_volume_relaxation must be in (0,1].')
+    config%flag_sb_jsm_available_pore_volume = flag_sb_jsm_available_pore_volume
+    config%sb_bulk_density_target_fraction = sb_bulk_density_target_fraction
+    config%sb_pore_volume_relaxation = sb_pore_volume_relaxation
+    WRITE(message_text,*) 'SB volume scheme: available pore=', flag_sb_jsm_available_pore_volume, &
+      & '; target density fraction=', sb_bulk_density_target_fraction, '; replay relaxation=', sb_pore_volume_relaxation
+    CALL message(TRIM(routine), TRIM(message_text))
+
     ! pass values as read from file
     config%active                          = active
     config%lrestart_cont                   = lrestart_cont
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
+    config%bc_quincy_soil_filename_3d      = bc_quincy_soil_filename_3d
     config%sb_analytical_init_filename     = ''
     config%soilphysics_forcing_filename    = soilphysics_forcing_filename
     config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename

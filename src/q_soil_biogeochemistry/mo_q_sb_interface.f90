@@ -627,6 +627,21 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SB_, sb_bgcm_pool_mineral_assoc_p, weighted_by_fract)
     END IF
 
+    ! Aggregate structural diagnostics from the actual SB owners, like other soil fields.
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_total_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_maoc_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_poc_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_free_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_maoc_excess_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_pore_poc_excess_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, poc_displaceable_frac_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, volume_min_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, surface_burial_frac, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, bulk_soil_carbon_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, soil_litter_carbon_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, bulk_dens_corr_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, qmax_org, weighted_by_fract)
+
     ! VEG_ fluxes
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_,   net_biosphere_production_c13  , weighted_by_fract)

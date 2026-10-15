@@ -1,11 +1,11 @@
 !> Forward soil-biogeochemistry spin-up accelerator
 !>
-!> QUINCY soil biogeochemistry
+!> ICON-Land
 !>
 !> ---------------------------------------
 !> Copyright (C) 2013-2026, MPI-M, MPI-BGC
 !>
-!> Contact: https://doi.org/10.17871/quincy-model-2019
+!> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
@@ -908,6 +908,184 @@ CONTAINS
   END SUBROUTINE prepare_sb_spinup_accelerator
 
   ! ===================================================================================================== !
+  !> Bounded annual replay calibration of SB-owned pore structure.
+  !!
+  !! Input SSE density remains the target reference, never an inout soil property.
+  !! MAOC imposes both physical pore and chemical mineral-mass bounds. Only the
+  !! structural state changes here; no CNP/isotope mass is created or removed.
+  !! Density agreement is diagnostic, not an additional stock-convergence gate.
+  SUBROUTINE calibrate_sb_pore_volume(tile, options, represented_year)
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_, SSE_
+    USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
+    USE mo_q_sb_jsm_processes, ONLY: solve_pore_volume_for_bulk_density, &
+      & calc_available_pore_carbon_components, calc_bulk_soil_carbon_available_pore_volume, &
+      & calc_bulk_density_correction_available_pore_volume, calc_qmax_bulk_density_correction, &
+      & calc_Psorption_parameter, &
+      & sb_density_solution_found, sb_density_target_above_maximum, sb_density_target_below_minimum
+    USE mo_sb_constants, ONLY: rho_particle_mineral, km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4
+    USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ixC
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SSE_)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: represented_year !< artificial elapsed years; global clock is unchanged [yr]
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: ics, ice, iblk, nc, nsoil_w, ic, is, status
+    INTEGER :: bounded_count !< number of layers whose target density is outside admissible bounds [-]
+    REAL(lp), PARAMETER :: density_calibration_rel_tol = 1.e-3_lp !< numerical density residual tolerance [-]
+    REAL(lp) :: maoc, poc !< carbon concentrations per total soil volume [mol C m-3]
+    REAL(lp) :: lower, upper, solved, old_pore !< pore fractions per total soil volume [-]
+    REAL(lp) :: density, residual, max_residual, max_change !< density [kg m-3]; normalized residual/fraction [-]
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
+    dsl4jsb_Real3D_onChunk :: clay_sl, silt_sl
+    dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_nh4
+    dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
+    dsl4jsb_Real3D_onChunk :: ph_sl
+    dsl4jsb_Real3D_onChunk :: rmm_sorption
+    dsl4jsb_Real3D_onChunk :: po4_solute
+    dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    dsl4jsb_Real3D_onChunk :: qmax_po4
+    dsl4jsb_Real3D_onChunk :: km_adsorpt_po4_sl
+    dsl4jsb_Real3D_onChunk :: qmax_fast_po4
+    dsl4jsb_Real3D_onChunk :: qmax_slow_po4
+    dsl4jsb_Real3D_onChunk :: km_fast_po4
+    dsl4jsb_Real3D_onChunk :: km_slow_po4
+    dsl4jsb_Real3D_onChunk :: Qmax_AlFe_cor
+    dsl4jsb_Real3D_onChunk :: bulk_dens_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_total_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_maoc_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_poc_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_free_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_maoc_excess_sl
+    dsl4jsb_Real3D_onChunk :: volume_pore_poc_excess_sl
+    dsl4jsb_Real3D_onChunk :: poc_displaceable_frac_sl
+    dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
+    dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
+    dsl4jsb_Real3D_onChunk :: soil_litter_carbon_sl
+    dsl4jsb_Real3D_onChunk :: volume_min_sl
+    dsl4jsb_Real3D_onChunk :: surface_burial_frac
+    dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
+    dsl4jsb_Real3D_onChunk :: qmax_org
+
+    IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    nc = ice - ics + 1
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(SB_)
+    IF (.NOT. dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) RETURN
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
+    ! Direct store access keeps ownership on this SB tile, not a shared physics tile.
+    sb_pool_mt => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
+    dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_total_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_maoc_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_poc_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_free_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_maoc_excess_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_poc_excess_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, poc_displaceable_frac_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, bulk_dens_corr_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, bulk_soil_carbon_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, soil_litter_carbon_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, volume_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, surface_burial_frac)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_org)
+    dsl4jsb_Get_var3D_onChunk(SSE_, clay_sl)
+    dsl4jsb_Get_var3D_onChunk(SSE_, silt_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_nh4_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_nh4)
+    dsl4jsb_Get_var3D_onChunk(SB_, km_adsorpt_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, ph_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, rmm_sorption)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_, km_adsorpt_po4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_fast_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_, qmax_slow_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_, km_fast_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_, km_slow_po4)
+    dsl4jsb_Get_var3D_onChunk(SB_, Qmax_AlFe_cor)
+    nsoil_w = SIZE(sb_pool_mt, 4)
+    max_change = 0._lp
+    bounded_count = 0
+    DO ic = 1, nc
+      DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+        CALL calc_available_pore_carbon_components(sb_pool_mt, ic, is, maoc, poc)
+        CALL solve_pore_volume_for_bulk_density(maoc, poc, qmax_org_min_sl(ic,is), &
+          & dsl4jsb_Config(SB_)%sb_bulk_density_target_fraction * bulk_dens_sl(ic,is), &
+          & density_calibration_rel_tol, lower, upper, solved, density, residual, status)
+        SELECT CASE (status)
+        CASE (sb_density_solution_found, sb_density_target_above_maximum, sb_density_target_below_minimum)
+          IF (status /= sb_density_solution_found) bounded_count = bounded_count + 1
+          old_pore = volume_pore_total_sl(ic,is)
+          volume_pore_total_sl(ic,is) = MIN(upper, MAX(lower, old_pore + &
+            & dsl4jsb_Config(SB_)%sb_pore_volume_relaxation * (solved - old_pore)))
+          max_change = MAX(max_change, ABS(volume_pore_total_sl(ic,is) - old_pore))
+        CASE DEFAULT
+          WRITE(message_text,*) 'Pore calibration has no admissible state: block/cell/layer/status=', iblk, ic, is, status
+          CALL finish(modname//':calibrate_sb_pore_volume', TRIM(message_text))
+        END SELECT
+      END DO
+    END DO
+    CALL calc_bulk_soil_carbon_available_pore_volume(nc, nsoil_w, num_sl_above_bedrock, 'jsm', sb_pool_mt, &
+      & surface_burial_frac, bulk_soil_carbon_sl, soil_litter_carbon_sl, volume_min_sl, &
+      & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl, volume_pore_free_sl, &
+      & poc_displaceable_frac_sl, volume_pore_maoc_excess_sl, volume_pore_poc_excess_sl)
+    bulk_dens_corr_sl = calc_bulk_density_correction_available_pore_volume( &
+      & volume_pore_total_sl, volume_pore_maoc_sl, volume_pore_poc_sl)
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
+      & 0._lp, qmax_org_min_sl, qmax_org, &
+      & mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl))
+    ! Refresh nutrient sorption too: replay must not use previous-year mineral mass.
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
+      & 0._lp, qmax_nh4_min_sl, qmax_nh4, &
+      & mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl))
+    CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
+      & km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, km_adsorpt_nh4_sl, &
+      & mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl))
+    DO ic = 1, nc
+      DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+        CALL calc_Psorption_parameter(dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+          & clay_sl(ic,is), silt_sl(ic,is), rmm_sorption(ic,is) * 1000._lp, ph_sl(ic,is), &
+          & bulk_soil_carbon_sl(ic,is), soil_litter_carbon_sl(ic,is), sb_pool_mt(ix_woody_litter,ixC,ic,is), &
+          & bulk_dens_sl(ic,is), volume_min_sl(ic,is), po4_solute(ic,is), &
+          & qmax_po4_min_sl(ic,is), qmax_po4_om_sl(ic,is), qmax_po4(ic,is), km_adsorpt_po4_sl(ic,is), &
+          & qmax_fast_po4(ic,is), qmax_slow_po4(ic,is), km_fast_po4(ic,is), km_slow_po4(ic,is), &
+          & Qmax_AlFe_cor(ic,is), mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,is)))
+      END DO
+    END DO
+    max_residual = 0._lp
+    DO ic = 1, nc
+      DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+        density = dsl4jsb_Config(SB_)%sb_bulk_density_target_fraction * bulk_dens_sl(ic,is)
+        max_residual = MAX(max_residual, ABS(bulk_dens_corr_sl(ic,is) - density) / MAX(1._lp, density))
+      END DO
+    END DO
+    IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(represented_year)) THEN
+      WRITE(message_text,*) 'Pore calibration tile/block/year=', TRIM(tile%name), iblk, represented_year, &
+        & '; max pore change, density relative residual, bounded layers=', max_change, max_residual, bounded_count
+      CALL message(modname//':calibrate_sb_pore_volume', TRIM(message_text))
+    END IF
+  END SUBROUTINE calibrate_sb_pore_volume
+
+
   !> Replay the bookkept climatology until the maximum pseudo-time or convergence criterion is reached.
   SUBROUTINE run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
@@ -957,6 +1135,7 @@ CONTAINS
       SELECT CASE (TRIM(sb_model_scheme))
       CASE ('jsm')
         CALL run_jsm_forward_relaxation(tile, options, forcing)
+        CALL calibrate_sb_pore_volume(tile, options, i_year)
       CASE ('simple_1d')
         CALL run_simple_1d_forward_relaxation(tile, options, forcing)
       CASE DEFAULT

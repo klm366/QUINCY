@@ -61,6 +61,7 @@ MODULE mo_sse_config_class
                                 !< the surface temperature during freezing and melting [m water equivalent]
     ! QUINCY-specific configuration
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< Name of the input file containing QUINCY soil data
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< Layer-resolved QUINCY soil input file
     INTEGER                     :: quincy_nsoil_e           !< Number of soil layers for soil energy calculations
                                 !< (equivalent to quincy_nsoil_w in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
@@ -130,6 +131,7 @@ CONTAINS
 
     ! QUINCY-specific configuration
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename !< Name of the input file containing QUINCY soil data.
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< Layer-resolved QUINCY soil input file
     REAL(lp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< Initial estimate of the
                                  !< soil-layer upper bounds used to build the default profile [m].
     REAL(lp) :: k_soil_profile   !< Exponential growth factor for the default QUINCY soil-layer profile.
@@ -156,6 +158,7 @@ CONTAINS
       & ic_filename,                            &
       & bc_filename,                            &
       & bc_quincy_soil_filename,                &
+      & bc_quincy_soil_filename_3d,             &
 #ifdef __QUINCY_STANDALONE__
       & qs_soil_sand, &
       & qs_soil_silt, &
@@ -203,6 +206,7 @@ CONTAINS
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
+    bc_quincy_soil_filename_3d = 'bc_land_soil_quincy_3d.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
@@ -224,6 +228,7 @@ CONTAINS
     config%ic_filename             = ic_filename
     config%bc_filename             = bc_filename
     config%bc_quincy_soil_filename = bc_quincy_soil_filename
+    config%bc_quincy_soil_filename_3d = bc_quincy_soil_filename_3d
 
     config%nsnow         = nsnow
     IF (nsnow > max_snow_layers) THEN

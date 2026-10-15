@@ -292,6 +292,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fact_n_status_mic_c_growth
     dsl4jsb_Real3D_onChunk :: fact_p_status_mic_c_growth
     dsl4jsb_Real3D_onChunk :: enzyme_frac_AP
+    dsl4jsb_Real3D_onChunk :: volume_pore_total_sl
     dsl4jsb_Real3D_onChunk :: volume_min_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk      = options%iblk
@@ -519,6 +520,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    fact_n_status_mic_c_growth)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    fact_p_status_mic_c_growth)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    enzyme_frac_AP)                   ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,    volume_pore_total_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_min_sl)                    ! in
     !------------------------------------------------------------------------------------------------------ !
 
@@ -739,6 +741,7 @@ CONTAINS
       & model%config%elements_index_map(:), &
       & model%config%is_element_used(:), &
       & k_bioturb(:,:), &
+      & dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume, &
       & nh4_assoc(:,:), &
       & po4_assoc_fast(:,:), &
       & po4_assoc_slow(:,:), &
@@ -1031,6 +1034,8 @@ CONTAINS
       & rmm_sorption(:,:), &
       & rtm_desorption(:,:), &
       & rmm_desorption(:,:), &
+      & dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume, &
+      & volume_pore_total_sl(:,:), &
       & sb_pool_mt(:,:,:,:), &                ! in
       & sb_formation_mt(:,:,:,:), &           ! inout
       & sb_loss_mt(:,:,:,:) )                 ! inout
