@@ -131,10 +131,9 @@ MODULE mo_sb_constants
       vmax_depolymerisation_litter, &   !< maximum depolymerisation rate of polymeric litter
       enzyme_frac_total, &              !< enzyme fraction of the total microbial biomass
       min_persistent_enzyme, &          !< minimum persistent depolymerisation-enzyme density [mol C/m3]
-      fc_p_res2dom, &                   !< fraction of residue P retranslocated to dom
-      fc_n_res2dom, &                   !< fraction of residue n retranslocated to dom
-      k_p_recyc_corr, &                 !< correction coefficient for microbial P recycling exponential decline curve
-      k_n_recyc_corr                    !< correction coefficient for microbial P recycling exponential decline curve
+      fc_p_res2dom_max, &               !< maximum fraction of otherwise-residue P recycled to DOM [-]
+      fc_n_res2dom_max, &               !< maximum fraction of otherwise-residue N recycled to DOM [-]
+      km_microbial_nutrient_recycling   !< half-response status increment above the recycling plateau [-]
 
   ! parameters controlling litter partitioning
   REAL(lp), SAVE :: &
@@ -456,10 +455,11 @@ CONTAINS
     km_depolymerisation           = 0.4438_lp / molar_mass_C                      ! calibrated, from Yu et al. 2020
     enzyme_frac_total             = 0.05_lp
     min_persistent_enzyme         = 5.e-7_lp                                      ! provisional extracellular-enzyme floor [mol C/m3]
-    fc_p_res2dom                  = 0._lp                                         ! Yu et al. 2020, GMD
-    fc_n_res2dom                  = 0.8_lp                                        ! Yu et al. 2020, GMD
-    k_p_recyc_corr                = 0.3_lp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
-    k_n_recyc_corr                = 0.1_lp                                        ! tuned [0,1], based on model-data comparison of 16 ecosystem traits (4 vegetation, 3 microbe, 9 soil) at 5 sites
+    fc_p_res2dom_max              = 0._lp   ! Yu et al. 2020 partition framework; retain disabled P recycling
+    fc_n_res2dom_max              = 0.8_lp  ! Retain ICON maximum; Yu et al. 2020 partition framework
+    ! Provisional QS response, approved for transfer on 2026-10-15, not a global calibration.
+    ! Tuned to recycling(10) approximately 0.25 with plateau 0.1, exponent 3 and minimum 0.01.
+    km_microbial_nutrient_recycling = 7.509_lp
 
     ! parameters controlling litter partitioning
     f_soluable_residue   = 0.172_lp                                   ! COMISSION, Ahrens et al. 2015

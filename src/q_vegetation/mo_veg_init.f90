@@ -163,6 +163,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain      :: t_soil_srf_tphen_mavg
     dsl4jsb_Real2D_onDomain      :: npp_tuptake_mavg
     dsl4jsb_Real2D_onDomain      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onDomain      :: demand_n_background_tuptake_mavg
+    dsl4jsb_Real2D_onDomain      :: demand_n_season_state
+    dsl4jsb_Real2D_onDomain      :: demand_p_background_tuptake_mavg
+    dsl4jsb_Real2D_onDomain      :: demand_p_season_state
     dsl4jsb_Real2D_onDomain      :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real2D_onDomain      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onDomain      :: growth_req_p_tuptake_mavg
@@ -275,6 +279,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(VEG_, t_soil_srf_tphen_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, npp_tuptake_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, demand_n_background_tuptake_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, demand_n_season_state)
+    dsl4jsb_Get_var2D_onDomain(VEG_, demand_p_background_tuptake_mavg)
+    dsl4jsb_Get_var2D_onDomain(VEG_, demand_p_season_state)
     dsl4jsb_Get_var2D_onDomain(VEG_, demand_uptake_p_tuptake_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, growth_req_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onDomain(VEG_, growth_req_p_tuptake_mavg)
@@ -639,6 +647,11 @@ CONTAINS
     npp_tuptake_mavg(:,:)                 = 1.0_lp
     demand_uptake_n_tuptake_mavg(:,:)     = 0.1_lp
     demand_uptake_p_tuptake_mavg(:,:)     = 0.1_lp
+    ! Initialize backgrounds from the existing effective demand, without changing its default.
+    demand_n_background_tuptake_mavg(:,:) = demand_uptake_n_tuptake_mavg(:,:)
+    demand_p_background_tuptake_mavg(:,:) = demand_uptake_p_tuptake_mavg(:,:)
+    demand_n_season_state(:,:) = -1.0_lp
+    demand_p_season_state(:,:) = -1.0_lp
     growth_req_n_tuptake_mavg(:,:)        = 1._lp / 25._lp
     growth_req_p_tuptake_mavg(:,:)        = 1._lp / 14._lp
     ga_tcnl_mavg(:,:)                     = 0.2_lp
@@ -676,6 +689,8 @@ CONTAINS
     !$ACC   DEVICE(beta_sinklim_ps_daytime_dacc(:,:), growth_req_n_tlabile_mavg(:,:), growth_req_p_tlabile_mavg(:,:)) &
     !$ACC   DEVICE(t_air_tphen_mavg(:,:), t_soil_srf_tphen_mavg(:,:), npp_tuptake_mavg(:,:)) &
     !$ACC   DEVICE(demand_uptake_n_tuptake_mavg(:,:), demand_uptake_p_tuptake_mavg(:,:), growth_req_n_tuptake_mavg(:,:)) &
+    !$ACC   DEVICE(demand_n_background_tuptake_mavg(:,:), demand_n_season_state(:,:)) &
+    !$ACC   DEVICE(demand_p_background_tuptake_mavg(:,:), demand_p_season_state(:,:)) &
     !$ACC   DEVICE(growth_req_p_tuptake_mavg(:,:), ga_tcnl_mavg(:,:), leaf2root_troot_mavg(:,:), an_boc_tvegdyn_mavg(:,:)) &
     !$ACC   DEVICE(net_growth_tvegdyn_mavg(:,:), lai_tvegdyn_mavg(:,:), beta_sinklim_ps_tacclim_mavg(:,:)) &
     !$ACC   DEVICE(t_air_tacclim_mavg(:,:), t_soil_root_tacclim_mavg(:,:), t_air_week_mavg(:,:), t_air_month_mavg(:,:)) &

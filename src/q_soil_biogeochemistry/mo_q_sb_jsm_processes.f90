@@ -802,40 +802,133 @@ CONTAINS
   END SUBROUTINE calc_nitri_denitri_partitioning_rate
 
   ! ======================================================================================================= !
-  !>calculate turnover of the microbial pool
-  !>  corresponds to the term 'pi * Cb' in Ahrens et al. 2015, eq. 7
-  !>
-  !> Input: microbial biomass
-  !>
-  !> Output: transfer of microbial biomass to its sink pools (soluable -> DOM; polymeric -> residue)
-  !>
+  !> Nutrient fraction redirected from otherwise-residue material to DOM during mortality.
+  !> r(s) = r_min + (r_max-r_min)/(1+(max(s-0.1,0)/K)**3), where
+  !> r_min = min(minimum_fraction,r_max). A zero maximum disables recycling exactly.
+  !> Requires fractions in [0,1], finite status and K>0; the caller checks these conditions.
+  !> Status is nutrient-supported / potential C-supported growth, without an upper clamp.
+  !> Status <=0.1 gives exactly r_max; K is the half-response scale above this plateau.
+  !> With K=7.509, r_max=0.8 and r_min=0.01, r(10) is approximately 0.25.
+  !> The K/(s-0.1) branch avoids overflow for very large nutrient status.
+  PURE ELEMENTAL FUNCTION calc_microbial_nutrient_recycling(status, maximum_fraction, &
+    & minimum_fraction, half_response) RESULT(recycling_fraction)
+    REAL(lp), INTENT(in) :: status             !< nutrient growth status [-]
+    REAL(lp), INTENT(in) :: maximum_fraction   !< selective recycling ceiling [-]
+    REAL(lp), INTENT(in) :: minimum_fraction   !< selective recycling floor when enabled [-]
+    REAL(lp), INTENT(in) :: half_response      !< half-response scale above the status plateau [-]
+    REAL(lp) :: recycling_fraction            !< fraction of otherwise-residue nutrient sent to DOM [-]
+    REAL(lp), PARAMETER :: status_plateau = 0.1_lp !< development choice: maximum recycling below this status [-]
+    REAL(lp) :: nutrient_surplus, fraction_min, ratio_cubed, response
+
+    nutrient_surplus = MAX(status - status_plateau, 0._lp)
+    fraction_min = MIN(minimum_fraction, maximum_fraction)
+    IF (nutrient_surplus <= half_response) THEN
+      ratio_cubed = (nutrient_surplus / half_response)**3
+      response = 1._lp / (1._lp + ratio_cubed)
+    ELSE
+      ratio_cubed = (half_response / nutrient_surplus)**3
+      response = ratio_cubed / (1._lp + ratio_cubed)
+    END IF
+    recycling_fraction = fraction_min + (maximum_fraction - fraction_min) * response
+  END FUNCTION calc_microbial_nutrient_recycling
+
+  !> Provisional NUE inversely coupled to the selective turnover N recycling fraction.
+  !> r(s) is exactly the turnover response, evaluated with the previous-timestep N status.
+  !> w = (r-r_min)/(r_max-r_min); NUE_base = NUE_max - (NUE_max-NUE_low)*w.
+  !> Maximum recycling therefore gives NUE_low; minimum recycling gives NUE_max.
+  !> NUE_low=0.3 is a provisional development target, not an empirical universal constant.
+  !> The later stoichiometric growth adjustment may reduce NUE below this provisional floor.
+  !> If recycling is disabled or has no response range, retain the configured NUE maximum.
+  !> Requires finite inputs, fractions in [0,1], and half_response>0 (validated by callers).
+  PURE ELEMENTAL FUNCTION calc_recycling_limited_nue(status, maximum_nue, maximum_recycling, &
+    & minimum_recycling, half_response) RESULT(nue)
+    REAL(lp), INTENT(in) :: status             !< previous nutrient-supported/C-supported growth [-]
+    REAL(lp), INTENT(in) :: maximum_nue        !< configured NUE ceiling [-]
+    REAL(lp), INTENT(in) :: maximum_recycling  !< selective turnover N recycling ceiling [-]
+    REAL(lp), INTENT(in) :: minimum_recycling  !< selective turnover N recycling floor [-]
+    REAL(lp), INTENT(in) :: half_response      !< recycling half-response status increment [-]
+    REAL(lp) :: nue                           !< provisional organic N retention efficiency [-]
+    REAL(lp), PARAMETER :: minimum_nue = 0.3_lp !< tuned development target for high recycling [-]
+    REAL(lp) :: recycling, recycling_min, weight
+
+    nue = maximum_nue
+    recycling_min = MIN(minimum_recycling, maximum_recycling)
+    IF (maximum_recycling <= recycling_min) RETURN
+    recycling = calc_microbial_nutrient_recycling(status, maximum_recycling, &
+      & minimum_recycling, half_response)
+    weight = MAX(0._lp, MIN(1._lp, &
+      & (recycling - recycling_min) / (maximum_recycling - recycling_min)))
+    nue = maximum_nue - (maximum_nue - MIN(minimum_nue, maximum_nue)) * weight
+  END FUNCTION calc_recycling_limited_nue
+
+  !> Joint turnover/growth regulation from the preceding timestep's nutrient status.
+  !> Recycling retains its Hill response; provisional NUE retains its inverse response.
+  !> CUE_cap = (CUE_max+CUE_min)/2 if an interactive nutrient has status<1, otherwise CUE_max.
+  !> Disabled N/P feedback must not lower the CUE cap, including via lagged restart status.
+  !> This step response is an empirical nutrient-stress cost for testing, not an enzyme budget.
+  !> Growth diagnoses nutrient status against the original maximum-CUE potential growth,
+  !> but limits the instantaneous CUE target by this cap. Actual fluxes retain moving-average CUE.
+  !> Inputs must be finite and efficiency bounds ordered.
+  PURE ELEMENTAL SUBROUTINE calc_microbial_nutrient_regulation(flag_sb_interactive_n, flag_sb_interactive_p, &
+    & status_n, status_p, &
+    & recycling_n_max, recycling_p_max, recycling_min, half_response, nue_max, cue_min, cue_max, &
+    & recycling_n, recycling_p, nue_provisional, cue_cap)
+    LOGICAL, INTENT(in) :: flag_sb_interactive_n, flag_sb_interactive_p !< enable nutrient feedback on C [-]
+    REAL(lp), INTENT(in) :: status_n, status_p !< nutrient-supported/C-supported growth [-]
+    REAL(lp), INTENT(in) :: recycling_n_max, recycling_p_max, recycling_min !< recycling bounds [-]
+    REAL(lp), INTENT(in) :: half_response !< recycling half-response status increment [-]
+    REAL(lp), INTENT(in) :: nue_max, cue_min, cue_max !< configured efficiency limits [-]
+    REAL(lp), INTENT(out) :: recycling_n, recycling_p !< selective turnover recycling [-]
+    REAL(lp), INTENT(out) :: nue_provisional, cue_cap !< growth retention and CUE ceiling [-]
+
+    recycling_n = calc_microbial_nutrient_recycling(status_n, recycling_n_max, recycling_min, half_response)
+    recycling_p = calc_microbial_nutrient_recycling(status_p, recycling_p_max, recycling_min, half_response)
+    nue_provisional = calc_recycling_limited_nue(status_n, nue_max, recycling_n_max, recycling_min, half_response)
+    cue_cap = cue_max
+    IF (flag_sb_interactive_n) THEN
+      IF (status_n < 1._lp) cue_cap = 0.5_lp * (cue_max + cue_min)
+    END IF
+    IF (flag_sb_interactive_p) THEN
+      IF (status_p < 1._lp) cue_cap = 0.5_lp * (cue_max + cue_min)
+    END IF
+  END SUBROUTINE calc_microbial_nutrient_regulation
+
+  !> Turnover of microbial biomass (pi * Cb in Ahrens et al. 2015, eq. 7).
+  !> Transfers the realized biomass loss to DOM and residue, conserving each element/isotope.
   SUBROUTINE calc_microbial_turnover( &
     & nc, &
     & nsoil_w, &
+    & flag_sb_interactive_n, flag_sb_interactive_p, &
     & dtime, &
     & num_sl_above_bedrock, &
     & fact_n_status_mic_c_growth, &
     & fact_p_status_mic_c_growth, &
     & sb_pool_mt_microbial, &
     & sb_loss_mt_microbial, &
-    & sb_formation_mt)
+    & sb_formation_mt, &
+    & microbial_nue_eff, microbial_cue_eff)
 
-    USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue, fc_p_res2dom, fc_n_res2dom, &
-      &                                 k_n_recyc_corr, k_p_recyc_corr
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue, &
+      &                                 fc_p_res2dom_max, fc_n_res2dom_max, &
+      &                                 km_microbial_nutrient_recycling, min_fraction_default_sb, &
+      &                                 microbial_nue, microbial_cue_min, microbial_cue_max
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                     !< number of soil layers
+    LOGICAL, INTENT(in) :: flag_sb_interactive_n, flag_sb_interactive_p !< enable nutrient feedback on C [-]
     REAL(lp),                          INTENT(in)    :: dtime                       !< timestep length
     REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_n_status_mic_c_growth  !< scalor of N availability on microbial C growth
     REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: fact_p_status_mic_c_growth  !< scalor of P availability on microbial C growth
     REAL(lp),                          INTENT(in)    :: sb_pool_mt_microbial(:,:,:) !< bgcm sb_pool: microbial biomass [mol/m3]
+    ! Provisional values here; growth replaces them with realized efficiency diagnostics.
+    REAL(lp), DIMENSION(nc, nsoil_w), INTENT(out) :: microbial_nue_eff !< turnover-regulated NUE [-]
+    REAL(lp), DIMENSION(nc, nsoil_w), INTENT(out) :: microbial_cue_eff !< nutrient-stress CUE ceiling [-]
     REAL(lp),                          INTENT(inout) :: sb_loss_mt_microbial(:,:,:) !< bgcm sb_loss flux: microbial death [mol/m3/timestep]
     REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)    !< bgcm sb_formation: DOM formation from microbial death [mol/m3/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: hlp1
-    REAL(lp)                                         :: hlp2
-    REAL(lp)                                         :: hlp3
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: p_res2dom
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: n_res2dom
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: mortality_rate
@@ -843,22 +936,54 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! Linear mortality is retained in Stage 2; density dependence is a separate increment.
+    IF (.NOT. ALL(ieee_is_finite([k_mort_microbial, min_mic_biomass, dtime]))) &
+      & CALL finish(routine, 'Nonfinite microbial mortality parameter or timestep.')
+    IF (MIN(k_mort_microbial, min_mic_biomass, dtime) < 0._lp) &
+      & CALL finish(routine, 'Mortality requires nonnegative rate, biomass floor and timestep.')
+
+    IF (.NOT. ALL(ieee_is_finite([fc_n_res2dom_max, fc_p_res2dom_max, &
+        & km_microbial_nutrient_recycling, min_fraction_default_sb]))) &
+      & CALL finish(routine, 'Nonfinite microbial nutrient recycling parameter.')
+    IF (MIN(fc_n_res2dom_max, fc_p_res2dom_max, min_fraction_default_sb) < 0._lp .OR. &
+        & MAX(fc_n_res2dom_max, fc_p_res2dom_max, min_fraction_default_sb) > 1._lp .OR. &
+        & km_microbial_nutrient_recycling <= 0._lp) &
+      & CALL finish(routine, 'Recycling requires fractions in [0,1] and a positive half-response scale.')
+
+    IF (.NOT. ALL(ieee_is_finite([microbial_nue, microbial_cue_min, microbial_cue_max]))) &
+      & CALL finish(routine, 'Nonfinite microbial efficiency limits.')
+    IF (microbial_nue < 0._lp .OR. microbial_nue > 1._lp .OR. microbial_cue_min < 0._lp .OR. &
+        & microbial_cue_max > 1._lp .OR. microbial_cue_min > microbial_cue_max) &
+      & CALL finish(routine, 'Microbial efficiencies require 0<=NUE<=1 and 0<=CUE_min<=CUE_max<=1.')
+    microbial_nue_eff(:,:) = microbial_nue
+    microbial_cue_eff(:,:) = microbial_cue_max
+
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
 
         !>0.9 init local variables
         !>
-        !>  Fractional of N and P in microbial necromass is recycled to DOM,
-        !>    regulated by the microbial nutritional scalors following exponential decline curve
+        !> r = r_min + (r_max-r_min)/(1+(max(s-0.1,0)/K)**3). Status may exceed one:
+        !> nutrient surplus suppresses recycling towards min_fraction_default_sb.
+        !> A zero maximum disables selective recycling (P by default). The existing
+        !> undefined-growth status of one is retained.
         !>
-        hlp2 = MIN(MAX(fact_n_status_mic_c_growth(ic,is), eps4), 1.0_lp)
-        hlp3 = MIN(MAX(fact_p_status_mic_c_growth(ic,is), eps4), 1.0_lp)
-
-        n_res2dom(ic,is) = fc_n_res2dom * MIN(1._lp, EXP(hlp2 * (-1._lp)) ** k_n_recyc_corr)
-        p_res2dom(ic,is) = fc_p_res2dom * MIN(1._lp, EXP(hlp3 * (-1._lp)) ** k_p_recyc_corr)
+        IF (.NOT. ALL(ieee_is_finite([fact_n_status_mic_c_growth(ic,is), &
+            & fact_p_status_mic_c_growth(ic,is)]))) &
+          & CALL finish(routine, 'Nonfinite microbial nutrient status in turnover.')
+        CALL calc_microbial_nutrient_regulation(flag_sb_interactive_n, flag_sb_interactive_p, &
+          & fact_n_status_mic_c_growth(ic,is), &
+          & fact_p_status_mic_c_growth(ic,is), fc_n_res2dom_max, fc_p_res2dom_max, &
+          & min_fraction_default_sb, km_microbial_nutrient_recycling, microbial_nue, &
+          & microbial_cue_min, microbial_cue_max, n_res2dom(ic,is), p_res2dom(ic,is), &
+          & microbial_nue_eff(ic,is), microbial_cue_eff(ic,is))
 
         !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
         !>
+        IF (.NOT. ieee_is_finite(sb_pool_mt_microbial(ixC, ic, is))) &
+          & CALL finish(routine, 'Nonfinite microbial carbon in mortality calculation.')
+        IF (sb_pool_mt_microbial(ixC, ic, is) < 0._lp) &
+          & CALL finish(routine, 'Negative microbial carbon in mortality calculation.')
         mortality_rate(ic,is) = k_mort_microbial * dtime
         hlp1(ic,is)           = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
         IF ((sb_pool_mt_microbial(ixC, ic, is) - hlp1(ic,is)) < min_mic_biomass) THEN
@@ -871,9 +996,9 @@ CONTAINS
 
         !>2.0 calculate matter fluxes associated with microbial death
         !>  a fraction turns to DOM, the remainder becomes residue
-        !>  the assumption is made that the composition of this material is not changed
-        !>
-        !>  @TODO define C:N:P stoichiometries of DOM and residues from microbial death
+        !> C partition is unchanged; selective N/P recycling changes product stoichiometry.
+        !> DOM_N = [f+(1-f)*r_N]*death_N; residue_N = (1-f)*(1-r_N)*death_N.
+        !> Each element is conserved; fresh residue C:N = microbial C:N/(1-r_N).
         !>
         ! C
         hlp1(ic,is)                              = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
@@ -1001,6 +1126,7 @@ CONTAINS
     & sb_loss_mt, &
     & sb_formation_mt )
 
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_isotope_util,          ONLY: calc_fractionation, calc_mixing_ratio_N15N14
     USE mo_sb_constants,          ONLY: vmax_mic_uptake, km_mic_uptake, microbial_cue, microbial_nue, microbial_pue, &
       &                                 min_mic_biomass, microbial_cn, microbial_np, microbial_cue_min, microbial_cue_max, &
@@ -1059,12 +1185,23 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: scal
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4_n15
+    REAL(lp)                                         :: microbial_cue_cap !< incoming turnover CUE ceiling [-]
     INTEGER                                          :: ic, is
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
     ! ----------------------------------------------------------------------------------------------------- !
 
+    ! Turnover validates the shared recycling parameters before growth in the JSM sequence.
+    IF (.NOT. ieee_is_finite(microbial_nue)) &
+      & CALL finish(routine, 'Nonfinite microbial NUE ceiling.')
+    IF (microbial_nue < 0._lp .OR. microbial_nue > 1._lp) &
+      & CALL finish(routine, 'Microbial NUE ceiling must be in [0,1].')
+
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
+        ! Existing efficiency fields carry provisional turnover values on entry.
+        ! Save the CUE ceiling before overwriting its field with the growth diagnostic;
+        ! NUE is already initialized by turnover and can only be reduced below.
+        microbial_cue_cap = microbial_cue_eff(ic,is)
         !>1.0 potential microbial DOM consumption [micro-mol / m3 / s]
         !>
         hlp1(ic,is)     = sb_pool_mt(ix_dom, ixC, ic, is) / (km_mic_uptake * rtm_hsc(ic,is) &
@@ -1076,6 +1213,7 @@ CONTAINS
         ELSE
           f_uptake(ic,is) = 0.0_lp
         END IF
+
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
 
@@ -1086,11 +1224,11 @@ CONTAINS
         !  ("fixed" is only available in the VEG_ symbiotic N fixation)
         CASE("dynamic", "fixed")
           asymb_n_fixation(ic,is) = asymb_n_fixation_rel_rate(ic,is) * &
-            &                     MAX(0.0_lp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
-            &                     microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is))
+            &                     MAX(0.0_lp, microbial_cue_cap * uptake_c(ic,is) / microbial_cn - &
+            &                     microbial_nue_eff(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is))
         CASE("unlimited")
-          asymb_n_fixation(ic,is) = MAX(0.0_lp, microbial_cue_max * uptake_c(ic,is) / microbial_cn - &
-            &                     microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) - &
+          asymb_n_fixation(ic,is) = MAX(0.0_lp, microbial_cue_cap * uptake_c(ic,is) / microbial_cn - &
+            &                     microbial_nue_eff(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) - &
             &                     microbial_uptake_nh4_sl(ic,is) - microbial_uptake_no3_sl(ic,is))
         CASE("none")
           asymb_n_fixation(ic,is) = 0.0_lp
@@ -1098,11 +1236,14 @@ CONTAINS
           CALL finish(TRIM(routine),'No such bnf_scheme available here.')
         END SELECT
 
+        ! Disabled nutrients cover maximum-CUE demand, the reference used for status below.
+        ! Using the cap here would diagnose false limitation and could restrict uptake
+        ! while the moving-average CUE still exceeds the cap.
         !> this ensures fact_n_status_mic_c_growth >= 1, which will affect calc_depolymerisation_SESAM and calc_microbial_turnover
         IF (.NOT. flag_sb_interactive_n) THEN
           microbial_uptake_nh4_sl(ic,is) = &
             & MAX(microbial_uptake_nh4_sl(ic,is), microbial_cue_max * uptake_c(ic,is) / microbial_cn &
-            & - microbial_nue * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) &
+            & - microbial_nue_eff(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) &
             & - asymb_n_fixation(ic,is) - microbial_uptake_no3_sl(ic,is))
         END IF
         !> this ensures fact_p_status_mic_c_growth >= 1, which will affect calc_depolymerisation_SESAM and calc_microbial_turnover
@@ -1115,8 +1256,10 @@ CONTAINS
 
         !>  1.2 microbial growth rates in [micro-mol C / m3 / s], given by C, N and P availability, and the rate-limiting growth rate
         !>
+        ! Diagnose limitation against maximum potential growth, independent of the lagged cap.
+        ! Otherwise a reduced CUE ceiling would itself weaken the next turnover stress signal.
         growth_c(ic,is) = microbial_cue_max * uptake_c(ic,is)
-        growth_n(ic,is) = (microbial_nue * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
+        growth_n(ic,is) = (microbial_nue_eff(ic,is) * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
           &               microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
         growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
           &               microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
@@ -1141,10 +1284,13 @@ CONTAINS
 
         !>2.0 Adjust carbon-use efficiency such that the growth is stoichiometrically balanced
         !>
-        microbial_cue_eff(ic,is) = microbial_cue_max
+        ! Keep maximum-CUE potential growth for status; cap only the instantaneous CUE target.
+        ! Fluxes below retain the moving-average CUE, allowing a gradual response to this target.
+        microbial_cue_eff(ic,is) = microbial_cue_cap
         IF (growth(ic,is) < growth_c(ic,is) .AND. uptake_c(ic,is) > eps8) THEN
           ! excess carbon is going to be respired
-          microbial_cue_eff(ic,is) = MAX(microbial_cue_min,growth(ic,is) / uptake_c(ic,is))
+          microbial_cue_eff(ic,is) = MIN(microbial_cue_cap, &
+            & MAX(microbial_cue_min, growth(ic,is) / uptake_c(ic,is)))
         ELSE IF (growth(ic,is) < growth_c(ic,is)) THEN
           microbial_cue_eff(ic,is) = microbial_cue_min
         END IF
@@ -1155,22 +1301,24 @@ CONTAINS
         ! growth_n and growth_p are unchanged, only growth_c needs to be adjusted to current CUE
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * uptake_c(ic,is)
         ! ensure asymb_n_fixation does not exceed uptake demand
-        IF (asymb_n_fixation(ic,is) > growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is)) THEN
-          asymb_n_fixation(ic,is) = MAX(0.0_lp, growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is))
+        IF (asymb_n_fixation(ic,is) > growth_c(ic,is) / microbial_cn &
+          & - microbial_nue_eff(ic,is) * uptake_n(ic,is)) THEN
+          asymb_n_fixation(ic,is) = MAX(0.0_lp, growth_c(ic,is) / microbial_cn &
+            & - microbial_nue_eff(ic,is) * uptake_n(ic,is))
         END IF
 
         IF (growth_c(ic,is) <= growth_n(ic,is) .AND. growth_c(ic,is) <= growth_p(ic,is)) THEN
           ! carbon uptake is limiting, full uptake rate is realised
           f_uptake(ic,is) = f_uptake(ic,is)
         ELSE IF (growth_n(ic,is) < growth_c(ic,is) .AND. growth_n(ic,is) <= growth_p(ic,is) .AND. &
-                 (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_nue &
+                 (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_nue_eff(ic,is) &
                   * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn) > eps8) THEN
           ! nitrogen uptake is limiting
           ! calculate uptake rate that satisfies N constraint and CUE
           f_uptake(ic,is) = MAX(0.0_lp,MIN(f_uptake(ic,is), &
             &   ((asymb_n_fixation(ic,is) + microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn) / &
             &   (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
-            &    microbial_nue * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn)))
+            &    microbial_nue_eff(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn)))
         ELSE IF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is) .AND. &
                  (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_pue &
                  * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn) > eps8) THEN
@@ -1187,7 +1335,7 @@ CONTAINS
         growth_c(ic,is) = microbial_cue_eff_tmic_mavg(ic,is) * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
-        growth_n(ic,is) = (microbial_nue * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
+        growth_n(ic,is) = (microbial_nue_eff(ic,is) * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
                          microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
         growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
                          microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
@@ -1195,11 +1343,11 @@ CONTAINS
         !>  2.2 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
         !>     and calculate gross mineralisation rate (and its isotopic signature)
         !>
-        microbial_nue_eff(ic,is) = microbial_nue
         IF (growth_c(ic,is) < growth_n(ic,is)) THEN
           ! inorganic N immobilisation flux in agreement with C growth, taking into account current fixation rate
           ! by design, N fixation is not larger than the deficit
-          hlp1(ic,is) = MAX(growth_c(ic,is) / microbial_cn - microbial_nue * uptake_n(ic,is) - asymb_n_fixation(ic,is),0.0_lp)
+          hlp1(ic,is) = MAX(growth_c(ic,is) / microbial_cn &
+            & - microbial_nue_eff(ic,is) * uptake_n(ic,is) - asymb_n_fixation(ic,is), 0.0_lp)
           IF ((microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) > eps8) THEN
             scal(ic,is) = hlp1(ic,is) / (microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is))
           ELSE
@@ -1210,7 +1358,7 @@ CONTAINS
           microbial_uptake_no3_sl(ic,is)     = microbial_uptake_no3_sl(ic,is)     * scal(ic,is)
           microbial_uptake_no3_n15_sl(ic,is) = microbial_uptake_no3_n15_sl(ic,is) * scal(ic,is)
           IF (uptake_n(ic,is) > eps8) THEN
-            microbial_nue_eff(ic,is) = MIN(microbial_nue, &
+            microbial_nue_eff(ic,is) = MIN(microbial_nue_eff(ic,is), &
               &                      ( growth_c(ic,is) / &
               &                        microbial_cn - microbial_uptake_nh4_sl(ic,is) - microbial_uptake_no3_sl(ic,is) ) / &
               &                      uptake_n(ic,is))
@@ -1280,15 +1428,15 @@ CONTAINS
         sb_formation_mt(ix_microbial, ixC14, ic, is) = sb_formation_mt(ix_microbial, ixC14, ic, is) &
           &                                            + microbial_cue_eff_tmic_mavg(ic,is) * uptake_dom(ic,is) &
           &                                            * dtime / 1000000.0_lp
-        het_respiration_c14(ic,is)                   = het_respiration_c14(ic,is) + (1._lp - microbial_cue_eff_tmic_mavg(ic,is) ) &
+        het_respiration_c14(ic,is)                   = het_respiration_c14(ic,is) + (1._lp - microbial_cue_eff_tmic_mavg(ic,is)) &
           &                                          * uptake_dom(ic,is)
-        ! nitrogen15
+        ! nitrogen15: retain uptake minus fractionated mineralization to conserve the isotope.
         net_mineralisation_nh4_n15(ic,is)            = gross_mineralisation_nh4_n15(ic,is) - microbial_uptake_nh4_n15_sl(ic,is)
         net_mineralisation_no3_n15(ic,is)            = - microbial_uptake_no3_n15_sl(ic,is)
         uptake_dom(ic,is)                            = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN15, ic, is)
         sb_loss_mt(ix_dom, ixN15, ic, is)            = sb_loss_mt(ix_dom, ixN15, ic, is) + uptake_dom(ic,is) * dtime / 1000000.0_lp
         sb_formation_mt(ix_microbial, ixN15, ic, is) = sb_formation_mt(ix_microbial, ixN15, ic, is) &
-          &                                          + (microbial_nue * uptake_dom(ic,is) &
+          &                                          + (uptake_dom(ic,is) - gross_mineralisation_nh4_n15(ic,is) &
           &                                          + asymb_n_fixation(ic,is) &
           &                                          / ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(- eta_nfixation)) &
           &                                          + microbial_uptake_nh4_n15_sl(ic,is) + microbial_uptake_no3_n15_sl(ic,is)) &

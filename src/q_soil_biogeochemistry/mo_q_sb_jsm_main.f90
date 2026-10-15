@@ -1010,13 +1010,17 @@ CONTAINS
     CALL calc_microbial_turnover( &
       & nc, &                                 ! in
       & nsoil_w, &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
+      & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
       & dtime, &
       & num_sl_above_bedrock(:), &
       & fact_n_status_mic_c_growth(:,:), &
       & fact_p_status_mic_c_growth(:,:), &
       & sb_pool_mt(ix_microbial,:,:,:), &     ! in
       & sb_loss_mt(ix_microbial,:,:,:), &     ! inout
-      & sb_formation_mt(:,:,:,:) )            ! inout
+      & sb_formation_mt(:,:,:,:), &           ! inout
+      & microbial_nue_eff(:,:), &             ! out: provisional NUE for growth below
+      & microbial_cue_eff(:,:) )              ! out: instantaneous CUE ceiling, not its moving average
 
     !>10.0 mineral stabilisation
     !>

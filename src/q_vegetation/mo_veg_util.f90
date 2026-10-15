@@ -44,6 +44,38 @@ MODULE mo_veg_util
 
 CONTAINS
 
+  !> Preserve end-of-season nutrient demand until the spring background exceeds the held value.
+  !! During every rooted growing-season step H'=(1-w3)*H+w3*f_N, w3=dt/(3*86400).
+  !! H is the background exponential average; freeze it during dormancy, not during spring hold.
+  !! At dormancy onset D=H, including after a season that never released the hold.
+  !! Hold D until growing AND H'>D, then use D=H' for the remainder of the season.
+  !! Compare the updated background average, not raw f_N, to avoid a downward jump at release.
+  !! Do not restart averaging from held D: use the continuously updated background H.
+  !! Falling f_N does not re-enable the hold; only a new dormancy resets the latch.
+  !! Initial dormant plants hold initialized D; initial growing plants use normal averaging.
+  !! Root absence freezes averages, not season transitions. Called independently for JSM N and P.
+  !! raw_demand represents N or P; histories and latches are independent for each nutrient.
+  PURE SUBROUTINE update_seasonal_nutrient_demand(dtime, growing, rooted, raw_demand, history, state, demand)
+    USE mo_lnd_time_averages, ONLY: calc_time_mavg, mavg_period_tuptake
+    REAL(lp), INTENT(in) :: dtime, raw_demand !< timestep [s], raw nutrient demand [unitless]
+    LOGICAL, INTENT(in) :: growing, rooted
+    REAL(lp), INTENT(inout) :: history !< background 3-day nutrient-demand average [unitless]
+    REAL(lp), INTENT(inout) :: state   !< -1 initial, 0 dormant, 1 spring hold, 2 released [unitless]
+    REAL(lp), INTENT(inout) :: demand  !< effective nutrient-uptake demand [unitless]
+    !$ACC ROUTINE SEQ
+
+    IF (state < 0.0_lp) state = MERGE(2.0_lp, 0.0_lp, growing)
+    IF (.NOT. growing) THEN
+      IF (state > 0.0_lp) demand = history
+      state = 0.0_lp
+    ELSE
+      history = calc_time_mavg(dtime, history, raw_demand, mavg_period_tuptake, do_calc=rooted)
+      IF (state < 0.5_lp) state = 1.0_lp
+      IF (state < 1.5_lp .AND. rooted .AND. history > demand) state = 2.0_lp
+      IF (state > 1.5_lp .AND. rooted) demand = history
+    END IF
+  END SUBROUTINE update_seasonal_nutrient_demand
+
   ! ======================================================================================================= !
   !>reset vegetation fluxes (to zero)
   !>
@@ -343,10 +375,11 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, Q_ASSIMI_, VEG_, Q_PHENO_, HYDRO_, SSE_
+    dsl4jsb_Use_processes A2L_, Q_ASSIMI_, VEG_, Q_PHENO_, HYDRO_, SSE_, SB_
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_ASSIMI_)
+    dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(Q_ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
@@ -364,6 +397,7 @@ CONTAINS
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
     LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
     LOGICAL                                 :: l_hlp                  !< helper
+    LOGICAL                                 :: l_seasonal_demand      !< JSM-only seasonal nutrient holds [-]
     REAl(lp)                                :: hlp_r                  !< helper
     REAl(lp)                                :: mavg_period_hlp        !< helper
     INTEGER                                 :: ic                     !< looping over chunk
@@ -379,6 +413,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_ASSIMI_)
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(Q_ASSIMI_)
@@ -461,6 +496,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_soil_srf_tphen_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_n_background_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_n_season_state
+    dsl4jsb_Real2D_onChunk      :: demand_p_background_tuptake_mavg
+    dsl4jsb_Real2D_onChunk      :: demand_p_season_state
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
@@ -532,6 +571,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_ASSIMI_)
+    dsl4jsb_Get_config(SB_)
+    l_seasonal_demand = TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == 'jsm'
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(Q_ASSIMI_)
@@ -618,6 +659,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_srf_tphen_mavg) !New in QS (0e0a3dc)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_n_background_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_n_season_state)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_p_background_tuptake_mavg)
+    dsl4jsb_Get_var2D_onChunk(VEG_, demand_p_season_state)
     dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
@@ -795,10 +840,21 @@ CONTAINS
       !>
       npp_tuptake_mavg(ic)                 = calc_time_mavg(dtime, npp_tuptake_mavg(ic), npp(ic), mavg_period_tuptake,         &
         &                                     do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
-      demand_uptake_n_tuptake_mavg(ic)     = calc_time_mavg(dtime, demand_uptake_n_tuptake_mavg(ic), f_n_demand(ic),           &
-        &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
-      demand_uptake_p_tuptake_mavg(ic)     = calc_time_mavg(dtime, demand_uptake_p_tuptake_mavg(ic), f_p_demand(ic),           &
-        &                                     mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+      ! Histories/latches belong to the integrating vegetation tile, independently for N and P.
+      ! Preserve the original SSM averaging in every phase; this is not a spinup-only switch.
+      IF (l_seasonal_demand) THEN
+        CALL update_seasonal_nutrient_demand(dtime, l_growing_season(ic), &
+          & veg_pool_mt(ix_fine_root,ixC,ic) > eps8, f_n_demand(ic), &
+          & demand_n_background_tuptake_mavg(ic), demand_n_season_state(ic), demand_uptake_n_tuptake_mavg(ic))
+        CALL update_seasonal_nutrient_demand(dtime, l_growing_season(ic), &
+          & veg_pool_mt(ix_fine_root,ixC,ic) > eps8, f_p_demand(ic), &
+          & demand_p_background_tuptake_mavg(ic), demand_p_season_state(ic), demand_uptake_p_tuptake_mavg(ic))
+      ELSE
+        demand_uptake_n_tuptake_mavg(ic) = calc_time_mavg(dtime, demand_uptake_n_tuptake_mavg(ic), &
+          & f_n_demand(ic), mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+        demand_uptake_p_tuptake_mavg(ic) = calc_time_mavg(dtime, demand_uptake_p_tuptake_mavg(ic), &
+          & f_p_demand(ic), mavg_period_tuptake, do_calc=(veg_pool_mt(ix_fine_root,ixC,ic) > eps8))
+      END IF
       growth_req_n_tuptake_mavg(ic)        = calc_time_mavg(dtime, growth_req_n_tuptake_mavg(ic), growth_req_n(ic), &
                                                            mavg_period_tuptake, do_calc=(growth_req_n(ic) > eps8))
       growth_req_p_tuptake_mavg(ic)        = calc_time_mavg(dtime, growth_req_p_tuptake_mavg(ic), growth_req_p(ic), &

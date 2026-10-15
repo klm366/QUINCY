@@ -272,6 +272,10 @@ MODULE mo_veg_memory_class
     TYPE(t_jsb_var_real2d)          :: &
                                     npp_tuptake_mavg               , &  !< npp of the last week [micro-mol m-2 s-1]
                                     demand_uptake_n_tuptake_mavg   , &  !< scalar of Vmax for root N uptake time-averaged [unitless]
+                                    demand_n_background_tuptake_mavg, & !< background rooted N-demand average [-]
+                                    demand_n_season_state         , &  !< N latch: -1 initial, 0 dormant, 1 held, 2 released [-]
+                                    demand_p_background_tuptake_mavg, & !< background rooted P-demand average [-]
+                                    demand_p_season_state         , &  !< P latch: -1 initial, 0 dormant, 1 held, 2 released [-]
                                     demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake time-averaged [unitless]
                                     growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
                                     growth_req_p_tuptake_mavg      , &  !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
@@ -2685,6 +2689,40 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
+
+      ! Seasonal histories and latches are tile-local restart state, not aggregated diagnostics.
+      ! Missing fields in older restarts must not silently reset an ongoing seasonal hold.
+      CALL mem%Add_var('demand_n_background_tuptake_mavg', mem%demand_n_background_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('demand_n_background_tuptake_mavg', '', 'background rooted demand average for N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.1_lp)
+
+      CALL mem%Add_var('demand_n_season_state', mem%demand_n_season_state, &
+        & hgrid, surface, &
+        & t_cf('demand_n_season_state', '', 'seasonal hold latch for N'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, loutput = .FALSE., lrestart = .TRUE., initval_r = -1.0_lp)
+
+      CALL mem%Add_var('demand_p_background_tuptake_mavg', mem%demand_p_background_tuptake_mavg, &
+        & hgrid, surface, &
+        & t_cf('demand_p_background_tuptake_mavg', '', 'background rooted demand average for P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.1_lp)
+
+      CALL mem%Add_var('demand_p_season_state', mem%demand_p_season_state, &
+        & hgrid, surface, &
+        & t_cf('demand_p_season_state', '', 'seasonal hold latch for P'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = NONE, loutput = .FALSE., lrestart = .TRUE., initval_r = -1.0_lp)
 
       CALL mem%Add_var('demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
         & hgrid, surface, &
