@@ -220,7 +220,7 @@ MODULE mo_carbon_memory_class
       soil_respiration_gsum
 
     ! YASSO on soil layers
-    TYPE(t_jsb_var_real3d) ::        &
+    TYPE(t_jsb_var_real3d) ::   &
      !SIZE CLASS 1
       c_acid_bg1_sl,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
       c_water_bg1_sl,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
@@ -237,19 +237,19 @@ MODULE mo_carbon_memory_class
       max_layer_sl                ! max layer thickness (soil / thaw depth dependent)
 
     ! YASSO on soil layers, as tile average
-    TYPE(t_jsb_var_real3d) ::      &
+    TYPE(t_jsb_var_real3d) ::   &
      !SIZE CLASS 1
-      c_acid_bg1_sl_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
-      c_water_bg1_sl_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
-      c_ethanol_bg1_sl_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
-      c_nonsoluble_bg1_sl_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
-      c_humus_1_sl_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
+      c_acid_bg1_sl_ta,         & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
+      c_water_bg1_sl_ta,        & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
+      c_ethanol_bg1_sl_ta,      & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
+      c_nonsoluble_bg1_sl_ta,   & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
+      c_humus_1_sl_ta,          & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
      !SIZE CLASS 2
-      c_acid_bg2_sl_ta,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
-      c_water_bg2_sl_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
-      c_ethanol_bg2_sl_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
-      c_nonsoluble_bg2_sl_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
-      c_humus_2_sl_ta                ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
+      c_acid_bg2_sl_ta,         & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
+      c_water_bg2_sl_ta,        & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
+      c_ethanol_bg2_sl_ta,      & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
+      c_nonsoluble_bg2_sl_ta,   & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
+      c_humus_2_sl_ta             ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory

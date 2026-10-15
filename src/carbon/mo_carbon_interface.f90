@@ -34,8 +34,8 @@ MODULE mo_carbon_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,           &
-                                 & Y_ACID, Y_WATER, Y_ETHANOL,       &
-                                 & Y_NONSOLUBLE, Y_HUMUS, WOODLITSIZE, &
+                                 & Y_ACID, Y_WATER, Y_ETHANOL,             &
+                                 & Y_NONSOLUBLE, Y_HUMUS, WOODLITSIZE,     &
                                  & ROOT_DIST_BETA, permafrost_threshold,   &
                                  & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE
 
@@ -182,21 +182,14 @@ CONTAINS
     REAL(lp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
     REAL(lp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
     REAL(lp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
-    REAL(lp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
+    REAL(lp)                     :: lctlib_Max_C_content_woods
     REAL(lp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
-    REAL(lp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
-    REAL(lp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
-    REAL(lp)                     :: lctlib_LeafLit_coef_humus
-    REAL(lp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
-    REAL(lp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
-    REAL(lp)                     :: lctlib_WoodLit_coef_humus
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
     REAL(lp)                     :: dtime
     REAL(lp)                     :: delta_time_C        !< Carbon time step [s]
     REAL(lp), DIMENSION(options%nc) :: MaxLai
     REAL(lp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
     REAL(lp), DIMENSION(options%nc) :: cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos
-    LOGICAL                         :: is_crop
 
     ! Variables required for vertical YASSO
     REAL(lp), ALLOCATABLE  :: layer_depth(:)            !< soil layer depth [m]
@@ -204,8 +197,6 @@ CONTAINS
 
     REAL(lp), ALLOCATABLE  :: soil_depth_thaw(:)        !< Minimum of either soil or thaw depth [m]
     REAL(lp), ALLOCATABLE  :: thaw_depth(:)             !< Maximum thaw depth / active layer depth [m]
-
-    REAL(lp), DIMENSION(options%nc) :: frac_inun_loc    !< Surface inundation fraction [m]
 
     REAL(lp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
     REAL(lp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
@@ -319,9 +310,9 @@ CONTAINS
                                                       ! Actual NPP after N-limitation and excess carbon drop.
                                                       ! [mol(CO2)/(m^2(canopy) s)]
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
+
     dsl4jsb_Real2D_onChunk ::  soil_respiration       ! mean daily rate of heterotrophic (soil) respiration
                                                       ! [mol(CO2)/m^2(ground)].
-    dsl4jsb_Real2D_onChunk ::  frac_inun              !< Inundated fraction (from topmodel/pond scheme)
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction    ! Daily updated flux correction from yesterdays carbon balance
                                                       ! [mol(CO2)/m^2(canopy) s]
                                                       ! Amount by which the NPP rate entering the routine has to be corrected.
@@ -394,7 +385,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_thaw_prev_year_climbuf !< Last years maximum active layer thickness [m]
     dsl4jsb_Real2D_onChunk :: soil_depth                 !< Soil depth until bedrock [m]
     dsl4jsb_Real3D_onChunk :: soil_depth_sl              !< Soil layer depth until bedock [m]
-
     dsl4jsb_Real2D_onChunk :: n_thaw_cycle_prev          !< Number of thaw cycles during last year [-]
 
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
@@ -569,10 +559,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
     END IF
 
-    ! frac_inun must wait until the use of any kind of inundated fraction (Topmodel or pond scheme)
-    ! is implemented here, this will be implemented with methane module merge
-    frac_inun => NULL()
-
     dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)          ! in
 
     lstart   = is_time_experiment_start(options%current_datetime)
@@ -738,17 +724,6 @@ CONTAINS
       lctlib_specificLeafArea_C      = dsl4jsb_Lctlib_param(specificLeafArea_C)
       lctlib_reserveC2leafC          = dsl4jsb_Lctlib_param(reserveC2leafC)
       lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
-      lctlib_LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ACID))
-      lctlib_LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_WATER))
-      lctlib_LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ETHANOL))
-      lctlib_LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(Y_NONSOLUBLE))
-      lctlib_LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_HUMUS))
-      lctlib_WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ACID))
-      lctlib_WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_WATER))
-      lctlib_WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ETHANOL))
-      lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(Y_NONSOLUBLE))
-      lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_HUMUS))
-      lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
 
       ! Set up parameter arrays for cleaner parameter transfer vertical YASSO
       LeafLit_coef(Y_ACID)       = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ACID))
@@ -774,23 +749,11 @@ CONTAINS
       CALL recalc_carbon_per_tile_vars(tile, options)
       CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
-      ! Get inundated surface fraction
-      IF (ASSOCIATED(frac_inun)) THEN
-        frac_inun_loc(:) = frac_inun(:)
-        IF (debug_on()) CALL message(TRIM(routine), 'Using frac_inun from Topmodel or pond scheme.')
-      ELSE
-        frac_inun_loc(:) = 0._lp
-        IF (debug_on()) CALL message(TRIM(routine), 'No frac_inun provided.')
-      END IF
-
-      ! Check whether or not we are on a crop pft
-      is_crop = lctlib_PhenologyType == 5
-
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         ! Now update the C pools for plants
         CALL calc_plant_c( &
-          &  delta_time_C, is_crop,                             & ! in
+          &  delta_time_C,                                      & ! in
           &  LAI_yDayMean(ic),                                  & ! in
           &  LAI_yyDayMean(ic),                                 & ! in
           &  MaxLai(ic),                                        & ! in
@@ -805,6 +768,7 @@ CONTAINS
           &  lctlib_Max_C_content_woods,                        & ! in
           &  lctlib_specificLeafArea_C,                         & ! in
           &  lctlib_reserveC2leafC,                             & ! in
+          &  lctlib_PhenologyType,                              & ! in
           !
           &  c_green(ic),                                       & ! inout
           &  c_woods(ic),                                       & ! inout

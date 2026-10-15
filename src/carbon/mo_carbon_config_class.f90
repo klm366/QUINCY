@@ -114,6 +114,7 @@ CONTAINS
          with_nitrogen,            &
          read_cpools,              &
          diag_humus_fluxes,        &
+         fire_fract_wood_2_atmos,  &
          vertical_yasso,           &
          remove_permafrost_carbon
 

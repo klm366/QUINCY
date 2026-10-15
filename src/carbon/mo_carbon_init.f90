@@ -162,7 +162,7 @@ CONTAINS
       & 'c_acid_ag2',  'c_water_ag2', 'c_ethanol_ag2', 'c_nonsoluble_ag2',               &
       & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
 
-    CHARACTER(len=20), PARAMETER :: Cpool_name_3d(npools) = [character(len=20) ::                   &
+    CHARACTER(len=20), PARAMETER :: Cpool_name_3d(npools) = [character(len=20) ::                     &
       & 'c_green',  'c_woods',  'c_reserve',                                                          &
       & 'c_acid_ag1',    'c_water_ag1',    'c_ethanol_ag1',    'c_nonsoluble_ag1',                    &
       & 'c_acid_bg1_sl', 'c_water_bg1_sl', 'c_ethanol_bg1_sl', 'c_nonsoluble_bg1_sl', 'c_humus_1_sl', &
