@@ -321,10 +321,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
     dsl4jsb_Real2D_onChunk ::  soil_respiration       ! mean daily rate of heterotrophic (soil) respiration
                                                       ! [mol(CO2)/m^2(ground)].
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_oxic  !< mean daily rate of heterotrophic (soil) respiration!
-                                                      !< For oxic soils in methane process only. [mol m-2(ground) d-1].
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_anox  !< mean daily rate of heterotrophic (soil) respiration!
-                                                      !< For anoxic soils in methane process only. [mol m-2(ground) d-1].
     dsl4jsb_Real2D_onChunk ::  frac_inun              !< Inundated fraction (from topmodel/pond scheme)
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction    ! Daily updated flux correction from yesterdays carbon balance
                                                       ! [mol(CO2)/m^2(canopy) s]
@@ -388,12 +384,6 @@ CONTAINS
                                                   !< on soil layers [mol(C)/m^2(canopy)]
     dsl4jsb_Real3D_onChunk :: c_humus_2_sl        !< Yasso below ground litter-pool for slow C compartment
                                                   !< on soil layers [mol(C)/m^2(canopy)]
-    !
-    dsl4jsb_Real3D_onChunk :: soil_respiration_oxic_sl !< Mean daily rate of heterotrophic (soil) respiration
-                                                       !< for oxic soils in methane process only. [mol m-2(ground) d-1].
-    dsl4jsb_Real3D_onChunk :: soil_respiration_anox_sl !< Mean daily rate of heterotrophic (soil) respiration
-                                                       !< for anoxic soils in methane process only. [mol m-2(ground) d-1].
-    !
     dsl4jsb_Real3D_onChunk :: root_dist_sl        !< Cumulative root density distribution on soil layers [-]
     dsl4jsb_Real3D_onChunk :: max_layer_sl        !< Maximum soil layer thickness [m]
 
@@ -559,9 +549,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl)      ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl)             ! inout
       !
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl) ! inout
-      !
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   soil_depth)               ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,   soil_depth_sl)            ! in
 
@@ -586,8 +573,6 @@ CONTAINS
     ! is implemented here, this will be implemented with methane module merge
     frac_inun => NULL()
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic )     ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox )     ! inout
     dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)          ! in
 
     lstart   = is_time_experiment_start(options%current_datetime)
@@ -684,9 +669,7 @@ CONTAINS
       & cflux_c_green_2_herb = cflux_c_green_2_herb(:),                           &
       & NPP_act_yDayMean = NPP_act_yDayMean(:),                                   &
       & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
-      & GPP_yDayMean = GPP_yDayMean(:),                                           &
-      & soil_respiration_oxic = soil_respiration_oxic(:),                         &
-      & soil_respiration_anox = soil_respiration_anox(:))
+      & GPP_yDayMean = GPP_yDayMean(:))
 
     IF (vertical_yasso) THEN
       ! Recalc per tile variables on soil levels
@@ -695,9 +678,7 @@ CONTAINS
         & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
         & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
         & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
-        & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
-        & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
-        & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+        & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
     END IF
 
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
@@ -994,10 +975,6 @@ CONTAINS
           c_nonsoluble_bg2(ic) = SUM(c_nonsoluble_bg2_sl(ic,:))
           c_humus_1(ic)        = SUM(c_humus_1_sl(ic,:))
           c_humus_2(ic)        = SUM(c_humus_2_sl(ic,:))
-          ! Note: without methan all respiration is collected in oxic respiration,
-          !       the anoxic respiration should be zero.
-          soil_respiration_oxic(ic) = SUM(soil_respiration_oxic_sl(ic,:))
-          soil_respiration_anox(ic) = SUM(soil_respiration_anox_sl(ic,:))
 
         ELSE
           c_acid_bg1(ic)       = green_cpools_bg(Y_ACID)
@@ -1071,9 +1048,7 @@ CONTAINS
         & cflux_c_green_2_herb = cflux_c_green_2_herb(:),                           &
         & NPP_act_yDayMean = NPP_act_yDayMean(:),                                   &
         & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
-        & GPP_yDayMean = GPP_yDayMean(:),                                           &
-        & soil_respiration_oxic = soil_respiration_oxic(:),     &
-        & soil_respiration_anox = soil_respiration_anox(:))
+        & GPP_yDayMean = GPP_yDayMean(:))
 
       IF (vertical_yasso) THEN
         ! Recalc per tile variables on soil levels
@@ -1082,9 +1057,7 @@ CONTAINS
           & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
           & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
           & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
-          & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
-          & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
-          & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+          & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
       END IF
 
       ! cflux_herb_2_atm and soil_respiration are negative (fluxes away from land)
@@ -1286,9 +1259,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_ta,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_ta,      weighted_by_fract)
-
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ! variables on soil levels
       ! bg1
@@ -1303,9 +1273,6 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(CARBON_, c_ethanol_bg2_sl_ta,      weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, c_nonsoluble_bg2_sl_ta,   weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(CARBON_, c_humus_2_sl_ta,          weighted_by_fract)
-
-      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_oxic_sl_ta, weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(CARBON_, soil_respiration_anox_sl_ta, weighted_by_fract)
 
       dsl4jsb_Aggregate_onChunk(CARBON_, root_dist_sl,             weighted_by_fract)             ! inout
       dsl4jsb_Aggregate_onChunk(CARBON_, max_layer_sl,             weighted_by_fract)             ! inout
@@ -1676,9 +1643,6 @@ CONTAINS
   dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl
   dsl4jsb_Real3D_onChunk ::  c_humus_2_sl
 
-  dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl
-  dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl
-
   dsl4jsb_Def_config(CARBON_)
   dsl4jsb_Def_memory(CARBON_)
 
@@ -1743,9 +1707,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl )
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl )
     dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl )
-
-    dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl )
-    dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl )
   END IF
 
 
@@ -1775,9 +1736,7 @@ CONTAINS
     & c_ethanol_bg1_sl = c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl = c_nonsoluble_bg1_sl(:,:), &
     & c_acid_bg2_sl = c_acid_bg2_sl(:,:), c_water_bg2_sl = c_water_bg2_sl(:,:),                 &
     & c_ethanol_bg2_sl = c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl = c_nonsoluble_bg2_sl(:,:), &
-    & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:),                       &
-    & soil_respiration_oxic_sl = soil_respiration_oxic_sl(:,:),                                 &
-    & soil_respiration_anox_sl = soil_respiration_anox_sl(:,:))
+    & c_humus_1_sl = c_humus_1_sl(:,:), c_humus_2_sl = c_humus_2_sl(:,:))
   END IF
 
 END SUBROUTINE recalc_carbon_per_tile_vars
@@ -1801,7 +1760,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & c_humus_1, c_humus_2,                                             &
       & c_decomp_humus_1_sum, c_decomp_humus_2_sum,                       &
       & c_into_humus_1_sum, c_into_humus_2_sum,                           &
-      & soil_respiration, soil_respiration_oxic, soil_respiration_anox,   &
+      & soil_respiration,                                                 &
       & NPP_flux_correction, NPP_pot_yDayMean, NPP_act_yDayMean,          &
       & GPP_yDayMean, root_exudates, cflux_c_green_2_herb,                &
       & cflux_dist_green_2_soil, cflux_dist_woods_2_soil,                 &
@@ -1809,8 +1768,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_c_greenwood_2_litter,                                       &
       & c_acid_bg1_sl, c_water_bg1_sl, c_ethanol_bg1_sl, c_nonsoluble_bg1_sl,         &
       & c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl,         &
-      & c_humus_1_sl, c_humus_2_sl,                                             &
-      & soil_respiration_oxic_sl, soil_respiration_anox_sl )
+      & c_humus_1_sl, c_humus_2_sl)
 
     USE mo_carbon_process, ONLY: get_per_tile
 
@@ -1852,8 +1810,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic(:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_anox(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
@@ -1872,8 +1828,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2_sl(:,:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_1_sl(:,:)
     REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_2_sl(:,:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_oxic_sl(:,:)
-    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration_anox_sl(:,:)
 
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(CARBON_)
@@ -1919,8 +1873,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk ::  cflux_dist_woods_2_soil_ta
     dsl4jsb_Real2D_onChunk ::  co2flux_fire_all_2_atm_ta
     dsl4jsb_Real2D_onChunk ::  soil_respiration_ta
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_oxic_ta
-    dsl4jsb_Real2D_onChunk ::  soil_respiration_anox_ta
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean_ta
     dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean_ta
     dsl4jsb_Real2D_onChunk ::  NPP_flux_correction_ta
@@ -1943,10 +1895,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real3D_onChunk ::  c_ethanol_bg2_sl_ta
     dsl4jsb_Real3D_onChunk ::  c_nonsoluble_bg2_sl_ta
     dsl4jsb_Real3D_onChunk ::  c_humus_2_sl_ta
-
-    dsl4jsb_Real3D_onChunk ::  soil_respiration_oxic_sl_ta
-    dsl4jsb_Real3D_onChunk ::  soil_respiration_anox_sl_ta
-
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(CARBON_)
@@ -2002,9 +1950,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )              ! in
 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_oxic_ta )     ! opt out
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration_anox_ta )   ! opt out
-
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl_ta )      ! opt out
@@ -2017,9 +1962,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_ethanol_bg2_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_nonsoluble_bg2_sl_ta )      ! opt out
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_humus_2_sl_ta )      ! opt out
-
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_oxic_sl_ta )      ! opt out
-      dsl4jsb_Get_var3D_onChunk(CARBON_,  soil_respiration_anox_sl_ta )      ! opt out
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -2089,10 +2031,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & NPP_act_yDayMean(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(soil_respiration)) CALL get_per_tile(soil_respiration_ta(:), &
       & soil_respiration(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(soil_respiration_oxic)) CALL get_per_tile(soil_respiration_oxic_ta(:), &
-      & soil_respiration_oxic(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(soil_respiration_anox)) CALL get_per_tile(soil_respiration_anox_ta(:), &
-      & soil_respiration_anox(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(NPP_flux_correction)) CALL get_per_tile(NPP_flux_correction_ta(:), &
       & NPP_flux_correction(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(GPP_yDayMean)) CALL get_per_tile(GPP_yDayMean_ta(:), &
@@ -2172,20 +2110,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       DO is = 1,nsoil
         CALL get_per_tile(c_humus_2_sl_ta(:,is), &
         & c_humus_2_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(soil_respiration_oxic_sl)) THEN
-      nsoil = SIZE(soil_respiration_oxic_sl, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(soil_respiration_oxic_sl_ta(:,is), &
-        & soil_respiration_oxic_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
-      END DO
-    END IF
-    IF (PRESENT(soil_respiration_anox_sl)) THEN
-      nsoil = SIZE(soil_respiration_anox_sl, DIM=2)
-      DO is = 1,nsoil
-        CALL get_per_tile(soil_respiration_anox_sl_ta(:,is), &
-        & soil_respiration_anox_sl(:,is), veg_fract_correction(:), fract_fpc_max(:))
       END DO
     END IF
 

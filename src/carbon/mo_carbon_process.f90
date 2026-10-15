@@ -624,7 +624,7 @@ CONTAINS
     &               Lit_coef, LitterSize, fract_aboveground, c_2_rootExudates,           &
     &               cpools_awen, c_humus,                                                &
     &               Cflx_soil_respiration, Cflx_into_humus, Cflx_decomp_humus,           &
-    &               root_dist, is_anoxic, is_peat                                        &
+    &               root_dist                                                            &
     &               )
     !$ACC ROUTINE SEQ
 
@@ -671,8 +671,7 @@ CONTAINS
       & ABOVE_GROUND, BELOW_GROUND
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants, ONLY: ref_decomp_rate_acid, ref_decomp_rate_water,     &
-      & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble, ref_decomp_rate_humus, &
-      & d_oxic, d_anox
+      & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble, ref_decomp_rate_humus
 
     IMPLICIT NONE
 
@@ -694,8 +693,6 @@ CONTAINS
     REAL(lp), INTENT(out)   :: Cflx_decomp_humus      !< Carbon flux from humus pool [mol(C) m-2 d-1]
 
     REAL(lp), OPTIONAL, INTENT(in) :: root_dist       ! Root distribution factor for a certain soil layer [ ]
-    LOGICAL, OPTIONAL, INTENT(in)  :: is_anoxic
-    LOGICAL, OPTIONAL, INTENT(in)  :: is_peat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':yasso'
 
@@ -757,11 +754,8 @@ CONTAINS
     REAL(lp)   :: d_ethanol
     REAL(lp)   :: d_nonsoluble
     REAL(lp)   :: d_humus
-    !   For methane relevant processes
-    REAL(lp)   :: d_redox                 !< decomposition rate modifier for redox state (oxic vs anoxic)
-    REAL(lp)   :: d_peat_acrotelm         !< decomposition rate modifier for peatland C pools acrotelm
-    REAL(lp)   :: d_peat_catotelm         !< decomposition rate modifier for peatland C pools catotelm
 
+    ! Climate dependencies
     REAL(lp)   :: d_temp                  !< term which accounts for the surface or soil temperature influence on litter decomposition
     REAL(lp)   :: d_moist                 !< term which accounts for the precipitation or soil moisture influence on litter decomposition
     REAL(lp)   :: d_size                  !< term which accounts for the litter size influence on litter decomposition
@@ -776,9 +770,6 @@ CONTAINS
     REAL(lp)   :: precip                  !< runnning mean of precipitation      [m yr-1]
     REAL(lp)   :: temp                    !< runnning mean of 2m air temperature [C]
     REAL(lp)   :: f_roots                 !< root distribution factor for a certain soil layer
-
-    ! anoxic & peat decomposition modifier
-    LOGICAL    :: anoxic_flag, peat_flag
 
     ! time stepping: yasso is parameterized based on annual time
     ! steps, thus the fluxes have to be scaled up to annual rates.
@@ -809,28 +800,6 @@ CONTAINS
       CALL finish(routine, 'ERROR: yasso_case must be either ABOVE_GROUND or BELOW_GROUND')
     END IF
 
-    anoxic_flag = .FALSE.
-    peat_flag   = .FALSE.
-    IF (PRESENT(is_anoxic)) anoxic_flag = is_anoxic
-    IF (PRESENT(is_peat))   peat_flag   = is_peat
-
-    ! set up anoxic decomposition rate modifiers
-    IF (anoxic_flag) THEN
-      d_redox = d_anox
-    ELSE
-      d_redox = d_oxic
-    END IF
-
-    ! set up peat decomposition rate modifiers
-    IF (peat_flag) THEN
-      d_peat_acrotelm = 1._lp                   ! no decomposition in litter pools modifier -- we reduce GPP instead
-      ! decomposition timescale in LPJ is 7.e-5 -> modifier is applied to (ref_decomp_rate_humus * d_anoxic_bg)
-      d_peat_catotelm = 0.125_lp                ! decomposition in catotelm is reduced  -> 0.0016*0.35*0.125 = 7e-5
-    ELSE
-      d_peat_acrotelm = 1._lp
-      d_peat_catotelm = 1._lp
-    END IF
-
     IF (PRESENT(root_dist)) THEN
       f_roots = root_dist
     ELSE IF (yasso_case == BELOW_GROUND .AND. vertical_yasso) THEN
@@ -838,7 +807,6 @@ CONTAINS
     ELSE
       f_roots = 1._lp
     END IF
-
 
     ! initialize yasso pools (AWEN + humus)
     c_acid        = cpools_awen(Y_ACID)
@@ -865,12 +833,8 @@ CONTAINS
     d_size   = get_modifier_size(LitterSize)
     !   Temperature dependence of decomposition
     d_temp   = get_modifier_temp(Weather(1))
-    !   Precipitation dependence of decomposition (not for peat)
-    IF (peat_flag) THEN
-      d_moist = 1.0_lp
-    ELSE
-      d_moist = get_modifier_precip(Weather(2))
-    END IF
+    !   Precipitation dependence of decomposition
+    d_moist = get_modifier_precip(Weather(2))
     IF (yasso_case == BELOW_GROUND .AND. vertical_yasso) THEN ! Multi-layer yasso
       ! Compute further dependencies
       d_temp  = get_modifier_temp(Weather(3))
@@ -882,11 +846,11 @@ CONTAINS
 
 
     !   decomposition rates accounting for temperature, precipitation, litter size or pool type, and nutrient limitation
-    d_acid       = ref_decomp_rate_acid       * d_temp * d_moist * d_size * d_depth * d_peat_acrotelm * d_redox
-    d_water      = ref_decomp_rate_water      * d_temp * d_moist * d_size * d_depth * d_peat_acrotelm * d_redox
-    d_ethanol    = ref_decomp_rate_ethanol    * d_temp * d_moist * d_size * d_depth * d_peat_acrotelm * d_redox
-    d_nonsoluble = ref_decomp_rate_nonsoluble * d_temp * d_moist * d_size * d_depth * d_peat_acrotelm * d_redox
-    d_humus      = ref_decomp_rate_humus      * d_temp * d_moist * d_pool * d_depth * d_peat_catotelm * d_redox
+    d_acid       = ref_decomp_rate_acid       * d_temp * d_moist * d_size * d_depth
+    d_water      = ref_decomp_rate_water      * d_temp * d_moist * d_size * d_depth
+    d_ethanol    = ref_decomp_rate_ethanol    * d_temp * d_moist * d_size * d_depth
+    d_nonsoluble = ref_decomp_rate_nonsoluble * d_temp * d_moist * d_size * d_depth
+    d_humus      = ref_decomp_rate_humus      * d_temp * d_moist * d_pool * d_depth
 
     ! 2a. Calculate carbon fluxes
 
