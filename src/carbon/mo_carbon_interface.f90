@@ -34,8 +34,8 @@ MODULE mo_carbon_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,           &
-                                 & LCT_ACID, LCT_WATER, LCT_ETHANOL,       &
-                                 & LCT_NONSOLUBLE, LCT_HUMUS, WOODLITSIZE, &
+                                 & Y_ACID, Y_WATER, Y_ETHANOL,       &
+                                 & Y_NONSOLUBLE, Y_HUMUS, WOODLITSIZE, &
                                  & ROOT_DIST_BETA, permafrost_threshold,   &
                                  & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE
 
@@ -738,29 +738,29 @@ CONTAINS
       lctlib_specificLeafArea_C      = dsl4jsb_Lctlib_param(specificLeafArea_C)
       lctlib_reserveC2leafC          = dsl4jsb_Lctlib_param(reserveC2leafC)
       lctlib_PhenologyType           = dsl4jsb_Lctlib_param(PhenologyType)
-      lctlib_LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID))
-      lctlib_LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER))
-      lctlib_LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL))
-      lctlib_LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_NONSOLUBLE))
-      lctlib_LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_HUMUS))
-      lctlib_WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ACID))
-      lctlib_WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_WATER))
-      lctlib_WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ETHANOL))
-      lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_NONSOLUBLE))
-      lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_HUMUS))
+      lctlib_LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ACID))
+      lctlib_LeafLit_coef_water      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_WATER))
+      lctlib_LeafLit_coef_ethanol    = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ETHANOL))
+      lctlib_LeafLit_coef_nonsoluble = dsl4jsb_Lctlib_param(LeafLit_coef(Y_NONSOLUBLE))
+      lctlib_LeafLit_coef_humus      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_HUMUS))
+      lctlib_WoodLit_coef_acid       = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ACID))
+      lctlib_WoodLit_coef_water      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_WATER))
+      lctlib_WoodLit_coef_ethanol    = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ETHANOL))
+      lctlib_WoodLit_coef_nonsoluble = dsl4jsb_Lctlib_param(WoodLit_coef(Y_NONSOLUBLE))
+      lctlib_WoodLit_coef_humus      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_HUMUS))
       lctlib_WoodLitterSize          = dsl4jsb_Lctlib_param(WoodLitterSize)
 
       ! Set up parameter arrays for cleaner parameter transfer vertical YASSO
-      LeafLit_coef(LCT_ACID)       = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ACID))
-      LeafLit_coef(LCT_WATER)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_WATER))
-      LeafLit_coef(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_ETHANOL))
-      LeafLit_coef(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_NONSOLUBLE))
-      LeafLit_coef(LCT_HUMUS)      = dsl4jsb_Lctlib_param(LeafLit_coef(LCT_HUMUS))
-      WoodLit_coef(LCT_ACID)       = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ACID))
-      WoodLit_coef(LCT_WATER)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_WATER))
-      WoodLit_coef(LCT_ETHANOL)    = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_ETHANOL))
-      WoodLit_coef(LCT_NONSOLUBLE) = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_NONSOLUBLE))
-      WoodLit_coef(LCT_HUMUS)      = dsl4jsb_Lctlib_param(WoodLit_coef(LCT_HUMUS))
+      LeafLit_coef(Y_ACID)       = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ACID))
+      LeafLit_coef(Y_WATER)      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_WATER))
+      LeafLit_coef(Y_ETHANOL)    = dsl4jsb_Lctlib_param(LeafLit_coef(Y_ETHANOL))
+      LeafLit_coef(Y_NONSOLUBLE) = dsl4jsb_Lctlib_param(LeafLit_coef(Y_NONSOLUBLE))
+      LeafLit_coef(Y_HUMUS)      = dsl4jsb_Lctlib_param(LeafLit_coef(Y_HUMUS))
+      WoodLit_coef(Y_ACID)       = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ACID))
+      WoodLit_coef(Y_WATER)      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_WATER))
+      WoodLit_coef(Y_ETHANOL)    = dsl4jsb_Lctlib_param(WoodLit_coef(Y_ETHANOL))
+      WoodLit_coef(Y_NONSOLUBLE) = dsl4jsb_Lctlib_param(WoodLit_coef(Y_NONSOLUBLE))
+      WoodLit_coef(Y_HUMUS)      = dsl4jsb_Lctlib_param(WoodLit_coef(Y_HUMUS))
       MiscPar(WOODLITSIZE)         = dsl4jsb_Lctlib_param(WoodLitterSize)
       MiscPar(ROOT_DIST_BETA)      = dsl4jsb_Lctlib_param(root_dist_beta)
 

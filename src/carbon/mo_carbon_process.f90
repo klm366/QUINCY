@@ -18,8 +18,8 @@ MODULE mo_carbon_process
   USE mo_kind,             ONLY: lp
   USE mo_exception,        ONLY: finish
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
-    & LCT_ACID, LCT_WATER, LCT_ETHANOL,                &
-    & LCT_NONSOLUBLE, LCT_HUMUS,                       &
+    & Y_ACID, Y_WATER, Y_ETHANOL,                &
+    & Y_NONSOLUBLE, Y_HUMUS,                       &
     & molarMassCO2_kg
 
   IMPLICIT NONE
@@ -658,20 +658,12 @@ CONTAINS
     !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
-    USE mo_carbon_constants, ONLY: sec_per_year, LCT_HUMUS,   &
-      & POOL_ACID_AG, POOL_WATER_AG, POOL_ETHANOL_AG,         &
-      & POOL_NONSOLUBLE_AG,                                   &
-      & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG,         &
-      & POOL_NONSOLUBLE_BG, POOL_HUMUS,                       &
-      & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG,                     &
-      & FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,                &
-      & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG,             &
-      & REL_FLUX_AWEN, FLUX_FROM_HUMUS, FLUX_LITTER_2_HUMUS,  &
-      & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE,             &
-      & ABOVE_GROUND, BELOW_GROUND
     USE mo_jsb_physical_constants, ONLY: tmelt
-    USE mo_carbon_constants, ONLY: ref_decomp_rate_acid, ref_decomp_rate_water,     &
-      & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble, ref_decomp_rate_humus
+    USE mo_carbon_constants, ONLY: sec_per_year, ref_decomp_rate_acid, ref_decomp_rate_water, &
+      & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble, ref_decomp_rate_humus,           &
+      & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, ABOVE_GROUND, BELOW_GROUND,                 &
+      & A_2_W, A_2_E, A_2_N, W_2_A, W_2_E, W_2_N, E_2_A, E_2_W, E_2_N, N_2_A, N_2_W, N_2_E,   &
+      & AWE_2_H, N_2_H
 
     IMPLICIT NONE
 
@@ -695,31 +687,6 @@ CONTAINS
     REAL(lp), OPTIONAL, INTENT(in) :: root_dist       ! Root distribution factor for a certain soil layer [ ]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':yasso'
-
-    ! Fractions to spit the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
-    ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
-    ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux
-    ! does not exists. However, after a recalibration of the model this fraction may change.
-    !
-    ! fractions of decomposition flux of acid soluble pool going to the other AWEN pools [ ]
-    REAL(lp)   :: A_2_W
-    REAL(lp)   :: A_2_E
-    REAL(lp)   :: A_2_N
-    ! fractions of decomposition flux of water soluble pool going to the other AWEN pools [ ]
-    REAL(lp)   :: W_2_A
-    REAL(lp)   :: W_2_E
-    REAL(lp)   :: W_2_N
-    ! fractions of decomposition flux of ethanol soluble pool going to the other AWEN pools [ ]
-    REAL(lp)   :: E_2_A
-    REAL(lp)   :: E_2_W
-    REAL(lp)   :: E_2_N
-    ! fractions of decomposition flux of non soluble pool going to the other AWEN pools [ ]
-    REAL(lp)   :: N_2_A
-    REAL(lp)   :: N_2_W
-    REAL(lp)   :: N_2_E
-    ! Alternative pathway for N pool which enters the humus pool [ ]
-    REAL(lp)   :: N_2_H
-    REAL(lp)   :: AWE_2_H
 
     ! Yasso pools [mol(C) m-2]
     REAL(lp)   :: c_acid
@@ -778,22 +745,6 @@ CONTAINS
     ts_per_year  = REAL(sec_per_year, lp) / delta_time_C
     years_per_ts = 1.0_lp / ts_per_year
 
-    ! Set default exchange values in [yr-1]
-    ! TODO: move to constants and remove from here
-    AWE_2_H  = 0.0045_lp
-    N_2_H    = 0.0045_lp
-    A_2_W    = 0.99_lp
-    A_2_E    = 0.00_lp
-    A_2_N    = 0.00_lp
-    W_2_A    = 0.48_lp
-    W_2_E    = 0.00_lp
-    W_2_N    = 0.015_lp
-    E_2_A    = 0.01_lp
-    E_2_W    = 0.00_lp
-    E_2_N    = 0.95_lp
-    N_2_A    = 0.83_lp
-    N_2_W    = 0.01_lp
-    N_2_E    = 0.02_lp
 
     ! Checks:
     IF (yasso_case /= ABOVE_GROUND .AND. yasso_case /= BELOW_GROUND) THEN
@@ -935,7 +886,7 @@ CONTAINS
     CALL distribute_yasso_litter(c_acid, c_water, c_ethanol, c_nonsoluble, c_humus, &
       &                          c_2_litter, fract_litter, Lit_coef)
 
-    Cflx_yr_litter_2_humus = Lit_coef(LCT_HUMUS) * c_2_litter * ts_per_year
+    Cflx_yr_litter_2_humus = Lit_coef(Y_HUMUS) * c_2_litter * ts_per_year
 
     ! 4.1 Collect the updated pools into the output arrays
     cpools_awen(Y_ACID)       = c_acid
@@ -965,7 +916,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_carbon_constants, ONLY:   LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS
+    USE mo_carbon_constants, ONLY:   Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
 
     IMPLICIT NONE
 
@@ -980,11 +931,11 @@ CONTAINS
     REAL(lp), DIMENSION(5), INTENT(in)  :: coefficients  !< litter coefficient (acid vs water vs ...) [ ]
     ! -------------------------------------------------------------------------------------------------- !
 
-    CALL add_litter_to_yasso_pool(c_acid,       litter, fraction, coefficients(LCT_ACID))
-    CALL add_litter_to_yasso_pool(c_water,      litter, fraction, coefficients(LCT_WATER))
-    CALL add_litter_to_yasso_pool(c_ethanol,    litter, fraction, coefficients(LCT_ETHANOL))
-    CALL add_litter_to_yasso_pool(c_nonsoluble, litter, fraction, coefficients(LCT_NONSOLUBLE))
-    CALL add_litter_to_yasso_pool(c_humus,      litter, fraction, coefficients(LCT_HUMUS))
+    CALL add_litter_to_yasso_pool(c_acid,       litter, fraction, coefficients(Y_ACID))
+    CALL add_litter_to_yasso_pool(c_water,      litter, fraction, coefficients(Y_WATER))
+    CALL add_litter_to_yasso_pool(c_ethanol,    litter, fraction, coefficients(Y_ETHANOL))
+    CALL add_litter_to_yasso_pool(c_nonsoluble, litter, fraction, coefficients(Y_NONSOLUBLE))
+    CALL add_litter_to_yasso_pool(c_humus,      litter, fraction, coefficients(Y_HUMUS))
 
   END SUBROUTINE distribute_yasso_litter
 
@@ -1034,221 +985,6 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
   END SUBROUTINE get_per_tile
-
-
-  SUBROUTINE yasso_minimal(delta_time_C, Y_in_pools, Y_in_mod,                                             &
-    &                      A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H, &
-    &                      Y_out_pools, Y_out_fluxes)
-
-    USE mo_carbon_constants, ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, &
-      &  F_RESP, F_2_HUMUS, F_F_HUMUS, F_LITRESP, ref_decomp_rate_acid,               &
-      &  ref_decomp_rate_water, ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble,  &
-      &  ref_decomp_rate_humus, M_LITTER, M_HUMUS, sec_per_year
-
-    REAL(lp), INTENT(in)                 :: delta_time_C     !< Carbon time step [s]
-    REAL(lp), DIMENSION(5),  INTENT(in)  :: Y_in_pools       !< Yasso pools IN [mol(c)/m2]
-    REAL(lp), DIMENSION(2),  INTENT(in)  :: Y_in_mod         !< Yasso rate modifiers IN
-
-    ! Possibilities to overwrite (some of) the default exchange coefficients (AWEN2H for backward compatibility)
-    REAL(lp), OPTIONAL,      INTENT(in)  :: A2W, A2E, A2N, W2A, W2E, W2N, E2A, E2W, E2N, N2A, N2W, N2E, AWEN2H, N2H, AWE2H
-    REAL(lp), DIMENSION(5),  INTENT(out) :: Y_out_pools      !< Yasso pools OUT [mol(c)/m2]
-    REAL(lp), DIMENSION(4),  INTENT(out) :: Y_out_fluxes     !< Yasso fluxes OUT [mol(c)/m2]
-
-    !local
-    ! Yasso pools   [mol(c)/m2]
-    REAL(lp)     :: c_acid
-    REAL(lp)     :: c_water
-    REAL(lp)     :: c_ethanol
-    REAL(lp)     :: c_nonsoluble
-    REAL(lp)     :: c_humus
-
-    ! Decomposition rates [1/a]
-    REAL(lp)     :: d_acid
-    REAL(lp)     :: d_water
-    REAL(lp)     :: d_ethanol
-    REAL(lp)     :: d_nonsoluble
-    REAL(lp)     :: d_humus
-
-    ! Carbon fluxes [mol(C) m-2 yr-1] - Unit indicated by names Cflx_yr (Carbon annual flux)
-    REAL(lp)     :: Cflx_yr_from_acid              !< Loss flux of acid soluble pool        [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_from_water             !< Loss flux of water soluble pool       [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_from_ethanol           !< Loss flux of ethanol soluble pool     [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_from_nonsoluble        !< Loss flux of non soluble pool         [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_from_humus             !< Loss flux of humus pool               [mol(c)/m2/yr]
-
-    REAL(lp)     :: Cflx_yr_2_acid                 !< Gain flux of acid soluble pool        [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_2_water                !< Gain flux of water soluble pool       [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_2_ethanol              !< Gain flux of ethanol soluble pool     [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_2_nonsoluble           !< Gain flux of non soluble pool         [mol(c)/m2/yr]
-    REAL(lp)     :: Cflx_yr_2_humus                !< Gain flux of humus pool               [mol(c)/m2/yr]
-
-    REAL(lp)     :: Cflx_yr_resp_from_litter
-    REAL(lp)     :: Cflx_yr_respiration
-
-    ! Fractions to split the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
-    ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
-    ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux
-    ! does not exists. However, after a recalibration of the model this fraction may change.
-    !
-    ! fractions of decomposition flux of acid soluble pool going to the other AWEN pools [ ]
-    ! (8,11,14)
-    REAL(lp)   :: A_2_W
-    REAL(lp)   :: A_2_E
-    REAL(lp)   :: A_2_N
-    ! fractions of decomposition flux of water soluble pool going to the other AWEN pools [ ]
-    ! (5,12,15)
-    REAL(lp)   :: W_2_A
-    REAL(lp)   :: W_2_E
-    REAL(lp)   :: W_2_N
-    ! fractions of decomposition flux of ethanol soluble pool going to the other AWEN pools [ ]
-    ! (6,9,16)
-    REAL(lp)   :: E_2_A
-    REAL(lp)   :: E_2_W
-    REAL(lp)   :: E_2_N
-    ! fractions of decomposition flux of non soluble pool going to the other AWEN pools [ ]
-    ! (7,10,13)
-    REAL(lp)   :: N_2_A
-    REAL(lp)   :: N_2_W
-    REAL(lp)   :: N_2_E
-    ! fraction of decomposition fluxes of AWEN pools which enters the humus pool [ ]
-    ! REAL(lp)   :: AWEN_2_H
-    ! Alternative pathway for N pool which enters the humus pool [ ]
-    REAL(lp)   :: N_2_H
-    REAL(lp)   :: AWE_2_H
-
-    ! time stepping; the parameterization of yasso is done on a annual time
-    ! step, thus the fluxes have to be scaled up to annual rates.
-    REAL(lp)     :: years_per_ts, ts_per_year
-
-    ts_per_year = REAL(sec_per_year,lp) / delta_time_C
-    years_per_ts = 1.0_lp/ts_per_year
-
-    ! Treatment of optional parameters
-    !   Set exchange coefficients
-    IF (PRESENT(AWEN2H)) THEN
-      AWE_2_H = AWEN2H
-      N_2_H   = AWEN2H
-    END IF
-
-    ! Default values in [yr-1]
-    AWE_2_H  = 0.0045_lp; IF (PRESENT(AWE2H))  AWE_2_H  = AWE2H
-    N_2_H    = 0.0045_lp; IF (PRESENT(  N2H))    N_2_H  =   N2H
-    A_2_W    = 0.99_lp;   IF (PRESENT(  A2W))    A_2_W  =   A2W
-    A_2_E    = 0.00_lp;   IF (PRESENT(  A2E))    A_2_E  =   A2E
-    A_2_N    = 0.00_lp;   IF (PRESENT(  A2N))    A_2_N  =   A2N
-    W_2_A    = 0.48_lp;   IF (PRESENT(  W2A))    W_2_A  =   W2A
-    W_2_E    = 0.00_lp;   IF (PRESENT(  W2E))    W_2_E  =   W2E
-    W_2_N    = 0.015_lp;  IF (PRESENT(  W2N))    W_2_N  =   W2N
-    E_2_A    = 0.01_lp;   IF (PRESENT(  E2A))    E_2_A  =   E2A
-    E_2_W    = 0.00_lp;   IF (PRESENT(  E2W))    E_2_W  =   E2W
-    E_2_N    = 0.95_lp;   IF (PRESENT(  E2N))    E_2_N  =   E2N
-    N_2_A    = 0.83_lp;   IF (PRESENT(  N2A))    N_2_A  =   N2A
-    N_2_W    = 0.01_lp;   IF (PRESENT(  N2W))    N_2_W  =   N2W
-    N_2_E    = 0.02_lp;   IF (PRESENT(  N2E))    N_2_E  =   N2E
-
-    ! INPUTS
-    ! a) pools
-    c_acid       = Y_in_pools(Y_ACID)
-    c_water      = Y_in_pools(Y_WATER)
-    c_ethanol    = Y_in_pools(Y_ETHANOL)
-    c_nonsoluble = Y_in_pools(Y_NONSOLUBLE)
-    c_humus      = Y_in_pools(Y_HUMUS)
-
-    ! b) decomposition modifiers
-    ! decomposition rate is reference decomposition rate * modifier
-    ! with modifier function(temperature, water, size, etc) set externally
-    d_acid       = ref_decomp_rate_acid       * Y_in_mod(M_LITTER)
-    d_water      = ref_decomp_rate_water      * Y_in_mod(M_LITTER)
-    d_ethanol    = ref_decomp_rate_ethanol    * Y_in_mod(M_LITTER)
-    d_nonsoluble = ref_decomp_rate_nonsoluble * Y_in_mod(M_LITTER)
-    d_humus      = ref_decomp_rate_humus      * Y_in_mod(M_HUMUS)
-
-    ! Calculate fluxes
-    !   annual loss fluxes (negative values):
-    Cflx_yr_from_acid         = c_acid       * d_acid
-    Cflx_yr_from_water        = c_water      * d_water
-    Cflx_yr_from_ethanol      = c_ethanol    * d_ethanol
-    Cflx_yr_from_nonsoluble   = c_nonsoluble * d_nonsoluble
-    Cflx_yr_from_humus        = c_humus      * d_humus
-
-    !   annual gain fluxes (positive values):
-    !   fixed fractions of each loss flux enters another pool; REMARK: the fraction can be zero (see above why)
-    Cflx_yr_2_acid            = ABS(Cflx_yr_from_water      * W_2_A  &    ! returns positive fluxes
-      &                           + Cflx_yr_from_ethanol    * E_2_A  &
-      &                           + Cflx_yr_from_nonsoluble * N_2_A)
-
-    Cflx_yr_2_water           = ABS(Cflx_yr_from_acid       * A_2_W  &
-      &                            + Cflx_yr_from_ethanol    * E_2_W &
-      &                            + Cflx_yr_from_nonsoluble * N_2_W)
-
-    Cflx_yr_2_ethanol         = ABS(Cflx_yr_from_acid       * A_2_E  &
-      &                            + Cflx_yr_from_water      * W_2_E &
-      &                            + Cflx_yr_from_nonsoluble * N_2_E)
-
-    Cflx_yr_2_nonsoluble      = ABS(Cflx_yr_from_acid       * A_2_N  &
-      &                           + Cflx_yr_from_water      * W_2_N  &
-      &                           + Cflx_yr_from_ethanol    * E_2_N)
-
-    Cflx_yr_2_humus           = ABS(Cflx_yr_from_acid                &
-      &                           + Cflx_yr_from_water               &
-      &                           + Cflx_yr_from_ethanol             &
-      &                           ) * AWE_2_H                        &
-      &                             +                                &
-      &                         ABS(Cflx_yr_from_nonsoluble)         &
-      &                             * N_2_H
-
-    !   litter ag & bg respiration (needed for N cycle)
-    Cflx_yr_resp_from_litter =  Cflx_yr_from_acid       * (1.0_lp - A_2_W - A_2_E - A_2_N - AWE_2_H) &
-      &                       + Cflx_yr_from_water      * (1.0_lp - W_2_A - W_2_E - W_2_N - AWE_2_H) &
-      &                       + Cflx_yr_from_ethanol    * (1.0_lp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
-      &                       + Cflx_yr_from_nonsoluble * (1.0_lp - N_2_A - N_2_W - N_2_E -   N_2_H)
-
-    Cflx_yr_respiration      =  Cflx_yr_resp_from_litter                      &
-      &                       + Cflx_yr_from_humus
-
-    ! 3. update Yasso pools
-
-    !   3a. redistribution among yasso pools
-    c_acid        = MAX(0.0_lp,                                    &
-      &                 c_acid                                     & ! old pool
-      &              + (Cflx_yr_from_acid                          & ! incoming flux from AWEN pools
-      &               + Cflx_yr_2_acid) * years_per_ts)
-    c_water       = MAX(0.0_lp,                                    & ! ...
-      &                 c_water                                    &
-      &              + (Cflx_yr_from_water                         &
-      &               + Cflx_yr_2_water) * years_per_ts)
-    c_ethanol     = MAX(0.0_lp,                                    &
-      &                 c_ethanol                                  &
-      &              + (Cflx_yr_from_ethanol                       &
-      &               + Cflx_yr_2_ethanol) * years_per_ts)
-    c_nonsoluble  = MAX(0.0_lp,                                    &
-      &                 c_nonsoluble                               &
-      &              + (Cflx_yr_from_nonsoluble                    &
-      &               + Cflx_yr_2_nonsoluble) * years_per_ts)
-
-    c_humus       = MAX(0.0_lp,                                    &
-      &                 c_humus                                    &
-      &              + (Cflx_yr_from_humus                         &
-      &               + Cflx_yr_2_humus) * years_per_ts)
-
-    ! 4.1 Write pools into the output array
-    Y_out_pools(Y_ACID)       = c_acid
-    Y_out_pools(Y_WATER)      = c_water
-    Y_out_pools(Y_ETHANOL)    = c_ethanol
-    Y_out_pools(Y_NONSOLUBLE) = c_nonsoluble
-    Y_out_pools(Y_HUMUS)      = c_humus
-
-    ! 4.2 Write respiration into the output array
-    Y_out_fluxes(F_RESP)     = Cflx_yr_respiration * years_per_ts ! convert back to daily
-
-    ! the routine might have been called to diagnose the nutrient demand, so we give out
-    ! 1. flux for immobilisation: this is the sum of all carbon coming from the non-humus pools to humus
-    Y_out_fluxes(F_2_HUMUS)  =  Cflx_yr_2_humus * years_per_ts !  per timestep ! the flux is positive
-    ! 2. flux for mineralisation:  this is the flux from humus to atmosphere
-    Y_out_fluxes(F_F_HUMUS)  = -Cflx_yr_from_humus * years_per_ts !  per timestep ! sign CHECKED!
-    ! ... as well as all fluxes from AWEN pools to atmosphere
-    Y_out_fluxes(F_LITRESP)  = -Cflx_yr_resp_from_litter * years_per_ts ! per timestep ! the flux is negative
-  END SUBROUTINE yasso_minimal
 
   ! ---------------------------------------------------------------------------------------------------------
   !>
@@ -1315,62 +1051,6 @@ CONTAINS
     END IF
 
   END FUNCTION determine_root_dist
-
-  ! ---------------------------------------------------------------------------------------------------------
-  !>
-  !> The routine prepares the yasso call: The "yasso_in" buffer is filled with data from the current vertical
-  !> yasso pools.
-  !>
-  PURE SUBROUTINE input_YASSO_pools(cpool_acid, cpool_water, cpool_ethanol,      &
-    &                               cpool_nonsoluble, cpool_humus, YASSO_in)
-    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
-
-    REAL(lp), INTENT(in)  :: cpool_acid
-    REAL(lp), INTENT(in)  :: cpool_water
-    REAL(lp), INTENT(in)  :: cpool_ethanol
-    REAL(lp), INTENT(in)  :: cpool_nonsoluble
-    REAL(lp), INTENT(in)  :: cpool_humus
-    REAL(lp), INTENT(out) :: YASSO_in(5)
-
-    YASSO_in(Y_ACID)       = cpool_acid
-    YASSO_in(Y_WATER)      = cpool_water
-    YASSO_in(Y_ETHANOL)    = cpool_ethanol
-    YASSO_in(Y_NONSOLUBLE) = cpool_nonsoluble
-    YASSO_in(Y_HUMUS)      = cpool_humus
-  END SUBROUTINE input_YASSO_pools
-
-  ! ---------------------------------------------------------------------------------------------------------
-  !>
-  !> This subroutine moves the yasso output to the respective vertical yasso pools. Depending on argument "plus"
-  !> the yasso output values are added to (true) or are replacing (false) current vertical pool values.
-  !>
-  PURE SUBROUTINE output_YASSO_pools(plus, YASSO_out, cpool_acid, cpool_water, cpool_ethanol, &
-    &                                cpool_nonsoluble, cpool_humus)
-
-    USE mo_carbon_constants,  ONLY: Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
-
-    LOGICAL,  INTENT(in)     :: plus
-    REAL(lp), INTENT(in)     :: YASSO_out(5)
-    REAL(lp), INTENT(inout)  :: cpool_acid
-    REAL(lp), INTENT(inout)  :: cpool_water
-    REAL(lp), INTENT(inout)  :: cpool_ethanol
-    REAL(lp), INTENT(inout)  :: cpool_nonsoluble
-    REAL(lp), INTENT(inout)  :: cpool_humus
-
-    IF (plus) THEN
-      cpool_acid       = cpool_acid       + YASSO_out(Y_ACID)
-      cpool_water      = cpool_water      + YASSO_out(Y_WATER)
-      cpool_ethanol    = cpool_ethanol    + YASSO_out(Y_ETHANOL)
-      cpool_nonsoluble = cpool_nonsoluble + YASSO_out(Y_NONSOLUBLE)
-      cpool_humus      = cpool_humus      + YASSO_out(Y_HUMUS)
-    ELSE
-      cpool_acid       = YASSO_out(Y_ACID)
-      cpool_water      = YASSO_out(Y_WATER)
-      cpool_ethanol    = YASSO_out(Y_ETHANOL)
-      cpool_nonsoluble = YASSO_out(Y_NONSOLUBLE)
-      cpool_humus      = YASSO_out(Y_HUMUS)
-    END IF
-  END SUBROUTINE output_YASSO_pools
 
   ! ---------------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION get_modifier_temp(temp_soil, use_Q10) RESULT(d_temp)

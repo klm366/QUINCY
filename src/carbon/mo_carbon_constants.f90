@@ -23,20 +23,6 @@ MODULE mo_carbon_constants
 
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
   ENUM, BIND(C)
-    ENUMERATOR :: LCT_ACID=1, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS
-  END ENUM
-
-  ! Indices of the yasso(_out) transfer array
-  ENUM, BIND(C)
-    ENUMERATOR :: POOL_ACID_AG=1, POOL_WATER_AG, POOL_ETHANOL_AG, POOL_NONSOLUBLE_AG,       &
-          & POOL_ACID_BG, POOL_WATER_BG, POOL_ETHANOL_BG, POOL_NONSOLUBLE_BG, POOL_HUMUS,   &
-          & FLUX_RESP_TOTAL, FLUX_2_HUMUS_AG, FLUX_2_HUMUS_BG, FLUX_FROM_HUMUS_DIAG,        &
-          & FLUX_RESP_LITTER_AG, FLUX_RESP_LITTER_BG, REL_FLUX_AWEN, FLUX_FROM_HUMUS,       &
-          & FLUX_LITTER_2_HUMUS
-  END ENUM
-
-  ! Yasso pool indicators for c pool in/out, rate constant in
-  ENUM, BIND(C)
     ENUMERATOR :: Y_ACID=1, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
   END ENUM
 
@@ -44,19 +30,10 @@ MODULE mo_carbon_constants
   ENUM, BIND(C)
     ENUMERATOR :: ABOVE_GROUND=1, BELOW_GROUND
   END ENUM
-  ! Yasso flux indicators for flux out
-  ENUM, BIND(C)
-    ENUMERATOR :: F_RESP=1, F_2_HUMUS, F_F_HUMUS, F_LITRESP
-  END ENUM
-
-  ! Yasso rate modifiers for litter/humus
-  ENUM, BIND(C)
-    ENUMERATOR :: M_LITTER=1, M_HUMUS
-  END ENUM
 
   ! Misc parameters in interface
   ENUM, BIND(C)
-    ENUMERATOR :: WOODLITSIZE=1, ROOT_DIST_BETA, FRAC_INUN_MIN
+    ENUMERATOR :: WOODLITSIZE=1, ROOT_DIST_BETA
   END ENUM
 
 
@@ -110,10 +87,10 @@ MODULE mo_carbon_constants
 
   !> helper for automatization (order needs to match var name list in carbon_required_passive_vars)
   INTEGER :: coefficient_ind_of_passive_vars(nr_of_yasso_pools) = (/ &
-    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,              &
-    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS,   &
-    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE,              &
-    & LCT_ACID, LCT_WATER, LCT_ETHANOL, LCT_NONSOLUBLE, LCT_HUMUS  /)
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE,                      &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS,             &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE,                      &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS           /)
 
   ! Yasso parameters (Tuomi 2011)
   !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
@@ -122,6 +99,31 @@ MODULE mo_carbon_constants
   REAL(lp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_lp    !<  ... ethanol-soluble fraction
   REAL(lp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_lp   !<  ... nonsoluble-soluble fraction
   REAL(lp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_lp  !<  ... humus
+
+  ! Fractions to split the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
+  ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
+  ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux
+  ! does not exists. However, after a recalibration of the model this fraction may change.
+  !
+  ! fractions of decomposition flux of acid soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: A_2_W = 0.99_lp
+  REAL(lp), PARAMETER   :: A_2_E = 0.00_lp
+  REAL(lp), PARAMETER   :: A_2_N = 0.00_lp
+  ! fractions of decomposition flux of water soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: W_2_A = 0.48_lp
+  REAL(lp), PARAMETER   :: W_2_E = 0.00_lp
+  REAL(lp), PARAMETER   :: W_2_N = 0.015_lp
+  ! fractions of decomposition flux of ethanol soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: E_2_A = 0.01_lp
+  REAL(lp), PARAMETER   :: E_2_W = 0.00_lp
+  REAL(lp), PARAMETER   :: E_2_N = 0.95_lp
+  ! fractions of decomposition flux of non soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: N_2_A = 0.83_lp
+  REAL(lp), PARAMETER   :: N_2_W = 0.01_lp
+  REAL(lp), PARAMETER   :: N_2_E = 0.02_lp
+  ! Alternative pathway for N pool which enters the humus pool [yr-1]
+  REAL(lp), PARAMETER   :: N_2_H   = 0.0045_lp
+  REAL(lp), PARAMETER   :: AWE_2_H = 0.0045_lp
 
   ! ------------------------------------------------------------------------------------------
   ! Parameters for vertical YASSO
@@ -156,7 +158,7 @@ MODULE mo_carbon_constants
   REAL(lp), PARAMETER   :: permafrost_threshold    = 1._lp   !< length threshold to consider a layer permafrost [yr]
 
   ! ------------------------------------------------------------------------------------------
-  ! Ratio of C mass to biomass (Spitfire and emission of chemical species by fire)
+  ! Ratio of C mass to biomass
   REAL(lp),  PARAMETER :: C_2_biomass_ratio = 0.5_lp !< Conversion factor between SOC and SOM (Pribyl, 2010)
 
   ! organic matter [litter/duff?] bulk densities for below above and ground [kg/m3],
