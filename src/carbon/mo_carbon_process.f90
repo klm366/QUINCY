@@ -25,7 +25,7 @@ MODULE mo_carbon_process
   PRIVATE
 
   PUBLIC :: calc_plant_c, calc_soil_c, relocate_carbon_fire, relocate_carbon_damage, &
-    & get_per_tile, add_litter_to_yasso_pool
+    & get_per_tile, add_litter_to_yasso_pool, sum_up_carbon_layers
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -445,109 +445,117 @@ CONTAINS
 
     ! Arguments
     REAL(lp), INTENT(in)    :: delta_time_C                 !< Carbon time step [s]
-    REAL(lp), INTENT(in)    :: burned_fract                 !< Fraction of the vegetated area of each tile burned till the last
+    REAL(lp), INTENT(in)    :: burned_fract(:)              !< Fraction of the vegetated area of each tile burned till the last
                                                             !< call of this routine
     REAL(lp), INTENT(in)    :: fire_fract_wood_2_atmos      !< Fraction of above ground wood immediately emitted to atmosphere
                                                             !< in case of fire
     REAL(lp), INTENT(in)    :: LeafLit_coef(:)              !< Factor to spread non woody litterfall into yasso pools [ ]
     REAL(lp), INTENT(in)    :: WoodLit_coef(:)              !< Factor to spread woody litterfall into yasso pools [ ]
-    REAL(lp), INTENT(inout) :: c_green                      !< Amount of green carbon [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_woods                      !< Amount of wood carbon [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_reserve                    !< Amount of reserve carbon [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: cflux_dist_green_2_soil      !< Carbon relocated by disturbances from non-woody biomass
+    REAL(lp), INTENT(inout) :: c_green(:)                   !< Amount of green carbon [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_woods(:)                   !< Amount of wood carbon [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_reserve(:)                 !< Amount of reserve carbon [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: cflux_dist_green_2_soil(:)   !< Carbon relocated by disturbances from non-woody biomass
                                                             !< to the green litter pools [mol(C)/m^2(canopy)s-1]
-    REAL(lp), INTENT(inout) :: cflux_dist_woods_2_soil      !< Carbon relocated by disturbances from woody biomass to
+    REAL(lp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   !< Carbon relocated by disturbances from woody biomass to
                                                             !< the wood litter pools [mol(C)/m^2(canopy)s-1]
     !   YASSO
     ! SIZE CLASS 1 ; GREEN
     !   above ground C pools
-    REAL(lp), INTENT(inout) :: c_acid_ag1                   !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_water_ag1                  !< Water soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_ethanol_ag1                !< Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_nonsoluble_ag1             !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_acid_ag1(:)                !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_water_ag1(:)               !< Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag1(:)             !< Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag1(:)          !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(lp), INTENT(inout) :: c_acid_bg1                   !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_water_bg1                  !< Water soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_ethanol_bg1                !< Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1             !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_humus_1                    !< Humus pool from green litter [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_acid_bg1(:)                !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_water_bg1(:)               !< Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg1(:)             !< Ethanol soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1(:)          !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_humus_1(:)                 !< Humus pool from green litter [mol(C)/m^2(canopy)]
     ! SIZE CLASS 2 ; WOOD
     !   above ground C pools
-    REAL(lp), INTENT(inout) :: c_acid_ag2                   !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_water_ag2                  !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_ethanol_ag2                !< Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_nonsoluble_ag2             !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_acid_ag2(:)                !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_water_ag2(:)               !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag2(:)             !< Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag2(:)          !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(lp), INTENT(inout) :: c_acid_bg2                   !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_water_bg2                  !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_ethanol_bg2                !< Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2             !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_humus_2                    !< Humus pool from woody litter [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(out)   :: co2flux_fire_all_2_atm       !< CO2 released by fire [kg(CO2)m-2(canopy)s-1]
+    REAL(lp), INTENT(inout) :: c_acid_bg2(:)                !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_water_bg2(:)               !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg2(:)             !< Ethanol soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2(:)          !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_humus_2(:)                 !< Humus pool from woody litter [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    !< CO2 released by fire [kg(CO2)m-2(canopy)s-1]
 
     ! Local variables
     REAL(lp)  :: non_woody_litter, fraction ! Helper
+    INTEGER   :: ic, nc
 
-    non_woody_litter = c_green + c_reserve
+    nc = SIZE(burned_fract)
 
-    ! Carbon released due to disturbances from the green and reserve pools, that enters the green litter and
-    ! soil pools. We here add the contribution of fires.
-    cflux_dist_green_2_soil = cflux_dist_green_2_soil + &
-      & (c_green + c_reserve) * (1._lp - fract_green_aboveGround) * burned_fract / delta_time_C
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(non_woody_litter, fraction)
+    DO ic = 1, nc
+      non_woody_litter = c_green(ic) + c_reserve(ic)
 
-    ! Carbon released due to disturbances from the woody vegetation pool, that enters the woody litter and soil
-    ! pools. We here add the contribution of fires.
-    cflux_dist_woods_2_soil = cflux_dist_woods_2_soil + &
-      & c_woods * (1._lp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract / delta_time_C
+      ! Carbon released due to disturbances from the green and reserve pools, that enters the green litter and
+      ! soil pools. We here add the contribution of fires.
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + &
+        & (c_green(ic) + c_reserve(ic)) * (1._lp - fract_green_aboveGround) * burned_fract(ic) / delta_time_C
 
-    ! Determine the carbon flux to the atmosphere due to fire: We assume that the above ground non-woody
-    ! biomass and above ground litter are burnt completely, while parts of the above ground woody biomass
-    ! and below ground matter resists the flames.
-    co2flux_fire_all_2_atm = ( &
-        ! above ground fraction of living biomass
-      & non_woody_litter * fract_green_aboveGround                          &
-        ! add the above ground YASSO pools
-      & + c_water_ag1 + c_acid_ag1 + c_ethanol_ag1                          &
-      & + c_nonsoluble_ag1                                                  &
-      & + c_water_ag2 + c_acid_ag2 + c_ethanol_ag2                          &
-      & + c_nonsoluble_ag2                                                  &
-        ! add the fire affected fraction of the above ground wood pools
-      & + c_woods * fire_fract_wood_2_atmos * fract_wood_aboveGround        &
-        ! scale with the burned fraction
-      & ) * burned_fract * molarMassCO2_kg / delta_time_C
+      ! Carbon released due to disturbances from the woody vegetation pool, that enters the woody litter and soil
+      ! pools. We here add the contribution of fires.
+      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + &
+        & c_woods(ic) * (1._lp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(ic) / delta_time_C
 
-    ! Reduce the above ground yasso pools accordingly
-    fraction = 1._lp - burned_fract
-    c_acid_ag1       = fraction * c_acid_ag1
-    c_water_ag1      = fraction * c_water_ag1
-    c_ethanol_ag1    = fraction * c_ethanol_ag1
-    c_nonsoluble_ag1 = fraction * c_nonsoluble_ag1
+      ! Determine the carbon flux to the atmosphere due to fire: We assume that the above ground non-woody
+      ! biomass and above ground litter are burnt completely, while parts of the above ground woody biomass
+      ! and below ground matter resists the flames.
+      co2flux_fire_all_2_atm(ic) = ( &
+          ! above ground fraction of living biomass
+        & non_woody_litter * fract_green_aboveGround                          &
+          ! add the above ground YASSO pools
+        & + c_water_ag1(ic) + c_acid_ag1(ic) + c_ethanol_ag1(ic)              &
+        & + c_nonsoluble_ag1(ic)                                              &
+        & + c_water_ag2(ic) + c_acid_ag2(ic) + c_ethanol_ag2(ic)              &
+        & + c_nonsoluble_ag2(ic)                                              &
+          ! add the fire affected fraction of the above ground wood pools
+        & + c_woods(ic) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
+          ! scale with the burned fraction
+        & ) * burned_fract(ic) * molarMassCO2_kg / delta_time_C
 
-    c_acid_ag2       = fraction * c_acid_ag2
-    c_water_ag2      = fraction * c_water_ag2
-    c_ethanol_ag2    = fraction * c_ethanol_ag2
-    c_nonsoluble_ag2 = fraction * c_nonsoluble_ag2
+      ! Reduce the above ground yasso pools accordingly
+      fraction = 1._lp - burned_fract(ic)
+      c_acid_ag1(ic)       = fraction * c_acid_ag1(ic)
+      c_water_ag1(ic)      = fraction * c_water_ag1(ic)
+      c_ethanol_ag1(ic)    = fraction * c_ethanol_ag1(ic)
+      c_nonsoluble_ag1(ic) = fraction * c_nonsoluble_ag1(ic)
 
-    ! Add below ground fraction of the burned vegetation to the below ground green litter pools
-    fraction = (1._lp - fract_green_aboveGround) * burned_fract
-    CALL distribute_yasso_litter(c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1, c_humus_1, &
-      &                          non_woody_litter, fraction, LeafLit_coef)
+      c_acid_ag2(ic)       = fraction * c_acid_ag2(ic)
+      c_water_ag2(ic)      = fraction * c_water_ag2(ic)
+      c_ethanol_ag2(ic)    = fraction * c_ethanol_ag2(ic)
+      c_nonsoluble_ag2(ic) = fraction * c_nonsoluble_ag2(ic)
 
-    ! Distribute the remaings of burned wood to the yasso litter pools
-    !  Above ground
-    fraction = (1._lp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract
-    CALL distribute_yasso_litter(c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, c_humus_2, &
-      &                          c_woods, fraction, WoodLit_coef)
-    !  Below ground
-    fraction = (1._lp - fract_wood_aboveGround) * burned_fract
-    CALL distribute_yasso_litter(c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2, c_humus_2, &
-      &                          c_woods, fraction, WoodLit_coef)
+      ! Add below ground fraction of the burned vegetation to the below ground green litter pools
+      fraction = (1._lp - fract_green_aboveGround) * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
+        &                          non_woody_litter, fraction, LeafLit_coef)
 
-    ! Reduce the living plant carbon pools accordingly
-    fraction = 1._lp - burned_fract
-    c_green   = c_green   * fraction
-    c_woods   = c_woods   * fraction
-    c_reserve = c_reserve * fraction
+      ! Distribute the remaings of burned wood to the yasso litter pools
+      !  Above ground
+      fraction = (1._lp - fire_fract_wood_2_atmos) * fract_wood_aboveGround * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+      !  Below ground
+      fraction = (1._lp - fract_wood_aboveGround) * burned_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+
+      ! Reduce the living plant carbon pools accordingly
+      fraction = 1._lp - burned_fract(ic)
+      c_green(ic)   = c_green(ic)   * fraction
+      c_woods(ic)   = c_woods(ic)   * fraction
+      c_reserve(ic) = c_reserve(ic) * fraction
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE relocate_carbon_fire
 
@@ -590,84 +598,93 @@ CONTAINS
 
     ! Arguments
     REAL(lp), INTENT(in)    :: delta_time_C                !< Carbon time step [s]
-    REAL(lp), INTENT(in)    :: damaged_fract               !< Fraction of the vegetated area of each tile damaged since the last
+    REAL(lp), INTENT(in)    :: damaged_fract(:)            !< Fraction of the vegetated area of each tile damaged since the last
                                                            !< call of this routine
     REAL(lp), INTENT(in)    :: LeafLit_coef(:)             !< Factor to spread non woody litter into yasso pools [ ]
     REAL(lp), INTENT(in)    :: WoodLit_coef(:)             !< Factor to spread woody litterfall into yasso pools [ ]
-    REAL(lp), INTENT(inout) :: c_green                     !< Amount of carbon in green pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_woods                     !< Amount carbon in wood pool [mol(C)/m^2(canopy)]
-    REAL(lp), INTENT(inout) :: c_reserve                   !< Amount of carbon in reserve pool [mol(C)/m^(canopy)2]
-    REAL(lp), INTENT(inout) :: cflux_dist_green_2_soil     !< Disturbance-induced carbon flux of non-woody living biomass
+    REAL(lp), INTENT(inout) :: c_green(:)                  !< Amount of carbon in green pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_woods(:)                  !< Amount carbon in wood pool [mol(C)/m^2(canopy)]
+    REAL(lp), INTENT(inout) :: c_reserve(:)                !< Amount of carbon in reserve pool [mol(C)/m^(canopy)2]
+    REAL(lp), INTENT(inout) :: cflux_dist_green_2_soil(:)  !< Disturbance-induced carbon flux of non-woody living biomass
                                                            !< to the green litter and soil pools [mol(C)/m^2(canopy)s-1]
-    REAL(lp), INTENT(inout) :: cflux_dist_woods_2_soil     !< Disturbance-induced carbon flux of woody living biomass to
+    REAL(lp), INTENT(inout) :: cflux_dist_woods_2_soil(:)  !< Disturbance-induced carbon flux of woody living biomass to
                                                            !< the woody litter and soil pools [mol(C)/m^2(canopy)s-1]
 
     !   YASSO
     ! Size class 1: green
     !   above ground C pools
-    REAL(lp),INTENT(inout) :: c_acid_ag1           !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_water_ag1          !< Water soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_ethanol_ag1        !< Ethanol soluble green litter pool [mol(C)/m2(canopy)]
-    REAL(lp),INTENT(inout) :: c_nonsoluble_ag1     !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_acid_ag1(:)                !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_water_ag1(:)               !< Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_ethanol_ag1(:)             !< Ethanol soluble green litter pool [mol(C)/m2(canopy)]
+    REAL(lp),INTENT(inout) :: c_nonsoluble_ag1(:)          !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(lp),INTENT(inout) :: c_acid_bg1           !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_water_bg1          !< Water soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_ethanol_bg1        !< Ethanol soluble green litter pool [mol(C)/m2(canopy)]
-    REAL(lp),INTENT(inout) :: c_nonsoluble_bg1     !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_humus_1            !< Humus pool from green litter [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_acid_bg1(:)                !< Acid soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_water_bg1(:)               !< Water soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_ethanol_bg1(:)             !< Ethanol soluble green litter pool [mol(C)/m2(canopy)]
+    REAL(lp),INTENT(inout) :: c_nonsoluble_bg1(:)          !< Non-soluble green litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_humus_1(:)                 !< Humus pool from green litter [mol(C)/m^2(canopy)]
     ! Size class 2: wood
     !   above ground C pools
-    REAL(lp),INTENT(inout) :: c_acid_ag2           !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_water_ag2          !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_ethanol_ag2        !< Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
-    REAL(lp),INTENT(inout) :: c_nonsoluble_ag2     !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_acid_ag2(:)                !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_water_ag2(:)               !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_ethanol_ag2(:)             !< Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
+    REAL(lp),INTENT(inout) :: c_nonsoluble_ag2(:)          !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
     !   below ground C pools
-    REAL(lp),INTENT(inout) :: c_acid_bg2           !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_water_bg2          !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_ethanol_bg2        !< Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
-    REAL(lp),INTENT(inout) :: c_nonsoluble_bg2     !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
-    REAL(lp),INTENT(inout) :: c_humus_2            !< Humus pool from woody litter [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_acid_bg2(:)                !< Acid soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_water_bg2(:)               !< Water soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_ethanol_bg2(:)             !< Ethanol soluble woody litter pool [mol(C)/m2(canopy)]
+    REAL(lp),INTENT(inout) :: c_nonsoluble_bg2(:)          !< Non-soluble woody litter pool [mol(C)/m^2(canopy)]
+    REAL(lp),INTENT(inout) :: c_humus_2(:)                 !< Humus pool from woody litter [mol(C)/m^2(canopy)]
 
     ! Local variables
     REAL(lp)  :: non_woody_litter, fraction  ! Helper
+    INTEGER   :: ic, nc
 
-    non_woody_litter = c_green + c_reserve
+    ! Initializations
+    nc = SIZE(damaged_fract)
 
-    ! Carbon transferred from the wood pool to the woody litter and soil pools due to disturbances;
-    ! we here add the contribution of wind throw.
-    cflux_dist_woods_2_soil = cflux_dist_woods_2_soil + c_woods * damaged_fract / delta_time_C
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(non_woody_litter, fraction)
+    DO ic = 1, nc
+      non_woody_litter = c_green(ic) + c_reserve(ic)
 
-    ! Carbon transferred from the non-woody vegetation pools to the green litter and soil pools due to
-    ! disturbances; we here add the contribution of wind throw.
-    cflux_dist_green_2_soil = cflux_dist_green_2_soil + non_woody_litter * damaged_fract / delta_time_C
+      ! Carbon transferred from the wood pool to the woody litter and soil pools due to disturbances;
+      ! we here add the contribution of wind throw.
+      cflux_dist_woods_2_soil(ic) = cflux_dist_woods_2_soil(ic) + c_woods(ic) * damaged_fract(ic) / delta_time_C
 
-    ! Distribute the carbon of damaged non-woody vegetation to the yasso litter and soil pools
-    !  Above ground
-    fraction = fract_green_aboveGround * damaged_fract
-    CALL distribute_yasso_litter(c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1, c_humus_1, &
-      &                          non_woody_litter, fraction, LeafLit_coef)
-    !  Below ground
-    fraction = (1._lp - fract_green_aboveGround) * damaged_fract
-    CALL distribute_yasso_litter(c_acid_bg1, c_water_bg1, c_ethanol_bg1, &
-      &                          c_nonsoluble_bg1, c_humus_1, &
-      &                          non_woody_litter, fraction, LeafLit_coef)
+      ! Carbon transferred from the non-woody vegetation pools to the green litter and soil pools due to
+      ! disturbances; we here add the contribution of wind throw.
+      cflux_dist_green_2_soil(ic) = cflux_dist_green_2_soil(ic) + non_woody_litter * damaged_fract(ic) / delta_time_C
 
-    ! Distribute the carbon of damaged woody vegetation to the yasso litter and soil pools
-    !  Above ground
-    fraction = fract_wood_aboveGround * damaged_fract
-    CALL distribute_yasso_litter(c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2, c_humus_2, &
-      &                          c_woods, fraction, WoodLit_coef)
-    !  Below ground
-    fraction = (1._lp - fract_wood_aboveGround) * damaged_fract
-    CALL distribute_yasso_litter(c_acid_bg2, c_water_bg2, c_ethanol_bg2, &
-      &                          c_nonsoluble_bg2, c_humus_2, &
-      &                          c_woods, fraction, WoodLit_coef)
+      ! Distribute the carbon of damaged non-woody vegetation to the yasso litter and soil pools
+      !  Above ground
+      fraction = fract_green_aboveGround * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), &
+        &                          c_nonsoluble_ag1(ic), c_humus_1(ic),                &
+        &                          non_woody_litter, fraction, LeafLit_coef)
+      !  Below ground
+      fraction = (1._lp - fract_green_aboveGround) * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), &
+        &                          c_nonsoluble_bg1(ic), c_humus_1(ic),                &
+        &                          non_woody_litter, fraction, LeafLit_coef)
 
-    ! Reduce the living plant carbon pools accordingly
-    fraction = 1._lp - damaged_fract
-    c_green   = c_green   * fraction
-    c_woods   = c_woods   * fraction
-    c_reserve = c_reserve * fraction
+      ! Distribute the carbon of damaged woody vegetation to the yasso litter and soil pools
+      !  Above ground
+      fraction = fract_wood_aboveGround * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+      !  Below ground
+      fraction = (1._lp - fract_wood_aboveGround)  * damaged_fract(ic)
+      CALL distribute_yasso_litter(c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
+        &                          c_woods(ic), fraction, WoodLit_coef)
+
+      ! Reduce the living plant carbon pools accordingly
+      fraction = 1._lp - damaged_fract(ic)
+      c_green(ic)   = c_green(ic)   * fraction
+      c_woods(ic)   = c_woods(ic)   * fraction
+      c_reserve(ic) = c_reserve(ic) * fraction
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE relocate_carbon_damage
 
@@ -1860,5 +1877,40 @@ CONTAINS
 
   END SUBROUTINE remove_C_below_bedrock
 
+  ! ---------------------------------------------------------------------------------------------------------
+  !>
+  !> Sum up layered carbon storages for single below ground pools
+  !>
+  !> This routine accumulates the vertically distinct carbon fields of the multi-layer
+  !> yasso scheme over all soil layers to fill the arrays used for the single
+  !> layer yasso.
+  !>
+  SUBROUTINE sum_up_carbon_layers(nc, nsoil, cpool_sl, cpool_bg)
+
+    INTEGER,  INTENT(in)     :: nc                    !< Number of grid cells [ ]
+    INTEGER,  INTENT(in)     :: nsoil                 !< Number of soil layers [ ]
+    REAL(lp), INTENT(in)     :: cpool_sl(:,:)         !< Soil carbon on layers [mol(C) m-2]
+    REAL(lp), INTENT(out)    :: cpool_bg(:)        !< Below ground soil carbon pool [mol(C) m-2]
+
+    INTEGER  :: ic                                    !< Grid cell index
+    INTEGER  :: is                                    !< Soil layer index
+
+    ! First set below ground carbon pool to zero
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      cpool_bg(ic) = 0._lp
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    ! Add carbon from each layer to below ground pool
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    DO ic = 1, nc
+      DO is = 1, nsoil
+        cpool_bg(ic) = cpool_bg(ic) * cpool_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE sum_up_carbon_layers
 #endif
 END MODULE mo_carbon_process
