@@ -175,7 +175,6 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER   :: soil_c
     LOGICAL                      :: lstart, lresume, new_day, new_year
     LOGICAL                      :: nlcc_is_enabled    ! helper needed on DWD NEC
-    LOGICAL                      :: vertical_yasso !< Switch to enable the vertically resolved yasso scheme
     INTEGER                      :: iblk, ics, ice, nc, ic, is, nsoil
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
@@ -202,16 +201,9 @@ CONTAINS
     REAL(lp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
     ! Pool and parameter transfer for YASSO scheme
-    REAL(lp) :: green_cpools_ag(4) !< Array with above ground green AWEN litter pools [mol(C) m-2]
-    REAL(lp) :: woody_cpools_ag(4) !< Array with above ground woody AWEN litter pools [mol(C) m-2]
-    REAL(lp) :: green_cpools_bg(4) !< Array with below ground green AWEN litter pools [mol(C) m-2]
-    REAL(lp) :: woody_cpools_bg(4) !< Array with below ground woody AWEN litter pools [mol(C) m-2]
     REAL(lp) :: LeafLit_coef(5)    !< Array with leaf litter coefficients []
     REAL(lp) :: WoodLit_coef(5)    !< Array with woody litter coefficients []
     REAL(lp) :: MiscPar(2)         !< Array with additional coefficients
-    ! Vertically stratified AWEN pools on soil layers
-    REAL(lp), ALLOCATABLE :: green_cpools_bg_sl(:,:) !< Array with below ground green AWEN litter pools at soil levels [mol(C) m-2]
-    REAL(lp), ALLOCATABLE :: woody_cpools_bg_sl(:,:) !< Array with below ground woody AWEN litter pools at soil levels [mol(C) m-2]
 
     REAL(lp), POINTER            :: tile_fract(:) !< Fraction of the tile (rel. to the grid cell) []
 
@@ -417,8 +409,6 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
 
-    vertical_yasso = dsl4jsb_Config(CARBON_)%vertical_yasso
-
     ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
     ! climbuf, as the pointer name is appended to the climate buffer variables below.
     climbuf => tile%parent_tile
@@ -427,12 +417,9 @@ CONTAINS
     dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Prepare soil grid information for vertical yasso
-    IF (vertical_yasso) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_c => Get_vgrid('soil_depth_carbon')
       nsoil = soil_c%n_levels
-
-      ALLOCATE(green_cpools_bg_sl(nsoil,4))
-      ALLOCATE(woody_cpools_bg_sl(nsoil,4))
 
       ALLOCATE(layer_depth(nsoil))
       ALLOCATE(layer_thick(nsoil))
@@ -448,7 +435,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, precip_15d_yDay, climbuf)    ! in
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, max_thaw_prev_year, climbuf) ! in
 
-    IF (vertical_yasso) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, t_soil_sl_15d_yDay, climbuf)        ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, wtr_soil_rel_sl_15d_yDay, climbuf)  ! in
       dsl4jsb_Get_var3D_onChunk_tile_name(CLIMBUF_, permafrost_period_sl, climbuf)      ! in
@@ -525,7 +512,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  co2flux_herb_2_atm_ta )      ! out
 
     ! Variables for vertical YASSO
-    IF (vertical_yasso) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       !SIZE CLASS 1
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_acid_bg1_sl)            ! inout
       dsl4jsb_Get_var3D_onChunk(CARBON_,  c_water_bg1_sl)           ! inout
@@ -629,7 +616,7 @@ CONTAINS
     !                            * SPREAD(surface%veg_ratio_max(kidx0:kidx1),DIM=2,NCOPIES=ntiles)
 
     ! Get information about the maximum thaw depth on soil layers
-    IF (vertical_yasso) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
       max_layer_sl = soil_depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
@@ -657,7 +644,7 @@ CONTAINS
       & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
       & GPP_yDayMean = GPP_yDayMean(:))
 
-    IF (vertical_yasso) THEN
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       ! Recalc per tile variables on soil levels
       CALL recalc_per_tile_vars(tile, options,                                                      &
         & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
@@ -740,7 +727,7 @@ CONTAINS
       MiscPar(ROOT_DIST_BETA)      = dsl4jsb_Lctlib_param(root_dist_beta)
 
       ! Check whether optional values were read from lctlib
-      IF (MiscPar(ROOT_DIST_BETA) < -990._lp .AND. vertical_yasso) THEN
+      IF (MiscPar(ROOT_DIST_BETA) < -990._lp .AND. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         CALL finish(TRIM(routine), 'ROOT_DIST_BETA is required in lctlib file for simulations ' // &
           & 'using vertically stratified yasso scheme')
       END IF
@@ -791,7 +778,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       ! clear C from frozen pools if requested
-      IF ((vertical_yasso) .AND. (dsl4jsb_Config(CARBON_)%remove_permafrost_carbon) &
+      IF ((dsl4jsb_Config(CARBON_)%vertical_yasso) .AND. (dsl4jsb_Config(CARBON_)%remove_permafrost_carbon) &
         &  .AND. (lresume .OR. lstart)) THEN
         CALL message(TRIM(routine), 'Removing carbon from permafrost affected soil layers')
         DO ic = 1, nc
@@ -813,145 +800,46 @@ CONTAINS
       END IF
 
       ! Calculate soil carbon pools
-      DO ic = 1, nc
-        ! Prepare vectors of above ground carbon AWEN pools (green and woody litter)
-        green_cpools_ag(Y_ACID)       = c_acid_ag1(ic)
-        green_cpools_ag(Y_WATER)      = c_water_ag1(ic)
-        green_cpools_ag(Y_ETHANOL)    = c_ethanol_ag1(ic)
-        green_cpools_ag(Y_NONSOLUBLE) = c_nonsoluble_ag1(ic)
-        woody_cpools_ag(Y_ACID)       = c_acid_ag2(ic)
-        woody_cpools_ag(Y_WATER)      = c_water_ag2(ic)
-        woody_cpools_ag(Y_ETHANOL)    = c_ethanol_ag2(ic)
-        woody_cpools_ag(Y_NONSOLUBLE) = c_nonsoluble_ag2(ic)
-        ! Prepare vectors of below ground carbon AWEN pools (green and woody litter)
-        IF (vertical_yasso) THEN
-          ! Use vertically resolved below ground pools
-          green_cpools_bg_sl(:,Y_ACID)       = c_acid_bg1_sl(ic,:)
-          green_cpools_bg_sl(:,Y_WATER)      = c_water_bg1_sl(ic,:)
-          green_cpools_bg_sl(:,Y_ETHANOL)    = c_ethanol_bg1_sl(ic,:)
-          green_cpools_bg_sl(:,Y_NONSOLUBLE) = c_nonsoluble_bg1_sl(ic,:)
-          woody_cpools_bg_sl(:,Y_ACID)       = c_acid_bg2_sl(ic,:)
-          woody_cpools_bg_sl(:,Y_WATER)      = c_water_bg2_sl(ic,:)
-          woody_cpools_bg_sl(:,Y_ETHANOL)    = c_ethanol_bg2_sl(ic,:)
-          woody_cpools_bg_sl(:,Y_NONSOLUBLE) = c_nonsoluble_bg2_sl(ic,:)
-          ! Call the soil carbon calculation routine for the multi-layer yasso
-          CALL calc_soil_c(                &
-            & vertical_yasso,              & ! in
-            & nsoil,                       & ! in
-            & delta_time_C,                & ! in
-            & LeafLit_coef,                & ! in
-            & WoodLit_coef,                & ! in
-            & MiscPar,                     & ! in
-            & temp_15d_yDay_climbuf(ic),   & ! in
-            & precip_15d_yDay_climbuf(ic), & ! in
-            & cflux_c_wood_2_litter(ic),   & ! in
-            & cflux_c_green_2_litter(ic),  & ! in
-            & root_exudates(ic),           & ! in
-            & green_cpools_ag(:),          & ! inout
-            & woody_cpools_ag(:),          & ! inout
-            & soil_respiration(ic),        & ! out
-            & c_decomp_humus_1_sum(ic),    & ! out
-            & c_decomp_humus_2_sum(ic),    & ! out
-            & c_into_humus_1_sum(ic),      & ! out
-            & c_into_humus_2_sum(ic),      & ! out
-            ! Optional parameter needed for multi-layer yasso
-            & t_soil_sl             = t_soil_sl_15d_yDay_climbuf(ic,:),       & ! in
-            & wtr_soil_rel_sl       = wtr_soil_rel_sl_15d_yDay_climbuf(ic,:), & ! in
-            & n_thaw_cycle          = n_thaw_cycle_prev(ic),                  & ! in
-            & soil_depth            = soil_depth(ic),                         & ! in
-            & soil_depth_sl         = soil_depth_sl(ic,:),                    & ! in
-            & max_depth             = soil_depth_thaw(ic),                    & ! in
-            & max_depth_sl          = max_layer_sl(ic,:),                     & ! in
-            & layer_depth           = layer_depth(:),                         & ! in
-            & layer_thick           = layer_thick(:),                         & ! in
-            & thaw_depth            = thaw_depth(ic),                         & ! in
-            & permafrost_period_sl  = permafrost_period_sl_climbuf(ic,:),     & ! in
-            & green_cpools_bg_sl    = green_cpools_bg_sl(:,:),                & ! inout
-            & green_cpools_humus_sl = c_humus_1_sl(ic,:),                     & ! inout
-            & woody_cpools_bg_sl    = woody_cpools_bg_sl(:,:),                & ! inout
-            & woody_cpools_humus_sl = c_humus_2_sl(ic,:)                      & ! inout
-            & )
-        ELSE
-          ! Use single layer below ground pools
-          green_cpools_bg(Y_ACID)       = c_acid_bg1(ic)
-          green_cpools_bg(Y_WATER)      = c_water_bg1(ic)
-          green_cpools_bg(Y_ETHANOL)    = c_ethanol_bg1(ic)
-          green_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg1(ic)
-          woody_cpools_bg(Y_ACID)       = c_acid_bg2(ic)
-          woody_cpools_bg(Y_WATER)      = c_water_bg2(ic)
-          woody_cpools_bg(Y_ETHANOL)    = c_ethanol_bg2(ic)
-          woody_cpools_bg(Y_NONSOLUBLE) = c_nonsoluble_bg2(ic)
-          ! Call the soil carbon calculation routine for the single layer yasso
-          CALL calc_soil_c(                &
-            & vertical_yasso,              & ! in
-            & nsoil,                       & ! in
-            & delta_time_C,                & ! in
-            & LeafLit_coef,                & ! in
-            & WoodLit_coef,                & ! in
-            & MiscPar,                     & ! in
-            & temp_15d_yDay_climbuf(ic),   & ! in
-            & precip_15d_yDay_climbuf(ic), & ! in
-            & cflux_c_wood_2_litter(ic),   & ! in
-            & cflux_c_green_2_litter(ic),  & ! in
-            & root_exudates(ic),           & ! in
-            & green_cpools_ag(:),          & ! inout
-            & woody_cpools_ag(:),          & ! inout
-            & soil_respiration(ic),        & ! out
-            & c_decomp_humus_1_sum(ic),    & ! out
-            & c_decomp_humus_2_sum(ic),    & ! out
-            & c_into_humus_1_sum(ic),      & ! out
-            & c_into_humus_2_sum(ic),      & ! out
-            ! Optional parameter needed for single layer yasso
-            & green_cpools_bg      = green_cpools_bg(:), & ! inout
-            & green_cpools_humus   = c_humus_1(ic),      & ! inout
-            & woody_cpools_bg      = woody_cpools_bg(:), & ! inout
-            & woody_cpools_humus   = c_humus_2(ic)       & ! inout
-            & )
-        END IF
-        ! Update the above ground carbon AWEN pools after the soil carbon calculation
-        c_acid_ag1(ic)       = green_cpools_ag(Y_ACID)
-        c_water_ag1(ic)      = green_cpools_ag(Y_WATER)
-        c_ethanol_ag1(ic)    = green_cpools_ag(Y_ETHANOL)
-        c_nonsoluble_ag1(ic) = green_cpools_ag(Y_NONSOLUBLE)
-        c_acid_ag2(ic)       = woody_cpools_ag(Y_ACID)
-        c_water_ag2(ic)      = woody_cpools_ag(Y_WATER)
-        c_ethanol_ag2(ic)    = woody_cpools_ag(Y_ETHANOL)
-        c_nonsoluble_ag2(ic) = woody_cpools_ag(Y_NONSOLUBLE)
-
-        ! Update the below ground carbon AWEN pools after the soil carbon calculation
-        IF (vertical_yasso) THEN
-          c_acid_bg1_sl(ic,:)       = green_cpools_bg_sl(:,Y_ACID)
-          c_water_bg1_sl(ic,:)      = green_cpools_bg_sl(:,Y_WATER)
-          c_ethanol_bg1_sl(ic,:)    = green_cpools_bg_sl(:,Y_ETHANOL)
-          c_nonsoluble_bg1_sl(ic,:) = green_cpools_bg_sl(:,Y_NONSOLUBLE)
-          c_acid_bg2_sl(ic,:)       = woody_cpools_bg_sl(:,Y_ACID)
-          c_water_bg2_sl(ic,:)      = woody_cpools_bg_sl(:,Y_WATER)
-          c_ethanol_bg2_sl(ic,:)    = woody_cpools_bg_sl(:,Y_ETHANOL)
-          c_nonsoluble_bg2_sl(ic,:) = woody_cpools_bg_sl(:,Y_NONSOLUBLE)
-          ! Provide all variables as sum, too, not just on levels
-          c_acid_bg1(ic)       = SUM(c_acid_bg1_sl(ic,:))
-          c_water_bg1(ic)      = SUM(c_water_bg1_sl(ic,:))
-          c_ethanol_bg1(ic)    = SUM(c_ethanol_bg1_sl(ic,:))
-          c_nonsoluble_bg1(ic) = SUM(c_nonsoluble_bg1_sl(ic,:))
-          c_acid_bg2(ic)       = SUM(c_acid_bg2_sl(ic,:))
-          c_water_bg2(ic)      = SUM(c_water_bg2_sl(ic,:))
-          c_ethanol_bg2(ic)    = SUM(c_ethanol_bg2_sl(ic,:))
-          c_nonsoluble_bg2(ic) = SUM(c_nonsoluble_bg2_sl(ic,:))
-          c_humus_1(ic)        = SUM(c_humus_1_sl(ic,:))
-          c_humus_2(ic)        = SUM(c_humus_2_sl(ic,:))
-
-        ELSE
-          c_acid_bg1(ic)       = green_cpools_bg(Y_ACID)
-          c_water_bg1(ic)      = green_cpools_bg(Y_WATER)
-          c_ethanol_bg1(ic)    = green_cpools_bg(Y_ETHANOL)
-          c_nonsoluble_bg1(ic) = green_cpools_bg(Y_NONSOLUBLE)
-          c_acid_bg2(ic)       = woody_cpools_bg(Y_ACID)
-          c_water_bg2(ic)      = woody_cpools_bg(Y_WATER)
-          c_ethanol_bg2(ic)    = woody_cpools_bg(Y_ETHANOL)
-          c_nonsoluble_bg2(ic) = woody_cpools_bg(Y_NONSOLUBLE)
-        END IF
-
-      END DO
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+        ! Use multi-layer yasso scheme
+        CALL calc_soil_c(                                                                              &
+          ! Input (parameter, soil properties, climate forcing, carbon fluxes)
+          & nc, nsoil, delta_time_C, LeafLit_coef(:), WoodLit_coef(:), MiscPar(:),                     &
+          & soil_depth(:), soil_depth_sl(:,:), soil_depth_thaw(:), max_layer_sl(:,:), layer_depth(:),  &
+          & layer_thick(:), thaw_depth(:), permafrost_period_sl_climbuf(:,:),                          &
+          & temp_15d_yDay_climbuf(:), precip_15d_yDay_climbuf(:), t_soil_sl_15d_yDay_climbuf(:,:),     &
+          & wtr_soil_rel_sl_15d_yDay_climbuf(:,:), n_thaw_cycle_prev(:),                               &
+          & cflux_c_wood_2_litter(:), cflux_c_green_2_litter(:), root_exudates(:),                     &
+          ! Inout (Carbon pools)
+          & c_acid_ag1(:),      c_water_ag1(:),      c_ethanol_ag1(:),      c_nonsoluble_ag1(:),       &
+          & c_acid_ag2(:),      c_water_ag2(:),      c_ethanol_ag2(:),      c_nonsoluble_ag2(:),       &
+          & c_acid_bg1(:),      c_water_bg1(:),      c_ethanol_bg1(:),      c_nonsoluble_bg1(:),       &
+          & c_acid_bg2(:),      c_water_bg2(:),      c_ethanol_bg2(:),      c_nonsoluble_bg2(:),       &
+          & c_acid_bg1_sl(:,:), c_water_bg1_sl(:,:), c_ethanol_bg1_sl(:,:), c_nonsoluble_bg1_sl(:,:),  &
+          & c_acid_bg2_sl(:,:), c_water_bg2_sl(:,:), c_ethanol_bg2_sl(:,:), c_nonsoluble_bg2_sl(:,:),  &
+          & c_humus_1(:),       c_humus_2(:),        c_humus_1_sl(:,:),     c_humus_2_sl(:,:),         &
+          ! Output (Soil respiration and humus fluxes)
+          & c_into_humus_1_sum(:), c_decomp_humus_1_sum(:),                                            &
+          & c_into_humus_2_sum(:), c_decomp_humus_2_sum(:), soil_respiration(:)                        &
+          & )
+      ELSE
+        ! Use single-layer yasso scheme
+        CALL calc_soil_c(                                                          &
+          ! Input (Parameter, Climate forcing, Carbon fluxes)
+          & nc, nsoil, delta_time_C, LeafLit_coef(:), WoodLit_coef(:), MiscPar(:), &
+          & temp_15d_yDay_climbuf(:), precip_15d_yDay_climbuf(:),                  &
+          & cflux_c_wood_2_litter(:), cflux_c_green_2_litter(:), root_exudates(:), &
+          ! Inout (Carbon pools)
+          & c_acid_ag1(:), c_water_ag1(:), c_ethanol_ag1(:), c_nonsoluble_ag1(:),  &
+          & c_acid_ag2(:), c_water_ag2(:), c_ethanol_ag2(:), c_nonsoluble_ag2(:),  &
+          & c_acid_bg1(:), c_water_bg1(:), c_ethanol_bg1(:), c_nonsoluble_bg1(:),  &
+          & c_acid_bg2(:), c_water_bg2(:), c_ethanol_bg2(:), c_nonsoluble_bg2(:),  &
+          & c_humus_1(:),  c_humus_2(:),                                           &
+          ! Output (Soil respiration and humus fluxes)
+          & c_into_humus_1_sum(:), c_decomp_humus_1_sum(:),                        &
+          & c_into_humus_2_sum(:), c_decomp_humus_2_sum(:), soil_respiration(:)    &
+          & )
+      END IF
 
       ! Reset humus accumulation diagnostics for too small tiles
       tile_fract => tile%fract(ics:ice, iblk)
@@ -1014,7 +902,7 @@ CONTAINS
         & NPP_pot_yDayMean = NPP_pot_yDayMean(:),                                   &
         & GPP_yDayMean = GPP_yDayMean(:))
 
-      IF (vertical_yasso) THEN
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
         ! Recalc per tile variables on soil levels
         CALL recalc_per_tile_vars(tile, options,                                                      &
           & c_acid_bg1_sl = c_acid_bg1_sl(:,:), c_water_bg1_sl = c_water_bg1_sl(:,:),                 &
@@ -1037,7 +925,7 @@ CONTAINS
         & current_fluxes(:), cconservation_calcCpools(:))
 
       ! Update relative soil carbon content on soil layers (if not prescribed by map)
-      IF (vertical_yasso .AND. dsl4jsb_Config(HYDRO_)%l_organic &
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso .AND. dsl4jsb_Config(HYDRO_)%l_organic &
         & .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
         !$ACC LOOP SEQ
@@ -1107,9 +995,7 @@ CONTAINS
     END IF
 
     !$ACC END DATA
-    IF (vertical_yasso) THEN
-      DEALLOCATE(green_cpools_bg_sl)
-      DEALLOCATE(woody_cpools_bg_sl)
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       DEALLOCATE(layer_depth)
       DEALLOCATE(layer_thick)
       DEALLOCATE(soil_depth_thaw)

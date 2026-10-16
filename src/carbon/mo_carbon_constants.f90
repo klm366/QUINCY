@@ -26,9 +26,9 @@ MODULE mo_carbon_constants
     ENUMERATOR :: Y_ACID=1, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
   END ENUM
 
-  ! Yasso pool indicators for above and below ground carbon pools
+  ! Yasso pool indicators for above, below ground and vertically resolved below ground carbon pools
   ENUM, BIND(C)
-    ENUMERATOR :: ABOVE_GROUND=1, BELOW_GROUND
+    ENUMERATOR :: ABOVE_GROUND=1, BELOW_GROUND, BELOW_GROUND_SL
   END ENUM
 
   ! Misc parameters in interface

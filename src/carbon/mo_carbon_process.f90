@@ -19,13 +19,18 @@ MODULE mo_carbon_process
   USE mo_exception,        ONLY: finish
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround,    &
     & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS, ABOVE_GROUND, BELOW_GROUND, &
-    & molarMassCO2_kg
+    & BELOW_GROUND_SL, molarMassCO2_kg
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: calc_plant_c, calc_soil_c, relocate_carbon_fire, relocate_carbon_damage, &
     & get_per_tile, add_litter_to_yasso_pool, sum_up_carbon_layers
+
+  INTERFACE calc_soil_c
+    MODULE PROCEDURE calc_soil_c_single_layer
+    MODULE PROCEDURE calc_soil_c_multi_layer
+  END INTERFACE calc_soil_c
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 
@@ -690,27 +695,172 @@ CONTAINS
 
 
   !
+  !> Compute soil carbon dynamics for single layer below ground pools.
+  !>
+  !> Carbon fluxes from litter and root exudates are added to the respective carbon pools,
+  !> which are then decomposed into humus according to the single-layer Yasso model.
+  !
+  SUBROUTINE calc_soil_c_single_layer(                                &
+    & nc, nsoil, delta_time_C, LeafLit_coef, WoodLit_coef, MiscPar,   &
+    & t_air, precip,                                                  &
+    & Cflx_wood_2_litter, Cflx_green_2_litter, Cflx_2_root_exudates,  &
+    & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1,       &
+    & c_acid_ag2, c_water_ag2, c_ethanol_ag2, c_nonsoluble_ag2,       &
+    & c_acid_bg1, c_water_bg1, c_ethanol_bg1, c_nonsoluble_bg1,       &
+    & c_acid_bg2, c_water_bg2, c_ethanol_bg2, c_nonsoluble_bg2,       &
+    & c_humus_1,  c_humus_2,                                          &
+    & c_into_humus_1_sum, c_decomp_humus_1_sum,                       &
+    & c_into_humus_2_sum, c_decomp_humus_2_sum, Cflx_soil_respiration &
+    & )
+
+    USE mo_carbon_constants, ONLY: WOODLITSIZE, ROOT_DIST_BETA
+
+    INTEGER,  INTENT(in)    :: nc                       !< Number of grid cells []
+    INTEGER,  INTENT(in)    :: nsoil                    !< Number of soil layers in vertical yasso scheme []
+    REAL(lp), INTENT(in)    :: delta_time_C             !< Carbon time step [s]
+    !   Vegetation dependent coefficients to separate leaf litter into classes of chemical composition
+    REAL(lp), INTENT(in)    :: LeafLit_coef(:)          !< Leaf litter fraction going to specific pools
+    !   Vegetation dependent coefficients to separate wood litter into classes of chemical composition
+    REAL(lp), INTENT(in)    :: WoodLit_coef(:)          !< Woody litter fraction going to specific pools
+    REAL(lp), INTENT(in)    :: MiscPar(:)               !< miscellaneous parameters
+    ! Input meteorology for Yasso
+    REAL(lp), INTENT(in)    :: t_air(:)                 !< 15-day mean air temperature [K]
+    REAL(lp), INTENT(in)    :: precip(:)                !< 15-day mean precipitation [kg m-2 s-1]
+    ! Carbon inputs [mol m-2 s-1]:
+    REAL(lp), INTENT(in)    :: Cflx_wood_2_litter(:)    !< Carbon flux from woody litter to soil [mol(C) m-2 s-1]
+    REAL(lp), INTENT(in)    :: Cflx_green_2_litter(:)   !< Carbon flux from green litter to soil [mol(C) m-2 s-1]
+    REAL(lp), INTENT(in)    :: Cflx_2_root_exudates(:)  !< Carbon flux from root exudates to soil [mol(C) m-2 s-1]
+    ! Soil carbon pools [mol(C) m-2(canopy)]
+    REAL(lp), INTENT(inout) :: c_acid_ag1(:)         !< Above-ground acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag1(:)        !< Above-ground water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag1(:)      !< Above-ground ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag1(:)   !< Above-ground nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_ag2(:)         !< Above-ground acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag2(:)        !< Above-ground water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag2(:)      !< Above-ground ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag2(:)   !< Above-ground nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg1(:)         !< Below-ground acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg1(:)        !< Below-ground water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg1(:)      !< Below-ground ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1(:)   !< Below-ground nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg2(:)         !< Below-ground acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg2(:)        !< Below-ground water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg2(:)      !< Below-ground ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2(:)   !< Below-ground nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_1(:)          !< Below-ground humus carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_2(:)          !< Below-ground humus carbon pools of green woody [mol(C) m-2]
+
+    ! Decomposistion fluxes
+    REAL(lp), INTENT(inout) :: c_into_humus_1_sum(:)    !< Annual sum of carbon decomposed into humus (leaf) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_decomp_humus_1_sum(:)  !< Annual sum of carbon of humus (leaf) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_into_humus_2_sum(:)    !< Annual sum of carbon decomposed into humus (wood) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_decomp_humus_2_sum(:)  !< Annual sum of carbon of humus (wood) [mol(C) m-2 yr-1]
+
+    REAL(lp), INTENT(out)   :: Cflx_soil_respiration(:) !< Soil (=heterotrophic) respiration rate  [mol(C) m-2 s-1]
+                                                        ! Note: this is a loss, therefore negative!
+
+    ! local variables for Yasso
+    INTEGER  :: ic                           !< Grid cell index []
+    REAL(lp) :: LeafLitterSize               !< Leaf litter size (always 0 -- > size has no effect on decomposition)
+    REAL(lp) :: WoodLitterSize               !< Wood litter size (PFT dependent)
+    REAL(lp) :: Cflx_soil_respiration_pool   !< Soil respiration flux from carbon pool [mol(C) m-2 d-1]
+    REAL(lp) :: Cflx_humus_gain              !< Humus pool carbon gain (litter decomposition) [mol(C) m-2 d-1]
+    REAL(lp) :: Cflx_humus_loss              !< Humus pool carbon loss (humus decomposition) [mol(C) m-2 d-1]
+    REAL(lp) :: d_temp                       !< surface or soil temperature impact on litter decomposition []
+    REAL(lp) :: d_moist                      !< precipitation or soil moisture impact on litter decomposition []
+    REAL(lp) :: d_size_leaf                  !< green (leaf) litter size impact on litter decomposition []
+    REAL(lp) :: d_size_wood                  !< wood litter size impact on litter decomposition []
+    REAL(lp) :: d_depth                      !< soil deptj impact on litter decomposition []
+    REAL(lp) :: f_roots                      !< root distribution factor for at soil layer []
+
+
+    ! Set globally uniform values
+    LeafLitterSize = 0._lp
+    WoodLitterSize = MiscPar(WOODLITSIZE)
+    ! Litter size dependence of decomposition -- no effect if LitterSize = 0.0 (e.g. for leafs)
+    d_size_leaf    = get_modifier_size(LeafLitterSize)
+    d_size_wood    = get_modifier_size(WoodLitterSize)
+    ! As the single layer yasso does not account for depth dependence, these parameters are set to one
+    d_depth = 1._lp
+    f_roots = 1._lp
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss) &
+    !$ACC   PRIVATE(d_temp, d_moist)
+    DO ic = 1, nc
+      ! Initialize and set decomposition parameters
+      !-------------------------------------------
+      Cflx_soil_respiration(ic) = 0._lp
+      d_temp  = get_modifier_temp(t_air(ic))
+      d_moist = get_modifier_precip(precip(ic))
+
+      ! ============== COMPUTE SOIL RESPIRATION ===================================================================
+      !
+      ! Compute yasso with single layer below ground pools
+      ! Above ground green (leaf) litter
+      CALL yasso(ABOVE_GROUND, delta_time_C, d_temp, d_moist, d_size_leaf, d_depth, f_roots,              &
+        &        Cflx_green_2_litter(ic) * delta_time_C, LeafLit_coef(:), fract_green_aboveGround,        &
+        &        c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), c_nonsoluble_ag1(ic), c_humus_1(ic), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+      c_into_humus_1_sum(ic)    = c_into_humus_1_sum(ic)    + Cflx_humus_gain
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
+
+      ! Above ground woody litter
+      CALL yasso(ABOVE_GROUND, delta_time_C, d_temp, d_moist, d_size_wood, d_depth, f_roots,              &
+        &        Cflx_wood_2_litter(ic) * delta_time_C, WoodLit_coef(:), fract_wood_aboveGround,          &
+        &        c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2(ic), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+      c_into_humus_2_sum(ic)    = c_into_humus_2_sum(ic)    + Cflx_humus_gain
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
+
+      ! Below ground green (leaf) litter, root exudates are used only here
+      CALL yasso(BELOW_GROUND, delta_time_C, d_temp, d_moist, d_size_leaf, d_depth, f_roots,              &
+        &        Cflx_green_2_litter(ic) * delta_time_C, LeafLit_coef(:), fract_green_aboveGround,        &
+        &        c_acid_bg1(ic), c_water_bg1(ic), c_ethanol_bg1(ic), c_nonsoluble_bg1(ic), c_humus_1(ic), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss,                            &
+        &        Cflx_2_root_exudates(ic) * delta_time_C)
+      c_into_humus_1_sum(ic)    = c_into_humus_1_sum(ic)    + Cflx_humus_gain
+      c_decomp_humus_1_sum(ic)  = c_decomp_humus_1_sum(ic)  + Cflx_humus_loss
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
+
+      ! Below ground woody litter
+      CALL yasso(BELOW_GROUND, delta_time_C, d_temp, d_moist, d_size_wood, d_depth, f_roots,              &
+        &        Cflx_wood_2_litter(ic) * delta_time_C, WoodLit_coef(:), fract_wood_aboveGround,          &
+        &        c_acid_bg2(ic), c_water_bg2(ic), c_ethanol_bg2(ic), c_nonsoluble_bg2(ic), c_humus_2(ic), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+      c_into_humus_2_sum(ic)    = c_into_humus_2_sum(ic)    + Cflx_humus_gain
+      c_decomp_humus_2_sum(ic)  = c_decomp_humus_2_sum(ic)  + Cflx_humus_loss
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
+    END DO
+    !$ACC END PARALLEL LOOP
+
+  END SUBROUTINE calc_soil_c_single_layer
+  !
   !> Compute soil carbon dynamics.
   !>
   !> Carbon fluxes from litter and root exudates are added to the respective carbon pools,
   !> which are then decomposed into humus according to the Yasso model.
   !
-  SUBROUTINE calc_soil_c(vertical_yasso, nsoil, delta_time_C,                               &
-    & LeafLit_coef, WoodLit_coef, MiscPar, temp, precip,                                    &
-    & Cflx_wood_2_litter, Cflx_green_2_litter, Cflx_2_root_exudates,                        &
-    & green_cpools_ag, woody_cpools_ag, Cflx_soil_respiration,                              &
-    & c_decomp_humus_1_sum, c_decomp_humus_2_sum, c_into_humus_1_sum, c_into_humus_2_sum,   &
-    & t_soil_sl, wtr_soil_rel_sl, n_thaw_cycle, soil_depth, soil_depth_sl, max_depth,       &
-    & max_depth_sl, layer_depth, layer_thick, thaw_depth, permafrost_period_sl,             &
-    & green_cpools_bg,    green_cpools_humus,    woody_cpools_bg,    woody_cpools_humus,    &
-    & green_cpools_bg_sl, green_cpools_humus_sl, woody_cpools_bg_sl, woody_cpools_humus_sl  &
+  SUBROUTINE calc_soil_c_multi_layer( &
+    & nc, nsoil, delta_time_C, LeafLit_coef, WoodLit_coef, MiscPar,         &
+    & soil_depth, soil_depth_sl, max_depth, max_depth_sl,                   &
+    & layer_depth_sl, layer_thick, thaw_depth, permafrost_period_sl,           &
+    & t_air, precip, t_soil_sl, wtr_soil_rel_sl, n_thaw_cycle,              &
+    & Cflx_wood_2_litter, Cflx_green_2_litter, Cflx_2_root_exudates,        &
+    & c_acid_ag1,    c_water_ag1,    c_ethanol_ag1,    c_nonsoluble_ag1,    &
+    & c_acid_ag2,    c_water_ag2,    c_ethanol_ag2,    c_nonsoluble_ag2,    &
+    & c_acid_bg1,    c_water_bg1,    c_ethanol_bg1,    c_nonsoluble_bg1,    &
+    & c_acid_bg2,    c_water_bg2,    c_ethanol_bg2,    c_nonsoluble_bg2,    &
+    & c_acid_bg1_sl, c_water_bg1_sl, c_ethanol_bg1_sl, c_nonsoluble_bg1_sl, &
+    & c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl, &
+    & c_humus_1,     c_humus_2,      c_humus_1_sl,     c_humus_2_sl,        &
+    & c_into_humus_1_sum, c_decomp_humus_1_sum,                             &
+    & c_into_humus_2_sum, c_decomp_humus_2_sum, Cflx_soil_respiration       &
     & )
-
-    !$ACC ROUTINE SEQ
 
     USE mo_carbon_constants, ONLY: WOODLITSIZE, ROOT_DIST_BETA
 
-    LOGICAL,  INTENT(in)    :: vertical_yasso        !< Yasso scheme switch
+    INTEGER,  INTENT(in)    :: nc                    !< Number of grid cells []
     INTEGER,  INTENT(in)    :: nsoil                 !< Number of soil layers in vertical yasso scheme []
     REAL(lp), INTENT(in)    :: delta_time_C          !< Carbon time step [s]
     !   Vegetation dependent coefficients to separate leaf litter into classes of chemical composition
@@ -718,206 +868,235 @@ CONTAINS
     !   Vegetation dependent coefficients to separate wood litter into classes of chemical composition
     REAL(lp), INTENT(in)    :: WoodLit_coef(:)       !< Woody litter fraction going to specific pools
     REAL(lp), INTENT(in)    :: MiscPar(:)            !< miscellaneous parameters
-
-    ! Carbon inputs [mol m-2 s-1]:
-    REAL(lp), INTENT(inout) :: Cflx_wood_2_litter    !< Carbon flux from woody litter to soil [mol(C) m-2 s-1]
-    REAL(lp), INTENT(inout) :: Cflx_green_2_litter   !< Carbon flux from green litter to soil [mol(C) m-2 s-1]
-    REAL(lp), INTENT(inout) :: Cflx_2_root_exudates  !< Carbon flux from root exudates to soil [mol(C) m-2 s-1]
-
     ! Input meteorology for Yasso
-    REAL(lp), INTENT(in)    :: temp                  !< 15-day mean surface temperature [K]
-    REAL(lp), INTENT(in)    :: precip                !< 15-day mean precipitation [kg m-2 s-1]
-
+    REAL(lp), INTENT(in)    :: soil_depth(:)            !< Total soil depth until bedrock [m]
+    REAL(lp), INTENT(in)    :: soil_depth_sl(:,:)       !< Soil depth within each layer [m]
+    REAL(lp), INTENT(in)    :: max_depth(:)             !< maximum available depth [m], either soil or thaw
+    REAL(lp), INTENT(in)    :: max_depth_sl(:,:)        !< maximum available depth [m], either soil or thaw, per layer
+    REAL(lp), INTENT(in)    :: layer_depth_sl(:)        !< Depths of soil layer center [m]
+    REAL(lp), INTENT(in)    :: layer_thick(:)           !< Thickness of soil layer [m]
+    REAL(lp), INTENT(in)    :: thaw_depth(:)            !< thaw depth [m]
+    REAL(lp), INTENT(in)    :: permafrost_period_sl(:,:)  !< Length of consecutive frozen ground for each soil layer [yr]
+    REAL(lp), INTENT(in)    :: t_air(:)                 !< 15-day mean air temperature [K]
+    REAL(lp), INTENT(in)    :: precip(:)                !< 15-day mean precipitation [kg m-2 s-1]
+    REAL(lp), INTENT(in)    :: t_soil_sl(:,:)           !< soil layer temperatures [K]
+    REAL(lp), INTENT(in)    :: wtr_soil_rel_sl(:,:)     !< relative soil moisture []
+    REAL(lp), INTENT(in)    :: n_thaw_cycle(:)          !< number of freeze-thaw cycles in previous year
+    ! Carbon inputs [mol m-2 s-1]:
+    REAL(lp), INTENT(in)    :: Cflx_wood_2_litter(:)    !< Carbon flux from woody litter to soil [mol(C) m-2 s-1]
+    REAL(lp), INTENT(in)    :: Cflx_green_2_litter(:)   !< Carbon flux from green litter to soil [mol(C) m-2 s-1]
+    REAL(lp), INTENT(in)    :: Cflx_2_root_exudates(:)  !< Carbon flux from root exudates to soil [mol(C) m-2 s-1]
     ! Soil carbon pools [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout) :: green_cpools_ag(:)    !< Aboveground carbon pools of green litter [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout) :: woody_cpools_ag(:)    !< Aboveground carbon pools of woody litter [mol(C) m-2(canopy)]
-
+    REAL(lp), INTENT(inout) :: c_acid_ag1(:)          !< Above-ground acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag1(:)         !< Above-ground water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag1(:)       !< Above-ground ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag1(:)    !< Above-ground nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_ag2(:)          !< Above-ground acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag2(:)         !< Above-ground water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag2(:)       !< Above-ground ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag2(:)    !< Above-ground nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg1(:)          !< Below-ground acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg1(:)         !< Below-ground water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg1(:)       !< Below-ground ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1(:)    !< Below-ground nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg2(:)          !< Below-ground acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg2(:)         !< Below-ground water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg2(:)       !< Below-ground ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2(:)    !< Below-ground nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg1_sl(:,:)       !< Soil layer acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg1_sl(:,:)      !< Soil layer water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg1_sl(:,:)    !< Soil layer ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1_sl(:,:) !< Soil layer nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg2_sl(:,:)       !< Soil layer acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg2_sl(:,:)      !< Soil layer water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg2_sl(:,:)    !< Soil layer ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2_sl(:,:) !< Soil layer nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_1(:)           !< Below-ground humus carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_2(:)           !< Below-ground humus carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_1_sl(:,:)      !< Soil layer humus carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_2_sl(:,:)      !< Soil layer humus carbon pools of green woody [mol(C) m-2]
     ! Decomposistion fluxes
-    REAL(lp), INTENT(inout) :: c_decomp_humus_1_sum  !< Annual sum of carbon of humus (leaf) [mol(C) m-2 yr-1]
-    REAL(lp), INTENT(inout) :: c_decomp_humus_2_sum  !< Annual sum of carbon of humus (wood) [mol(C) m-2 yr-1]
-    REAL(lp), INTENT(inout) :: c_into_humus_1_sum    !< Annual sum of carbon decomposed into humus (leaf) [mol(C) m-2 yr-1]
-    REAL(lp), INTENT(inout) :: c_into_humus_2_sum    !< Annual sum of carbon decomposed into humus (wood) [mol(C) m-2 yr-1]
-
-    REAL(lp), INTENT(out)   :: Cflx_soil_respiration !< Soil (=heterotrophic) respiration rate  [mol(C) m-2 s-1]
-                                                     ! Note: this is a loss, therefore negative!
-
-    ! Optional arguments for either single or multilayer yasso
-    REAL(lp), INTENT(in),    OPTIONAL :: t_soil_sl(:)             !< soil layer temperatures [K]
-    REAL(lp), INTENT(in),    OPTIONAL :: wtr_soil_rel_sl(:)       !< relative soil moisture []
-    REAL(lp), INTENT(in),    OPTIONAL :: n_thaw_cycle             !< number of freeze-thaw cycles in previous year
-    REAL(lp), INTENT(in),    OPTIONAL :: soil_depth               !< Total soil depth until bedrock [m]
-    REAL(lp), INTENT(in),    OPTIONAL :: soil_depth_sl(:)         !< Soil depth within each layer [m]
-    REAL(lp), INTENT(in),    OPTIONAL :: max_depth                !< maximum available depth [m], either soil or thaw
-    REAL(lp), INTENT(in),    OPTIONAL :: max_depth_sl(:)          !< maximum available depth [m], either soil or thaw, per layer
-    REAL(lp), INTENT(in),    OPTIONAL :: layer_depth(:)           !< Depths of soil layer center [m]
-    REAL(lp), INTENT(in),    OPTIONAL :: layer_thick(:)           !< Thickness of soil layer [m]
-    REAL(lp), INTENT(in),    OPTIONAL :: thaw_depth               !< thaw depth [m]
-    REAL(lp), INTENT(in),    OPTIONAL :: permafrost_period_sl(:)  !< Length of consecutive frozen ground for each soil layer [yr]
-    REAL(lp), INTENT(inout), OPTIONAL :: green_cpools_bg(:)       !< Belowground carbon pools of green litter [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: green_cpools_humus       !< Carbon pool of humus (leaf) [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: woody_cpools_bg(:)       !< Belowground carbon pools of woody litter [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: woody_cpools_humus       !< Carbon pool of humus (wood) [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: green_cpools_bg_sl(:,:)  !< Belowground carbon pools of green litter [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: green_cpools_humus_sl(:) !< Carbon pool of humus (leaf) [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: woody_cpools_bg_sl(:,:)  !< Belowground carbon pools of woody litter [mol(C) m-2(canopy)]
-    REAL(lp), INTENT(inout), OPTIONAL :: woody_cpools_humus_sl(:) !< Carbon pool of humus (wood) [mol(C) m-2(canopy)]
+    REAL(lp), INTENT(inout) :: c_into_humus_1_sum(:)    !< Annual sum of carbon decomposed into humus (leaf) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_decomp_humus_1_sum(:)  !< Annual sum of carbon of humus (leaf) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_into_humus_2_sum(:)    !< Annual sum of carbon decomposed into humus (wood) [mol(C) m-2 yr-1]
+    REAL(lp), INTENT(inout) :: c_decomp_humus_2_sum(:)  !< Annual sum of carbon of humus (wood) [mol(C) m-2 yr-1]
+    ! Soil respiration flux
+    REAL(lp), INTENT(out)   :: Cflx_soil_respiration(:) !< Soil (=heterotrophic) respiration rate  [mol(C) m-2 s-1]
+                                                        ! Note: this is a loss, therefore negative!
 
     ! local variables for Yasso
-    INTEGER  :: is                  !< Soil layer index []
-    INTEGER  :: ip                  !< Pool type index []
-    INTEGER  :: npools              !< Maximum number of above and below ground AWEN pools []
-    REAL(lp) :: Weather(5)          !< Vector containing climate metrics for Yasso
-    REAL(lp) :: LeafLitterSize      !< Leaf litter size (always 0 -- > size has no effect on decomposition)
-    REAL(lp) :: WoodLitterSize      !< Wood litter size (PFT dependent)
-    REAL(lp) :: ZeroFlux            !< Flux that is zero for a specific pool (green,wood,above,below)
-    REAL(lp) :: root_dist_sl(nsoil) !< Root distribution factor for each soil layer []
-    REAL(lp) :: diff_coeff(nsoil)   !< Vertical carbon flux diffusion coefficient [m2 s-1]
-    REAL(lp) :: Cflx_soil_respiration_layer
-    REAL(lp) :: Cflx_into_humus_layer
-    REAL(lp) :: Cflx_decomp_humus_layer
+    INTEGER  :: ic                         !< Grid cell index []
+    INTEGER  :: is                         !< Soil layer index []
+    REAL(lp) :: root_dist_sl(nc,nsoil)     !< Root distribution factor for each soil layer []
+    REAL(lp) :: diff_coeff(nc,nsoil)       !< Vertical carbon flux diffusion coefficient [m2 s-1]
+    REAL(lp) :: LeafLitterSize             !< Leaf litter size (always 0 -- > size has no effect on decomposition)
+    REAL(lp) :: WoodLitterSize             !< Wood litter size (PFT dependent)
+    REAL(lp) :: Cflx_soil_respiration_pool !< Soil respiration flux from carbon pool [mol(C) m-2 d-1]
+    REAL(lp) :: Cflx_humus_gain            !< Humus pool carbon gain (litter decomposition) [mol(C) m-2 d-1]
+    REAL(lp) :: Cflx_humus_loss            !< Humus pool carbon loss (humus decomposition) [mol(C) m-2 d-1]
+    REAL(lp) :: d_temp                     !< surface or soil temperature impact on litter decomposition []
+    REAL(lp) :: d_moist                    !< precipitation or soil moisture impact on litter decomposition []
+    REAL(lp) :: d_size_leaf                !< green (leaf) litter size impact on litter decomposition []
+    REAL(lp) :: d_size_wood                !< wood litter size impact on litter decomposition []
+    REAL(lp) :: d_depth                    !< soil deptj impact on litter decomposition []
+    REAL(lp) :: f_roots                    !< root distribution factor for at soil layer []
 
-    ! Preparations
-    !-------------------------------------------
+    !$ACC DATA CREATE(root_dist_sl, diff_coeff)
 
-    Cflx_soil_respiration = 0._lp
-    Weather(:)            = 0._lp
-    LeafLitterSize        = 0._lp
-    WoodLitterSize        = MiscPar(WOODLITSIZE)
-    ZeroFlux              = 0._lp
+    ! Set globally uniform values
+    LeafLitterSize = 0._lp
+    WoodLitterSize = MiscPar(WOODLITSIZE)
+    ! Litter size dependence of decomposition -- no effect if LitterSize = 0.0 (e.g. for leafs)
+    d_size_leaf    = get_modifier_size(LeafLitterSize)
+    d_size_wood    = get_modifier_size(WoodLitterSize)
 
-    Weather(1)            = temp
-    Weather(2)            = precip
+    ! ============== COMPUTE SOIL RESPIRATION for above ground pools ============================================
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) &
+    !$ACC   PRIVATE(Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss) &
+    !$ACC   PRIVATE(d_temp, d_moist, d_depth, f_roots)
+    DO ic = 1, nc
+      ! Initialize and set decomposition parameters
+      !-------------------------------------------
+      Cflx_soil_respiration(ic) = 0._lp
+      d_temp  = get_modifier_temp(t_air(ic))
+      d_moist = get_modifier_precip(precip(ic))
+      ! Above ground pools do not account for depth dependence, these parameters are set to one
+      d_depth = 1._lp
+      f_roots = 1._lp
 
-    npools = SIZE(green_cpools_ag(:))
-
-    IF (vertical_yasso) THEN
-      root_dist_sl(:) = determine_root_dist(max_depth_sl, layer_depth, MiscPar(ROOT_DIST_BETA), &
-        &                                   t_soil_sl, permafrost_period_sl)
-    END IF
-
-    ! ============== COMPUTE SOIL RESPIRATION for single layer yasso ============================================
-    !
-    IF (.NOT. vertical_yasso) THEN
-      ! Compute yasso with single layer below ground pools
       ! Above ground green (leaf) litter
-      CALL yasso(vertical_yasso, ABOVE_GROUND, delta_time_C, Weather(:), Cflx_green_2_litter * delta_time_C,    &
-        &        LeafLit_coef(:), LeafLitterSize, fract_green_aboveGround,                      &
-        &        Cflx_2_root_exudates * delta_time_C, green_cpools_ag(:), green_cpools_humus,   &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_1_sum    = c_into_humus_1_sum    + Cflx_into_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
+      CALL yasso(ABOVE_GROUND, delta_time_C, d_temp, d_moist, d_size_leaf, d_depth, f_roots,                   &
+        &        Cflx_green_2_litter(ic) * delta_time_C, LeafLit_coef(:), fract_green_aboveGround,             &
+        &        c_acid_ag1(ic), c_water_ag1(ic), c_ethanol_ag1(ic), c_nonsoluble_ag1(ic), c_humus_1_sl(ic,1), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+      c_into_humus_1_sum(ic)    = c_into_humus_1_sum(ic)    + Cflx_humus_gain
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
 
       ! Above ground woody litter
-      CALL yasso(vertical_yasso, ABOVE_GROUND, delta_time_C, Weather(:), Cflx_wood_2_litter * delta_time_C,     &
-        &        WoodLit_coef(:), WoodLitterSize, fract_wood_aboveGround,                       &
-        &        ZeroFlux, woody_cpools_ag(:), woody_cpools_humus,                              &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_2_sum    = c_into_humus_2_sum    + Cflx_into_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
+      CALL yasso(ABOVE_GROUND, delta_time_C, d_temp, d_moist, d_size_wood, d_depth, f_roots,                   &
+        &        Cflx_wood_2_litter(ic) * delta_time_C, WoodLit_coef(:), fract_wood_aboveGround,               &
+        &        c_acid_ag2(ic), c_water_ag2(ic), c_ethanol_ag2(ic), c_nonsoluble_ag2(ic), c_humus_2_sl(ic,1), &
+        &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+      c_into_humus_2_sum(ic)    = c_into_humus_2_sum(ic)    + Cflx_humus_gain
+      Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
+    END DO
+    !$ACC END PARALLEL LOOP
 
-      ! Below ground green (leaf) litter
-      CALL yasso(vertical_yasso, BELOW_GROUND, delta_time_C, Weather(:), Cflx_green_2_litter * delta_time_C,    &
-        &        LeafLit_coef(:), LeafLitterSize, fract_green_aboveGround,                      &
-        &        Cflx_2_root_exudates * delta_time_C, green_cpools_bg(:), green_cpools_humus,   &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_1_sum    = c_into_humus_1_sum    + Cflx_into_humus_layer
-      c_decomp_humus_1_sum  = c_decomp_humus_1_sum  + Cflx_decomp_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
+    ! ============== COMPUTE SOIL RESPIRATION for below ground pools ============================================
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      root_dist_sl(ic,:) = determine_root_dist(max_depth_sl(ic,:), layer_depth_sl(:), MiscPar(ROOT_DIST_BETA), &
+        &                                   t_soil_sl(ic,:), permafrost_period_sl(ic,:))
+    END DO
+    !$ACC END PARALLEL LOOP
 
-      ! Below ground woody litter
-      CALL yasso(vertical_yasso, BELOW_GROUND, delta_time_C, Weather(:), Cflx_wood_2_litter * delta_time_C,     &
-        &        WoodLit_coef(:), WoodLitterSize, fract_wood_aboveGround,                       &
-        &        ZeroFlux, woody_cpools_bg(:), woody_cpools_humus,                              &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_2_sum    = c_into_humus_2_sum    + Cflx_into_humus_layer
-      c_decomp_humus_2_sum  = c_decomp_humus_2_sum  + Cflx_decomp_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
-
-    ! ============== COMPUTE SOIL RESPIRATION for multi-layer yasso =============================================
-    !
-    ELSE
-      ! Compute yasso with multiple soil layers for the below ground pools
-      ! Above ground green (leaf) litter
-      CALL yasso(vertical_yasso, ABOVE_GROUND, delta_time_C, Weather(:), Cflx_green_2_litter * delta_time_C,    &
-        &        LeafLit_coef(:), LeafLitterSize, fract_green_aboveGround,                      &
-        &        ZeroFlux, green_cpools_ag(:), green_cpools_humus_sl(1),                        &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_1_sum    = c_into_humus_1_sum    + Cflx_into_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
-
-      ! Above ground woody litter
-      CALL yasso(vertical_yasso, ABOVE_GROUND, delta_time_C, Weather(:), Cflx_wood_2_litter * delta_time_C,     &
-        &        WoodLit_coef(:), WoodLitterSize, fract_wood_aboveGround,                       &
-        &        ZeroFlux, woody_cpools_ag(:), woody_cpools_humus_sl(1),                        &
-        &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer)
-      c_into_humus_2_sum    = c_into_humus_2_sum    + Cflx_into_humus_layer
-      Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
-
-      DO is = 1, nsoil
-        ! Set level depending climate forcing
-        Weather(3) = t_soil_sl(is)
-        Weather(4) = wtr_soil_rel_sl(is)
-        Weather(5) = layer_depth(is)
-
-        ! Below ground green (leaf) litter
-        CALL yasso(vertical_yasso, BELOW_GROUND, delta_time_C, Weather(:), Cflx_green_2_litter * delta_time_C,               &
-          &        LeafLit_coef(:), LeafLitterSize, fract_green_aboveGround,                                 &
-          &        Cflx_2_root_exudates * delta_time_C, green_cpools_bg_sl(is,:), green_cpools_humus_sl(is), &
-          &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer,              &
-          &        root_dist_sl(is))
-        c_into_humus_1_sum    = c_into_humus_1_sum    + Cflx_into_humus_layer
-        c_decomp_humus_1_sum  = c_decomp_humus_1_sum  + Cflx_decomp_humus_layer
-        Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    !$ACC   PRIVATE(Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss) &
+    !$ACC   PRIVATE(d_temp, d_moist, d_depth, f_roots)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        ! Initialize and set decomposition parameters
+        !-------------------------------------------
+        d_temp  = get_modifier_temp(t_soil_sl(ic,is))
+        d_moist = get_modifier_water(wtr_soil_rel_sl(ic,is))
+        d_depth = get_modifier_depth(layer_depth_sl(is))
+        f_roots = root_dist_sl(ic,is)
+        ! Below ground green (leaf) litter, root exudates are used only here
+        CALL yasso(BELOW_GROUND_SL, delta_time_C, d_temp, d_moist, d_size_leaf, d_depth, f_roots,           &
+          &        Cflx_green_2_litter(ic) * delta_time_C, LeafLit_coef(:), fract_green_aboveGround,        &
+          &        c_acid_bg1_sl(ic,is), c_water_bg1_sl(ic,is), c_ethanol_bg1_sl(ic,is),                    &
+          &        c_nonsoluble_bg1_sl(ic,is), c_humus_1_sl(ic,is),                                         &
+          &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss,                            &
+          &        Cflx_2_root_exudates(ic) * delta_time_C)
+        c_into_humus_1_sum(ic)    = c_into_humus_1_sum(ic)    + Cflx_humus_gain
+        c_decomp_humus_1_sum(ic)  = c_decomp_humus_1_sum(ic)  + Cflx_humus_loss
+        Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
 
         ! Below ground woody litter
-        CALL yasso(vertical_yasso, BELOW_GROUND, delta_time_C, Weather(:), Cflx_wood_2_litter * delta_time_C,     &
-          &        WoodLit_coef(:), WoodLitterSize, fract_wood_aboveGround,                       &
-          &        ZeroFlux, woody_cpools_bg_sl(is,:), woody_cpools_humus_sl(is),                 &
-          &        Cflx_soil_respiration_layer, Cflx_into_humus_layer, Cflx_decomp_humus_layer,   &
-          &        root_dist_sl(is))
-        c_into_humus_2_sum    = c_into_humus_2_sum    + Cflx_into_humus_layer
-        c_decomp_humus_2_sum  = c_decomp_humus_2_sum  + Cflx_decomp_humus_layer
-        Cflx_soil_respiration = Cflx_soil_respiration + Cflx_soil_respiration_layer / delta_time_C
+        CALL yasso(BELOW_GROUND_SL, delta_time_C, d_temp, d_moist, d_size_wood, d_depth, f_roots,           &
+          &        Cflx_wood_2_litter(ic) * delta_time_C, WoodLit_coef(:), fract_wood_aboveGround,          &
+          &        c_acid_bg2_sl(ic,is), c_water_bg2_sl(ic,is), c_ethanol_bg2_sl(ic,is),                    &
+          &        c_nonsoluble_bg2_sl(ic,is), c_humus_2_sl(ic,is),                                         &
+          &        Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss)
+        c_into_humus_2_sum(ic)    = c_into_humus_2_sum(ic)    + Cflx_humus_gain
+        c_decomp_humus_2_sum(ic)  = c_decomp_humus_2_sum(ic)  + Cflx_humus_loss
+        Cflx_soil_respiration(ic) = Cflx_soil_respiration(ic) + Cflx_soil_respiration_pool / delta_time_C
       END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
-      ! ============== VERTICAL MIXING OF CARBON POOLS ==========================================================
-      !
-      CALL move_ag_2_bg(nsoil, max_depth, layer_thick, permafrost_period_sl,  &
-        &               green_cpools_ag(:), woody_cpools_ag(:),               &
-        &               green_cpools_bg_sl(:,:), woody_cpools_bg_sl(:,:),     &
-        &               green_cpools_humus_sl(:), woody_cpools_humus_sl(:))
+    ! ============== VERTICAL MIXING OF CARBON POOLS ==========================================================
+    !
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+    DO ic = 1, nc
+      ! Move carbon downwards that exceed the maximum possible carbon content of a layer
+      CALL move_ag_2_bg(nsoil, max_depth(ic), layer_thick(:), permafrost_period_sl(ic,:),               &
+        & c_acid_ag1(ic),      c_water_ag1(ic),      c_ethanol_ag1(ic),      c_nonsoluble_ag1(ic),      &
+        & c_acid_ag2(ic),      c_water_ag2(ic),      c_ethanol_ag2(ic),      c_nonsoluble_ag2(ic),      &
+        & c_acid_bg1_sl(ic,:), c_water_bg1_sl(ic,:), c_ethanol_bg1_sl(ic,:), c_nonsoluble_bg1_sl(ic,:), &
+        & c_acid_bg2_sl(ic,:), c_water_bg2_sl(ic,:), c_ethanol_bg2_sl(ic,:), c_nonsoluble_bg2_sl(ic,:), &
+        & c_humus_1_sl(ic,:),  c_humus_2_sl(ic,:))
+      ! Compute diffusivity for vertical carbon transport
+      CALL set_diffusivity(nsoil, soil_depth(ic), soil_depth_sl(ic,:), thaw_depth(ic), layer_depth_sl(:), &
+        & t_soil_sl(ic,:), wtr_soil_rel_sl(ic,:), n_thaw_cycle(ic), permafrost_period_sl(ic,:), diff_coeff(ic,:))
+      ! Compute vertical transport (cryoturbation and bioturbation) for each below ground carbon pool
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_acid_bg1_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_water_bg1_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_ethanol_bg1_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_nonsoluble_bg1_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_humus_1_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_acid_bg2_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_water_bg2_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_ethanol_bg2_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_nonsoluble_bg2_sl(ic,:))
+      CALL vertical_C_transport(max_depth_sl(ic,:), diff_coeff(ic,:), delta_time_C, layer_thick(:), &
+        & permafrost_period_sl(ic,:), c_humus_2_sl(ic,:))
+      ! Remove any C that might have ended up below the bedrock boundary
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_acid_bg1_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_water_bg1_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_ethanol_bg1_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_nonsoluble_bg1_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_humus_1_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_acid_bg2_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_water_bg2_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_ethanol_bg2_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_nonsoluble_bg2_sl(ic,:))
+      CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_humus_2_sl(ic,:))
+    END DO
+    !$ACC END PARALLEL LOOP
 
-      CALL set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
-        &                  wtr_soil_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
-      ! AWEN Pools
-      DO ip = 1, npools
-        CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, &
-          & green_cpools_bg_sl(:,ip))
-        CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, &
-          & woody_cpools_bg_sl(:,ip))
-      END DO
-      ! Humus Pools
-      CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, &
-        & green_cpools_humus_sl(:))
-      CALL vertical_C_transport(max_depth_sl, diff_coeff, delta_time_C, layer_thick, permafrost_period_sl, &
-        & woody_cpools_humus_sl(:))
+    ! Provide all variables as sum, too, not just on levels
+    CALL sum_up_carbon_layers(nc, nsoil, c_acid_bg1_sl(:,:)      , c_acid_bg1(:)       )
+    CALL sum_up_carbon_layers(nc, nsoil, c_water_bg1_sl(:,:)     , c_water_bg1(:)      )
+    CALL sum_up_carbon_layers(nc, nsoil, c_ethanol_bg1_sl(:,:)   , c_ethanol_bg1(:)    )
+    CALL sum_up_carbon_layers(nc, nsoil, c_nonsoluble_bg1_sl(:,:), c_nonsoluble_bg1(:) )
+    CALL sum_up_carbon_layers(nc, nsoil, c_acid_bg2_sl(:,:)      , c_acid_bg2(:)       )
+    CALL sum_up_carbon_layers(nc, nsoil, c_water_bg2_sl(:,:)     , c_water_bg2(:)      )
+    CALL sum_up_carbon_layers(nc, nsoil, c_ethanol_bg2_sl(:,:)   , c_ethanol_bg2(:)    )
+    CALL sum_up_carbon_layers(nc, nsoil, c_nonsoluble_bg2_sl(:,:), c_nonsoluble_bg2(:) )
+    CALL sum_up_carbon_layers(nc, nsoil, c_humus_1_sl(:,:)       , c_humus_1(:)        )
+    CALL sum_up_carbon_layers(nc, nsoil, c_humus_2_sl(:,:)       , c_humus_2(:)        )
 
-      ! remove any C that might be below bedrock boundary
-      DO ip = 1, npools
-        CALL remove_C_below_bedrock(soil_depth, layer_thick, green_cpools_bg_sl(:,ip))
-        CALL remove_C_below_bedrock(soil_depth, layer_thick, woody_cpools_bg_sl(:,ip))
-      END DO
-    END IF
-
-  END SUBROUTINE calc_soil_c
+  END SUBROUTINE calc_soil_c_multi_layer
 
 
-  SUBROUTINE yasso (vertical_yasso, yasso_case, delta_time_C, Weather, c_2_litter,       &
-    &               Lit_coef, LitterSize, fract_aboveground, c_2_rootExudates,           &
-    &               cpools_awen, c_humus,                                                &
-    &               Cflx_soil_respiration, Cflx_into_humus, Cflx_decomp_humus,           &
-    &               root_dist                                                            &
-    &               )
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE yasso (yasso_case, delta_time_C, d_temp, d_moist, d_size, d_depth, f_roots, &
+    &               c_2_litter, Lit_coef, fract_aboveground,                             &
+    &               c_acid, c_water, c_ethanol, c_nonsoluble, c_humus,                   &
+    &               Cflx_soil_respiration, Cflx_humus_gain, Cflx_humus_loss,             &
+    &               c_2_rootExudates)
     !$ACC ROUTINE SEQ
 
     !! DSG: 11.03.2013
@@ -958,32 +1137,28 @@ CONTAINS
 
     IMPLICIT NONE
 
-    LOGICAL,  INTENT(in)  :: vertical_yasso           !< T: use vertical yasso scheme
-    INTEGER,  INTENT(in)  :: yasso_case               !< Yasso case: ABOVE_GROUND or BELOW_GROUND
-    REAL(lp), INTENT(in)  :: delta_time_C             !< Carbon time step [s]
-    REAL(lp), INTENT(in)  :: Weather(:)               !< climatic drivers: air temperature and precipitation, 15-d means
-    REAL(lp), INTENT(in)  :: c_2_litter               !< fresh litter inputs  (above and belowground) [mol(C) m-2 d-1]
-    REAL(lp), INTENT(in)  :: Lit_coef(5)              !< fractions to seperate incoming litter to the yasso pool    [ ]
-    REAL(lp), INTENT(in)  :: LitterSize               !< Size of leaf or woody litter
-    REAL(lp), INTENT(in)  :: fract_aboveground        !< parameter to seperate litter influx into above- and belowground parts [ ]
-    REAL(lp), INTENT(in)  :: c_2_rootExudates         !< root exudates flux [mol(C) m-2 d-1]
+    INTEGER,  INTENT(in)  :: yasso_case                !< Yasso case: ABOVE_GROUND or BELOW_GROUND
+    REAL(lp), INTENT(in)  :: delta_time_C              !< Carbon time step [s]
+    REAL(lp), INTENT(in)  :: d_temp                    !< Surface or soil temperature impact on litter decomposition []
+    REAL(lp), INTENT(in)  :: d_moist                   !< Precipitation or soil moisture impact on litter decomposition []
+    REAL(lp), INTENT(in)  :: d_size                    !< Litter size impact on litter decomposition []
+    REAL(lp), INTENT(in)  :: d_depth                   !< Soil depth impact on litter decomposition []
+    REAL(lp), INTENT(in)  :: f_roots                   !< Root distribution factor for at soil layer []
+    REAL(lp), INTENT(in)  :: c_2_litter                !< Fresh litter inputs  (above and belowground) [mol(C) m-2 d-1]
+    REAL(lp), INTENT(in)  :: Lit_coef(:)               !< Fractions to seperate incoming litter to the yasso pool []
+    REAL(lp), INTENT(in)  :: fract_aboveground         !< Parameter to seperate litter influx into above- and belowground parts []
 
-    REAL(lp), INTENT(inout) :: cpools_awen(:)         !< Above ground carbon pools [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: c_humus                !< Humus pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid                  !< Acid soluble carbon pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water                 !< Water soluble carbon pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol               !< Ethanol soluble carbon pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble            !< Nonsoluble carbon pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus                 !< Humus carbon pool [mol(C) m-2]
 
-    REAL(lp), INTENT(out)   :: Cflx_soil_respiration  !< Soil respiration flux [mol(C) m-2 d-1]
-    REAL(lp), INTENT(out)   :: Cflx_into_humus        !< Carbon flux into humus pool [mol(C) m-2 d-1]
-    REAL(lp), INTENT(out)   :: Cflx_decomp_humus      !< Carbon flux from humus pool [mol(C) m-2 d-1]
+    REAL(lp), INTENT(out)   :: Cflx_soil_respiration   !< Soil respiration flux [mol(C) m-2 d-1]
+    REAL(lp), INTENT(out)   :: Cflx_humus_gain         !< Carbon flux into humus pool [mol(C) m-2 d-1]
+    REAL(lp), INTENT(out)   :: Cflx_humus_loss         !< Carbon flux from humus pool [mol(C) m-2 d-1]
 
-    REAL(lp), OPTIONAL, INTENT(in) :: root_dist       ! Root distribution factor for a certain soil layer [ ]
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':yasso'
-
-    ! Yasso pools [mol(C) m-2]
-    REAL(lp)   :: c_acid
-    REAL(lp)   :: c_water
-    REAL(lp)   :: c_ethanol
-    REAL(lp)   :: c_nonsoluble
+    REAL(lp), INTENT(in), OPTIONAL :: c_2_rootExudates !< root exudates flux (below ground leaf litter only) [mol(C) m-2 d-1]
 
     ! Carbon loss and gain fluxes [mol(C) m-2 yr-1]
     REAL(lp)   :: Cflx_yr_from_acid                 !< Loss flux of acid soluble pool
@@ -1014,20 +1189,11 @@ CONTAINS
     REAL(lp)   :: d_humus
 
     ! Climate dependencies
-    REAL(lp)   :: d_temp                  !< term which accounts for the surface or soil temperature influence on litter decomposition
-    REAL(lp)   :: d_moist                 !< term which accounts for the precipitation or soil moisture influence on litter decomposition
-    REAL(lp)   :: d_size                  !< term which accounts for the litter size influence on litter decomposition
     REAL(lp)   :: d_pool                  !< term which accounds for the pool type (above,below) for humus decomposition
-    REAL(lp)   :: d_depth                 !< term which accounts for the soil water influence on litter decomposition
 
     ! Decomposition rate for N litter green (needed for N cycle)
     REAL(lp)   :: d_litter_green          !< the rate with which the sum of AWEN pools decays
     REAL(lp)   :: Pseudo_litter_green     !< Sum of all AWEN pools
-
-    ! climatic drivers
-    REAL(lp)   :: precip                  !< runnning mean of precipitation      [m yr-1]
-    REAL(lp)   :: temp                    !< runnning mean of 2m air temperature [C]
-    REAL(lp)   :: f_roots                 !< root distribution factor for a certain soil layer
 
     ! time stepping: yasso is parameterized based on annual time
     ! steps, thus the fluxes have to be scaled up to annual rates.
@@ -1036,31 +1202,11 @@ CONTAINS
     ts_per_year  = REAL(sec_per_year, lp) / delta_time_C
     years_per_ts = 1.0_lp / ts_per_year
 
-
-    ! Checks:
-    IF (yasso_case /= ABOVE_GROUND .AND. yasso_case /= BELOW_GROUND) THEN
-      CALL finish(routine, 'ERROR: yasso_case must be either ABOVE_GROUND or BELOW_GROUND')
-    END IF
-
-    IF (PRESENT(root_dist)) THEN
-      f_roots = root_dist
-    ELSE IF (yasso_case == BELOW_GROUND .AND. vertical_yasso) THEN
-      CALL finish(routine, 'Error: root distribution factor required by vertical yasso')
-    ELSE
-      f_roots = 1._lp
-    END IF
-
-    ! initialize yasso pools (AWEN + humus)
-    c_acid        = cpools_awen(Y_ACID)
-    c_water       = cpools_awen(Y_WATER)
-    c_ethanol     = cpools_awen(Y_ETHANOL)
-    c_nonsoluble  = cpools_awen(Y_NONSOLUBLE)
-
     ! Effects of above vs below ground pools
     IF (yasso_case == ABOVE_GROUND) THEN
       fract_litter = fract_aboveground
       d_pool       = 0._lp
-    ELSE IF (yasso_case == BELOW_GROUND) THEN
+    ELSE
       fract_litter = MAX(0._lp, 1.0_lp - fract_aboveground) * f_roots
       d_pool       = 1._lp
     END IF
@@ -1069,32 +1215,14 @@ CONTAINS
     !!!!!!! START CALCULATION OF SOIL CARBON !!!!!!!!!!!
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! 1. Calculate decomposition rates
-
-    !   Litter size dependence of decomposition -- no effect if LitterSize = 0.0 (e.g. for leafs)
-    d_size   = get_modifier_size(LitterSize)
-    !   Temperature dependence of decomposition
-    d_temp   = get_modifier_temp(Weather(1))
-    !   Precipitation dependence of decomposition
-    d_moist = get_modifier_precip(Weather(2))
-    IF (yasso_case == BELOW_GROUND .AND. vertical_yasso) THEN ! Multi-layer yasso
-      ! Compute further dependencies
-      d_temp  = get_modifier_temp(Weather(3))
-      d_moist = get_modifier_water(Weather(4))
-      d_depth = get_modifier_depth(Weather(5))
-    ELSE
-      d_depth = 1._lp
-    END IF
-
-
-    !   decomposition rates accounting for temperature, precipitation, litter size or pool type, and nutrient limitation
+    ! 1. Decomposition rates accounting for temperature, precipitation, litter size or pool type, and nutrient limitation
     d_acid       = ref_decomp_rate_acid       * d_temp * d_moist * d_size * d_depth
     d_water      = ref_decomp_rate_water      * d_temp * d_moist * d_size * d_depth
     d_ethanol    = ref_decomp_rate_ethanol    * d_temp * d_moist * d_size * d_depth
     d_nonsoluble = ref_decomp_rate_nonsoluble * d_temp * d_moist * d_size * d_depth
     d_humus      = ref_decomp_rate_humus      * d_temp * d_moist * d_pool * d_depth
 
-    ! 2a. Calculate carbon fluxes
+    ! 2. Calculate carbon fluxes
 
     !   annual loss fluxes (negative values):
     Cflx_yr_from_acid       = c_acid       * d_acid
@@ -1136,7 +1264,7 @@ CONTAINS
       & + Cflx_yr_from_ethanol    * (1.0_lp - E_2_A - E_2_W - E_2_N - AWE_2_H) &
       & + Cflx_yr_from_nonsoluble * (1.0_lp - N_2_A - N_2_W - N_2_E -   N_2_H)
 
-    ! 2b. update Yasso pools
+    ! 3. update Yasso pools
 
     !   redistribution among yasso pools
     c_acid        = MAX(0.0_lp,                                      &
@@ -1152,25 +1280,29 @@ CONTAINS
       &                 + (Cflx_yr_from_nonsoluble                   &
       &                 + Cflx_yr_2_nonsoluble) * years_per_ts)
     IF (yasso_case == ABOVE_GROUND) THEN
-      ! Above ground (no humus pool decomposition or root exudates)
-      c_water     = MAX(0.0_lp,                                      &
-        &               c_water                                      &
-        &               + (Cflx_yr_from_water                        &
-        &               + Cflx_yr_2_water) * years_per_ts)
+      ! Above ground only consideres decomposition into humus
       c_humus     = MAX(0.0_lp,                                      &
         &               c_humus                                      &
         &               + Cflx_yr_2_humus * years_per_ts)
-    ELSE IF (yasso_case == BELOW_GROUND) THEN
-      ! Below ground (with humus pool decomposition and root exudates)
-      c_water     = MAX(0.0_lp,                                      &
-        &               c_water                                      &
-        &               + (Cflx_yr_from_water                        &
-        &               + Cflx_yr_2_water) * years_per_ts            &
-        &               + c_2_rootExudates * f_roots)                  ! exudates are carbohydrates only
+    ELSE
+      ! Below ground also considers decomposition of humus
       c_humus     = MAX(0.0_lp,                                      &
         &               c_humus                                      &
         &               + (Cflx_yr_from_humus                        &
         &               + Cflx_yr_2_humus) * years_per_ts)
+    END IF
+    IF (PRESENT(c_2_rootExudates)) THEN
+      ! Root exudates are only considered carbonhydrates and only for below ground leaf litter
+      c_water   = MAX(0.0_lp,                                      &
+        &             c_water                                      &
+        &             + (Cflx_yr_from_water                        &
+        &             + Cflx_yr_2_water) * years_per_ts            &
+        &             + c_2_rootExudates * f_roots)
+    ELSE
+      c_water     = MAX(0.0_lp,                                      &
+        &               c_water                                      &
+        &               + (Cflx_yr_from_water                        &
+        &               + Cflx_yr_2_water) * years_per_ts)
     END IF
 
     ! 4.0 Distribute litter to the pools
@@ -1179,19 +1311,13 @@ CONTAINS
 
     Cflx_yr_litter_2_humus = Lit_coef(Y_HUMUS) * c_2_litter * ts_per_year
 
-    ! 4.1 Collect the updated pools into the output arrays
-    cpools_awen(Y_ACID)       = c_acid
-    cpools_awen(Y_WATER)      = c_water
-    cpools_awen(Y_ETHANOL)    = c_ethanol
-    cpools_awen(Y_NONSOLUBLE) = c_nonsoluble
-
     ! 4.2 Compute the total soil respiration flux (from AWEN and humus pools)
     Cflx_yr_respiration   = Cflx_yr_resp_from_litter + Cflx_yr_from_humus
     Cflx_soil_respiration = Cflx_yr_respiration * years_per_ts ! convert back to daily
 
     ! 4.3 Write diagnostics to determine equilibrium of humus pools
-    Cflx_into_humus   = (Cflx_yr_2_humus + Cflx_yr_litter_2_humus) * years_per_ts
-    Cflx_decomp_humus = -Cflx_yr_from_humus * years_per_ts
+    Cflx_humus_gain = (Cflx_yr_2_humus + Cflx_yr_litter_2_humus) * years_per_ts
+    Cflx_humus_loss = -Cflx_yr_from_humus * years_per_ts
 
   END SUBROUTINE yasso
 
@@ -1590,11 +1716,13 @@ CONTAINS
   !> active layer depth. In regions not affected by permafrost, the vertical transport is
   !> facilitated by bioturbation.
   !>
-  SUBROUTINE set_diffusivity(soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
+  SUBROUTINE set_diffusivity(nsoil, soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
     &                        wtr_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
+
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
+    INTEGER,  INTENT(in)    :: nsoil                 !< Number of soil layers in vertical yasso scheme []
     REAL(lp), INTENT(in)    :: soil_depth
     REAL(lp), INTENT(in)    :: soil_depth_sl(:)
     REAL(lp), INTENT(in)    :: thaw_depth
@@ -1604,13 +1732,10 @@ CONTAINS
     REAL(lp), INTENT(in)    :: n_thaw_cycle
     REAL(lp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
     REAL(lp), INTENT(out)   :: diff_coeff(:)           !< Vertical carbon mixing coefficient [m2 s-1]
-    INTEGER :: is, isp1, nsoil
+    INTEGER :: is, isp1
 
     REAL(lp), PARAMETER :: cryo_max = 4.7e-12_lp !< Maximum diffusivity for cryoturbation [m^2 s-1]
     REAL(lp), PARAMETER :: bio_max  = 4.7e-13_lp !< Maximum diffusivity for bioturbation [m^2 s-1]
-
-
-    nsoil = size(diff_coeff)
 
     diff_coeff(:) = 0._lp
 
@@ -1649,9 +1774,12 @@ CONTAINS
   !> below ground layer. Similarily, if the below ground litter pools exceed a certain threshold, the
   !> excess carbon is moved to the next below ground layer.
   !>
-    SUBROUTINE move_ag_2_bg(nsoil, max_depth, layer_thick, permafrost_period_sl,                          &
-      &                     green_cpools_ag, woody_cpools_ag, green_cpools_bg_sl, woody_cpools_bg_sl,     &
-      &                     c_humus_1_sl, c_humus_2_sl)
+    SUBROUTINE move_ag_2_bg(nsoil, max_depth, layer_thick, permafrost_period_sl, &
+      &    c_acid_ag1,    c_water_ag1,    c_ethanol_ag1,    c_nonsoluble_ag1,    &
+      &    c_acid_ag2,    c_water_ag2,    c_ethanol_ag2,    c_nonsoluble_ag2,    &
+      &    c_acid_bg1_sl, c_water_bg1_sl, c_ethanol_bg1_sl, c_nonsoluble_bg1_sl, &
+      &    c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl, &
+      &    c_humus_1_sl,  c_humus_2_sl)
 
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
       &                            permafrost_threshold
@@ -1660,64 +1788,40 @@ CONTAINS
     REAL(lp), INTENT(in)    :: max_depth               !< Soil depth until bedrock or permafrost [m]
     REAL(lp), INTENT(in)    :: layer_thick(:)          !< Thickness of soil layers [m]
     REAL(lp), INTENT(in)    :: permafrost_period_sl(:) !< Length of consecutive frozen ground for each soil layer [yr]
-    REAL(lp), INTENT(inout) :: green_cpools_ag(:)      !< Above ground green (leaf) AWEN carbon pools [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: woody_cpools_ag(:)      !< Above ground woody AWEN carbon pools [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: green_cpools_bg_sl(:,:) !< Below ground green (leaf) AWEN carbon pools [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: woody_cpools_bg_sl(:,:) !< Below ground woody AWEN carbon pools [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: c_humus_1_sl(:)         !< Humus pool from green litter pool [mol(C) m-2]
-    REAL(lp), INTENT(inout) :: c_humus_2_sl(:)         !< Humus pool from woody litter pool [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_ag1              !< Above-ground acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag1             !< Above-ground water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag1           !< Above-ground ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag1        !< Above-ground nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_ag2              !< Above-ground acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_ag2             !< Above-ground water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_ag2           !< Above-ground ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_ag2        !< Above-ground nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg1_sl(:)        !< Soil layer acid soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg1_sl(:)       !< Soil layer water soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg1_sl(:)     !< Soil layer ethanol soluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg1_sl(:)  !< Soil layer nonsoluble carbon pools of green litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_acid_bg2_sl(:)        !< Soil layer acid soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_water_bg2_sl(:)       !< Soil layer water soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_ethanol_bg2_sl(:)     !< Soil layer ethanol soluble carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_nonsoluble_bg2_sl(:)  !< Soil layer nonsoluble carbon pools of green woody [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_1_sl(:)         !< Soil layer humus carbon pools of woody litter [mol(C) m-2]
+    REAL(lp), INTENT(inout) :: c_humus_2_sl(:)         !< Soil layer humus carbon pools of green woody [mol(C) m-2]
 
     REAL(lp),  PARAMETER :: thresh_frac_org    = 1.25_lp  !< Threshold organic fraction above which C is being moved downwards
     REAL(lp),  PARAMETER :: ag_layer_depth     = 0.13_lp  !< Assumed depth of above ground litter layer [m]
-    REAL(lp) :: c_acid_ag1                  !< Above ground acid soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_acid_bg1_sl(nsoil)        !< Below ground acid soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_acid_ag2                  !< Above ground acid soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_acid_bg2_sl(nsoil)        !< Below ground acid soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_water_ag1                 !< Above ground water soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_water_bg1_sl(nsoil)       !< Below ground water soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_water_ag2                 !< Above ground water soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_water_bg2_sl(nsoil)       !< Below ground water soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_ethanol_ag1               !< Above ground ethanol soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_ethanol_bg1_sl(nsoil)     !< Below ground ethanol soluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_ethanol_ag2               !< Above ground ethanol soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_ethanol_bg2_sl(nsoil)     !< Below ground ethanol soluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_nonsoluble_ag1            !< Above ground nonsoluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_nonsoluble_bg1_sl(nsoil)  !< Below ground nonsoluble green litter pool [mol(C) m-2]
-    REAL(lp) :: c_nonsoluble_ag2            !< Above ground nonsoluble woody litter pool [mol(C) m-2]
-    REAL(lp) :: c_nonsoluble_bg2_sl(nsoil)  !< Below ground nonsoluble woody litter pool [mol(C) m-2]
     REAL(lp) :: cpool_tot
     REAL(lp) :: depth_upper
     REAL(lp) :: rfrac
     REAL(lp) :: tmp
 
     REAL(lp) :: max_C_ag
-    REAL(lp) :: max_C_bg(size(layer_thick))
+    REAL(lp) :: max_C_bg(nsoil)
     INTEGER  :: is, isp1
-
-
-    ! Above ground
-    c_acid_ag1             = green_cpools_ag(Y_ACID)
-    c_water_ag1            = green_cpools_ag(Y_WATER)
-    c_ethanol_ag1          = green_cpools_ag(Y_ETHANOL)
-    c_nonsoluble_ag1       = green_cpools_ag(Y_NONSOLUBLE)
-    c_acid_ag2             = woody_cpools_ag(Y_ACID)
-    c_water_ag2            = woody_cpools_ag(Y_WATER)
-    c_ethanol_ag2          = woody_cpools_ag(Y_ETHANOL)
-    c_nonsoluble_ag2       = woody_cpools_ag(Y_NONSOLUBLE)
-    ! ! Below ground
-    c_acid_bg1_sl(:)       = green_cpools_bg_sl(:,Y_ACID)
-    c_water_bg1_sl(:)      = green_cpools_bg_sl(:,Y_WATER)
-    c_ethanol_bg1_sl(:)    = green_cpools_bg_sl(:,Y_ETHANOL)
-    c_nonsoluble_bg1_sl(:) = green_cpools_bg_sl(:,Y_NONSOLUBLE)
-    c_acid_bg2_sl(:)       = woody_cpools_bg_sl(:,Y_ACID)
-    c_water_bg2_sl(:)      = woody_cpools_bg_sl(:,Y_WATER)
-    c_ethanol_bg2_sl(:)    = woody_cpools_bg_sl(:,Y_ETHANOL)
-    c_nonsoluble_bg2_sl(:) = woody_cpools_bg_sl(:,Y_NONSOLUBLE)
 
     ! determine max C amount per layer
     ! C [kgC] = height [m] x A [m2] x rho [kg/m3] x C_2_bio [kgC/kg]
     ! finally converted to mol
-    max_C_ag = ag_layer_depth * rho_org_ag * C_2_biomass_ratio / molarMassC_kg
+    max_C_ag    = ag_layer_depth * rho_org_ag * C_2_biomass_ratio / molarMassC_kg
     max_C_bg(:) = layer_thick(:) * rho_org_bg * C_2_biomass_ratio / molarMassC_kg
 
     ! Check ag soil
@@ -1811,26 +1915,6 @@ CONTAINS
       END IF
     END DO
 
-    ! Backmap to AWEN vectors
-    ! Above ground
-    green_cpools_ag(Y_ACID)            = c_acid_ag1
-    green_cpools_ag(Y_WATER)           = c_water_ag1
-    green_cpools_ag(Y_ETHANOL)         = c_ethanol_ag1
-    green_cpools_ag(Y_NONSOLUBLE)      = c_nonsoluble_ag1
-    woody_cpools_ag(Y_ACID)            = c_acid_ag2
-    woody_cpools_ag(Y_WATER)           = c_water_ag2
-    woody_cpools_ag(Y_ETHANOL)         = c_ethanol_ag2
-    woody_cpools_ag(Y_NONSOLUBLE)      = c_nonsoluble_ag2
-    ! ! Below ground
-    green_cpools_bg_sl(:,Y_ACID)       = c_acid_bg1_sl(:)
-    green_cpools_bg_sl(:,Y_WATER)      = c_water_bg1_sl(:)
-    green_cpools_bg_sl(:,Y_ETHANOL)    = c_ethanol_bg1_sl(:)
-    green_cpools_bg_sl(:,Y_NONSOLUBLE) = c_nonsoluble_bg1_sl(:)
-    woody_cpools_bg_sl(:,Y_ACID)       = c_acid_bg2_sl(:)
-    woody_cpools_bg_sl(:,Y_WATER)      = c_water_bg2_sl(:)
-    woody_cpools_bg_sl(:,Y_ETHANOL)    = c_ethanol_bg2_sl(:)
-    woody_cpools_bg_sl(:,Y_NONSOLUBLE) = c_nonsoluble_bg2_sl(:)
-
   END SUBROUTINE move_ag_2_bg
 
   ! ---------------------------------------------------------------------------------------------------------
@@ -1887,13 +1971,13 @@ CONTAINS
   !>
   SUBROUTINE sum_up_carbon_layers(nc, nsoil, cpool_sl, cpool_bg)
 
-    INTEGER,  INTENT(in)     :: nc                    !< Number of grid cells [ ]
-    INTEGER,  INTENT(in)     :: nsoil                 !< Number of soil layers [ ]
-    REAL(lp), INTENT(in)     :: cpool_sl(:,:)         !< Soil carbon on layers [mol(C) m-2]
-    REAL(lp), INTENT(out)    :: cpool_bg(:)        !< Below ground soil carbon pool [mol(C) m-2]
+    INTEGER,  INTENT(in)     :: nc            !< Number of grid cells [ ]
+    INTEGER,  INTENT(in)     :: nsoil         !< Number of soil layers [ ]
+    REAL(lp), INTENT(in)     :: cpool_sl(:,:) !< Soil carbon on layers [mol(C) m-2]
+    REAL(lp), INTENT(out)    :: cpool_bg(:)   !< Below ground soil carbon pool [mol(C) m-2]
 
-    INTEGER  :: ic                                    !< Grid cell index
-    INTEGER  :: is                                    !< Soil layer index
+    INTEGER  :: ic                            !< Grid cell index
+    INTEGER  :: is                            !< Soil layer index
 
     ! First set below ground carbon pool to zero
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1906,7 +1990,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
     DO ic = 1, nc
       DO is = 1, nsoil
-        cpool_bg(ic) = cpool_bg(ic) * cpool_sl(ic,is)
+        cpool_bg(ic) = cpool_bg(ic) + cpool_sl(ic,is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
