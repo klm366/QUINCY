@@ -45,7 +45,6 @@ MODULE mo_sb_config_class
     !> options
     !!
     CHARACTER(15)         :: sb_model_scheme
-    CHARACTER(15)         :: sb_init_scheme       !< deprecated compatibility member; initialization is always legacy
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: bnf_scheme                 !< select scheme to simulate asymbiotic BNF (biological nitrogen fixation)
                                                         !! identical with the symbiotic N fixation in VEG_
@@ -107,7 +106,6 @@ MODULE mo_sb_config_class
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< Layer-resolved QUINCY soil input file
-    CHARACTER(len=filename_max) :: sb_analytical_init_filename !< deprecated compatibility member; no longer read
     CHARACTER(len=filename_max) :: soilphysics_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: veglitterfall_forcing_filename    !< IQ (QUINCY) forcing data for soil model
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
@@ -428,13 +426,11 @@ CONTAINS
     config%bc_filename                     = bc_filename
     config%bc_quincy_soil_filename         = bc_quincy_soil_filename
     config%bc_quincy_soil_filename_3d      = bc_quincy_soil_filename_3d
-    config%sb_analytical_init_filename     = ''
     config%soilphysics_forcing_filename    = soilphysics_forcing_filename
     config%veglitterfall_forcing_filename  = veglitterfall_forcing_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
     config%skip_forcing_isotopes_after_init = skip_forcing_isotopes_after_init
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
-    config%sb_init_scheme                  = 'legacy'
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
     config%bnf_scheme                      = TRIM(sb_bnf_scheme)
     config%sb_adsorp_scheme                = TRIM(sb_adsorp_scheme)
@@ -511,23 +507,15 @@ CONTAINS
       END IF
     END IF
 
-    IF (flag_sb_model_spinup_accelerator .AND. &
-        & config%model_config%flag_analytical_ss_spinup_accelerator) THEN
-      IF (sb_model_spinup_accelerator_frequency /= &
-          & config%model_config%analytical_ss_spinup_accelerator_frequency .OR. &
-          & sb_model_spinup_accelerator_start_year /= &
-          & config%model_config%analytical_ss_spinup_accelerator_start_year .OR. &
-          & sb_model_spinup_accelerator_max_executions /= &
-          & config%model_config%analytical_ss_spinup_accelerator_max_executions .OR. &
-          & sb_model_spinup_accelerator_forcing_years /= &
-          & config%model_config%analytical_ss_spinup_accelerator_forcing_years) THEN
-        CALL finish(TRIM(routine), &
-          & 'Analytical and forward SB spin-up accelerators must use the same event schedule.')
-      END IF
+    IF (config%model_config%flag_analytical_ss_spinup_accelerator) THEN
+      IF (.NOT. flag_sb_model_spinup_accelerator) CALL finish(TRIM(routine), &
+        & 'Analytical carbon jumps require SB replay and use its shared event schedule.')
+      IF (TRIM(sb_model_scheme) == 'jsm' .AND. .NOT. flag_sb_jsm_available_pore_volume) &
+        & CALL finish(TRIM(routine), 'JSM analytical carbon jumps require available pore volume.')
     END IF
-
     IF (config%skip_forcing_isotopes_after_init) THEN
-      CALL message(TRIM(routine), 'skip_forcing_isotopes_after_init enabled: 13C/14C/15N forcing is only read on first cache load.')
+      CALL message(TRIM(routine), 'skip_forcing_isotopes_after_init enabled: ' // &
+        & '13C/14C/15N forcing is only read on first cache load.')
     END IF
 
     ! Set deposition scheme

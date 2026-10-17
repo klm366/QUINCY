@@ -236,10 +236,6 @@ CONTAINS
     nproma        =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
-    IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume .AND. &
-      & model%config%flag_analytical_ss_spinup_accelerator) THEN
-      CALL finish(routine, 'Available-pore JSM analytical jumps are not yet ported. Disable analytical jumps for Stage 1.')
-    END IF
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)

@@ -59,18 +59,12 @@ MODULE mo_jsb_time
   PUBLIC :: timestep_in_days, timesteps_per_day
   PUBLIC :: execute_quincy_sb_accelerator_this_timestep
   PUBLIC :: executed_quincy_sb_accelerator_previous_timestep
-  PUBLIC :: execute_quincy_sb_analytical_accelerator_this_timestep
-  PUBLIC :: executed_quincy_sb_analytical_accelerator_previous_timestep
   PUBLIC :: executed_sb_model_spinup_accelerator_this_timestep
 
   LOGICAL, SAVE :: execute_quincy_sb_accelerator_this_timestep = .FALSE.
     !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator should be executed this timestep
   LOGICAL, SAVE :: executed_quincy_sb_accelerator_previous_timestep = .FALSE.
     !< Boolean indicating if the QUINCY SB_ slow-pool spinup-accelerator has been executed in the previous timestep
-  LOGICAL, SAVE :: execute_quincy_sb_analytical_accelerator_this_timestep = .FALSE.
-    !< Boolean indicating if the analytical SB_ spinup-accelerator should be executed this timestep
-  LOGICAL, SAVE :: executed_quincy_sb_analytical_accelerator_previous_timestep = .FALSE.
-    !< Boolean indicating if the analytical SB_ spinup-accelerator ran in the previous timestep
   LOGICAL, SAVE :: executed_sb_model_spinup_accelerator_this_timestep = .FALSE.
     !< Boolean indicating if the forward soil-model spinup accelerator ran in the current timestep
 

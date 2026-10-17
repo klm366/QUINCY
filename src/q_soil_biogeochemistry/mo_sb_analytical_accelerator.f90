@@ -14,1738 +14,798 @@
 MODULE mo_sb_analytical_accelerator
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: finish, message
-  USE mo_jsb_math_constants, ONLY: eps4, eps8, one_day, one_year
+  USE mo_kind,               ONLY: lp
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: calc_analytical_ss_jsm, apply_analytical_ss_jsm_accelerator
+  ! Scientific targets used only by the shared replay event driver.
+  PUBLIC :: t_sb_local_coefficients, t_sb_local_target, solve_local_carbon_target
+  PUBLIC :: solve_analytical_maoc_partition, reconstruct_analytical_column
+  PUBLIC :: t_sb_analytical_inputs, build_sb_analytical_inputs, diagnose_local_carbon_targets
+  PUBLIC :: solve_simple_carbon_target
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_analytical_accelerator' !< module name used in log contexts
+  !> Local pool order is S,W,L,B,R,D,AD,AR; concentrations refer to TOTAL soil volume.
+  !> Coefficients are prescribed, not additional fitted parameters or nutrient-equilibrium closures.
+  TYPE :: t_sb_local_coefficients
+    REAL(lp) :: dtime = 0.0_lp !< Forward replay timestep [s]
+    REAL(lp) :: litter_input_carbon(3) = 0.0_lp !< Soluble, woody, polymeric litter inputs [mol C m-3 s-1]
+    REAL(lp) :: transport_dom_inflow = 0.0_lp, dom_export_rate = 0.0_lp !< Target-derived DOM influx [mol C m-3 s-1], export [s-1]
+    REAL(lp) :: litter_turnover_rate(2) = 0.0_lp !< Effective soluble and woody decay constants [s-1]
+    REAL(lp) :: carbon_transfer_fraction(3) = 0.0_lp !< Soluble-to-DOM, woody-to-poly, mortality-to-DOM fractions [-]
+    REAL(lp) :: microbial_decay_rate = 0.0_lp, minimum_microbial_carbon = 0.0_lp !< Mortality [s-1], floor [mol C m-3]
+    REAL(lp) :: microbial_cue = 0.0_lp, enzyme_frac_ap_layer = 0.0_lp !< Prescribed CUE and AP allocation [-]
+    REAL(lp) :: alpha_poly = 0.0_lp !< Historical allocation for input validation only; target solves its own [-]
+    REAL(lp) :: vmax_uptake_eff = 0.0_lp, km_uptake_eff = 0.0_lp !< Molar uptake capacity [s-1], HSC [mol C m-3]
+    REAL(lp) :: vmax_depoly_eff(2) = 0.0_lp, km_depoly_eff = 0.0_lp !< Poly/residue capacity [s-1], HSC [mol C m-3]
+    REAL(lp) :: enzyme_frac_total_local = 0.0_lp, persistent_enzyme_carbon = 0.0_lp !< Allocation [-], persistent C [mol C m-3]
+    REAL(lp) :: adsorption_rate(2) = 0.0_lp !< DOM/residue adsorption [m3 mol C-1 s-1]
+    REAL(lp) :: desorption_rate(2) = 0.0_lp !< Associated DOM/residue desorption [s-1]
+    REAL(lp) :: qmax_org_layer = 0.0_lp, volume_pore_total = 0.0_lp !< Chemical capacity [mol C m-3], fixed pore fraction [-]
+    REAL(lp) :: volume_per_carbon_maoc = 0.0_lp, volume_per_carbon_poc = 0.0_lp !< Solid volume per C concentration [m3 mol C-1]
+    LOGICAL :: l_surface_layer = .FALSE. !< Surface excess POC can remain above the mineral soil [-]
+  END TYPE t_sb_local_coefficients
+
+  !> A valid carbon result still requires column-wide organic element reconstruction before a jump.
+  TYPE :: t_sb_local_target
+    LOGICAL :: l_minimum_microbial_seed = .FALSE. !< Quasi-steady floor branch; microbial growth retained [-]
+    INTEGER :: status = 1 !< 0 conditional seed; 1 invalid; 2 no root; 3 limiter; 4 geometry; 5 residual [-]
+    CHARACTER(len=192) :: reason = 'Not evaluated' !< Rejection or conditional-success explanation [-]
+    REAL(lp) :: carbon(8) = 0.0_lp !< S,W,L,B,R,D,AD,AR candidate pools [mol C m-3]
+    REAL(lp) :: residual(8) = 0.0_lp !< Same-order local carbon balance residuals [mol C m-3 s-1]
+    REAL(lp) :: burial = 1.0_lp, maoc_volume = 0.0_lp, poc_volume = 0.0_lp !< Candidate geometry [-]
+    REAL(lp) :: poc_excess = 0.0_lp !< Solid POC volume outside fixed pores [-]
+    REAL(lp) :: transport(3) = 0.0_lp !< DOM influx, downward export, net lateral export [mol C m-3 s-1]
+    REAL(lp) :: uptake_step = 0.0_lp !< Unrestricted DOC uptake over one replay timestep [mol C m-3]
+    REAL(lp) :: microbial_mortality = 0._lp !< Candidate mortality flux, zero at biomass floor [mol C m-3 s-1]
+    REAL(lp) :: alpha_poly = 0.0_lp, alpha_residue = 0.0_lp !< Solved carbon allocation fractions [-]
+    REAL(lp) :: enzyme_depoly = 0.0_lp !< Total effective depolymerizing enzyme C [mol C m-3]
+    REAL(lp) :: enzyme_poly = 0.0_lp, enzyme_residue = 0.0_lp !< Effective substrate-specific enzyme C [mol C m-3]
+  END TYPE t_sb_local_target
+
+
+
+  !> Read-only representative inputs, rebuilt from replay forcing at each eligible event.
+  !> Mean products of modifiers are retained: product(mean(rt),mean(rm)) is NOT equivalent.
+  TYPE :: t_sb_analytical_inputs
+    LOGICAL :: ready = .FALSE. !< Complete and valid forcing available [-]
+    REAL(lp) :: timestep = 0.0_lp !< Replay timestep used to partition litter [s]
+    REAL(lp), ALLOCATABLE :: month_weight(:) !< Replay day-count weights, sum equals one [-]
+    REAL(lp), ALLOCATABLE :: litter_mean(:,:,:,:) !< pool/element/cell/layer mean input [mol m-3 s-1]
+    REAL(lp), ALLOCATABLE :: rate_product_mean(:,:,:) !< depoly/uptake/sorption/desorption/HSC/SSM rt*rm [-]
+    REAL(lp), ALLOCATABLE :: cue(:,:), alpha_poly(:,:), alpha_ap(:,:) !< Coupled-window means [-]
+    REAL(lp), ALLOCATABLE :: water_rate_mean(:,:,:) !< Downward/lateral hydrological export rates [s-1]
+    REAL(lp), ALLOCATABLE :: litter_budget_residual(:,:) !< Partitioned minus source element rate [mol m-2 s-1]
+    REAL(lp), ALLOCATABLE :: depth(:,:), pore_volume(:,:) !< Thickness [m], fixed pore fraction [-]
+    REAL(lp), ALLOCATABLE :: qmax_org(:,:) !< Chemical sorption capacity [mol C m-3 soil]
+  END TYPE t_sb_analytical_inputs
 
 CONTAINS
 
-  ! ======================================================================================================= !
-  !> evaluate one JSM analytical steady-state layer for a prescribed microbial biomass
-  !> The helper projects the biogeochemical solution onto an admissible soil-volume state
-  !> without changing the forward model equations.
-  !>
-  SUBROUTINE calc_analytical_ss_jsm_layer_state( &
-    & l_surface_layer, &
-    & input_sol, &
-    & input_poly, &
-    & input_wood, &
-    & dom_carbon, &
-    & microbial_carbon, &
-    & l_microbial_dormant, &
-    & enzyme_frac_ap_layer, &
-    & enzyme_frac_total_scale, &
-    & particle_poly_c, &
-    & particle_residue_c, &
-    & particle_dom_assoc_c, &
-    & particle_residue_assoc_c, &
-    & km_depoly_eff, &
-    & vmax_poly_eff, &
-    & vmax_res_eff, &
-    & qmax_org_min_local, &
-    & bulk_dens_local, &
-    & rtm_sorb_eff, &
-    & rmm_sorb_eff, &
-    & rtm_desorb_eff, &
-    & rmm_desorb_eff, &
-    & alpha_poly, &
-    & alpha_residue, &
-    & polymeric_carbon, &
-    & residue_carbon, &
-    & dom_assoc_carbon, &
-    & residue_assoc_carbon, &
-    & qmax_org_layer, &
-    & bulk_carbon_layer)
+  !> Conditional five-pool SSM carbon target, without nutrient or solid-transport equilibrium.
+  !> S,W,L,F,R are concentrations per TOTAL soil volume. Fluxes are mol C m-3 s-1.
+  !> kF*F = fLF*(IS+IL+fWD*IW)/(1-fFR*fRF); kR*R=fFR*kF*F.
+  !> Woody splitting is supplied from the forward C:N-dependent rule at the retained composition.
+  !> Zero removal makes a zero-input pool nonunique: reject, never manufacture an empty target.
+  PURE SUBROUTINE solve_simple_carbon_target(input, rate, transfer, woody_soluble, dt, target)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: input(3) !< S,W,L input [mol C m-3 s-1]
+    REAL(lp), INTENT(in) :: rate(5) !< S,W,L,F,R first-order loss rates [s-1]
+    REAL(lp), INTENT(in) :: transfer(4) !< Woody-to-litter, litter-to-fast, fast-to-slow, slow-to-fast [-]
+    REAL(lp), INTENT(in) :: woody_soluble, dt !< Woody soluble fraction [-], timestep [s]
+    TYPE(t_sb_local_target), INTENT(out) :: target !< S,W,L,F,R target, unused JSM entries zero
+    REAL(lp) :: supply(5), loss(5), tolerance(5), respiration !< Carbon rates [mol C m-3 s-1]
+    target = t_sb_local_target()
+    target%reason = 'Rejected: invalid SSM forcing, rates or transfer fractions'
+    IF (.NOT. ALL(ieee_is_finite(input)) .OR. .NOT. ALL(ieee_is_finite(rate)) .OR. &
+      & .NOT. ALL(ieee_is_finite(transfer)) .OR. .NOT. ieee_is_finite(woody_soluble)) RETURN
+    IF (ANY(input < 0._lp) .OR. ANY(rate < 0._lp) .OR. ANY(transfer < 0._lp) .OR. &
+      & ANY(transfer > 1._lp) .OR. woody_soluble < 0._lp .OR. woody_soluble > 1._lp .OR. dt <= 0._lp) RETURN
+    target%reason = 'Rejected: SSM zero-removal or non-dissipative recycling has no unique target'
+    IF (ANY(rate == 0._lp) .OR. transfer(3)*transfer(4) >= 1._lp) RETURN
+    target%reason = 'Rejected: SSM target activates the forward timestep donor limit'
+    IF (ANY(rate*dt > 1._lp)) RETURN
+    supply(1) = input(1) + woody_soluble*transfer(1)*input(2)
+    supply(2) = input(2)
+    supply(3) = input(3) + (1._lp-woody_soluble)*transfer(1)*input(2)
+    supply(4) = transfer(2)*(supply(1)+supply(3))/(1._lp-transfer(3)*transfer(4))
+    supply(5) = transfer(3)*supply(4)
+    WHERE (rate < 1._lp)
+      tolerance = HUGE(1._lp)*rate
+    ELSEWHERE
+      tolerance = HUGE(1._lp)
+    END WHERE
+    IF (ANY(supply > tolerance)) RETURN
+    target%carbon(1:5) = supply/rate
+    loss = rate*target%carbon(1:5)
+    target%residual(1:5) = [input(1)+woody_soluble*transfer(1)*loss(2)-loss(1), &
+      & input(2)-loss(2), input(3)+(1._lp-woody_soluble)*transfer(1)*loss(2)-loss(3), &
+      & transfer(2)*(loss(1)+loss(3))+transfer(4)*loss(5)-loss(4), transfer(3)*loss(4)-loss(5)]
+    tolerance = 1.e-18_lp+1.e-9_lp*MAX(supply,loss)
+    target%status = 5
+    target%reason = 'Rejected: SSM local or column carbon residual'
+    IF (ANY(ABS(target%residual(1:5)) > tolerance)) RETURN
+    respiration = (1._lp-transfer(1))*loss(2)+(1._lp-transfer(2))*(loss(1)+loss(3)) + &
+      & (1._lp-transfer(3))*loss(4)+(1._lp-transfer(4))*loss(5)
+    IF (ABS(SUM(input)-respiration) > 1.e-16_lp+1.e-9_lp*MAX(SUM(input),respiration)) RETURN
+    target%status = 0
+    target%reason = 'Accepted: conditional SSM carbon target; nutrient limitation and solid transport not solved'
+  END SUBROUTINE solve_simple_carbon_target
 
-    USE mo_q_sb_jsm_processes,      ONLY: calc_enzyme_allocation
-    USE mo_sb_constants
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_C
 
-    LOGICAL,  INTENT(in)  :: l_surface_layer             !< TRUE for the uppermost mineral soil layer
-    REAL(wp), INTENT(in)  :: input_sol                   !< soluble-litter C input rate [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: input_poly                  !< polymeric-litter C input rate [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: input_wood                  !< woody-litter C input rate [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: dom_carbon                  !< dissolved organic matter C density [mol C m-3]
-    REAL(wp), INTENT(in)  :: microbial_carbon            !< prescribed microbial biomass C density [mol C m-3]
-    LOGICAL,  INTENT(in)  :: l_microbial_dormant         !< TRUE when biomass is held at its dormant minimum
-    REAL(wp), INTENT(in)  :: enzyme_frac_ap_layer        !< phosphatase fraction of total enzyme investment [-]
-    REAL(wp), INTENT(in)  :: enzyme_frac_total_scale     !< physical-constraint multiplier of total enzyme fraction [-]
-    REAL(wp), INTENT(in)  :: particle_poly_c             !< net polymeric-litter transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: particle_residue_c          !< net residue transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: particle_dom_assoc_c        !< net mineral-associated DOM tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: particle_residue_assoc_c    !< net mineral-associated residue tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: km_depoly_eff               !< modified depolymerisation half-saturation [mol C m-3]
-    REAL(wp), INTENT(in)  :: vmax_poly_eff               !< modified polymeric-litter depolymerisation rate [s-1]
-    REAL(wp), INTENT(in)  :: vmax_res_eff                !< modified residue depolymerisation rate [s-1]
-    REAL(wp), INTENT(in)  :: qmax_org_min_local          !< texture-dependent sorption capacity [mol C kg-1]
-    REAL(wp), INTENT(in)  :: bulk_dens_local             !< mineral soil bulk density [kg m-3]
-    REAL(wp), INTENT(in)  :: rtm_sorb_eff                !< temperature modifier of sorption [-]
-    REAL(wp), INTENT(in)  :: rmm_sorb_eff                !< moisture modifier of sorption [-]
-    REAL(wp), INTENT(in)  :: rtm_desorb_eff              !< temperature modifier of desorption [-]
-    REAL(wp), INTENT(in)  :: rmm_desorb_eff              !< moisture modifier of desorption [-]
-    REAL(wp), INTENT(out) :: alpha_poly                  !< enzyme allocation fraction to polymeric litter [-]
-    REAL(wp), INTENT(out) :: alpha_residue               !< enzyme allocation fraction to residue [-]
-    REAL(wp), INTENT(out) :: polymeric_carbon            !< analytical polymeric-litter C density [mol C m-3]
-    REAL(wp), INTENT(out) :: residue_carbon              !< analytical microbial-residue C density [mol C m-3]
-    REAL(wp), INTENT(out) :: dom_assoc_carbon            !< analytical mineral-associated DOM C [mol C m-3]
-    REAL(wp), INTENT(out) :: residue_assoc_carbon        !< analytical mineral-associated residue C [mol C m-3]
-    REAL(wp), INTENT(out) :: qmax_org_layer              !< available organic-matter sorption capacity [mol C m-3]
-    REAL(wp), INTENT(out) :: bulk_carbon_layer           !< C occupying the mineral-soil layer volume [mol C m-3]
+  !> Same integer day-to-month mapping in forward replay and analytical input preparation.
+  PURE INTEGER FUNCTION sb_replay_month(day, n_days, n_months) RESULT(month)
+    INTEGER, INTENT(in) :: day, n_days, n_months !< One-based day and bin counts [-]
+    month = MIN(n_months, (day - 1) * n_months / n_days + 1)
+  END FUNCTION sb_replay_month
 
-    REAL(wp) :: soluable_carbon              !< analytical soluble-litter C density [mol C m-3]
-    REAL(wp) :: woody_carbon                 !< analytical woody-litter C density [mol C m-3]
-    REAL(wp) :: enzyme_depoly                !< depolymerisation-enzyme C density [mol C m-3]
-    REAL(wp) :: enzyme_residue               !< effective residue-depolymerisation enzyme C density [mol C m-3]
-    REAL(wp) :: enzyme_frac_total_local      !< scaled microbial enzyme investment fraction [-]
-    REAL(wp) :: d_litter                     !< polymeric-substrate source including transport [mol C m-3 s-1]
-    REAL(wp) :: d_residue                    !< residue source including transport [mol C m-3 s-1]
-    REAL(wp) :: qmax_a                       !< texture capacity expressed per soil volume [mol C m-3]
-    REAL(wp) :: qmax_b                       !< C density of pure organic matter [mol C m-3]
-    REAL(wp) :: c0_star                      !< non-associated SOM C density occupying soil volume [mol C m-3]
-    REAL(wp) :: ratio_dom                    !< DOM adsorption-to-desorption coefficient ratio [m3 mol-1]
-    REAL(wp) :: ratio_res                    !< residue adsorption-to-desorption coefficient ratio [m3 mol-1]
-    REAL(wp) :: qmax_f                       !< occupied fraction in the sorption-capacity closure [-]
-    REAL(wp) :: sorption_denom               !< competitive sorption denominator [-]
-    REAL(wp) :: beta_dom                     !< transported associated-DOM offset [mol C m-3]
-    REAL(wp) :: beta_residue                 !< transported associated-residue offset [mol C m-3]
-    REAL(wp) :: beta_total                   !< sum of associated-pool transport offsets [mol C m-3]
-    REAL(wp) :: free_sorption_capacity       !< unoccupied equilibrium sorption capacity [mol C m-3]
-    LOGICAL  :: l_particle_tendency          !< TRUE when any particle-transport tendency is nonzero
+  !> Prepare coefficients and litter on scratch arrays only; no target solve or live-state update.
+  SUBROUTINE build_sb_analytical_inputs(nc, ns, npool, nelem, nsource, nbin, nday, dt, sla, growthform, scheme, &
+      & nactive, depth, field_cap, forcing_time, litter, roots, temperature, water, ice, water_potential, &
+      & down_daily, lateral_daily, cue_sum, poly_sum, ap_sum, inputs, reason)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
+    USE mo_q_sb_rate_modifier, ONLY: calc_jsm_carbon_rate_modifiers, calc_ssm_carbon_rate_modifiers
+    INTEGER, INTENT(in) :: nc, ns, npool, nelem, nsource, nbin, nday !< Array dimensions [-]
+    CHARACTER(len=*), INTENT(in) :: scheme !< JSM or simple_1d partitioning and rate equations [-]
+    REAL(lp), INTENT(in) :: water_potential(nc,nbin*ns) !< Monthly water potential [forward HYDRO unit]
+    REAL(lp), INTENT(in) :: dt !< Replay timestep [s]
+    REAL(lp), INTENT(in) :: sla !< Leaf specific area, as used by forward litter partitioning [m2 mol C-1]
+    INTEGER, INTENT(in) :: growthform !< Vegetation growth form identifier [-]
+    REAL(lp), INTENT(in) :: nactive(nc), depth(nc,ns), field_cap(nc,ns) !< Layers [-], thickness [m], FC [m3 m-3]
+    REAL(lp), INTENT(in) :: forcing_time(nc,nbin) !< Coupled-window sampled time by bin [s]
+    REAL(lp), INTENT(in) :: litter(:,:) !< Flattened bin/source/element litter [mol m-2 s-1]
+    REAL(lp), INTENT(in) :: roots(nc,nbin*ns) !< Monthly root fractions [-]
+    REAL(lp), INTENT(in) :: temperature(nc,nbin*ns) !< Monthly soil temperature [K]
+    REAL(lp), INTENT(in) :: water(nc,nbin*ns), ice(nc,nbin*ns) !< Monthly liquid and ice depths [m]
+    REAL(lp), INTENT(in) :: down_daily(nc,nday*ns), lateral_daily(nc,nday*ns) !< Daily water rates [s-1]
+    REAL(lp), INTENT(in) :: cue_sum(nc,ns), poly_sum(nc,ns), ap_sum(nc,ns) !< Coupled biological integrals [s]
+    TYPE(t_sb_analytical_inputs), INTENT(out) :: inputs !< Prepared read-only inputs; ready false on rejection
+    CHARACTER(len=*), INTENT(out) :: reason !< Preparation outcome [-]
+    REAL(lp) :: veg(nsource,nelem,nc), seed(nelem,nc) !< Scratch litter per replay step [mol m-2]
+    REAL(lp) :: formation(npool,nelem,nc,ns), root(nc,ns) !< Scratch increments [mol m-3], roots [-]
+    REAL(lp) :: coverage(nc), reference(nelem,nc), reconstructed, tolerance !< Time [s], rates [mol m-2 s-1]
+    REAL(lp) :: modifiers(nc,ns,10), ssm_rt, ssm_rm !< Monthly scratch rate multipliers [-]
+    INTEGER :: b, d, s, c, e, source, entry, k !< Bin, day, layer, cell, element, source and field indices [-]
 
-    !> C_wl*  = I_wl [mol C m-3 s-1] * tau_wl [s]
-    woody_carbon    = input_wood * tau_woody_litter
-    !> C_sol* = I_sol [mol C m-3 s-1] * tau_sol [s]
-    soluable_carbon = input_sol  * tau_soluable_litter
-
-    enzyme_frac_total_local = MAX(0.0_wp, enzyme_frac_total * enzyme_frac_total_scale)
-    !> Retain a background extracellular-enzyme capacity when living microbial biomass is very small.
-    !> E_depoly* = max(C_B* * enzyme_frac_total * (1 - enzyme_frac_AP), E_persistent,min) [mol C m-3]
-    enzyme_depoly = MAX(microbial_carbon * enzyme_frac_total_local * (1._wp - enzyme_frac_ap_layer), &
-      &                 min_persistent_enzyme)
-    !> d_L = I_poly + eta_poly^wl * I_wl  [mol C m-3 s-1]
-    d_litter        = MAX(0.0_wp, input_poly + fc_woody2polymeric * input_wood + particle_poly_c)
-    !> d_R = (1 - f_soluable_residue) * k_B * C_B*  [mol C m-3 s-1]
-    IF (l_microbial_dormant) THEN
-      d_residue = MAX(0.0_wp, particle_residue_c + particle_residue_assoc_c)
-    ELSE
-      d_residue = MAX(0.0_wp, &
-        & (1._wp - f_soluable_residue) * k_mort_microbial * microbial_carbon + &
-        & particle_residue_c + particle_residue_assoc_c)
-    END IF
-
-    alpha_poly = calc_enzyme_allocation(d_litter, d_residue, km_depoly_eff, enzyme_depoly)
-
-    IF (alpha_poly /= alpha_poly) alpha_poly = init_enzyme_fraction
-    alpha_poly    = MIN(MAX(alpha_poly, min_enzyme_fraction), 1._wp - min_enzyme_fraction)
-    alpha_residue = 1._wp - alpha_poly
-    enzyme_residue = MAX(alpha_residue * enzyme_depoly, min_persistent_enzyme)
-
-    !> C_poly*=(I_poly + eta_poly^wl * I_wl) [mol C m-3 s-1]
-    !>         / (vmax_poly [s-1] * alpha_poly [-] * E_depoly* [mol C m-3])
-    !>         * (Km_depoly [mol C m-3] + alpha_poly * E_depoly*)
-    IF (d_litter > 0.0_wp .AND. alpha_poly * enzyme_depoly > 0.0_wp .AND. vmax_poly_eff > 0.0_wp) THEN
-      polymeric_carbon = d_litter * (km_depoly_eff + alpha_poly * enzyme_depoly) / &
-        &                (vmax_poly_eff * alpha_poly * enzyme_depoly)
-    ELSE
-      polymeric_carbon = eps8
-    END IF
-
-    !> C_res*=((1 - f_soluable_residue) * k_B * C_B*) [mol C m-3 s-1]
-    !>        / (vmax_res [s-1] * E_res* [mol C m-3])
-    !>        * (Km_depoly [mol C m-3] + E_res*)
-    !> where E_res*=max(alpha_residue * E_depoly*, E_persistent,min).
-    IF (d_residue > 0.0_wp .AND. enzyme_residue > 0.0_wp .AND. vmax_res_eff > 0.0_wp) THEN
-      residue_carbon = d_residue * (km_depoly_eff + enzyme_residue) / &
-        &             (vmax_res_eff * enzyme_residue)
-    ELSE
-      residue_carbon = eps8
-    END IF
-
-    !> A = qmax_min [mol C kg-1] * rho_bulk [kg m-3]
-    qmax_a = qmax_org_min_local * bulk_dens_local
-    !> B = f_C^SOM [-] * rho_org [kg SOM m-3], converted to [mol C m-3]
-    qmax_b = carbon_per_dryweight_SOM * rho_bulk_org * 1000._wp / molar_mass_C
-
-    IF (l_surface_layer) THEN
-      !> Keep the first-layer physical constraint aligned with the mineral-volume treatment:
-      !> woody litter stays above the mineral soil matrix, while soluable litter, polymeric litter,
-      !> microbial biomass, DOM, and residue are the non-associated surface SOM that can be buried into
-      !> the first layer.
-      !> C0*_surface = C_sol* + C_poly* + C_D* + C_B* + C_res*
-      c0_star = soluable_carbon + polymeric_carbon + dom_carbon + microbial_carbon + residue_carbon
-    ELSE
-      !> C0* = C_sol* + C_poly* + C_D* + C_B* + C_res*
-      c0_star = soluable_carbon + polymeric_carbon + dom_carbon + microbial_carbon + residue_carbon
-    END IF
-
-    !> r_D = k_ads,D / k_des,D
-    ratio_dom = k_adsorpt_dom * rtm_sorb_eff * rmm_sorb_eff / (k_desorpt_dom * rtm_desorb_eff * rmm_desorb_eff)
-    !> r_R = k_ads,R / k_des,R
-    ratio_res = k_adsorpt_det * rtm_sorb_eff * rmm_sorb_eff / (k_desorpt_det * rtm_desorb_eff * rmm_desorb_eff)
-    l_particle_tendency = ABS(particle_poly_c) + ABS(particle_residue_c) + ABS(particle_dom_assoc_c) &
-      &              + ABS(particle_residue_assoc_c) > 0.0_wp
-    beta_dom = 0.0_wp
-    beta_residue = 0.0_wp
-    IF (l_particle_tendency) THEN
-      IF (k_desorpt_dom * rtm_desorb_eff * rmm_desorb_eff > eps8) THEN
-        beta_dom = particle_dom_assoc_c / (k_desorpt_dom * rtm_desorb_eff * rmm_desorb_eff)
-      END IF
-      IF (k_desorpt_det * rtm_desorb_eff * rmm_desorb_eff > eps8) THEN
-        beta_residue = particle_residue_assoc_c / (k_desorpt_det * rtm_desorb_eff * rmm_desorb_eff)
-      END IF
-    END IF
-    beta_total = beta_dom + beta_residue
-
-    !> F = (r_D * C_D* + r_R * C_res*) / (1 + r_D * C_D* + r_R * C_res*)
-    qmax_f = (ratio_dom * dom_carbon + ratio_res * residue_carbon) / &
-      &      (1._wp + ratio_dom * dom_carbon + ratio_res * residue_carbon)
-
-    !> Qmax* = (A * (1 - C0* / B)) / (1 + A * F / B)
-    IF (qmax_b > eps8) THEN
-      IF (l_particle_tendency) THEN
-        qmax_org_layer = MAX(0.0_wp, qmax_a * &
-          & (1._wp - (c0_star + (1._wp - qmax_f) * beta_total) / qmax_b) / &
-          & (1._wp + qmax_a * qmax_f / qmax_b))
-      ELSE
-        qmax_org_layer = MAX(0.0_wp, qmax_a * (1._wp - c0_star / qmax_b) / (1._wp + qmax_a * qmax_f / qmax_b))
-      END IF
-    ELSE
-      qmax_org_layer = eps8
-    END IF
-
-    sorption_denom = 1._wp + ratio_res * residue_carbon + ratio_dom * dom_carbon
-    IF (sorption_denom > eps8 .AND. l_particle_tendency) THEN
-      free_sorption_capacity = MAX(0.0_wp, (qmax_org_layer - beta_total) / sorption_denom)
-      dom_assoc_carbon = MAX(0.0_wp, ratio_dom * dom_carbon * free_sorption_capacity + beta_dom)
-      residue_assoc_carbon = MAX(0.0_wp, ratio_res * residue_carbon * free_sorption_capacity + beta_residue)
-    ELSE IF (sorption_denom > eps8) THEN
-      !> C_aDOM* = (r_D * C_D*) * Qmax* / (1 + r_R * C_res* + r_D * C_D*)
-      dom_assoc_carbon     = ratio_dom * dom_carbon     * qmax_org_layer / sorption_denom
-      !> C_aRes* = (r_R * C_res*) * Qmax* / (1 + r_R * C_res* + r_D * C_D*)
-      residue_assoc_carbon = ratio_res * residue_carbon * qmax_org_layer / sorption_denom
-    ELSE
-      dom_assoc_carbon     = eps8
-      residue_assoc_carbon = eps8
-    END IF
-
-    IF (l_surface_layer) THEN
-      !> C_bulk* for the first mineral layer includes minerally associated SOM fully,
-      !> and all other carbon pools as potentially buried surface SOM.
-      bulk_carbon_layer = soluable_carbon + polymeric_carbon + microbial_carbon + dom_carbon &
-                          + residue_carbon + dom_assoc_carbon + residue_assoc_carbon
-    ELSE
-      !> C_bulk* = C_wl* + C_sol* + C_poly* + C_D* + C_B* + C_res* + C_aDOM* + C_aRes*
-      bulk_carbon_layer = woody_carbon + soluable_carbon + polymeric_carbon + microbial_carbon + dom_carbon &
-        &                 + residue_carbon + dom_assoc_carbon + residue_assoc_carbon
-    END IF
-  END SUBROUTINE calc_analytical_ss_jsm_layer_state
-
-  ! ======================================================================================================= !
-  !> Solve the coupled microbial-biomass and DOM steady state with a prescribed microbial
-  !> transport tendency. Carbon source excludes the outgoing DOC term lambda_doc * C_DOM.
-  SUBROUTINE calc_microbial_dom_ss_transport( &
-    & carbon_source, lambda_doc, microbial_transport_c, microbial_cue, microbial_mortality, &
-    & km_uptake, vmax_uptake, microbial_carbon, dom_carbon, l_solution)
-
-    REAL(wp), INTENT(in)  :: carbon_source          !< net C source excluding DOC export [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: lambda_doc             !< first-order downward DOC transport coefficient [s-1]
-    REAL(wp), INTENT(in)  :: microbial_transport_c  !< net microbial C transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in)  :: microbial_cue          !< microbial carbon-use efficiency [-]
-    REAL(wp), INTENT(in)  :: microbial_mortality    !< microbial mortality rate coefficient [s-1]
-    REAL(wp), INTENT(in)  :: km_uptake              !< modified microbial uptake half-saturation [mol C m-3]
-    REAL(wp), INTENT(in)  :: vmax_uptake            !< modified maximum microbial uptake rate [s-1]
-    REAL(wp), INTENT(out) :: microbial_carbon       !< positive microbial steady-state C density [mol C m-3]
-    REAL(wp), INTENT(out) :: dom_carbon              !< positive DOM steady-state C density [mol C m-3]
-    LOGICAL,  INTENT(out) :: l_solution              !< TRUE when a physically admissible root was found
-
-    REAL(wp) :: biomass_intercept       !< biomass at zero DOM implied by the layer C balance [mol C m-3]
-    REAL(wp) :: doc_slope               !< biomass decrease per unit DOM from DOC export [-]
-    REAL(wp) :: coef_a                  !< quadratic coefficient of DOM^2 [s-1]
-    REAL(wp) :: coef_b                  !< quadratic coefficient of DOM [mol C m-3 s-1]
-    REAL(wp) :: coef_c                  !< quadratic constant [(mol C m-3)^2 s-1]
-    REAL(wp) :: discriminant            !< quadratic discriminant [(mol C m-3 s-1)^2]
-    REAL(wp) :: dom_candidates(2)       !< candidate roots for DOM C density [mol C m-3]
-    REAL(wp) :: biomass_candidate       !< microbial C associated with a candidate DOM root [mol C m-3]
-    REAL(wp) :: microbial_loss          !< net microbial loss after transport [mol C m-3 s-1]
-    REAL(wp) :: microbial_uptake        !< candidate gross microbial DOC uptake [mol C m-3 s-1]
-    REAL(wp) :: residual                !< microbial steady-state equation residual [mol C m-3 s-1]
-    REAL(wp) :: residual_scale          !< magnitude used to normalize the residual [mol C m-3 s-1]
-    INTEGER  :: iroot                   !< index of the two quadratic roots [-]
-
-    microbial_carbon = 0.0_wp
-    dom_carbon = 0.0_wp
-    l_solution = .FALSE.
-    IF (microbial_cue <= 0.0_wp .OR. microbial_cue >= 1.0_wp .OR. microbial_mortality <= 0.0_wp) RETURN
-
-    !> Combining the whole-layer C balance with
-    !>   CUE * U - k_B * C_B + T_B = 0
-    !> gives C_B = (T_B + CUE * (S - lambda * C_DOM)) / (k_B * (1 - CUE)).
-    biomass_intercept = (microbial_transport_c + microbial_cue * carbon_source) / &
-      &                 (microbial_mortality * (1.0_wp - microbial_cue))
-    doc_slope = microbial_cue * MAX(0.0_wp, lambda_doc) / &
-      &         (microbial_mortality * (1.0_wp - microbial_cue))
-
-    coef_a = -doc_slope * (microbial_cue * vmax_uptake - microbial_mortality)
-    coef_b = (microbial_cue * vmax_uptake - microbial_mortality) * biomass_intercept &
-      &      + microbial_transport_c + km_uptake * microbial_mortality * doc_slope
-    coef_c = -km_uptake * (microbial_mortality * biomass_intercept - microbial_transport_c)
-
-    dom_candidates(:) = -1.0_wp
-    IF (ABS(coef_a) <= TINY(1.0_wp)) THEN
-      IF (ABS(coef_b) > TINY(1.0_wp)) dom_candidates(1) = -coef_c / coef_b
-    ELSE
-      discriminant = coef_b * coef_b - 4.0_wp * coef_a * coef_c
-      IF (discriminant >= 0.0_wp) THEN
-        discriminant = SQRT(discriminant)
-        dom_candidates(1) = (-coef_b + discriminant) / (2.0_wp * coef_a)
-        dom_candidates(2) = (-coef_b - discriminant) / (2.0_wp * coef_a)
-      END IF
-    END IF
-
-    DO iroot = 1, 2
-      IF (dom_candidates(iroot) < 0.0_wp) CYCLE
-      biomass_candidate = biomass_intercept - doc_slope * dom_candidates(iroot)
-      microbial_loss = microbial_mortality * biomass_candidate - microbial_transport_c
-      IF (km_uptake + dom_candidates(iroot) > TINY(1.0_wp)) THEN
-        microbial_uptake = vmax_uptake * biomass_candidate * dom_candidates(iroot) / &
-          &                (km_uptake + dom_candidates(iroot))
-      ELSE
-        microbial_uptake = 0.0_wp
-      END IF
-      residual = microbial_cue * microbial_uptake - microbial_loss
-      residual_scale = MAX(TINY(1.0_wp), ABS(microbial_cue * microbial_uptake), ABS(microbial_loss))
-      ! Exclude the algebraic B=0 root that appears when T_B=0; it does not
-      ! represent the positive microbial steady state selected by the legacy solution.
-      IF (biomass_candidate > eps8 .AND. microbial_loss >= -eps8 .AND. &
-        & ABS(residual) <= 1000.0_wp * EPSILON(1.0_wp) * residual_scale) THEN
-        microbial_carbon = biomass_candidate
-        dom_carbon = dom_candidates(iroot)
-        l_solution = .TRUE.
-        EXIT
-      END IF
+    reason = 'Input preparation rejected: invalid dimensions, timestep or incomplete bookkeeping.'
+    IF (MIN(nc,ns,npool,nelem,nsource,nbin,nday) <= 0 .OR. dt <= 0.0_lp) RETURN
+    IF (SIZE(litter,1) /= nc .OR. SIZE(litter,2) /= nbin*(nsource+1)*nelem) RETURN
+    IF (.NOT. ALL(ieee_is_finite(forcing_time)) .OR. ANY(forcing_time <= 0.0_lp)) RETURN
+    coverage = SUM(forcing_time, DIM=2)
+    IF (.NOT. ALL(ieee_is_finite(cue_sum)) .OR. .NOT. ALL(ieee_is_finite(poly_sum)) .OR. &
+        & .NOT. ALL(ieee_is_finite(ap_sum))) RETURN
+    IF (.NOT. ALL(ieee_is_finite(nactive)) .OR. .NOT. ALL(ieee_is_finite(depth)) .OR. &
+        & .NOT. ALL(ieee_is_finite(field_cap))) RETURN
+    DO c = 1,nc
+      IF (nactive(c) < 1.0_lp .OR. nactive(c) > REAL(ns,lp)) RETURN
+      DO s = 1,NINT(nactive(c))
+        IF (MIN(cue_sum(c,s),poly_sum(c,s),ap_sum(c,s)) < 0.0_lp) RETURN
+        IF (MAX(cue_sum(c,s),poly_sum(c,s),ap_sum(c,s)) > coverage(c)*(1.0_lp+1.e-12_lp)) RETURN
+        IF (depth(c,s) <= 0.0_lp .OR. field_cap(c,s) <= 0.0_lp) RETURN
+      END DO
     END DO
+    IF (.NOT. ALL(ieee_is_finite(water_potential))) RETURN
+    IF (.NOT. ALL(ieee_is_finite(litter)) .OR. ANY(litter < 0.0_lp)) RETURN
+    IF (.NOT. ALL(ieee_is_finite(roots)) .OR. ANY(roots < 0.0_lp)) RETURN
+    IF (.NOT. ALL(ieee_is_finite(temperature)) .OR. .NOT. ALL(ieee_is_finite(water)) .OR. &
+        & .NOT. ALL(ieee_is_finite(ice))) RETURN
+    IF (.NOT. ALL(ieee_is_finite(down_daily)) .OR. .NOT. ALL(ieee_is_finite(lateral_daily))) RETURN
+    IF (ANY(down_daily < 0.0_lp) .OR. ANY(lateral_daily < 0.0_lp)) RETURN
 
-  END SUBROUTINE calc_microbial_dom_ss_transport
+    inputs%timestep = dt
+    ALLOCATE(inputs%month_weight(nbin), SOURCE=0.0_lp)
+    DO d = 1,nday
+      b = sb_replay_month(d, nday, nbin)
+      inputs%month_weight(b) = inputs%month_weight(b) + 1.0_lp / REAL(nday,lp)
+    END DO
+    ALLOCATE(inputs%litter_mean(npool,nelem,nc,ns), SOURCE=0.0_lp)
+    ALLOCATE(inputs%rate_product_mean(nc,ns,6), SOURCE=0.0_lp)
+    ALLOCATE(inputs%cue(nc,ns), inputs%alpha_poly(nc,ns), inputs%alpha_ap(nc,ns))
+    ALLOCATE(inputs%water_rate_mean(nc,ns,2), SOURCE=0.0_lp)
+    ALLOCATE(inputs%litter_budget_residual(nelem,nc), SOURCE=0.0_lp)
+    inputs%cue = 0.0_lp
+    inputs%alpha_poly = 0.0_lp
+    inputs%alpha_ap = 0.0_lp
+    DO c = 1,nc
+      DO s = 1,NINT(nactive(c))
+        inputs%cue(c,s) = cue_sum(c,s) / coverage(c)
+        inputs%alpha_poly(c,s) = poly_sum(c,s) / coverage(c)
+        inputs%alpha_ap(c,s) = ap_sum(c,s) / coverage(c)
+        entry = (s-1)*nday
+        inputs%water_rate_mean(c,s,1) = SUM(REAL(down_daily(c,entry+1:entry+nday),lp)) / REAL(nday,lp)
+        inputs%water_rate_mean(c,s,2) = SUM(REAL(lateral_daily(c,entry+1:entry+nday),lp)) / REAL(nday,lp)
+      END DO
+    END DO
+    reference = 0.0_lp
+    DO b = 1,nbin
+      modifiers = 0._lp
+      DO e = 1,nelem
+        DO source = 1,nsource
+          entry = b + nbin*((source-1)+(nsource+1)*(e-1))
+          veg(source,e,:) = litter(:,entry) * dt
+        END DO
+        entry = b + nbin*(nsource+(nsource+1)*(e-1))
+        seed(e,:) = litter(:,entry) * dt
+        reference(e,:) = reference(e,:) + &
+          & inputs%month_weight(b)*(SUM(veg(:,e,:),DIM=1)+seed(e,:))/dt
+      END DO
+      DO s = 1,ns
+        entry = b+nbin*(s-1)
+        root(:,s) = roots(:,entry)
+        DO c = 1,nc
+          IF (s > NINT(nactive(c))) CYCLE
+          IF (temperature(c,entry) <= 0.0_lp .OR. water(c,entry) < 0.0_lp .OR. ice(c,entry) < 0.0_lp) RETURN
+          IF (scheme == 'jsm') THEN
+            CALL calc_jsm_carbon_rate_modifiers(temperature(c,entry), water(c,entry), ice(c,entry), &
+              & field_cap(c,s)*depth(c,s), depth(c,s), &
+              & modifiers(c,s,1), modifiers(c,s,2), &
+              & modifiers(c,s,3), modifiers(c,s,4), &
+              & modifiers(c,s,5), modifiers(c,s,6), &
+              & modifiers(c,s,7), modifiers(c,s,8), &
+              & modifiers(c,s,9), modifiers(c,s,10))
+          ELSE
+            CALL calc_ssm_carbon_rate_modifiers(temperature(c,entry), water_potential(c,entry), ssm_rt, ssm_rm)
+            inputs%rate_product_mean(c,s,6) = inputs%rate_product_mean(c,s,6) + &
+              & inputs%month_weight(b)*ssm_rt*ssm_rm
+          END IF
+        END DO
+      END DO
+      formation = 0.0_lp
+      ! Preserve tissue CNP, seed input, coarse-root depth distribution and the forward eps8 branches.
+      CALL calc_litter_partitioning(nc,ns,nactive,sla,growthform,scheme,depth,root,veg,seed,formation)
+      inputs%litter_mean = inputs%litter_mean + inputs%month_weight(b)*formation/dt
+      DO k = 1,5
+        inputs%rate_product_mean(:,:,k) = inputs%rate_product_mean(:,:,k) + inputs%month_weight(b) * &
+          & modifiers(:,:,k)*modifiers(:,:,k+5)
+      END DO
+    END DO
+    IF (.NOT. ALL(ieee_is_finite(inputs%rate_product_mean)) .OR. &
+        & .NOT. ALL(ieee_is_finite(inputs%litter_mean))) RETURN
+    DO c = 1,nc
+      DO e = 1,nelem
+        reconstructed = 0.0_lp
+        DO s = 1,NINT(nactive(c))
+          reconstructed = reconstructed + SUM(inputs%litter_mean(:,e,c,s))*depth(c,s)
+        END DO
+        inputs%litter_budget_residual(e,c) = reconstructed - reference(e,c)
+        tolerance = 1.e-10_lp*ABS(reference(e,c)) + 1.e-18_lp
+        IF (ABS(inputs%litter_budget_residual(e,c)) > tolerance) THEN
+          reason = 'Input preparation rejected: replay litter partition does not conserve the source input.'
+          RETURN
+        END IF
+      END DO
+    END DO
+    inputs%ready = .TRUE.
+    reason = 'Inputs prepared; mean-state approximation only; no analytical target applied.'
+  END SUBROUTINE build_sb_analytical_inputs
 
   ! ======================================================================================================= !
-  !> calculate analytical steady-state carbon pools for the Jena Soil Model
-  !> The current C-only analytical draft uses
-  !>   C_wl*   = I_wl tau_wl
-  !>   C_sol*  = I_sol tau_sol
-  !>   C_D*    = (k_B * K_m,U) / (CUE * vmax_U - k_B)
-  !> and the layer-wise DOC transport closure
-  !>   C_B,sl*  = CUE_sl / (k_B * (1 - CUE_sl)) * C_eff_input_sl
-  !>   C_eff_input_sl = (eta_DOM^sol * I_sol,sl + I_poly,sl + eta_poly^wl * I_wl,sl
-  !>                - lambda_sl * C_D,sl* + lambda_(sl-1) * C_D,sl-1*)
-  !> together with the associated-pool and sorption-capacity closure
-  !>   C_aDOM* = ((k_ads,D [s-1] * C_D* [mol C m-3]) / k_des,D [s-1]) * Qmax* [mol C m-3]
-  !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
-  !>   C_aRes* = ((k_ads,R [s-1] * C_res* [mol C m-3]) / k_des,R [s-1]) * Qmax* [mol C m-3]
-  !>             / (1 + (k_ads,R / k_des,R) * C_res* + (k_ads,D / k_des,D) * C_D*)
-  !>   Qmax*   = (A * (1 - C0* / B)) / (1 + A * F / B)
-  !>   C0*     = C_sol* + C_poly* + C_D* + C_B* + C_res*
-  !>   A       = qmax_min [mol C kg-1] * rho_bulk [kg m-3]
-  !>   B       = f_C^SOM [-] * rho_org [kg SOM m-3], converted below to [mol C m-3]
-  !>   F       = (r_D * C_D* + r_R * C_res*) / (1 + r_D * C_D* + r_R * C_res*)
-  !> before solving the polymeric-litter and residue pools from the enzyme-allocation closure.
-  !>   C_poly*=(I_poly + eta_poly^wl * I_wl)/(vmax_poly * enzyme_frac_poly * C_B* )(Km_depoly + enzyme_frac_poly * C_B*)
-  !>   C_res*=((1-f_soluable_residue) * k_B * C_B*)/(vmax_res * enzyme_frac_residue * C_B*)(Km_depoly + enzyme_frac_residue * C_B*)
+  !> Diagnose independent layer targets from prepared means, with mineral structure held fixed.
   !>
-  !> Unit convention of the explicit analytical forcing fields used here:
-  !>   I_sol, I_poly, I_wl        [mol C m-3 s-1]
-  !>   lambda_doc                 [s-1]
-  !>   tau_*                      [s]
-  !>   k_B, vmax_*, k_ads, k_des  [s-1]
-  !>   K_m,*                      [mol C m-3]
-  !>   qmax_org_fine_particle     [mol C kg-1]
-  !>   rho_bulk                   [kg m-3]
-  !>   rtm_*, rmm_*, enzyme_frac* [-]
-  !>   C_*, Qmax*                 [mol C m-3]
-  !> Litter-formation and DOC-transport inputs must be mean rates, not timestep sums.
-  SUBROUTINE calc_analytical_ss_jsm( &
-    & nproma, &
-    & nsoil_w, &
-    & nblks, &
-    & num_sl_above_bedrock, &
-    & qmax_org_fine_particle, &
-    & soil_lay_depth_center_sl, &
-    & soil_lay_depth_ubound_sl, &
-    & formation_soluable_litter_c, &
-    & formation_polymeric_litter_c, &
-    & formation_woody_litter_c, &
-    & frac_wtr_transp_down_sl, &
-    & enzyme_frac_ap_forcing, &
-    & silt_sl, &
-    & clay_sl, &
-    & bulk_dens_sl, &
-    & bulk_carbon_max, &
-    & qmax_org, &
-    & rtm_depolymerisation, &
-    & rmm_depolymerisation, &
-    & rtm_mic_uptake, &
-    & rmm_mic_uptake, &
-    & rtm_sorption, &
-    & rmm_sorption, &
-    & rtm_desorption, &
-    & rmm_desorption, &
-    & rtm_hsc, &
-    & rmm_hsc, &
-    & sb_pool_mt_domain, &
-    & surface_burial_frac, &
-    & enzyme_frac_poly, &
-    & enzyme_frac_residue, &
-    & enzyme_frac_poly_c, &
-    & enzyme_frac_poly_n, &
-    & enzyme_frac_poly_p, &
-    & enzyme_frac_AP, &
-    & l_constraint_debug, &
-    & qmax_org_min_forcing, &
-    & transport_soluable_c, &
-    & transport_poly_c, &
-    & transport_woody_c, &
-    & transport_dom_c, &
-    & transport_microbial_c, &
-    & transport_residue_c, &
-    & transport_dom_assoc_c, &
-    & transport_residue_assoc_c)
-
-    USE mo_sb_util,                       ONLY: calc_qmax_texture
-    USE mo_sb_constants
+  !> This adapter supplies current model constants to the infrastructure-free scalar solver. Effective
+  !> rates use mean(rt*rm), not mean(rt)*mean(rm). In particular vmax_mic_uptake produces micromoles
+  !> in calc_microbial_growth, so its conversion to the molar carbon equations requires 1.e-6.
+  !> CUE and allocation are prescribed coupled-window means. No N/P feasibility, transport equilibrium,
+  !> seasonal fixed point is claimed by a successful result. Optional coupling includes DOM advection only.
+  !> Equation references below refer to JSM_pore_volume_analytical_CNP_derivation.md, Sections 3-11.
+  !> Fixed entry geometry is a local-solver assumption only: annual calibration during forward replay
+  !> can subsequently change V and Q, so this target is not a jointly calibrated equilibrium.
+  SUBROUTINE diagnose_local_carbon_targets(inputs, nactive, targets, lateral_return)
+    USE mo_lnd_bgcm_idx, ONLY: ixC, ix_soluable_litter, ix_woody_litter, ix_polymeric_litter
     USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants, ONLY: tau_soluable_litter, tau_woody_litter, fc_soluable2dom, &
+      & fc_woody2polymeric, f_soluable_residue, k_mort_microbial, min_mic_biomass, &
+      & vmax_mic_uptake, km_mic_uptake, vmax_depolymerisation_litter, vmax_depolymerisation_residue, &
+      & km_depolymerisation, enzyme_frac_total, min_persistent_enzyme, k_adsorpt_dom, k_adsorpt_det, &
+      & k_desorpt_dom, k_desorpt_det, carbon_per_dryweight_SOM, rho_solid_maoc, rho_bulk_org
+    TYPE(t_sb_analytical_inputs), INTENT(in) :: inputs !< Prepared forcing and fixed geometry [various]
+    REAL(lp), INTENT(in) :: nactive(:) !< Active soil-layer count per cell [-]
+    TYPE(t_sb_local_target), ALLOCATABLE, INTENT(out) :: targets(:,:) !< Diagnostic-only cell/layer results
+    REAL(lp), OPTIONAL, INTENT(in) :: lateral_return !< Enable downward/dom_lateral_export_rate coupling; returned fraction [0,1]
+    TYPE(t_sb_local_coefficients) :: coefficients !< Layer effective coefficients [units as declared in type]
+    INTEGER :: ic, is !< Cell and soil-layer indices [-]
+    !> Interface influx [mol C m-2 s-1], export coefficients [s-1]
+    REAL(lp) :: dom_inflow_flux, dom_vertical_export_rate, dom_lateral_export_rate
+    REAL(lp) :: column_carbon_input, column_carbon_loss !< Independent whole-column input and external loss [mol C m-2 s-1]
+    REAL(lp) :: column_carbon_storage !< Integrated seed storage tendency, including floor-biomass growth [mol C m-2 s-1]
 
-    INTEGER,  INTENT(in)    :: nproma                         !< horizontal points per block [-]
-    INTEGER,  INTENT(in)    :: nsoil_w                        !< number of soil layers [-]
-    INTEGER,  INTENT(in)    :: nblks                          !< number of horizontal blocks [-]
-    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:,:)      !< active soil-layer count per point [-]
-    REAL(wp), INTENT(in)    :: qmax_org_fine_particle(:,:,:)  !< fine-particle sorption capacity [mol C kg-1]
-    REAL(wp), INTENT(in)    :: soil_lay_depth_center_sl(:,:,:)!< soil-layer midpoint depth [m]
-    REAL(wp), INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:) !< soil-layer lower-bound depth [m]
-    REAL(wp), INTENT(in)    :: formation_soluable_litter_c(:,:,:) !< soluble-litter input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: formation_polymeric_litter_c(:,:,:) !< polymeric-litter input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: formation_woody_litter_c(:,:,:) !< woody-litter input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: frac_wtr_transp_down_sl(:,:,:) !< downward DOC transport coefficient [s-1]
-    REAL(wp), INTENT(in)    :: enzyme_frac_ap_forcing(:,:,:)  !< mean phosphatase enzyme fraction [-]
-    REAL(wp), INTENT(in)    :: silt_sl(:,:,:)                 !< soil silt fraction [-]
-    REAL(wp), INTENT(in)    :: clay_sl(:,:,:)                 !< soil clay fraction [-]
-    REAL(wp), INTENT(in)    :: bulk_dens_sl(:,:,:)            !< mineral soil bulk density [kg m-3]
-    REAL(wp), INTENT(inout) :: bulk_carbon_max(:,:,:)         !< maximum admissible soil C density [mol C m-3]
-    REAL(wp), INTENT(inout) :: qmax_org(:,:,:)                 !< analytical organic sorption capacity [mol C m-3]
-    REAL(wp), INTENT(in)    :: rtm_depolymerisation(:,:,:)    !< temperature modifier of depolymerisation [-]
-    REAL(wp), INTENT(in)    :: rmm_depolymerisation(:,:,:)    !< moisture modifier of depolymerisation [-]
-    REAL(wp), INTENT(in)    :: rtm_mic_uptake(:,:,:)          !< temperature modifier of microbial uptake [-]
-    REAL(wp), INTENT(in)    :: rmm_mic_uptake(:,:,:)          !< moisture modifier of microbial uptake [-]
-    REAL(wp), INTENT(in)    :: rtm_sorption(:,:,:)            !< temperature modifier of sorption [-]
-    REAL(wp), INTENT(in)    :: rmm_sorption(:,:,:)            !< moisture modifier of sorption [-]
-    REAL(wp), INTENT(in)    :: rtm_desorption(:,:,:)          !< temperature modifier of desorption [-]
-    REAL(wp), INTENT(in)    :: rmm_desorption(:,:,:)          !< moisture modifier of desorption [-]
-    REAL(wp), INTENT(in)    :: rtm_hsc(:,:,:)                 !< temperature modifier of half-saturation constants [-]
-    REAL(wp), INTENT(in)    :: rmm_hsc(:,:,:)                 !< moisture modifier of half-saturation constants [-]
-    REAL(wp), INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)   !< pool by element, point, layer and block [mol m-3]
-    REAL(wp), INTENT(inout) :: surface_burial_frac(:,:,:)     !< fraction of surface SOM buried in layer one [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_poly(:,:,:)        !< enzyme allocation to polymeric litter [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_residue(:,:,:)     !< enzyme allocation to microbial residue [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_poly_c(:,:,:)      !< C-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_poly_n(:,:,:)      !< N-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_poly_p(:,:,:)      !< P-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(out)   :: enzyme_frac_AP(:,:,:)          !< phosphatase fraction of total enzyme [-]
-    LOGICAL,  INTENT(in), OPTIONAL :: l_constraint_debug      !< emit physical-constraint diagnostics when TRUE
-    REAL(wp), INTENT(in), OPTIONAL :: qmax_org_min_forcing(:,:,:) !< prescribed capacity [mol C kg-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_soluable_c(:,:,:) !< soluble-C transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_poly_c(:,:,:) !< polymeric-C transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_woody_c(:,:,:) !< woody-C transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_dom_c(:,:,:)  !< DOM-C transport tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_microbial_c(:,:,:) !< microbial-C tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_residue_c(:,:,:) !< residue-C tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_dom_assoc_c(:,:,:) !< associated-DOM tendency [mol C m-3 s-1]
-    REAL(wp), INTENT(in), OPTIONAL :: transport_residue_assoc_c(:,:,:) !< associated-residue tendency [mol C m-3 s-1]
+    IF (.NOT. inputs%ready) RETURN
+    ALLOCATE(targets(SIZE(inputs%cue,1),SIZE(inputs%cue,2)))
+    coefficients%dtime = inputs%timestep
+    coefficients%carbon_transfer_fraction = [fc_soluable2dom, fc_woody2polymeric, f_soluable_residue]
+    coefficients%microbial_decay_rate = k_mort_microbial
+    coefficients%minimum_microbial_carbon = min_mic_biomass
+    coefficients%enzyme_frac_total_local = enzyme_frac_total
+    coefficients%persistent_enzyme_carbon = min_persistent_enzyme
+    !> Eq. (1): gamma_A=M_C/(1000*f_C*rho_A), gamma_P=M_C/(1000*f_C*rho_P) [m3/mol C].
+    !> Multiplication by a concentration per TOTAL soil volume gives an occupied volume fraction.
+    !> These are dry-solid occupancies; neither dissolved DOM nor woody litter occupies these pores.
+    coefficients%volume_per_carbon_maoc = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_solid_maoc
+    coefficients%volume_per_carbon_poc = molar_mass_C / 1000.0_lp / carbon_per_dryweight_SOM / rho_bulk_org
+    DO ic = 1,SIZE(nactive)
+      dom_inflow_flux = 0.0_lp
+      column_carbon_input = 0.0_lp
+      column_carbon_loss = 0.0_lp
+      column_carbon_storage = 0.0_lp
+      DO is = 1,NINT(nactive(ic))
+        coefficients%transport_dom_inflow = 0.0_lp
+        coefficients%dom_export_rate = 0.0_lp
+        dom_vertical_export_rate = 0.0_lp
+        dom_lateral_export_rate = 0.0_lp
+        IF (PRESENT(lateral_return)) THEN
+          ! Eq. (24): j_i=F_(i-1)/h_i, ell_i=q_i+(1-r)*lambda_i, F_i=q_i*h_i*D_i.
+          ! Bookkeeping ALREADY divided native hydrological coefficients by 1000: these are effective s-1.
+          ! Only dom_lateral_export_rate loss receives (1-r). Bottom F_n remains an external leaching loss.
+          IF (lateral_return < 0.0_lp .OR. lateral_return > 1.0_lp) RETURN
+          IF (inputs%depth(ic,is) <= 0.0_lp) EXIT
+          dom_vertical_export_rate = inputs%water_rate_mean(ic,is,1)
+          dom_lateral_export_rate = (1.0_lp-lateral_return)*inputs%water_rate_mean(ic,is,2)
+          coefficients%transport_dom_inflow = dom_inflow_flux/inputs%depth(ic,is)
+          coefficients%dom_export_rate = dom_vertical_export_rate+dom_lateral_export_rate
+        END IF
+        coefficients%litter_input_carbon = inputs%litter_mean([ix_soluable_litter,ix_woody_litter,ix_polymeric_litter],ixC,ic,is)
+        !> Section 4.1: kS=<rt_d*rm_d>/tau_S and kW=<rt_d*rm_d>/tau_W [s-1].
+        !> The mean-state approximation freezes coefficients, not the full seasonally forced trajectory:
+        !> Eq. (36), <v*B*D/(K+D)> /= <v>*<B>*<D>/(<K>+<D>), even with correct modifier averaging.
+        coefficients%litter_turnover_rate = inputs%rate_product_mean(ic,is,1) / [tau_soluable_litter,tau_woody_litter]
+        coefficients%microbial_cue = inputs%cue(ic,is)
+        coefficients%alpha_poly = inputs%alpha_poly(ic,is)
+        coefficients%enzyme_frac_ap_layer = inputs%alpha_ap(ic,is)
+        !> Eq. (5): U=vU*B*D/(KU+D); vU=1.e-6*vmax_code*<rt_U*rm_U>, KU=km_U*<rt_h*rm_h>.
+        !> This is POTENTIAL molar uptake. Prescribed CUE does not guarantee that N/P availability
+        !> permits this uptake in the forward model; a state-dependent uptake cap cannot be absorbed
+        !> into CUE while retaining the same DOM equation. No such nutrient feasibility test occurs here.
+        coefficients%vmax_uptake_eff = 1.e-6_lp * vmax_mic_uptake * inputs%rate_product_mean(ic,is,2)
+        coefficients%km_uptake_eff = km_mic_uptake * inputs%rate_product_mean(ic,is,5)
+        coefficients%vmax_depoly_eff = [vmax_depolymerisation_litter,vmax_depolymerisation_residue] * &
+          & inputs%rate_product_mean(ic,is,1)
+        coefficients%km_depoly_eff = km_depolymerisation * inputs%rate_product_mean(ic,is,5)
+        coefficients%adsorption_rate = [k_adsorpt_dom,k_adsorpt_det] * inputs%rate_product_mean(ic,is,3)
+        coefficients%desorption_rate = [k_desorpt_dom,k_desorpt_det] * inputs%rate_product_mean(ic,is,4)
+        !> Eq. (2): Q=q_min*rho_m*(1-V) is supplied by the entry-state mineral geometry [mol C/m3].
+        !> Hold Q and V fixed in this solve. Do not replace Q by min(Q,V/gamma_A) in sorption kinetics:
+        !> chemical sites set potential sorption; physical space only limits the resulting increments.
+        coefficients%qmax_org_layer = inputs%qmax_org(ic,is)
+        coefficients%volume_pore_total = inputs%pore_volume(ic,is)
+        coefficients%l_surface_layer = is == 1
+        CALL solve_local_carbon_target(coefficients,targets(ic,is))
+        targets(ic,is)%transport = [coefficients%transport_dom_inflow,dom_vertical_export_rate*targets(ic, &
+      & is)%carbon(6),dom_lateral_export_rate*targets(ic,is)%carbon(6)]
+        IF (PRESENT(lateral_return)) THEN
+          ! No upward advection or bioturbation in this target: the coupling is triangular, not iterative.
+          ! If an upstream root is inadmissible, no downstream source can be certified. Reject the column.
+          IF (targets(ic,is)%status /= 0) EXIT
+          dom_inflow_flux = dom_vertical_export_rate*inputs%depth(ic,is)*targets(ic,is)%carbon(6)
+          column_carbon_input = column_carbon_input+SUM(coefficients%litter_input_carbon)*inputs%depth(ic,is)
+          column_carbon_loss = column_carbon_loss + ((1.0_lp-coefficients%carbon_transfer_fraction(1))* &
+      & coefficients%litter_input_carbon(1) + &
+            & (1.0_lp-coefficients%carbon_transfer_fraction(2))*coefficients%litter_input_carbon(2) + &
+      & (1.0_lp-coefficients%microbial_cue)*targets(ic,is)%uptake_step/coefficients%dtime + &
+            & dom_lateral_export_rate*targets(ic,is)%carbon(6))*inputs%depth(ic,is)
+          column_carbon_storage = column_carbon_storage + SUM(targets(ic,is)%residual)*inputs%depth(ic,is)
+        END IF
+      END DO
+      IF (PRESENT(lateral_return)) THEN
+        IF (ALL(targets(ic,1:NINT(nactive(ic)))%status == 0)) THEN
+          ! Eq. (12): internal interface transfers cancel in thickness-integrated balances.
+          ! Input = external loss + storage tendency. The minimum-biomass seed retains positive B growth;
+          ! its residual is storage, NOT respiration or an external loss.
+          column_carbon_loss = column_carbon_loss+dom_inflow_flux
+          IF (ABS(column_carbon_input-column_carbon_loss-column_carbon_storage) > &
+            & 1.e-16_lp+1.e-9_lp*MAX(column_carbon_input,column_carbon_loss,ABS(column_carbon_storage))) THEN
+            targets(ic,1:NINT(nactive(ic)))%status = 5
+            targets(ic,1:NINT(nactive(ic)))%reason = 'Rejected: independent column C budget does not close'
+          END IF
+        END IF
+      END IF
+    END DO
+  END SUBROUTINE diagnose_local_carbon_targets
 
-    REAL(wp) :: input_sol                       !< local soluble-litter input [mol C m-3 s-1]
-    REAL(wp) :: input_poly                      !< local polymeric-litter input [mol C m-3 s-1]
-    REAL(wp) :: input_wood                      !< local woody-litter input [mol C m-3 s-1]
-    REAL(wp) :: eff_input_c                     !< net C input available to microbial growth [mol C m-3 s-1]
-    REAL(wp) :: carbon_source                   !< layer C source excluding downward DOC loss [mol C m-3 s-1]
-    REAL(wp) :: transport_soluable_local        !< local soluble-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_poly_local            !< local polymeric-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_woody_local           !< local woody-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_dom_local             !< local DOM-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_microbial_local       !< local microbial-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_residue_local         !< local residue-C transport tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_dom_assoc_local       !< local associated-DOM tendency [mol C m-3 s-1]
-    REAL(wp) :: transport_residue_assoc_local   !< local associated-residue tendency [mol C m-3 s-1]
-    REAL(wp) :: alpha_poly                      !< enzyme allocation to polymeric litter [-]
-    REAL(wp) :: alpha_residue                   !< enzyme allocation to microbial residue [-]
-    REAL(wp) :: denominator                     !< positive microbial uptake-minus-mortality rate [s-1]
-    REAL(wp) :: km_uptake_eff                   !< environmentally modified uptake half-saturation [mol C m-3]
-    REAL(wp) :: vmax_uptake_eff                 !< environmentally modified uptake rate [s-1]
-    REAL(wp) :: km_depoly_eff                   !< environmentally modified depolymerisation half-saturation [mol C m-3]
-    REAL(wp) :: vmax_poly_eff                   !< modified polymeric-litter depolymerisation rate [s-1]
-    REAL(wp) :: vmax_res_eff                    !< modified residue depolymerisation rate [s-1]
-    REAL(wp) :: qmax_org_min_local              !< local texture-dependent sorption capacity [mol C kg-1]
-    REAL(wp) :: qmax_b                          !< C density of pure organic matter [mol C m-3]
-    REAL(wp) :: lambda_doc                      !< downward DOC transport coefficient of this layer [s-1]
-    REAL(wp) :: lambda_doc_above                !< downward DOC transport coefficient of layer above [s-1]
-    REAL(wp) :: rtm_dep_eff                    !< valid local temperature modifier of depolymerisation [-]
-    REAL(wp) :: rmm_dep_eff                    !< valid local moisture modifier of depolymerisation [-]
-    REAL(wp) :: rtm_upt_eff                    !< valid local temperature modifier of microbial uptake [-]
-    REAL(wp) :: rmm_upt_eff                    !< valid local moisture modifier of microbial uptake [-]
-    REAL(wp) :: rtm_sorb_eff                   !< valid local temperature modifier of sorption [-]
-    REAL(wp) :: rmm_sorb_eff                   !< valid local moisture modifier of sorption [-]
-    REAL(wp) :: rtm_desorb_eff                 !< valid local temperature modifier of desorption [-]
-    REAL(wp) :: rmm_desorb_eff                 !< valid local moisture modifier of desorption [-]
-    REAL(wp) :: rtm_hsc_eff                    !< valid local temperature modifier of half-saturation constants [-]
-    REAL(wp) :: rmm_hsc_eff                    !< valid local moisture modifier of half-saturation constants [-]
-    REAL(wp) :: bulk_dens_local                !< local mineral bulk density [kg m-3]
-    REAL(wp) :: silt_local                     !< local silt fraction [-]
-    REAL(wp) :: clay_local                     !< local clay fraction [-]
-    REAL(wp) :: microbial_c_bio                !< unconstrained biological microbial C solution [mol C m-3]
-    REAL(wp) :: microbial_c_bio_unclamped      !< microbial C solution before applying the numerical minimum [mol C m-3]
-    REAL(wp) :: polymeric_carbon               !< analytical polymeric-litter C density [mol C m-3]
-    REAL(wp) :: residue_carbon                 !< analytical microbial-residue C density [mol C m-3]
-    REAL(wp) :: dom_assoc_carbon               !< analytical mineral-associated DOM C [mol C m-3]
-    REAL(wp) :: residue_assoc_carbon           !< analytical mineral-associated residue C [mol C m-3]
-    REAL(wp) :: bulk_carbon_bio                !< bulk C from the current biological solution [mol C m-3]
-    REAL(wp) :: bulk_carbon_unconstrained      !< bulk C before applying physical constraints [mol C m-3]
-    REAL(wp) :: bulk_carbon_mid                !< bulk C at the current enzyme-scale midpoint [mol C m-3]
-    REAL(wp) :: min_volume_min_layer           !< prescribed minimum mineral volume fraction [-]
-    REAL(wp) :: cb_bracket_tol                 !< enzyme-scale bisection bracket tolerance [-]
-    REAL(wp) :: surface_bulk_nonsorbed         !< non-associated surface C eligible for burial [mol C m-3]
-    REAL(wp) :: surface_bulk_assoc             !< fully buried associated surface C [mol C m-3]
-    REAL(wp) :: qmax_org_target                !< capacity implied by minimum mineral volume [mol C m-3]
-    REAL(wp) :: assoc_scale                    !< multiplier mapping unconstrained to target associated pools [-]
-    REAL(wp) :: enzyme_frac_total_scale        !< current multiplier of total enzyme investment [-]
-    REAL(wp) :: enzyme_scale_lower             !< lower enzyme-scale bisection bound [-]
-    REAL(wp) :: enzyme_scale_upper             !< upper enzyme-scale bisection bound [-]
-    REAL(wp) :: enzyme_scale_mid               !< current enzyme-scale bisection midpoint [-]
-    REAL(wp) :: bulk_carbon_scale_upper        !< bulk C evaluated at upper enzyme-scale bound [mol C m-3]
-    REAL(wp) :: max_enzyme_frac_total_scale    !< largest enzyme multiplier used in this solve [-]
-    REAL(wp), PARAMETER :: enzyme_frac_total_phys_scale = 10.0_wp !< factor used to expand enzyme bracket [-]
-    LOGICAL  :: l_surface_layer                !< TRUE while solving the first mineral layer
-    LOGICAL  :: l_transport_tendencies_present !< TRUE when all optional pool tendencies were supplied
-    LOGICAL  :: l_microbial_solution           !< TRUE when an admissible positive microbial solution exists
-    LOGICAL  :: l_microbial_dormant            !< TRUE when microbial C is held at its minimum
-    INTEGER  :: iblk                           !< horizontal block index [-]
-    INTEGER  :: is                             !< soil-layer index [-]
-    INTEGER  :: ic                             !< horizontal point index [-]
-    INTEGER  :: iter_phys_constraint           !< current physical-constraint bisection iteration [-]
-    INTEGER  :: constraint_iterations          !< iterations used for the current constrained layer [-]
-    INTEGER  :: n_surface_constraints          !< number of surface burial constraints applied [-]
-    INTEGER  :: n_enzyme_constraints           !< number of deeper-layer enzyme constraints applied [-]
-    INTEGER, PARAMETER :: max_iter_phys_constraint = 200 !< maximum enzyme-scale bisection iterations [-]
-    LOGICAL  :: l_print_constraint_debug       !< local switch for constraint diagnostics
-    CHARACTER(len=1024) :: message_text         !< formatted model-log message
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_analytical_ss_jsm' !< log context
-    ! This flag describes this individual analytical solve. It is independent of
-    ! the model option that enables the outer one-pass transport correction.
-    l_transport_tendencies_present = PRESENT(transport_soluable_c) .AND. PRESENT(transport_poly_c) .AND. &
-      & PRESENT(transport_woody_c) .AND. PRESENT(transport_dom_c) .AND. PRESENT(transport_microbial_c) .AND. &
-      & PRESENT(transport_residue_c) .AND. PRESENT(transport_dom_assoc_c) .AND. &
-      & PRESENT(transport_residue_assoc_c)
-    IF (ANY([PRESENT(transport_soluable_c), PRESENT(transport_poly_c), PRESENT(transport_woody_c), &
-      & PRESENT(transport_dom_c), PRESENT(transport_microbial_c), PRESENT(transport_residue_c), &
-      & PRESENT(transport_dom_assoc_c), PRESENT(transport_residue_assoc_c)]) .AND. &
-      & .NOT. l_transport_tendencies_present) THEN
-      CALL finish(TRIM(routine), 'All eight analytically solved transport tendencies must be supplied together.')
+  !> Fixed-pore local C kernel, ported from QS d79f601 (linear mortality path).
+  !> Pool concentrations are per TOTAL soil volume; prescribed rates are per second.
+  !> With U=vU*B*D/(KU+D) and M=kB*B, e*U=M and
+  !> J=(1-e)*U+ellD*D give D=kB*KU/(e*vU-kB), B=e*(J-ellD*D)/(kB*(1-e)).
+  !> L=(IL+fW*IW)/aL, R=(1-fR)*M/aR. MAOC uses the finite-step capped exchange,
+  !> not an unlimited Langmuir extrapolation. Pore volume and chemical capacity stay fixed.
+  !> A biomass-floor seed closes donor balances but retains positive microbial growth:
+  !> it is explicitly NOT full steady state. Failed, nonunique or inadmissible roots reject.
+  !> No solid transport, nutrient equilibrium or density calibration is solved here.
+  PURE SUBROUTINE solve_local_carbon_target(coefficients, target)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_q_sb_jsm_processes, ONLY: calc_enzyme_allocation
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients !< Fixed coefficients [see type declaration]
+    TYPE(t_sb_local_target), INTENT(out) :: target !< Candidate, validity and balance diagnostics
+    REAL(lp) :: carbon_pools(8) !< Candidate concentrations in S,W,L,B,R,D,AD,AR order [mol C m-3]
+    !> Net litter supply, microbial death and gross DOC uptake [mol C m-3 s-1]
+    REAL(lp) :: carbon_source, microbial_decay, microbial_uptake
+    !> Total depolymerizing, polymeric and residue enzyme C [mol C m-3]
+    REAL(lp) :: enzyme_depoly, enzyme_poly, enzyme_residue
+    REAL(lp) :: alpha_poly, alpha_residue !< Carbon-based enzyme allocation fractions [-]
+    REAL(lp) :: depolymerisation_rate(2) !< Effective polymeric/residue first-order depolymerization rates [s-1]
+    REAL(lp) :: substrate_input_rate(2), net_sorption_rate(2) !< Substrate supply and net adsorption [mol C m-3 s-1]
+    REAL(lp) :: sorption_increment(2) !< Gross DOM/residue sorption increments [mol C m-3 timestep-1]
+    REAL(lp) :: residual_scale(8) !< Per-pool numerical balance tolerance [mol C m-3 s-1]
+    REAL(lp) :: volume_pore_available !< Pore fraction available after MAOC occupancy [-]
+    LOGICAL :: l_maoc_solution !< Finite-timestep MAOC solve passed [-]
+    REAL(lp) :: dom_lower_bound, dom_upper_bound, dom_removal !< DOC bracket [mol C/m3], removal [mol C/m3/s]
+    INTEGER :: iter_dom !< Bounded monotonic DOC root iteration [-]
+
+    ! Named pool aliases follow the reference layer-state solver; vector storage is unchanged.
+    ASSOCIATE( &
+      & soluable_carbon => carbon_pools(1), &
+      & woody_carbon => carbon_pools(2), &
+      & polymeric_carbon => carbon_pools(3), &
+      & microbial_carbon => carbon_pools(4), &
+      & residue_carbon => carbon_pools(5), &
+      & dom_carbon => carbon_pools(6), &
+      & dom_assoc_carbon => carbon_pools(7), &
+      & residue_assoc_carbon => carbon_pools(8), &
+      & input_sol => coefficients%litter_input_carbon(1), &
+      & input_wood => coefficients%litter_input_carbon(2), &
+      & input_poly => coefficients%litter_input_carbon(3), &
+      & d_litter => substrate_input_rate(1), &
+      & d_residue => substrate_input_rate(2))
+
+    target = t_sb_local_target()
+    target%reason = 'Invalid local coefficients'
+    IF (.NOT. ALL(ieee_is_finite([coefficients%dtime,coefficients%litter_input_carbon, &
+      & coefficients%litter_turnover_rate,coefficients%carbon_transfer_fraction, &
+      & coefficients%microbial_decay_rate,coefficients%minimum_microbial_carbon, &
+      & coefficients%microbial_cue,coefficients%alpha_poly,coefficients%enzyme_frac_ap_layer, &
+      & coefficients%vmax_uptake_eff,coefficients%km_uptake_eff,coefficients%vmax_depoly_eff, &
+      & coefficients%km_depoly_eff,coefficients%enzyme_frac_total_local,coefficients%persistent_enzyme_carbon, &
+      & coefficients%adsorption_rate,coefficients%desorption_rate,coefficients%qmax_org_layer, &
+      & coefficients%volume_pore_total,coefficients%volume_per_carbon_maoc, &
+      & coefficients%volume_per_carbon_poc,coefficients%transport_dom_inflow,coefficients%dom_export_rate]))) RETURN
+    IF (coefficients%dtime <= 0.0_lp .OR. coefficients%microbial_decay_rate <= 0.0_lp .OR. &
+      & coefficients%microbial_cue <= 0.0_lp .OR. coefficients%microbial_cue >= 1.0_lp) RETURN
+    IF (MINVAL([coefficients%litter_input_carbon,coefficients%litter_turnover_rate, &
+      & coefficients%minimum_microbial_carbon,coefficients%vmax_uptake_eff,coefficients%vmax_depoly_eff, &
+      & coefficients%enzyme_frac_total_local, &
+      & coefficients%persistent_enzyme_carbon,coefficients%adsorption_rate,coefficients%desorption_rate, &
+      & coefficients%qmax_org_layer,coefficients%volume_pore_total,coefficients%transport_dom_inflow, &
+      & coefficients%dom_export_rate]) < 0.0_lp) RETURN
+    IF (MINVAL([coefficients%carbon_transfer_fraction,coefficients%alpha_poly, &
+      & coefficients%enzyme_frac_ap_layer]) < 0.0_lp .OR. MAXVAL([coefficients%carbon_transfer_fraction, &
+      & coefficients%alpha_poly,coefficients%enzyme_frac_ap_layer]) > 1.0_lp) RETURN
+    IF (coefficients%volume_pore_total > 1.0_lp .OR. MIN(coefficients%volume_per_carbon_maoc, &
+      & coefficients%volume_per_carbon_poc,coefficients%km_uptake_eff,coefficients%km_depoly_eff) <= 0.0_lp) RETURN
+    target%status = 2
+    target%reason = 'No unique positive-growth root: zero removal/source or insufficient uptake capacity'
+    !> Eqs. (13),(15): kS,kW>0 and e*vU-kB>0 are required for the divisions on this branch.
+    !> A zero decay coefficient with positive input has no finite stationary litter stock; with zero
+    !> input its stock is undetermined. Reject both rather than silently prescribing a zero pool.
+    IF (ANY(coefficients%litter_turnover_rate <= 0.0_lp)) RETURN
+    carbon_source = coefficients%carbon_transfer_fraction(1)*input_sol + input_poly + &
+      & coefficients%carbon_transfer_fraction(2)*input_wood + coefficients%transport_dom_inflow
+    !> Eqs. (16)-(17): J=fS*IS+IL+fW*IW+jD; net growth supply is J-ellD*D>0.
+    !> jD comes from the solved upstream TARGET, not a recorded historical material flux.
+    carbon_pools = 0.0_lp
+    soluable_carbon = input_sol / coefficients%litter_turnover_rate(1)
+    woody_carbon = input_wood / coefficients%litter_turnover_rate(2)
+    !> Eq. (17) follows from 0=J+kB*B-U-ellD*D and e*U=kB*B. It relies on stationary MAOC net_sorption_rate
+    !> and no microbial/residue transport; it cannot be retained after simply clipping B to B_min.
+    !> Eq. (15): cancel B>0 in e*vU*B*D/(KU+D)=kB*B to obtain D=kB*KU/(e*vU-kB).
+    !> This is not a DOC prescription for a dormant layer or a layer where actual U is capped.
+    target%l_minimum_microbial_seed = .TRUE.
+    IF (coefficients%microbial_cue*coefficients%vmax_uptake_eff > coefficients%microbial_decay_rate) THEN
+      dom_carbon = coefficients%microbial_decay_rate*coefficients%km_uptake_eff/(coefficients%microbial_cue* &
+        & coefficients%vmax_uptake_eff-coefficients%microbial_decay_rate)
+      microbial_carbon = coefficients%microbial_cue*(carbon_source-coefficients%dom_export_rate*dom_carbon)/ &
+        & (coefficients%microbial_decay_rate*(1.0_lp-coefficients%microbial_cue))
+      target%l_minimum_microbial_seed = microbial_carbon <= coefficients%minimum_microbial_carbon
     END IF
-    l_print_constraint_debug = .FALSE.
-    IF (PRESENT(l_constraint_debug)) l_print_constraint_debug = l_constraint_debug
-    n_surface_constraints = 0
-    n_enzyme_constraints = 0
-    max_enzyme_frac_total_scale = 1.0_wp
-    !> init out var
-    !> The current analytical steady-state solution only solves for the carbon pools, so we can safely
-    !> initialise the other elements with zeros here. The actual NetCDF reader will need to fill
-    sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_microbial, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_dom, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_residue, ixC, :, :, :) = 0.0_wp
-    sb_pool_mt_domain(ix_residue_assoc, ixC, :, :, :) = 0.0_wp
-    qmax_org(:,:,:) = 0.0_wp
-    surface_burial_frac(:,:,:) = 1.0_wp
-    enzyme_frac_poly(:,:,:) = 0.0_wp
-    enzyme_frac_residue(:,:,:) = 0.0_wp
-    enzyme_frac_poly_c(:,:,:) = 0.0_wp
-    enzyme_frac_poly_n(:,:,:) = 0.0_wp
-    enzyme_frac_poly_p(:,:,:) = 0.0_wp
-    enzyme_frac_AP(:,:,:) = 0.0_wp
-
-    DO iblk = 1,nblks
-      DO ic = 1,nproma
-        DO is = 1, NINT(num_sl_above_bedrock(ic, iblk))
-
-          input_sol  = MAX(0.0_wp, formation_soluable_litter_c(ic, is, iblk))
-          input_poly = MAX(0.0_wp, formation_polymeric_litter_c(ic, is, iblk))
-          input_wood = MAX(0.0_wp, formation_woody_litter_c(ic, is, iblk))
-          transport_soluable_local = 0.0_wp
-          transport_poly_local = 0.0_wp
-          transport_woody_local = 0.0_wp
-          transport_dom_local = 0.0_wp
-          transport_microbial_local = 0.0_wp
-          transport_residue_local = 0.0_wp
-          transport_dom_assoc_local = 0.0_wp
-          transport_residue_assoc_local = 0.0_wp
-          IF (l_transport_tendencies_present) THEN
-            transport_soluable_local = transport_soluable_c(ic,is,iblk)
-            transport_poly_local = transport_poly_c(ic,is,iblk)
-            transport_woody_local = transport_woody_c(ic,is,iblk)
-            transport_dom_local = transport_dom_c(ic,is,iblk)
-            transport_microbial_local = transport_microbial_c(ic,is,iblk)
-            transport_residue_local = transport_residue_c(ic,is,iblk)
-            transport_dom_assoc_local = transport_dom_assoc_c(ic,is,iblk)
-            transport_residue_assoc_local = transport_residue_assoc_c(ic,is,iblk)
-          END IF
-
-          ! Soluble and woody litter have linear analytical lifetimes. Their net
-          ! particle tendencies therefore enter as additional signed source rates.
-          input_sol = MAX(0.0_wp, input_sol + transport_soluable_local)
-          input_wood = MAX(0.0_wp, input_wood + transport_woody_local)
-
-          bulk_dens_local = bulk_dens_sl(ic, is, iblk)
-          silt_local = silt_sl(ic, is, iblk)
-          clay_local = clay_sl(ic, is, iblk)
-
-          rtm_dep_eff    = rtm_depolymerisation(ic, is, iblk)
-          rmm_dep_eff    = rmm_depolymerisation(ic, is, iblk)
-          rtm_upt_eff    = rtm_mic_uptake(ic, is, iblk)
-          rmm_upt_eff    = rmm_mic_uptake(ic, is, iblk)
-          rtm_sorb_eff   = rtm_sorption(ic, is, iblk)
-          rmm_sorb_eff   = rmm_sorption(ic, is, iblk)
-          rtm_desorb_eff = rtm_desorption(ic, is, iblk)
-          rmm_desorb_eff = rmm_desorption(ic, is, iblk)
-          rtm_hsc_eff    = rtm_hsc(ic, is, iblk)
-          rmm_hsc_eff    = rmm_hsc(ic, is, iblk)
-
-          rtm_dep_eff    = MERGE(rtm_dep_eff,    1.0_wp, rtm_dep_eff    > eps8)
-          rmm_dep_eff    = MERGE(rmm_dep_eff,    1.0_wp, rmm_dep_eff    > eps8)
-          rtm_upt_eff    = MERGE(rtm_upt_eff,    1.0_wp, rtm_upt_eff    > eps8)
-          rmm_upt_eff    = MERGE(rmm_upt_eff,    1.0_wp, rmm_upt_eff    > eps8)
-          rtm_sorb_eff   = MERGE(rtm_sorb_eff,   1.0_wp, rtm_sorb_eff   > eps8)
-          rmm_sorb_eff   = MERGE(rmm_sorb_eff,   1.0_wp, rmm_sorb_eff   > eps8)
-          rtm_desorb_eff = MERGE(rtm_desorb_eff, 1.0_wp, rtm_desorb_eff > eps8)
-          rmm_desorb_eff = MERGE(rmm_desorb_eff, 1.0_wp, rmm_desorb_eff > eps8)
-          rtm_hsc_eff    = MERGE(rtm_hsc_eff,    1.0_wp, rtm_hsc_eff    > eps8)
-          rmm_hsc_eff    = MERGE(rmm_hsc_eff,    1.0_wp, rmm_hsc_eff    > eps8)
-
-          km_uptake_eff = km_mic_uptake * rtm_hsc_eff * rmm_hsc_eff
-          vmax_uptake_eff = vmax_mic_uptake * rtm_upt_eff * rmm_upt_eff
-          km_depoly_eff = km_depolymerisation * rtm_hsc_eff * rmm_hsc_eff
-          vmax_poly_eff = vmax_depolymerisation_litter * rtm_dep_eff * rmm_dep_eff
-          vmax_res_eff = vmax_depolymerisation_residue * rtm_dep_eff * rmm_dep_eff
-          l_surface_layer = (is == 1)
-
-          !> C_wl*   = I_wl [mol C m-3 s-1] * tau_wl [s]
-          sb_pool_mt_domain(ix_woody_litter, ixC, ic, is, iblk)    = input_wood * tau_woody_litter
-          !> C_sol*  = I_sol [mol C m-3 s-1] * tau_sol [s]
-          sb_pool_mt_domain(ix_soluable_litter, ixC, ic, is, iblk) = input_sol * tau_soluable_litter
-
-          lambda_doc = MAX(0.0_wp, frac_wtr_transp_down_sl(ic, is, iblk))
-          IF (is > 1) THEN
-            lambda_doc_above = MAX(0.0_wp, frac_wtr_transp_down_sl(ic, is - 1, iblk))
+    microbial_decay = coefficients%microbial_decay_rate*microbial_carbon
+    IF (target%l_minimum_microbial_seed) THEN
+      microbial_carbon = coefficients%minimum_microbial_carbon
+      microbial_decay = 0.0_lp
+      !> At the floor forward mortality is zero, but uptake remains active. Solve the donor balance,
+      !> not the active-growth D=kB*KU/(e*vU-kB). Removal is monotone in D for fixed B_min.
+      !> If ellD>0, [0,J/ellD] brackets the root. With ellD=0 require J<vU*B_min;
+      !> then D=J*KU/(vU*B_min-J). Zero supply/removal together is history dependent and rejected.
+      target%reason = 'Minimum microbial seed has no finite unique DOC balance'
+      IF (coefficients%dom_export_rate > 0.0_lp) THEN
+        dom_lower_bound = 0.0_lp
+        dom_upper_bound = carbon_source/coefficients%dom_export_rate
+        DO iter_dom = 1,160
+          dom_carbon = dom_lower_bound+0.5_lp*(dom_upper_bound-dom_lower_bound)
+          dom_removal = coefficients%dom_export_rate*dom_carbon + &
+            & coefficients%vmax_uptake_eff*microbial_carbon*dom_carbon/(coefficients%km_uptake_eff+dom_carbon)
+          IF (dom_removal > carbon_source) THEN
+            dom_upper_bound = dom_carbon
           ELSE
-            lambda_doc_above = 0.0_wp
+            dom_lower_bound = dom_carbon
           END IF
-
-          carbon_source = 0.0_wp
-          eff_input_c = 0.0_wp
-          l_microbial_solution = .FALSE.
-          IF (l_transport_tendencies_present) THEN
-            carbon_source = fc_soluable2dom * input_sol + input_poly + fc_woody2polymeric * input_wood &
-              &             + transport_poly_local + transport_residue_local &
-              &             + transport_dom_local + transport_dom_assoc_local + transport_residue_assoc_local
-            IF (is > 1) carbon_source = carbon_source + lambda_doc_above * &
-              & sb_pool_mt_domain(ix_dom, ixC, ic, is - 1, iblk)
-            CALL calc_microbial_dom_ss_transport( &
-              & carbon_source, lambda_doc, transport_microbial_local, microbial_cue_max, k_mort_microbial, &
-              & km_uptake_eff, vmax_uptake_eff, microbial_c_bio, &
-              & sb_pool_mt_domain(ix_dom, ixC, ic,is,iblk), l_microbial_solution)
-            IF (.NOT. l_microbial_solution) THEN
-              microbial_c_bio_unclamped = 0.0_wp
-              microbial_c_bio = min_mic_biomass
-              l_microbial_dormant = .TRUE.
-              sb_pool_mt_domain(ix_dom, ixC, ic,is,iblk) = 0.0_wp
-            ELSE
-              microbial_c_bio_unclamped = microbial_c_bio
-              l_microbial_dormant = microbial_c_bio <= min_mic_biomass
-              microbial_c_bio = MAX(min_mic_biomass, microbial_c_bio)
-            END IF
-          ELSE
-            denominator = microbial_cue_max * vmax_uptake_eff - k_mort_microbial
-            IF (denominator <= eps8) THEN
-              CALL finish(TRIM(routine), &
-                & 'Analytical JSM initialisation requires modified microbial uptake to exceed microbial mortality.')
-            END IF
-            sb_pool_mt_domain(ix_dom, ixC, ic,is,iblk) = k_mort_microbial * km_uptake_eff / denominator
-            eff_input_c = fc_soluable2dom * input_sol + input_poly + fc_woody2polymeric * input_wood &
-              &            - lambda_doc * sb_pool_mt_domain(ix_dom, ixC, ic,is,iblk)
-            IF (is > 1) THEN
-              eff_input_c = eff_input_c + lambda_doc_above * sb_pool_mt_domain(ix_dom, ixC, ic,is - 1,iblk)
-            END IF
-            IF (eff_input_c > 0.0_wp) THEN
-              microbial_c_bio = microbial_cue_max / &
-                & (k_mort_microbial * (1._wp - microbial_cue_max)) * eff_input_c
-              microbial_c_bio_unclamped = microbial_c_bio
-              l_microbial_solution = .TRUE.
-              l_microbial_dormant = microbial_c_bio <= min_mic_biomass
-              microbial_c_bio = MAX(min_mic_biomass, microbial_c_bio)
-            ELSE
-              microbial_c_bio_unclamped = 0.0_wp
-              microbial_c_bio = min_mic_biomass
-              l_microbial_dormant = .TRUE.
-            END IF
-          END IF
-
-          IF (l_microbial_dormant .AND. l_print_constraint_debug) THEN
-            WRITE(message_text,*) 'DEBUG analytical microbial dormancy activated at ic/is/iblk = ', &
-              & ic, is, iblk, &
-              & '; transport-coupled solve, microbial solution available = ', &
-              & l_transport_tendencies_present, l_microbial_solution, &
-              & '; C_mic_raw, C_mic_min, C_mic_used [mol C m-3] = ', &
-              & microbial_c_bio_unclamped, min_mic_biomass, microbial_c_bio, &
-              & '; effective/local C source, DOM [mol C m-3 s-1; mol C m-3] = ', &
-              & MERGE(carbon_source, eff_input_c, l_transport_tendencies_present), &
-              & sb_pool_mt_domain(ix_dom, ixC, ic,is,iblk)
-            CALL message(TRIM(routine), TRIM(message_text))
-          END IF
-
-          enzyme_frac_AP(ic, is, iblk) = MIN(MAX(enzyme_frac_ap_forcing(ic, is, iblk), &
-            & min_enzyme_fraction), max_enzyme_fraction)
-          IF (PRESENT(qmax_org_min_forcing)) THEN
-            qmax_org_min_local = qmax_org_min_forcing(ic, is, iblk)
-          ELSE
-            qmax_org_min_local = calc_qmax_texture(qmax_org_fine_particle(ic, is, iblk), silt_local, clay_local)
-            qmax_org_min_local = qmax_org_min_local &
-              & * EXP(-is / (INT(num_sl_above_bedrock(ic, iblk)) * k_sl_conv_moc_corr)) * 0.5_wp
-            IF (soil_lay_depth_ubound_sl(ic, is, iblk) > z_deep_soil_moc_corr) THEN
-              qmax_org_min_local = qmax_org_min_local &
-                & * MAX(0.0001_wp, 10._wp**(-soil_lay_depth_ubound_sl(ic, is, iblk)))
-            END IF
-          END IF
-
-          !> Steady-state-only physical correction:
-          !> phi_min^min(1) = 0.05
-          !> phi_min^min(k) = phi_min^min(k-1) + 0.01 * (z_mid,k - z_mid,k-1)
-          !> C_bulk^max(k) = B * (1 - phi_min^min(k))
-          !> For the first mineral layer, if C_bulk^bio > C_bulk^max, solve the geometric
-          !> surface-soil partition directly with
-          !>   f_burial = (C_bulk^max - (C_aDOM* + C_aRes*))
-          !>              / (C_sol* + C_poly* + C_B* + C_D* + C_res*)
-          !> so only the buried fraction of the non-woody, non-associated surface SOM occupies soil volume.
-          !> For deeper layers, keep the current bisection search on C_B.
-          qmax_b = carbon_per_dryweight_SOM * rho_bulk_org * 1000._wp / molar_mass_C
-          bulk_carbon_max(ic, is, iblk) = MAX(0.0_wp, bulk_carbon_max(ic, is, iblk))
-          min_volume_min_layer = MAX(0.0_wp, 1.0_wp - bulk_carbon_max(ic, is, iblk) / qmax_b)
-          enzyme_frac_total_scale = 1.0_wp
-
-          CALL calc_analytical_ss_jsm_layer_state( &
-            & l_surface_layer, &
-            & input_sol, &
-            & input_poly, &
-            & input_wood, &
-            & sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk), &
-            & microbial_c_bio, &
-            & l_microbial_dormant, &
-            & enzyme_frac_AP(ic, is, iblk), &
-            & enzyme_frac_total_scale, &
-            & transport_poly_local, transport_residue_local, &
-            & transport_dom_assoc_local, transport_residue_assoc_local, &
-            & km_depoly_eff, &
-            & vmax_poly_eff, &
-            & vmax_res_eff, &
-            & qmax_org_min_local, &
-            & bulk_dens_local, &
-            & rtm_sorb_eff, &
-            & rmm_sorb_eff, &
-            & rtm_desorb_eff, &
-            & rmm_desorb_eff, &
-            & alpha_poly, &
-            & alpha_residue, &
-            & polymeric_carbon, &
-            & residue_carbon, &
-            & dom_assoc_carbon, &
-            & residue_assoc_carbon, &
-            & qmax_org(ic, is, iblk), &
-            & bulk_carbon_bio)
-          bulk_carbon_unconstrained = bulk_carbon_bio
-
-          surface_burial_frac(ic, is, iblk) = 1.0_wp
-          IF (l_surface_layer .AND. bulk_carbon_bio > bulk_carbon_max(ic, is, iblk)) THEN
-            n_surface_constraints = n_surface_constraints + 1
-            !> For the capped surface layer, qmax_org is reset by the prescribed minimum
-            !> mineral-soil volume rather than by the unconstrained analytical C_B solution:
-            !>   Qmax_org = phi_min^min * qmax_org_min * rho_bulk
-            qmax_org_target = min_volume_min_layer * qmax_org_min_local * bulk_dens_local
-            IF (qmax_org(ic, is, iblk) > eps8) THEN
-              assoc_scale = qmax_org_target / qmax_org(ic, is, iblk)
-            ELSE
-              assoc_scale = 0.0_wp
-            END IF
-            qmax_org(ic, is, iblk) = qmax_org_target
-            dom_assoc_carbon       = dom_assoc_carbon * assoc_scale
-            residue_assoc_carbon   = residue_assoc_carbon * assoc_scale
-            !> C_bulk,1^soil = f_burial * (C_sol* + C_poly* + C_B* + C_D* + C_res*) + C_aDOM* + C_aRes*
-            !> f_burial = (C_bulk,max - (C_aDOM* + C_aRes*))
-            !>              / (C_sol* + C_poly* + C_B* + C_D* + C_res*)
-            surface_bulk_nonsorbed = input_sol * tau_soluable_litter + polymeric_carbon + microbial_c_bio &
-              &                     + sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk) + residue_carbon
-            surface_bulk_assoc     = dom_assoc_carbon + residue_assoc_carbon
-            IF (surface_bulk_nonsorbed > eps8) THEN
-              surface_burial_frac(ic, is, iblk) = (bulk_carbon_max(ic, is, iblk) - surface_bulk_assoc) / surface_bulk_nonsorbed
-              surface_burial_frac(ic, is, iblk) = MIN(1.0_wp, MAX(0.0_wp, surface_burial_frac(ic, is, iblk)))
-            ELSE
-              surface_burial_frac(ic, is, iblk) = 0.0_wp
-            END IF
-            IF (l_print_constraint_debug) THEN
-              WRITE(message_text,*) 'DEBUG analytical physical constraint surface_burial ic/is/iblk = ', &
-                & ic, is, iblk, '; C_bulk_unconstrained, C_bulk_max, burial_frac = ', &
-                & bulk_carbon_unconstrained, bulk_carbon_max(ic, is, iblk), surface_burial_frac(ic, is, iblk), &
-                & '; input_sol/poly/wood, C_microbial/poly/residue = ', input_sol, input_poly, input_wood, &
-                & microbial_c_bio, polymeric_carbon, residue_carbon
-              CALL message(TRIM(routine), TRIM(message_text))
-            END IF
-          ELSE IF (bulk_carbon_bio > bulk_carbon_max(ic, is, iblk)) THEN
-            n_enzyme_constraints = n_enzyme_constraints + 1
-            constraint_iterations = 0
-            enzyme_scale_lower = 1.0_wp
-            enzyme_scale_upper = MAX(enzyme_frac_total_phys_scale, bulk_carbon_bio / bulk_carbon_max(ic, is, iblk))
-            enzyme_frac_total_scale = enzyme_scale_upper
-            CALL calc_analytical_ss_jsm_layer_state( &
-              & l_surface_layer, &
-              & input_sol, &
-              & input_poly, &
-              & input_wood, &
-              & sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk), &
-              & microbial_c_bio, &
-              & l_microbial_dormant, &
-              & enzyme_frac_AP(ic, is, iblk), &
-              & enzyme_frac_total_scale, &
-              & transport_poly_local, transport_residue_local, &
-              & transport_dom_assoc_local, transport_residue_assoc_local, &
-              & km_depoly_eff, &
-              & vmax_poly_eff, &
-              & vmax_res_eff, &
-              & qmax_org_min_local, &
-              & bulk_dens_local, &
-              & rtm_sorb_eff, &
-              & rmm_sorb_eff, &
-              & rtm_desorb_eff, &
-              & rmm_desorb_eff, &
-              & alpha_poly, &
-              & alpha_residue, &
-              & polymeric_carbon, &
-              & residue_carbon, &
-              & dom_assoc_carbon, &
-              & residue_assoc_carbon, &
-              & qmax_org(ic, is, iblk), &
-              & bulk_carbon_scale_upper)
-            IF (bulk_carbon_scale_upper <= bulk_carbon_max(ic, is, iblk)) THEN
-              cb_bracket_tol = eps4 * MAX(1.0_wp, enzyme_scale_upper)
-              !> Bisection solve for enzyme_frac_total_scale such that
-              !> C_bulk(C_B^bio, enzyme_frac_total_scale) = C_bulk^max
-              DO iter_phys_constraint = 1, max_iter_phys_constraint
-                constraint_iterations = iter_phys_constraint
-                enzyme_scale_mid = 0.5_wp * (enzyme_scale_lower + enzyme_scale_upper)
-                CALL calc_analytical_ss_jsm_layer_state( &
-                  & l_surface_layer, &
-                  & input_sol, &
-                  & input_poly, &
-                  & input_wood, &
-                  & sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk), &
-                  & microbial_c_bio, &
-                  & l_microbial_dormant, &
-                  & enzyme_frac_AP(ic, is, iblk), &
-                  & enzyme_scale_mid, &
-                  & transport_poly_local, transport_residue_local, &
-                  & transport_dom_assoc_local, transport_residue_assoc_local, &
-                  & km_depoly_eff, &
-                  & vmax_poly_eff, &
-                  & vmax_res_eff, &
-                  & qmax_org_min_local, &
-                  & bulk_dens_local, &
-                  & rtm_sorb_eff, &
-                  & rmm_sorb_eff, &
-                  & rtm_desorb_eff, &
-                  & rmm_desorb_eff, &
-                  & alpha_poly, &
-                  & alpha_residue, &
-                  & polymeric_carbon, &
-                  & residue_carbon, &
-                  & dom_assoc_carbon, &
-                  & residue_assoc_carbon, &
-                  & qmax_org(ic, is, iblk), &
-                  & bulk_carbon_mid)
-                IF (bulk_carbon_mid > bulk_carbon_max(ic, is, iblk)) THEN
-                  enzyme_scale_lower = enzyme_scale_mid
-                ELSE
-                  enzyme_scale_upper = enzyme_scale_mid
-                  bulk_carbon_scale_upper = bulk_carbon_mid
-                  IF ((bulk_carbon_max(ic, is, iblk) - bulk_carbon_mid) <= 0.01_wp * bulk_carbon_max(ic, is, iblk)) EXIT
-                END IF
-                IF ((enzyme_scale_upper - enzyme_scale_lower) <= cb_bracket_tol) EXIT
-              END DO
-              enzyme_frac_total_scale = enzyme_scale_upper
-            ELSE IF (bulk_carbon_bio > bulk_carbon_max(ic, is, iblk)) THEN
-              enzyme_frac_total_scale = enzyme_scale_upper
-            END IF
-
-            CALL calc_analytical_ss_jsm_layer_state( &
-              & l_surface_layer, &
-              & input_sol, &
-              & input_poly, &
-              & input_wood, &
-              & sb_pool_mt_domain(ix_dom, ixC, ic, is, iblk), &
-              & microbial_c_bio, &
-              & l_microbial_dormant, &
-              & enzyme_frac_AP(ic, is, iblk), &
-              & enzyme_frac_total_scale, &
-              & transport_poly_local, transport_residue_local, &
-              & transport_dom_assoc_local, transport_residue_assoc_local, &
-              & km_depoly_eff, &
-              & vmax_poly_eff, &
-              & vmax_res_eff, &
-              & qmax_org_min_local, &
-              & bulk_dens_local, &
-              & rtm_sorb_eff, &
-              & rmm_sorb_eff, &
-              & rtm_desorb_eff, &
-              & rmm_desorb_eff, &
-              & alpha_poly, &
-              & alpha_residue, &
-              & polymeric_carbon, &
-              & residue_carbon, &
-              & dom_assoc_carbon, &
-              & residue_assoc_carbon, &
-              & qmax_org(ic, is, iblk), &
-              & bulk_carbon_bio)
-            max_enzyme_frac_total_scale = MAX(max_enzyme_frac_total_scale, enzyme_frac_total_scale)
-            IF (l_print_constraint_debug) THEN
-              WRITE(message_text,*) 'DEBUG analytical physical constraint enzyme_scale ic/is/iblk = ', &
-                & ic, is, iblk, '; C_bulk_unconstrained, C_bulk_max, C_bulk_corrected, scale, iterations = ', &
-                & bulk_carbon_unconstrained, bulk_carbon_max(ic, is, iblk), bulk_carbon_bio, &
-                & enzyme_frac_total_scale, constraint_iterations, &
-                & '; enzyme_frac_base/effective, input_sol/poly/wood, C_microbial/poly/residue = ', &
-                & enzyme_frac_total, enzyme_frac_total * enzyme_frac_total_scale, &
-                & input_sol, input_poly, input_wood, microbial_c_bio, polymeric_carbon, residue_carbon
-              CALL message(TRIM(routine), TRIM(message_text))
-            END IF
-          END IF
-
-          sb_pool_mt_domain(ix_microbial, ixC, ic, is, iblk) = microbial_c_bio
-          enzyme_frac_poly(ic, is, iblk)    = alpha_poly
-          enzyme_frac_residue(ic, is, iblk) = alpha_residue
-          !> In the C-only draft, the carbon-based analytical allocation is the only closed solution.
-          !> Keep the N and P diagnostic fractions aligned with the carbon solution until the
-          !> nutrient-limited analytical system is added.
-          enzyme_frac_poly_c(ic, is, iblk)  = alpha_poly
-          enzyme_frac_poly_n(ic, is, iblk)  = alpha_poly
-          enzyme_frac_poly_p(ic, is, iblk)  = alpha_poly
-          sb_pool_mt_domain(ix_polymeric_litter, ixC, ic, is, iblk) = polymeric_carbon
-          sb_pool_mt_domain(ix_residue, ixC, ic, is, iblk)          = residue_carbon
-          sb_pool_mt_domain(ix_dom_assoc, ixC, ic, is, iblk)        = dom_assoc_carbon
-          sb_pool_mt_domain(ix_residue_assoc, ixC, ic, is, iblk)    = residue_assoc_carbon
         END DO
+      ELSE IF (carbon_source < coefficients%vmax_uptake_eff*microbial_carbon) THEN
+        dom_carbon = carbon_source*coefficients%km_uptake_eff / &
+          & (coefficients%vmax_uptake_eff*microbial_carbon-carbon_source)
+      ELSE
+        RETURN
+      END IF
+    END IF
+    target%microbial_mortality = microbial_decay
+    !> Eq. (8): E=max(fE*(1-AP)*B,E0), EL=alpha*E, ER=max((1-alpha)*E,E0).
+    !> This Stage 5 path uses linear mortality and the existing forward persistent-enzyme policy.
+    !> Only ER has the additional independent floor. For small B with ER=E0, Eq. (18) gives R -> 0
+    !> as B -> 0 while linear microbial_decay holds; dropping that floor can leave a spurious finite R.
+    !> Eqs. (21)-(22): derive allocation from stationary carbon fluxes, not the historical allocation.
+    !> d_litter/d_residue = alpha_poly*(Km+alpha_poly*E) /
+    !>                     (alpha_residue*(Km+alpha_residue*E)).
+    !> The shared forward function handles zero/equal demands; bound its result as in forward JSM.
+    !> This is the model's carbon allocation rule, not a new optimum for the asymmetric residue floor.
+    !> AP and CUE remain prescribed; nutrient-dependent allocation and its fixed point are not solved.
+    d_litter = input_poly + coefficients%carbon_transfer_fraction(2) * input_wood
+    d_residue = (1.0_lp - coefficients%carbon_transfer_fraction(3)) * microbial_decay
+    enzyme_depoly = MAX(coefficients%enzyme_frac_total_local*(1.0_lp-coefficients%enzyme_frac_ap_layer)* &
+      & microbial_carbon,coefficients%persistent_enzyme_carbon)
+    alpha_poly = calc_enzyme_allocation(d_litter, d_residue, coefficients%km_depoly_eff, enzyme_depoly)
+    IF (.NOT. ieee_is_finite(alpha_poly)) THEN
+      target%reason = 'Nonfinite carbon enzyme allocation'
+      RETURN
+    END IF
+    alpha_poly = MIN(MAX(alpha_poly, min_enzyme_fraction), 1.0_lp - min_enzyme_fraction)
+    alpha_residue = 1.0_lp - alpha_poly
+    enzyme_poly = alpha_poly * enzyme_depoly
+    enzyme_residue = MAX(alpha_residue * enzyme_depoly, coefficients%persistent_enzyme_carbon)
+    target%alpha_poly = alpha_poly
+    target%alpha_residue = alpha_residue
+    target%enzyme_depoly = enzyme_depoly
+    target%enzyme_poly = enzyme_poly
+    target%enzyme_residue = enzyme_residue
+    depolymerisation_rate = coefficients%vmax_depoly_eff * [enzyme_poly/(coefficients%km_depoly_eff+ &
+      & enzyme_poly),enzyme_residue/(coefficients%km_depoly_eff+enzyme_residue)]
+    IF (ANY(depolymerisation_rate <= 0.0_lp)) THEN
+      ! No arbitrary stock is assigned to an undetermined zero-source/zero-removal pool.
+      ! Keep the live column and continue forward replay, which safely handles zero enzymes.
+      target%reason = 'Zero enzyme removal: no unique stationary polymeric/residue target'
+      RETURN
+    END IF
+    !> Eqs. (13),(14),(18): dL=IL+fW*IW, dR=(1-fR)*kB*B, L=dL/aL, R=dR/aR,
+    !> with aL=vL*EL/(KE+EL), aR=vR*ER/(KE+ER). Require positive removal coefficients;
+    !> Positive-source candidates must also remain above the forward eps8 depolymerization thresholds.
+    !> The residue relation requires zero NET residue sorption, not absence of gross sorption/desorption.
+    !> d_litter and d_residue are source rates [mol C m-3 s-1], not annual pool increments.
+    polymeric_carbon = d_litter/depolymerisation_rate(1)
+    residue_carbon = d_residue/depolymerisation_rate(2)
+
+    ! Solve the actual finite-timestep MAOC exchange, not an unrestricted Langmuir extrapolation.
+    CALL solve_analytical_maoc_partition(coefficients%dtime,carbon_pools([6,5]), &
+      & coefficients%adsorption_rate,coefficients%desorption_rate, &
+      & coefficients%qmax_org_layer,coefficients%volume_pore_total/coefficients%volume_per_carbon_maoc, &
+      & carbon_pools(7:8),net_sorption_rate,sorption_increment,l_maoc_solution)
+    target%carbon = carbon_pools
+    IF (.NOT. l_maoc_solution) THEN
+      target%reason = 'MAOC partition is degenerate or bounded solve did not close'
+      RETURN
+    END IF
+    microbial_uptake = coefficients%vmax_uptake_eff*microbial_carbon*dom_carbon/(coefficients%km_uptake_eff+dom_carbon)
+    target%uptake_step = microbial_uptake*coefficients%dtime
+    !> Eq. (11), T_D=jD-ellD*D and other T_X=0; JD/JR are net adsorption [mol C/m3/s]:
+    !> rS=IS-kS*S; rW=IW-kW*W; rL=IL+fW*kW*W-aL*L; rB=e*U-M;
+    !> rR=(1-fR)*M-aR*R-JR; rD=fS*kS*S+aL*L+aR*R+fR*M-U-JD+jD-ellD*D; rAD=JD; rAR=JR.
+    !> Their sum is Eq. (12): IS+IW+IL-(1-fS)*kS*S-(1-fW)*kW*W-(1-e)*U+jD-ellD*D.
+    !> Internal transfers cancel only with these signs. Each pool must close, not merely their sum.
+    target%residual(1:2) = coefficients%litter_input_carbon(1:2)-coefficients%litter_turnover_rate*carbon_pools(1:2)
+    target%residual(3) = input_poly+coefficients%carbon_transfer_fraction(2)* &
+      & coefficients%litter_turnover_rate(2)*woody_carbon-depolymerisation_rate(1)*polymeric_carbon
+    target%residual(4) = coefficients%microbial_cue*microbial_uptake-microbial_decay
+    target%residual(5) = (1.0_lp-coefficients%carbon_transfer_fraction(3))*microbial_decay- &
+      & depolymerisation_rate(2)*residue_carbon-net_sorption_rate(2)
+    target%residual(6) = coefficients%carbon_transfer_fraction(1)*coefficients%litter_turnover_rate(1)* &
+      & soluable_carbon+SUM(depolymerisation_rate*carbon_pools([3,5])) + &
+      & coefficients%carbon_transfer_fraction(3)*microbial_decay-microbial_uptake-net_sorption_rate(1)+ &
+      & coefficients%transport_dom_inflow-coefficients%dom_export_rate*dom_carbon
+    target%residual(7:8) = net_sorption_rate
+    !> Eqs. (3)-(4): VA=gamma_A*(AD+AR), VP_raw=gamma_P*(S+L+B+R), free=max(0,V-VA).
+    !> For admissible MAOC (VA<=V), surface b=min(1,free/VP_raw), or b=1 for negligible VP_raw.
+    !> Excess=max(0,VP_raw-free) is NOT deleted C. At the surface it remains above mineral soil;
+    !> at depth this solver rejects it rather than solving the displacement map of Eq. (25).
+    !> Burial does not multiply B,R,L in the biochemical equations: they use full pool concentrations.
+    target%maoc_volume = coefficients%volume_per_carbon_maoc*SUM(carbon_pools(7:8))
+    target%poc_volume = coefficients%volume_per_carbon_poc*SUM(carbon_pools([1,3,4,5]))
+    volume_pore_available = MAX(0.0_lp,coefficients%volume_pore_total-target%maoc_volume)
+    target%poc_excess = MAX(0.0_lp,target%poc_volume-volume_pore_available)
+    IF (coefficients%l_surface_layer .AND. target%poc_volume > eps8) &
+      & target%burial = MIN(1.0_lp,volume_pore_available/target%poc_volume)
+
+    !> Eq. (7): unrestricted M(B) requires B-M*dt>=B_min for the linear mortality law.
+    !> U*dt>D is diagnostic only: continuous substrate_input_rate can replenish DOC within the interval.
+    !> Forward replay caps actual microbial_uptake against DOC availability. This can cause adjustment away
+    !> from the continuous carbon root, but is not itself a reason to reject that root.
+    !> Additional C/N/P availability caps in calc_microbial_growth are NOT proved inactive here.
+    !> Retain the current ICON forward DOC activation cutoff eps8 [mol C/m3].
+    !> The shared smaller cutoff and nonlinear mortality are a separate Stage 6 increment.
+    !> The conservative donor checks kS*dt,kW*dt,aL*dt<=1 and dR*dt+ads_R_step<=R avoid
+    !> requiring more old substrate than exists; the latter is a sufficient guard, not a complete
+    !> reconstruction of the staged forward CNP update including concurrent formation and transport.
+    target%status = 3
+    target%reason = 'Unrestricted seed activates a microbial floor, small-DOC branch or timestep pool limit'
+    IF (.NOT. target%l_minimum_microbial_seed) THEN
+      IF (microbial_carbon-microbial_decay*coefficients%dtime < coefficients%minimum_microbial_carbon .OR. &
+        & dom_carbon <= eps8) RETURN
+    END IF
+    IF ((d_litter > 0.0_lp .AND. polymeric_carbon <= eps8) .OR. &
+      & (d_residue > 0.0_lp .AND. residue_carbon <= eps8)) RETURN
+    IF (ANY(coefficients%litter_turnover_rate*coefficients%dtime > 1.0_lp)) RETURN
+    IF (coefficients%dom_export_rate*coefficients%dtime > 1.0_lp) RETURN
+    IF (depolymerisation_rate(1)*coefficients%dtime > 1.0_lp .OR. d_residue*coefficients%dtime+ &
+      & sorption_increment(2) > residue_carbon) RETURN
+    target%status = 4
+    target%reason = 'Deep solid POC requires displacement: no local transport-free equilibrium'
+    IF (.NOT. coefficients%l_surface_layer .AND. target%poc_excess > 1.e-12_lp) RETURN
+    target%status = 5
+    target%reason = 'Nonfinite, negative or nonclosing conditional carbon target'
+    IF (.NOT. ALL(ieee_is_finite(carbon_pools)) .OR. ANY(carbon_pools < 0.0_lp)) RETURN
+    IF (.NOT. ALL(ieee_is_finite(target%residual))) RETURN
+    ! Numerical verification tolerance, not the much looser ecological spinup-convergence threshold.
+    ! Use each pool's own throughput so large DOM cycling cannot conceal a small MAOC imbalance.
+    residual_scale = 1.e-18_lp + 1.e-9_lp * &
+      & [coefficients%litter_input_carbon(1:2),d_litter,microbial_decay,d_residue,MAX(carbon_source,microbial_uptake), &
+      & sorption_increment/coefficients%dtime]
+    ! The floor seed closes all donor/associated pools, but deliberately retains e*U in microbial storage.
+    ! Do not zero that diagnostic or include it in respiration; the column budget accounts for storage.
+    IF (target%l_minimum_microbial_seed) residual_scale(4) = ABS(target%residual(4)) + 1.e-18_lp
+    IF (ANY(ABS(target%residual) > residual_scale)) RETURN
+    target%status = 0
+    target%reason = 'Conditional C root; prescribed biology, no solid transport; nutrient equilibrium not solved'
+    IF (target%l_minimum_microbial_seed) &
+      & target%reason = 'Minimum microbial quasi-steady seed: zero mortality/residue/aRes; positive growth retained'
+    END ASSOCIATE
+  END SUBROUTINE solve_local_carbon_target
+
+  !> Solve stationary MAOC partition using the forward finite-timestep shared caps.
+  PURE SUBROUTINE solve_analytical_maoc_partition(dtime, donor_carbon, adsorption_rate, desorption_rate, &
+      & qmax_org_layer, maoc_pore_capacity, &
+      & associated_carbon, sorption_residual, sorption_increment, l_maoc_solution)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: dtime, donor_carbon(2), adsorption_rate(2), desorption_rate(2) !< [s], [mol C/m3], [m3/mol C/s], [s-1]
+    !> Chemical and physical carbon capacities [mol C/m3]
+    REAL(lp), INTENT(in) :: qmax_org_layer, maoc_pore_capacity
+    REAL(lp), INTENT(out) :: associated_carbon(2) !< Stationary associated_carbon DOM/residue [mol C m-3]
+    REAL(lp), INTENT(out) :: sorption_residual(2) !< Sorption minus desorption tendency [mol C m-3 s-1]
+    REAL(lp), INTENT(out) :: sorption_increment(2) !< Gross sorption increments [mol C m-3 timestep-1]
+    LOGICAL, INTENT(out) :: l_maoc_solution !< Both original equations and shared capacity bounds passed [-]
+    REAL(lp) :: maoc_lower_bound, maoc_upper_bound, maoc_carbon !< Bracket endpoints and total MAOC [mol C m-3]
+    !> Chemical and physical free capacities [mol C m-3]
+    REAL(lp) :: chemical_capacity_available, physical_capacity_available
+    !> Shared sorption limiter and desorbed fractions per timestep [-]
+    REAL(lp) :: sorption_capacity_fraction, desorption_fraction(2)
+    !> Potential increments and implied stationary partitions [mol C m-3]
+    REAL(lp) :: potential_sorption(2), associated_carbon_candidate(2)
+    INTEGER :: iter_maoc !< Bounded bisection counter [-]
+
+    l_maoc_solution = .FALSE.
+    associated_carbon = 0.0_lp
+    sorption_residual = 0.0_lp
+    sorption_increment = 0.0_lp
+    IF (.NOT. ALL(ieee_is_finite([dtime,donor_carbon,adsorption_rate,desorption_rate,qmax_org_layer,maoc_pore_capacity]))) RETURN
+    IF (dtime <= 0.0_lp .OR. MINVAL([donor_carbon,adsorption_rate,qmax_org_layer,maoc_pore_capacity]) < 0.0_lp) RETURN
+    IF (ANY(desorption_rate <= 0.0_lp)) RETURN
+    !> Eq. (31): delta_j=min(1,bj*dtime)>0 allows Aj=ads_j_step/delta_j.
+    !> Do not divide by a zero desorption coefficient: an immobile associated_carbon stock can be history dependent.
+    desorption_fraction = MIN(1.0_lp,desorption_rate*dtime)
+    maoc_lower_bound = 0.0_lp
+    maoc_upper_bound = MIN(qmax_org_layer,maoc_pore_capacity)
+    !> Scalar equation g(A)=sum[s(A)*pj(A)/delta_j]-A=0 with 0<=A<=min(Q,KV).
+    !> At A=0, g>=0; at the upper bound at least one shared capacity is zero, so g=-A<=0.
+    !> The cap belongs in the root interval and shared limiter, NOT in the chemical potential sorption.
+    DO iter_maoc = 1,160
+      maoc_carbon = maoc_lower_bound+0.5_lp*(maoc_upper_bound-maoc_lower_bound)
+      !> Eq. (29): HQ=max(0,Q-A), HV=max(0,KV-A), pj=Xj*min(1,aj*HQ*dtime).
+      !> Xj is old-state D or R. Each pj is an increment [mol C/m3], not a rate [mol C/m3/s].
+      chemical_capacity_available = MAX(0.0_lp,qmax_org_layer-maoc_carbon)
+      physical_capacity_available = MAX(0.0_lp,maoc_pore_capacity-maoc_carbon)
+      potential_sorption = donor_carbon*MIN(1.0_lp,adsorption_rate*chemical_capacity_available*dtime)
+      sorption_capacity_fraction = 1.0_lp
+      !> Eq. (30): s=min(1,HQ/p,HV/p), p=sum(pj). If p=0 keep s=1 and adsorption=0;
+      !> this branch prevents 0/0 without inventing a nonzero sorption flux.
+      IF (SUM(potential_sorption) > 0.0_lp) sorption_capacity_fraction = MIN(1.0_lp, &
+      & chemical_capacity_available/SUM(potential_sorption),physical_capacity_available/SUM(potential_sorption))
+      associated_carbon_candidate = sorption_capacity_fraction*potential_sorption/desorption_fraction
+      IF (SUM(associated_carbon_candidate) > maoc_carbon) THEN
+        maoc_lower_bound = maoc_carbon
+      ELSE
+        maoc_upper_bound = maoc_carbon
+      END IF
+    END DO
+    !> Eqs. (19)-(20) would give Aj=Q*(aj/bj)*Xj/(1+sum[(aj/bj)*Xj]) ONLY when
+    !> aj*HQ*dtime<=1, bj*dtime<=1 and p<=HQ,HV (no source, desorption or shared-chemical_capacity_available cap changes fluxes).
+    !> Even Q<=KV does not guarantee inactive chemical capacity limitation. With one donor and an
+    !> active chemical_capacity_available cap, sufficient potential_sorption sorption and b*dtime<1, Eq. (32) instead gives
+    !> A=min(Q,KV)/(1+b*dtime). Do not use that one-pool special case for a two-pool partition.
+    ! Normalize the partition to the bounded scalar root, then reevaluate the ORIGINAL operator there.
+    ! This prevents near-saturation floating-point error from producing an over-capacity candidate.
+    IF (SUM(associated_carbon_candidate) > 0.0_lp) associated_carbon = maoc_carbon* &
+      & (associated_carbon_candidate/SUM(associated_carbon_candidate))
+    maoc_carbon = SUM(associated_carbon)
+    chemical_capacity_available = MAX(0.0_lp,qmax_org_layer-maoc_carbon)
+    physical_capacity_available = MAX(0.0_lp,maoc_pore_capacity-maoc_carbon)
+    potential_sorption = donor_carbon*MIN(1.0_lp,adsorption_rate*chemical_capacity_available*dtime)
+    sorption_capacity_fraction = 1.0_lp
+    IF (SUM(potential_sorption) > 0.0_lp) sorption_capacity_fraction = MIN(1.0_lp, &
+      & chemical_capacity_available/SUM(potential_sorption),physical_capacity_available/SUM(potential_sorption))
+    sorption_increment = sorption_capacity_fraction*potential_sorption
+    !> Eq. (31): rj=(s*pj-delta_j*Aj)/dtime=0 [mol C/m3/s]. Reevaluate both original equations:
+    !> a small scalar bracket alone cannot certify the partition when rates/headrooms are very small.
+    sorption_residual = (sorption_increment-desorption_fraction*associated_carbon)/dtime
+    l_maoc_solution = ALL(ieee_is_finite(sorption_residual)) .AND. &
+      & ALL(ABS(sorption_residual) <= 1.e-18_lp+1.e-9_lp*MAX(sorption_increment,desorption_fraction* &
+      & associated_carbon)/dtime) .AND. &
+      & maoc_carbon <= MIN(qmax_org_layer,maoc_pore_capacity)+1.e-12_lp
+  END SUBROUTINE solve_analytical_maoc_partition
+
+  !> Reconstruct organic elements on scratch arrays after every layer passes.
+  !> Scale each existing pool by Cnew/Cold, retaining N/C, P/C and isotope ratios.
+  !> C14/C preservation is a NON-equilibrium seed; radioactive decay remains in replay.
+  !> Undefined positive-target composition rejects the column without changing live state.
+  !> Element increments [mol m-2] are artificial jump bookkeeping, never physical fluxes.
+  PURE SUBROUTINE reconstruct_analytical_column(pool_before, targets, depth, pool_index, carbon_index, &
+      & pool_candidate, element_increment, l_column_accepted, reason)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: pool_before(:,:,:), depth(:) !< pool/element/layer [mol m-3], thickness [m]
+    TYPE(t_sb_local_target), INTENT(in) :: targets(:) !< Active-layer carbon targets
+    INTEGER, INTENT(in) :: pool_index(:), carbon_index !< S,W,L,B,R[,D,AD,AR] and C matrix indices [-]
+    REAL(lp), INTENT(out) :: pool_candidate(:,:,:), element_increment(:) !< Candidate [mol m-3], artificial jump [mol m-2]
+    LOGICAL, INTENT(out) :: l_column_accepted !< All layers and elements validated [-]
+    CHARACTER(len=*), INTENT(out) :: reason !< Column acceptance reason
+    INTEGER :: is, ipool_local, ipool, ielem !< Layer, local pool, matrix pool and element indices [-]
+    REAL(lp) :: carbon_scaling_factor, carbon_before, carbon_target !< Scaling [-], pre/post carbon concentrations [mol C m-3]
+
+    pool_candidate = pool_before
+    element_increment = 0.0_lp
+    l_column_accepted = .FALSE.
+    reason = 'Rejected: at least one layer lacks an admissible transport-coupled carbon target'
+    IF (ANY(targets%status /= 0)) RETURN
+    reason = 'Rejected: invalid pre-jump composition or geometry'
+    IF (.NOT. ALL(ieee_is_finite(pool_before)) .OR. .NOT. ALL(ieee_is_finite(depth))) RETURN
+    IF (ANY(pool_before < 0.0_lp) .OR. ANY(depth <= 0.0_lp)) RETURN
+    DO is = 1,SIZE(targets)
+      DO ipool_local = 1,SIZE(pool_index)
+        ipool = pool_index(ipool_local)
+        carbon_before = pool_before(ipool,carbon_index,is)
+        carbon_target = targets(is)%carbon(ipool_local)
+        IF (carbon_before == 0.0_lp) THEN
+          IF (carbon_target > 0.0_lp .OR. ANY(pool_before(ipool,:,is) /= 0.0_lp)) THEN
+            pool_candidate = pool_before
+            reason = 'Rejected: zero pool_before carbon leaves target pool stoichiometry undefined'
+            RETURN
+          END IF
+          CYCLE
+        END IF
+        ! Guard the ratio before division under debug floating-point traps.
+        IF (carbon_before < 1.0_lp) THEN
+          IF (carbon_target > HUGE(1.0_lp)*carbon_before) THEN
+            pool_candidate = pool_before
+            reason = 'Rejected: unrepresentable pool scaling'
+            RETURN
+          END IF
+        END IF
+        carbon_scaling_factor = carbon_target/carbon_before
+        IF (carbon_scaling_factor > 1.0_lp) THEN
+          IF (ANY(pool_before(ipool,:,is) > HUGE(1.0_lp)/carbon_scaling_factor)) THEN
+            pool_candidate = pool_before
+            RETURN
+          END IF
+        END IF
+        pool_candidate(ipool,:,is) = pool_before(ipool,:,is)*carbon_scaling_factor
+        pool_candidate(ipool,carbon_index,is) = carbon_target
       END DO
     END DO
-
-    IF (l_print_constraint_debug) THEN
-      WRITE(message_text,*) 'DEBUG analytical physical constraint summary', &
-        & '; surface_burial_count, deeper_enzyme_scale_count, max_enzyme_scale = ', &
-        & n_surface_constraints, n_enzyme_constraints, max_enzyme_frac_total_scale
-      CALL message(TRIM(routine), TRIM(message_text))
+    IF (.NOT. ALL(ieee_is_finite(pool_candidate)) .OR. ANY(pool_candidate < 0.0_lp)) THEN
+      pool_candidate = pool_before
+      RETURN
     END IF
+    DO ielem = 1,SIZE(pool_before,2)
+      element_increment(ielem) = SUM(SUM(pool_candidate(:,ielem,:)-pool_before(:,ielem,:),DIM=1)*depth)
+    END DO
+    l_column_accepted = .TRUE.
+    reason = 'Accepted: advective C target; old organic ratios retained, including non-equilibrium 14C/C'
+  END SUBROUTINE reconstruct_analytical_column
 
-  END SUBROUTINE calc_analytical_ss_jsm
-
-  ! ======================================================================================================= !
-  !> Calculate and apply one analytical steady-state target on a model chunk.
-  !> Carbon follows the analytical solution. C14 follows its own steady-state tracer solution including
-  !> radioactive decay; other elements retain their current pool-specific ratios.
-  !>
-  !> Current accelerator workflow:
-  !>
-  !>   time-mean forcing and pre-jump state
-  !>                  |
-  !>                  v
-  !>   solve transport-free analytical C target
-  !>                  |
-  !>                  v
-  !>   enforce physical constraints
-  !>   (minimum mineral volume, surface burial, qmax, enzyme scaling)
-  !>                  |
-  !>                  +---------------- bioturbation smoothing disabled ------------+
-  !>                  |                                                             |
-  !>                  v                                                             |
-  !>   integrate bioturbation directly over transport_smoothing_years                |
-  !>   while updating bulk density and mineral volume annually                       |
-  !>                  |                                                             |
-  !>                  v                                                             |
-  !>   use the mass-conserving bioturbation-smoothed target                          |
-  !>                  |                                                             |
-  !>                  +-------------------------------------------------------------+
-  !>                  |
-  !>                  v
-  !>   reconstruct N, P, and isotope pools from target C
-  !>   (C14 uses a decay-aware steady-state solution)
-  !>                  |
-  !>                  v
-  !>   replace model pools and associated qmax, burial, and enzyme diagnostics
-  !>
-  !> The jump is instantaneous in model time. Particle transport is deliberately
-  !> excluded here and subsequently evolves from actual forward-model formation and loss rates.
-  SUBROUTINE apply_analytical_ss_jsm_accelerator( &
-    & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, &
-    & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
-    & input_sol_c, input_poly_c, input_wood_c, input_sol_c14, input_poly_c14, input_wood_c14, &
-    & l_c14_enabled, doc_transport, enzyme_ap_forcing, &
-    & bulk_dens_sl, bulk_carbon_max, qmax_org_min_sl, depoly_mod, uptake_mod, &
-    & sorption_mod, desorption_mod, hsc_mod, l_use_bioturbation, l_transport_debug, &
-    & transport_smoothing_years, bioturb_numerator, &
-    & sb_pool_mt, qmax_org, surface_burial_frac, &
-    & enzyme_frac_poly, enzyme_frac_residue, enzyme_frac_poly_c, enzyme_frac_poly_n, &
-    & enzyme_frac_poly_p, enzyme_frac_AP)
-
-    USE mo_sb_constants, ONLY: microbial_cn, microbial_np, k_slow_som_np, &
-      & k_init_soluable_litter_cn, k_init_polymeric_litter_cn, &
-      & k_init_woody_litter_cn, k_init_litter_np, fc_soluable2dom, &
-      & fc_woody2polymeric, f_soluable_residue, k_mort_microbial, &
-      & k_desorpt_dom, k_desorpt_det
-    USE mo_jsb_physical_constants, ONLY: lambda_C14
-    USE mo_q_sb_jsm_processes, ONLY: calc_bulk_soil_carbon, calc_bulk_density_correction
-
-    INTEGER,  INTENT(in)    :: nc                  !< number of horizontal points in this chunk [-]
-    INTEGER,  INTENT(in)    :: nsoil_w             !< number of soil layers [-]
-    REAL(wp), INTENT(in)    :: num_sl_above_bedrock(:) !< active soil-layer count per point [-]
-    REAL(wp), INTENT(in)    :: soil_depth_sl(:,:)  !< soil-layer thickness [m]
-    REAL(wp), INTENT(in)    :: soil_lay_depth_center_sl(:,:) !< soil-layer midpoint depth [m]
-    REAL(wp), INTENT(in)    :: soil_lay_depth_ubound_sl(:,:) !< soil-layer lower-bound depth [m]
-    REAL(wp), INTENT(in)    :: input_sol_c(:,:)    !< mean soluble-litter C input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: input_poly_c(:,:)   !< mean polymeric-litter C input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: input_wood_c(:,:)   !< mean woody-litter C input [mol C m-3 s-1]
-    REAL(wp), INTENT(in)    :: input_sol_c14(:,:)  !< mean soluble-litter C14 input [mol C14 m-3 s-1]
-    REAL(wp), INTENT(in)    :: input_poly_c14(:,:) !< mean polymeric-litter C14 input [mol C14 m-3 s-1]
-    REAL(wp), INTENT(in)    :: input_wood_c14(:,:) !< mean woody-litter C14 input [mol C14 m-3 s-1]
-    LOGICAL,  INTENT(in)    :: l_c14_enabled       !< TRUE when C14 pools are active
-    REAL(wp), INTENT(in)    :: doc_transport(:,:)  !< downward DOC transport coefficient [s-1]
-    REAL(wp), INTENT(in)    :: enzyme_ap_forcing(:,:) !< mean phosphatase enzyme fraction [-]
-    REAL(wp), INTENT(in)    :: bulk_dens_sl(:,:)   !< mineral soil bulk density [kg m-3]
-    REAL(wp), INTENT(inout) :: bulk_carbon_max(:,:)!< maximum admissible soil C density [mol C m-3]
-    REAL(wp), INTENT(in)    :: qmax_org_min_sl(:,:)!< texture-dependent sorption capacity [mol C kg-1]
-    REAL(wp), INTENT(in)    :: depoly_mod(:,:)     !< combined environmental depolymerisation modifier [-]
-    REAL(wp), INTENT(in)    :: uptake_mod(:,:)     !< combined environmental microbial-uptake modifier [-]
-    REAL(wp), INTENT(in)    :: sorption_mod(:,:)   !< combined environmental sorption modifier [-]
-    REAL(wp), INTENT(in)    :: desorption_mod(:,:) !< combined environmental desorption modifier [-]
-    REAL(wp), INTENT(in)    :: hsc_mod(:,:)        !< combined half-saturation-constant modifier [-]
-    LOGICAL,  INTENT(in)    :: l_use_bioturbation  !< smooth the analytical target with bioturbation
-    LOGICAL,  INTENT(in)    :: l_transport_debug   !< print jump summaries and profiles
-    INTEGER,  INTENT(in)    :: transport_smoothing_years !< direct bioturbation integration period [yr]
-    REAL(wp), INTENT(in)    :: bioturb_numerator(:,:) !< numerator of bioturbation diffusivity [m2 s-1 kg m-3]
-    REAL(wp), INTENT(inout) :: sb_pool_mt(:,:,:,:) !< pool by element, point and layer [mol m-3]
-    REAL(wp), INTENT(inout) :: qmax_org(:,:)       !< organic-matter sorption capacity [mol C m-3]
-    REAL(wp), INTENT(inout) :: surface_burial_frac(:,:) !< buried fraction of first-layer surface SOM [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_poly(:,:) !< polymeric enzyme allocation [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_residue(:,:) !< residue enzyme allocation [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_poly_c(:,:) !< C-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_poly_n(:,:) !< N-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_poly_p(:,:) !< P-based polymeric enzyme allocation [-]
-    REAL(wp), INTENT(inout) :: enzyme_frac_AP(:,:) !< phosphatase fraction of total enzyme [-]
-
-    REAL(wp), ALLOCATABLE :: pool_before(:,:,:,:)      !< pre-jump element pools [mol m-3]
-    REAL(wp), ALLOCATABLE :: pool_domain(:,:,:,:,:)    !< accepted analytical element pools [mol m-3]
-    REAL(wp), ALLOCATABLE :: candidate_domain(:,:,:,:,:) !< bioturbation-smoothed target pools [mol m-3]
-    REAL(wp), ALLOCATABLE :: num_sl_domain(:,:)        !< active soil-layer count with block dimension [-]
-    REAL(wp), ALLOCATABLE :: zero_domain(:,:,:)        !< reusable zero modifier/forcing array [-]
-    REAL(wp), ALLOCATABLE :: one_domain(:,:,:)         !< reusable unit modifier array [-]
-    REAL(wp), ALLOCATABLE :: bulk_carbon_max_domain(:,:,:) !< accepted maximum bulk C [mol C m-3]
-    REAL(wp), ALLOCATABLE :: qmax_org_domain(:,:,:)    !< accepted sorption capacity [mol C m-3]
-    REAL(wp), ALLOCATABLE :: surface_burial_domain(:,:,:) !< accepted surface burial fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_poly_domain(:,:,:)   !< accepted polymeric enzyme fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_res_domain(:,:,:)    !< accepted residue enzyme fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_poly_c_domain(:,:,:) !< accepted C-based enzyme fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_poly_n_domain(:,:,:) !< accepted N-based enzyme fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_poly_p_domain(:,:,:) !< accepted P-based enzyme fraction [-]
-    REAL(wp), ALLOCATABLE :: enzyme_ap_domain(:,:,:)     !< accepted phosphatase fraction [-]
-    REAL(wp), ALLOCATABLE :: qmax_org_min_domain(:,:,:)  !< prescribed texture capacity [mol C kg-1]
-    REAL(wp), ALLOCATABLE :: candidate_bulk_soil_c(:,:) !< candidate bulk soil C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: candidate_litter_c(:,:)    !< candidate soil litter C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: candidate_volume_min(:,:)  !< candidate mineral soil volume fraction [-]
-    REAL(wp), ALLOCATABLE :: candidate_bulk_density(:,:)!< candidate corrected bulk density [kg m-3]
-    REAL(wp), ALLOCATABLE :: candidate_k_bioturb(:,:)   !< candidate bioturbation diffusivity [m2 s-1]
-    REAL(wp), ALLOCATABLE :: candidate_surface_burial(:,:) !< mutable candidate burial fraction [-]
-    REAL(wp), ALLOCATABLE :: bioturbation_pool(:,:) !< buried pool undergoing bioturbation [mol C m-3]
-    REAL(wp), ALLOCATABLE :: transported_pool(:,:) !< pool after one implicit bioturbation year [mol C m-3]
-    REAL(wp), ALLOCATABLE :: debug_bulk_c_before(:,:)   !< pre-jump bulk C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: debug_bulk_c_after(:,:)    !< post-jump bulk C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: debug_litter_c_before(:,:) !< pre-jump litter C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: debug_litter_c_after(:,:)  !< post-jump litter C density [mol C m-3]
-    REAL(wp), ALLOCATABLE :: debug_density_before(:,:)  !< pre-jump corrected bulk density [kg m-3]
-    REAL(wp), ALLOCATABLE :: debug_density_after(:,:)   !< post-jump corrected bulk density [kg m-3]
-    REAL(wp), ALLOCATABLE :: debug_volume_min_before(:,:) !< pre-jump mineral volume fraction [-]
-    REAL(wp), ALLOCATABLE :: debug_volume_min_after(:,:) !< post-jump mineral volume fraction [-]
-    REAL(wp), ALLOCATABLE :: debug_burial_before(:,:)   !< pre-jump surface burial fraction [-]
-    REAL(wp), ALLOCATABLE :: debug_burial_after(:,:)    !< post-jump surface burial fraction [-]
-    INTEGER :: ic                                      !< horizontal point index [-]
-    INTEGER :: is                                      !< soil-layer index [-]
-    CHARACTER(len=1024) :: message_text                 !< formatted model-log message
-    INTEGER, PARAMETER :: bioturb_pools(5) = [ix_polymeric_litter, ix_microbial, ix_residue, & !< pool IDs mixed by bioturbation
-      & ix_dom_assoc, ix_residue_assoc]
-
-    ALLOCATE(pool_before(SIZE(sb_pool_mt,1), SIZE(sb_pool_mt,2), nc, nsoil_w))
-    ALLOCATE(pool_domain(SIZE(sb_pool_mt,1), SIZE(sb_pool_mt,2), nc, nsoil_w, 1))
-    ALLOCATE(num_sl_domain(nc,1), zero_domain(nc,nsoil_w,1), one_domain(nc,nsoil_w,1))
-    ALLOCATE(bulk_carbon_max_domain(nc,nsoil_w,1), qmax_org_domain(nc,nsoil_w,1))
-    ALLOCATE(surface_burial_domain(nc,nsoil_w,1), enzyme_poly_domain(nc,nsoil_w,1))
-    ALLOCATE(enzyme_res_domain(nc,nsoil_w,1), enzyme_poly_c_domain(nc,nsoil_w,1))
-    ALLOCATE(enzyme_poly_n_domain(nc,nsoil_w,1), enzyme_poly_p_domain(nc,nsoil_w,1))
-    ALLOCATE(enzyme_ap_domain(nc,nsoil_w,1), qmax_org_min_domain(nc,nsoil_w,1))
-    IF (l_use_bioturbation .OR. l_transport_debug) THEN
-      ALLOCATE(candidate_domain(SIZE(sb_pool_mt,1), SIZE(sb_pool_mt,2), nc, nsoil_w, 1))
-      ALLOCATE(candidate_bulk_soil_c(nc,nsoil_w), candidate_litter_c(nc,nsoil_w))
-      ALLOCATE(candidate_volume_min(nc,nsoil_w), candidate_bulk_density(nc,nsoil_w))
-      ALLOCATE(candidate_k_bioturb(nc,nsoil_w), candidate_surface_burial(nc,nsoil_w))
-      ALLOCATE(bioturbation_pool(nc,nsoil_w), transported_pool(nc,nsoil_w))
-      IF (l_transport_debug) THEN
-        ALLOCATE(debug_bulk_c_before(nc,nsoil_w), debug_bulk_c_after(nc,nsoil_w))
-        ALLOCATE(debug_litter_c_before(nc,nsoil_w), debug_litter_c_after(nc,nsoil_w))
-        ALLOCATE(debug_density_before(nc,nsoil_w), debug_density_after(nc,nsoil_w))
-        ALLOCATE(debug_volume_min_before(nc,nsoil_w), debug_volume_min_after(nc,nsoil_w))
-        ALLOCATE(debug_burial_before(nc,nsoil_w), debug_burial_after(nc,nsoil_w))
-      END IF
-    END IF
-
-    pool_before = sb_pool_mt
-    pool_domain(:,:,:,:,1) = sb_pool_mt
-    num_sl_domain(:,1) = num_sl_above_bedrock
-    zero_domain = 0.0_wp
-    one_domain = 1.0_wp
-    bulk_carbon_max_domain(:,:,1) = bulk_carbon_max
-    qmax_org_domain(:,:,1) = qmax_org
-    surface_burial_domain(:,:,1) = surface_burial_frac
-    qmax_org_min_domain(:,:,1) = qmax_org_min_sl
-
-    ! Stage 1: solve and physically constrain the local analytical target.
-    CALL solve_particle_free_constrained_target()
-
-    ! Stage 2: optionally smooth the target directly with mass-conserving bioturbation.
-    IF (l_use_bioturbation) CALL apply_bioturbation_target_smoothing()
-
-    IF (l_transport_debug) CALL write_analytical_target_debug()
-
-    CALL reconstruct_target_elements(nc, nsoil_w, num_sl_above_bedrock, pool_before, pool_domain(:,:,:,:,1))
-    IF (l_c14_enabled) THEN
-      IF (ixC14 > SIZE(sb_pool_mt,2)) THEN
-        CALL finish(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', &
-          & 'C14 is enabled but absent from the SB element matrix.')
-      END IF
-      CALL reconstruct_target_c14(nc, nsoil_w, num_sl_above_bedrock, &
-        & input_sol_c, input_poly_c, input_wood_c, input_sol_c14, input_poly_c14, input_wood_c14, &
-        & doc_transport, desorption_mod, pool_domain(:,:,:,:,1))
-    END IF
-
-    sb_pool_mt = pool_domain(:,:,:,:,1)
-    bulk_carbon_max = bulk_carbon_max_domain(:,:,1)
-    qmax_org = qmax_org_domain(:,:,1)
-    surface_burial_frac = surface_burial_domain(:,:,1)
-    enzyme_frac_poly = enzyme_poly_domain(:,:,1)
-    enzyme_frac_residue = enzyme_res_domain(:,:,1)
-    enzyme_frac_poly_c = enzyme_poly_c_domain(:,:,1)
-    enzyme_frac_poly_n = enzyme_poly_n_domain(:,:,1)
-    enzyme_frac_poly_p = enzyme_poly_p_domain(:,:,1)
-    enzyme_frac_AP = enzyme_ap_domain(:,:,1)
-
-  CONTAINS
-
-    SUBROUTINE solve_particle_free_constrained_target()
-      ! No particle-tendency arguments are supplied here. Consequently the
-      ! analytical solve uses only biological forcing and then applies burial,
-      ! mineral-volume, qmax, and enzyme-fraction constraints.
-      CALL solve_analytical_target(pool_domain, bulk_carbon_max_domain, qmax_org_domain, &
-        & surface_burial_domain, enzyme_poly_domain, enzyme_res_domain, enzyme_poly_c_domain, &
-        & enzyme_poly_n_domain, enzyme_poly_p_domain, enzyme_ap_domain)
-    END SUBROUTINE solve_particle_free_constrained_target
-
-    SUBROUTINE write_analytical_target_debug()
-      candidate_domain(:,:,:,:,1) = pool_before
-      debug_burial_before = surface_burial_frac
-      CALL update_candidate_soil_state(candidate_domain, debug_burial_before)
-      debug_bulk_c_before = candidate_bulk_soil_c
-      debug_litter_c_before = candidate_litter_c
-      debug_density_before = candidate_bulk_density
-      debug_volume_min_before = candidate_volume_min
-
-      candidate_domain = pool_domain
-      debug_burial_after = surface_burial_domain(:,:,1)
-      CALL update_candidate_soil_state(candidate_domain, debug_burial_after)
-      debug_bulk_c_after = candidate_bulk_soil_c
-      debug_litter_c_after = candidate_litter_c
-      debug_density_after = candidate_bulk_density
-      debug_volume_min_after = candidate_volume_min
-
-      IF (l_use_bioturbation) THEN
-        WRITE(message_text,*) 'DEBUG analytical jump with direct bioturbation-smoothed target'
-      ELSE
-        WRITE(message_text,*) 'DEBUG analytical direct jump without transport'
-      END IF
-      CALL message(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', TRIM(message_text))
-      CALL write_debug_carbon_totals('analytical target jump', &
-        & pool_before, candidate_domain(:,:,:,:,1), &
-        & debug_bulk_c_before, debug_bulk_c_after, debug_litter_c_before, debug_litter_c_after)
-
-      DO ic = 1, nc
-        DO is = 1, NINT(num_sl_above_bedrock(ic))
-          WRITE(message_text,*) 'DEBUG analytical target state ic/is = ', ic, is, &
-            & '; C_bulk before/after/delta = ', debug_bulk_c_before(ic,is), &
-            & debug_bulk_c_after(ic,is), debug_bulk_c_after(ic,is) - debug_bulk_c_before(ic,is), &
-            & '; C_litter before/after/delta = ', debug_litter_c_before(ic,is), &
-            & debug_litter_c_after(ic,is), debug_litter_c_after(ic,is) - debug_litter_c_before(ic,is), &
-            & '; bulk_density before/after/delta = ', debug_density_before(ic,is), &
-            & debug_density_after(ic,is), debug_density_after(ic,is) - debug_density_before(ic,is), &
-            & '; mineral_volume before/after/delta = ', debug_volume_min_before(ic,is), &
-            & debug_volume_min_after(ic,is), debug_volume_min_after(ic,is) - debug_volume_min_before(ic,is), &
-            & '; burial before/after/delta = ', debug_burial_before(ic,is), &
-            & debug_burial_after(ic,is), debug_burial_after(ic,is) - debug_burial_before(ic,is)
-          CALL message(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', TRIM(message_text))
-        END DO
-      END DO
-    END SUBROUTINE write_analytical_target_debug
-
-    SUBROUTINE write_debug_carbon_totals(label, state_before, state_after, &
-      & bulk_before, bulk_after, litter_before, litter_after)
-
-      CHARACTER(len=*), INTENT(in) :: label !< diagnostic label identifying the compared states
-      REAL(wp), INTENT(in) :: state_before(:,:,:,:) !< pre-jump element pools [mol m-3]
-      REAL(wp), INTENT(in) :: state_after(:,:,:,:)  !< post-jump element pools [mol m-3]
-      REAL(wp), INTENT(in) :: bulk_before(:,:)      !< pre-jump bulk soil C density [mol C m-3]
-      REAL(wp), INTENT(in) :: bulk_after(:,:)       !< post-jump bulk soil C density [mol C m-3]
-      REAL(wp), INTENT(in) :: litter_before(:,:)    !< pre-jump litter C density [mol C m-3]
-      REAL(wp), INTENT(in) :: litter_after(:,:)     !< post-jump litter C density [mol C m-3]
-
-      REAL(wp) :: total_bulk_before    !< depth-integrated pre-jump bulk C [mol C m-2]
-      REAL(wp) :: total_bulk_after     !< depth-integrated post-jump bulk C [mol C m-2]
-      REAL(wp) :: total_litter_before  !< depth-integrated pre-jump litter C [mol C m-2]
-      REAL(wp) :: total_litter_after   !< depth-integrated post-jump litter C [mol C m-2]
-      REAL(wp) :: total_soc_before     !< depth-integrated pre-jump total soil C [mol C m-2]
-      REAL(wp) :: total_soc_after      !< depth-integrated post-jump total soil C [mol C m-2]
-      INTEGER  :: ic_local             !< horizontal point index [-]
-      INTEGER  :: is_local             !< soil-layer index [-]
-      CHARACTER(len=1024) :: totals_message !< formatted model-log message
-
-      total_bulk_before = 0.0_wp
-      total_bulk_after = 0.0_wp
-      total_litter_before = 0.0_wp
-      total_litter_after = 0.0_wp
-      total_soc_before = 0.0_wp
-      total_soc_after = 0.0_wp
-      DO ic_local = 1, nc
-        DO is_local = 1, NINT(num_sl_above_bedrock(ic_local))
-          total_bulk_before = total_bulk_before + &
-            & bulk_before(ic_local,is_local) * soil_depth_sl(ic_local,is_local)
-          total_bulk_after = total_bulk_after + &
-            & bulk_after(ic_local,is_local) * soil_depth_sl(ic_local,is_local)
-          total_litter_before = total_litter_before + &
-            & litter_before(ic_local,is_local) * soil_depth_sl(ic_local,is_local)
-          total_litter_after = total_litter_after + &
-            & litter_after(ic_local,is_local) * soil_depth_sl(ic_local,is_local)
-          total_soc_before = total_soc_before + &
-            & SUM(state_before(:,ixC,ic_local,is_local)) * soil_depth_sl(ic_local,is_local)
-          total_soc_after = total_soc_after + &
-            & SUM(state_after(:,ixC,ic_local,is_local)) * soil_depth_sl(ic_local,is_local)
-        END DO
-      END DO
-
-      WRITE(totals_message,*) 'DEBUG ', TRIM(label), ' carbon totals [mol C m-2]', &
-        & '; C_bulk before/after/delta = ', total_bulk_before, total_bulk_after, &
-        & total_bulk_after - total_bulk_before, &
-        & '; C_litter before/after/delta = ', total_litter_before, total_litter_after, &
-        & total_litter_after - total_litter_before, &
-        & '; SOC before/after/delta = ', total_soc_before, total_soc_after, &
-        & total_soc_after - total_soc_before
-      CALL message(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', TRIM(totals_message))
-    END SUBROUTINE write_debug_carbon_totals
-
-    SUBROUTINE solve_analytical_target(target_pool, target_bulk_carbon_max, target_qmax_org, &
-      & target_surface_burial, target_enzyme_poly, target_enzyme_res, target_enzyme_poly_c, &
-      & target_enzyme_poly_n, target_enzyme_poly_p, target_enzyme_ap)
-
-      REAL(wp), INTENT(out) :: target_pool(:,:,:,:,:) !< solved pool by element, point, layer, block [mol m-3]
-      REAL(wp), INTENT(out) :: target_bulk_carbon_max(:,:,:) !< solved maximum bulk C [mol C m-3]
-      REAL(wp), INTENT(out) :: target_qmax_org(:,:,:) !< solved sorption capacity [mol C m-3]
-      REAL(wp), INTENT(out) :: target_surface_burial(:,:,:) !< solved surface burial fraction [-]
-      REAL(wp), INTENT(out) :: target_enzyme_poly(:,:,:) !< solved polymeric enzyme allocation [-]
-      REAL(wp), INTENT(out) :: target_enzyme_res(:,:,:) !< solved residue enzyme allocation [-]
-      REAL(wp), INTENT(out) :: target_enzyme_poly_c(:,:,:) !< solved C-based allocation [-]
-      REAL(wp), INTENT(out) :: target_enzyme_poly_n(:,:,:) !< solved N-based allocation [-]
-      REAL(wp), INTENT(out) :: target_enzyme_poly_p(:,:,:) !< solved P-based allocation [-]
-      REAL(wp), INTENT(out) :: target_enzyme_ap(:,:,:) !< solved phosphatase fraction [-]
-
-      target_pool(:,:,:,:,1) = pool_before
-      target_bulk_carbon_max(:,:,1) = bulk_carbon_max
-      target_qmax_org(:,:,1) = qmax_org
-      target_surface_burial(:,:,1) = surface_burial_frac
-      target_enzyme_poly(:,:,1) = enzyme_frac_poly
-      target_enzyme_res(:,:,1) = enzyme_frac_residue
-      target_enzyme_poly_c(:,:,1) = enzyme_frac_poly_c
-      target_enzyme_poly_n(:,:,1) = enzyme_frac_poly_n
-      target_enzyme_poly_p(:,:,1) = enzyme_frac_poly_p
-      target_enzyme_ap(:,:,1) = enzyme_frac_AP
-
-      CALL calc_analytical_ss_jsm( &
-        & nc, nsoil_w, 1, num_sl_domain, zero_domain, &
-        & RESHAPE(soil_lay_depth_center_sl, [nc,nsoil_w,1]), &
-        & RESHAPE(soil_lay_depth_ubound_sl, [nc,nsoil_w,1]), &
-        & RESHAPE(input_sol_c, [nc,nsoil_w,1]), RESHAPE(input_poly_c, [nc,nsoil_w,1]), &
-        & RESHAPE(input_wood_c, [nc,nsoil_w,1]), RESHAPE(doc_transport, [nc,nsoil_w,1]), &
-        & RESHAPE(enzyme_ap_forcing, [nc,nsoil_w,1]), zero_domain, zero_domain, &
-        & RESHAPE(bulk_dens_sl, [nc,nsoil_w,1]), target_bulk_carbon_max, target_qmax_org, &
-        & RESHAPE(depoly_mod, [nc,nsoil_w,1]), one_domain, RESHAPE(uptake_mod, [nc,nsoil_w,1]), one_domain, &
-        & RESHAPE(sorption_mod, [nc,nsoil_w,1]), one_domain, &
-        & RESHAPE(desorption_mod, [nc,nsoil_w,1]), one_domain, RESHAPE(hsc_mod, [nc,nsoil_w,1]), one_domain, &
-        & target_pool, target_surface_burial, target_enzyme_poly, target_enzyme_res, &
-        & target_enzyme_poly_c, target_enzyme_poly_n, target_enzyme_poly_p, target_enzyme_ap, &
-        & l_constraint_debug=l_transport_debug, qmax_org_min_forcing=qmax_org_min_domain)
-    END SUBROUTINE solve_analytical_target
-
-    SUBROUTINE apply_bioturbation_target_smoothing()
-      REAL(wp) :: unburied_surface(nc) !< surface material excluded from mineral-soil mixing [mol C m-3]
-      REAL(wp) :: max_pool_change      !< maximum absolute C-density change caused by smoothing [mol C m-3]
-      REAL(wp) :: max_bulk_excess      !< maximum post-smoothing excess above physical bulk-C limit [mol C m-3]
-      INTEGER  :: smoothing_year       !< annual bioturbation integration step [-]
-      INTEGER  :: transport_pool_index !< index in bioturb_pools [-]
-      INTEGER  :: local_ic             !< horizontal point index [-]
-      INTEGER  :: local_is             !< soil-layer index [-]
-
-      IF (transport_smoothing_years <= 0) THEN
-        CALL finish(TRIM(modname)//':apply_bioturbation_target_smoothing', &
-          & 'The analytical bioturbation smoothing period must be greater than zero.')
-      END IF
-
-      candidate_domain = pool_domain
-      candidate_surface_burial = surface_burial_domain(:,:,1)
-      IF (l_transport_debug) THEN
-        CALL write_bioturbation_target_profile('transport-free target', candidate_domain, &
-          & bulk_carbon_max_domain(:,:,1), qmax_org_domain(:,:,1), candidate_surface_burial, &
-          & enzyme_poly_domain(:,:,1), enzyme_res_domain(:,:,1), enzyme_ap_domain(:,:,1))
-      END IF
-
-      DO smoothing_year = 1, transport_smoothing_years
-        ! Recalculate organic volume and bulk density before each annual mixing
-        ! step because the bioturbation coefficient depends on bulk density.
-        CALL update_candidate_soil_state(candidate_domain, candidate_surface_burial)
-        candidate_k_bioturb = 0.0_wp
-        WHERE (candidate_bulk_density > eps8)
-          candidate_k_bioturb = bioturb_numerator / candidate_bulk_density
-        END WHERE
-
-        DO transport_pool_index = 1, SIZE(bioturb_pools)
-          bioturbation_pool = candidate_domain(bioturb_pools(transport_pool_index),ixC,:,:,1)
-          unburied_surface = 0.0_wp
-          SELECT CASE (bioturb_pools(transport_pool_index))
-          CASE (ix_polymeric_litter, ix_microbial, ix_residue)
-            unburied_surface = bioturbation_pool(:,1) * (1.0_wp - candidate_surface_burial(:,1))
-            bioturbation_pool(:,1) = bioturbation_pool(:,1) * candidate_surface_burial(:,1)
-          END SELECT
-
-          CALL implicit_bioturbation_step(nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, &
-            & candidate_k_bioturb, one_day * one_year, bioturbation_pool, transported_pool)
-          candidate_domain(bioturb_pools(transport_pool_index),ixC,:,:,1) = transported_pool
-          candidate_domain(bioturb_pools(transport_pool_index),ixC,:,1,1) = &
-            & candidate_domain(bioturb_pools(transport_pool_index),ixC,:,1,1) + unburied_surface
-        END DO
-      END DO
-
-      CALL update_candidate_soil_state(candidate_domain, candidate_surface_burial)
-      max_pool_change = MAXVAL(ABS(candidate_domain(:,ixC,:,:,1) - pool_domain(:,ixC,:,:,1)))
-      max_bulk_excess = 0.0_wp
-      DO local_ic = 1, nc
-        DO local_is = 1, NINT(num_sl_above_bedrock(local_ic))
-          max_bulk_excess = MAX(max_bulk_excess, candidate_bulk_soil_c(local_ic,local_is) - &
-            & bulk_carbon_max_domain(local_ic,local_is,1))
-        END DO
-      END DO
-
-      pool_domain = candidate_domain
-      surface_burial_domain(:,:,1) = candidate_surface_burial
-
-      IF (l_transport_debug) THEN
-        CALL write_bioturbation_target_profile('bioturbation-smoothed target', candidate_domain, &
-          & bulk_carbon_max_domain(:,:,1), qmax_org_domain(:,:,1), candidate_surface_burial, &
-          & enzyme_poly_domain(:,:,1), enzyme_res_domain(:,:,1), enzyme_ap_domain(:,:,1))
-        WRITE(message_text,*) 'DEBUG analytical bioturbation target smoothing; years, ', &
-          & 'max pool change [mol C m-3], max bulk-C excess [mol C m-3] = ', &
-          & transport_smoothing_years, max_pool_change, max_bulk_excess
-        CALL message(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', TRIM(message_text))
-      END IF
-    END SUBROUTINE apply_bioturbation_target_smoothing
-
-    SUBROUTINE write_bioturbation_target_profile(label, target_pool, target_bulk_max, target_qmax, &
-      & target_burial, target_enzyme_poly, target_enzyme_res, target_enzyme_ap)
-      CHARACTER(len=*), INTENT(in) :: label !< name of the analytical target being reported
-      REAL(wp), INTENT(in) :: target_pool(:,:,:,:,:) !< target element pools [mol m-3]
-      REAL(wp), INTENT(in) :: target_bulk_max(:,:) !< maximum admissible bulk C [mol C m-3]
-      REAL(wp), INTENT(in) :: target_qmax(:,:) !< target organic sorption capacity [mol C m-3]
-      REAL(wp), INTENT(in) :: target_burial(:,:) !< target first-layer burial fraction [-]
-      REAL(wp), INTENT(in) :: target_enzyme_poly(:,:) !< polymeric enzyme allocation fraction [-]
-      REAL(wp), INTENT(in) :: target_enzyme_res(:,:) !< residue enzyme allocation fraction [-]
-      REAL(wp), INTENT(in) :: target_enzyme_ap(:,:) !< phosphatase enzyme allocation fraction [-]
-
-      REAL(wp) :: total_carbon !< total target organic C density in one layer [mol C m-3]
-      REAL(wp) :: profile_bulk_soil_c(nc,nsoil_w) !< diagnostic bulk soil C density [mol C m-3]
-      REAL(wp) :: profile_litter_c(nc,nsoil_w) !< diagnostic litter C density [mol C m-3]
-      REAL(wp) :: profile_volume_min(nc,nsoil_w) !< diagnostic mineral soil volume fraction [-]
-      REAL(wp) :: profile_bulk_density(nc,nsoil_w) !< diagnostic corrected bulk density [kg m-3]
-      REAL(wp) :: profile_burial(nc,nsoil_w) !< diagnostic burial fraction after constraint update [-]
-      INTEGER  :: profile_ic   !< horizontal point index [-]
-      INTEGER  :: profile_is   !< soil-layer index [-]
-
-      profile_burial = target_burial
-      profile_bulk_soil_c = 0.0_wp
-      profile_litter_c = 0.0_wp
-      profile_volume_min = 0.0_wp
-      CALL calc_bulk_soil_carbon(nc, nsoil_w, num_sl_above_bedrock, 'jsm', &
-        & target_pool(:,:,:,:,1), target_bulk_max, profile_burial, &
-        & profile_bulk_soil_c, profile_litter_c, profile_volume_min)
-      profile_bulk_density = calc_bulk_density_correction( &
-        & profile_bulk_soil_c, profile_litter_c, bulk_dens_sl)
-
-      DO profile_ic = 1, nc
-        DO profile_is = 1, NINT(num_sl_above_bedrock(profile_ic))
-          total_carbon = SUM(target_pool(:,ixC,profile_ic,profile_is,1))
-          WRITE(message_text,*) 'DEBUG analytical ', TRIM(label), ' profile ic/is = ', profile_ic, profile_is, &
-            & '; C_sol, C_poly, C_wood, C_DOM, C_aDOM, C_mic, C_res, C_aRes [mol C m-3] = ', &
-            & target_pool(ix_soluable_litter,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_polymeric_litter,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_woody_litter,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_dom,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_dom_assoc,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_microbial,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_residue,ixC,profile_ic,profile_is,1), &
-            & target_pool(ix_residue_assoc,ixC,profile_ic,profile_is,1), &
-            & '; C_total, C_bulk, C_litter [mol C m-3] = ', total_carbon, &
-            & profile_bulk_soil_c(profile_ic,profile_is), profile_litter_c(profile_ic,profile_is), &
-            & '; C_bulk_max, qmax [mol C m-3], bulk_density [kg m-3], mineral_volume, burial = ', &
-            & target_bulk_max(profile_ic,profile_is), target_qmax(profile_ic,profile_is), &
-            & profile_bulk_density(profile_ic,profile_is), profile_volume_min(profile_ic,profile_is), &
-            & profile_burial(profile_ic,profile_is), &
-            & '; enzyme_poly, enzyme_res, enzyme_AP = ', target_enzyme_poly(profile_ic,profile_is), &
-            & target_enzyme_res(profile_ic,profile_is), target_enzyme_ap(profile_ic,profile_is)
-          CALL message(TRIM(modname)//':apply_analytical_ss_jsm_accelerator', TRIM(message_text))
-        END DO
-      END DO
-    END SUBROUTINE write_bioturbation_target_profile
-
-
-    SUBROUTINE update_candidate_soil_state(candidate_pool, candidate_burial)
-
-      REAL(wp), INTENT(in)    :: candidate_pool(:,:,:,:,:) !< candidate element pools [mol m-3]
-      REAL(wp), INTENT(inout) :: candidate_burial(:,:) !< burial fraction updated by bulk-C constraints [-]
-
-      ! These host-associated scratch arrays are deliberately updated here so
-      ! subsequent bioturbation smoothing uses a mutually consistent C density,
-      ! mineral volume, corrected bulk density, and burial fraction.
-
-      candidate_bulk_soil_c = 0.0_wp
-      candidate_litter_c = 0.0_wp
-      candidate_volume_min = 0.0_wp
-      CALL calc_bulk_soil_carbon(nc, nsoil_w, num_sl_above_bedrock, 'jsm', &
-        & candidate_pool(:,:,:,:,1), bulk_carbon_max_domain(:,:,1), candidate_burial, &
-        & candidate_bulk_soil_c, candidate_litter_c, candidate_volume_min)
-      candidate_bulk_density = calc_bulk_density_correction( &
-        & candidate_bulk_soil_c, candidate_litter_c, bulk_dens_sl)
-    END SUBROUTINE update_candidate_soil_state
-
-    SUBROUTINE implicit_bioturbation_step(nc_local, nsoil_local, nsl, layer_thickness, &
-      & diffusivity, step_seconds, old_pool, new_pool)
-
-      INTEGER,  INTENT(in)  :: nc_local          !< number of horizontal points [-]
-      INTEGER,  INTENT(in)  :: nsoil_local       !< number of soil layers [-]
-      REAL(wp), INTENT(in)  :: nsl(:)            !< active soil-layer count per point [-]
-      REAL(wp), INTENT(in)  :: layer_thickness(:,:) !< soil-layer thickness [m]
-      REAL(wp), INTENT(in)  :: diffusivity(:,:)  !< bioturbation diffusion coefficient [m2 s-1]
-      REAL(wp), INTENT(in)  :: step_seconds      !< implicit transport integration period [s]
-      REAL(wp), INTENT(in)  :: old_pool(:,:)     !< pre-transport pool density [mol C m-3]
-      REAL(wp), INTENT(out) :: new_pool(:,:)     !< post-transport pool density [mol C m-3]
-
-      REAL(wp) :: lower(nsoil_local)      !< lower diagonal of dimensionless transport matrix [-]
-      REAL(wp) :: diagonal(nsoil_local)   !< main diagonal of dimensionless transport matrix [-]
-      REAL(wp) :: upper(nsoil_local)      !< upper diagonal of dimensionless transport matrix [-]
-      REAL(wp) :: rhs(nsoil_local)        !< tridiagonal right-hand-side pool density [mol C m-3]
-      REAL(wp) :: solution(nsoil_local)   !< tridiagonal solution pool density [mol C m-3]
-      REAL(wp) :: interface_conductance   !< diffusive conductance across a layer interface [m s-1]
-      REAL(wp) :: midpoint_distance       !< distance between adjacent layer midpoints [m]
-      REAL(wp) :: elimination_factor      !< Thomas-algorithm elimination multiplier [-]
-      INTEGER  :: ic_local                !< horizontal point index [-]
-      INTEGER  :: is_local                !< soil-layer index [-]
-      INTEGER  :: n_active                !< active soil-layer count for one point [-]
-
-      new_pool = old_pool
-      DO ic_local = 1, nc_local
-        n_active = NINT(nsl(ic_local))
-        IF (n_active <= 1) CYCLE
-
-        lower = 0.0_wp
-        diagonal = 1.0_wp
-        upper = 0.0_wp
-        rhs = 0.0_wp
-        solution = 0.0_wp
-        rhs(1:n_active) = old_pool(ic_local,1:n_active)
-
-        DO is_local = 1, n_active - 1
-          midpoint_distance = 0.5_wp * (layer_thickness(ic_local,is_local) + &
-            & layer_thickness(ic_local,is_local + 1))
-          IF (midpoint_distance <= eps8 .OR. layer_thickness(ic_local,is_local) <= eps8 .OR. &
-            & layer_thickness(ic_local,is_local + 1) <= eps8) CYCLE
-          interface_conductance = MAX(0.0_wp, diffusivity(ic_local,is_local)) / midpoint_distance
-          diagonal(is_local) = diagonal(is_local) + step_seconds * interface_conductance / &
-            & layer_thickness(ic_local,is_local)
-          upper(is_local) = upper(is_local) - step_seconds * interface_conductance / &
-            & layer_thickness(ic_local,is_local)
-          lower(is_local + 1) = lower(is_local + 1) - step_seconds * interface_conductance / &
-            & layer_thickness(ic_local,is_local + 1)
-          diagonal(is_local + 1) = diagonal(is_local + 1) + step_seconds * interface_conductance / &
-            & layer_thickness(ic_local,is_local + 1)
-        END DO
-
-        DO is_local = 2, n_active
-          elimination_factor = lower(is_local) / diagonal(is_local - 1)
-          diagonal(is_local) = diagonal(is_local) - elimination_factor * upper(is_local - 1)
-          rhs(is_local) = rhs(is_local) - elimination_factor * rhs(is_local - 1)
-        END DO
-
-        solution(n_active) = rhs(n_active) / diagonal(n_active)
-        DO is_local = n_active - 1, 1, -1
-          solution(is_local) = (rhs(is_local) - upper(is_local) * solution(is_local + 1)) / diagonal(is_local)
-        END DO
-        new_pool(ic_local,1:n_active) = MAX(0.0_wp, solution(1:n_active))
-      END DO
-    END SUBROUTINE implicit_bioturbation_step
-
-    SUBROUTINE reconstruct_target_elements(nc_local, nsoil_local, nsl, old_pool, target_pool)
-      INTEGER,  INTENT(in)    :: nc_local       !< number of horizontal points [-]
-      INTEGER,  INTENT(in)    :: nsoil_local    !< number of soil layers [-]
-      REAL(wp), INTENT(in)    :: nsl(:)         !< active soil-layer count per point [-]
-      REAL(wp), INTENT(in)    :: old_pool(:,:,:,:) !< pre-jump element pools [mol m-3]
-      REAL(wp), INTENT(inout) :: target_pool(:,:,:,:) !< analytical C and reconstructed elements [mol m-3]
-      REAL(wp) :: old_c       !< pre-jump pool C density [mol C m-3]
-      REAL(wp) :: new_c       !< analytical target pool C density [mol C m-3]
-      REAL(wp) :: layer_c     !< pre-jump total layer C density [mol C m-3]
-      REAL(wp) :: layer_ratio(SIZE(old_pool,2)) !< layer-average element-to-C molar ratios [-]
-      REAL(wp) :: ratio       !< selected pool or layer element-to-C molar ratio [-]
-      INTEGER  :: ic          !< horizontal point index [-]
-      INTEGER  :: is          !< soil-layer index [-]
-      INTEGER  :: ipool       !< biogeochemical pool index [-]
-      INTEGER  :: ielem       !< element index [-]
-
-      ! Preserve each pool's existing stoichiometry where possible; fall back
-      ! first to the layer-average ratio and finally to model-default ratios.
-
-      DO ic = 1, nc_local
-        DO is = NINT(nsl(ic)) + 1, nsoil_local
-          target_pool(:,:,ic,is) = old_pool(:,:,ic,is)
-        END DO
-        DO is = 1, NINT(nsl(ic))
-          layer_c = SUM(old_pool(:,ixC,ic,is))
-          layer_ratio(:) = 0.0_wp
-          IF (layer_c > eps8) THEN
-            DO ielem = 1, SIZE(old_pool,2)
-              IF (ielem /= ixC) layer_ratio(ielem) = SUM(old_pool(:,ielem,ic,is)) / layer_c
-            END DO
-          END IF
-
-          DO ipool = 1, SIZE(old_pool,1)
-            old_c = old_pool(ipool,ixC,ic,is)
-            new_c = MAX(0.0_wp, target_pool(ipool,ixC,ic,is))
-            target_pool(ipool,ixC,ic,is) = new_c
-            DO ielem = 1, SIZE(old_pool,2)
-              IF (ielem == ixC) CYCLE
-              IF (old_c > eps8) THEN
-                ratio = old_pool(ipool,ielem,ic,is) / old_c
-              ELSE IF (layer_c > eps8) THEN
-                ratio = layer_ratio(ielem)
-              ELSE
-                ratio = default_element_ratio(ipool, ielem)
-              END IF
-              target_pool(ipool,ielem,ic,is) = MAX(0.0_wp, new_c * ratio)
-            END DO
-          END DO
-        END DO
-      END DO
-    END SUBROUTINE reconstruct_target_elements
-
-    SUBROUTINE reconstruct_target_c14(nc_local, nsoil_local, nsl, &
-      & sol_c_in, poly_c_in, wood_c_in, sol_c14_in, poly_c14_in, wood_c14_in, &
-      & doc_transport_in, desorption_mod_in, target_pool)
-      INTEGER,  INTENT(in)    :: nc_local       !< number of horizontal points [-]
-      INTEGER,  INTENT(in)    :: nsoil_local    !< number of soil layers [-]
-      REAL(wp), INTENT(in)    :: nsl(:)         !< active soil-layer count per point [-]
-      REAL(wp), INTENT(in)    :: sol_c_in(:,:)  !< soluble-litter C input [mol C m-3 s-1]
-      REAL(wp), INTENT(in)    :: poly_c_in(:,:) !< polymeric-litter C input [mol C m-3 s-1]
-      REAL(wp), INTENT(in)    :: wood_c_in(:,:) !< woody-litter C input [mol C m-3 s-1]
-      REAL(wp), INTENT(in)    :: sol_c14_in(:,:)  !< soluble-litter C14 input [mol C14 m-3 s-1]
-      REAL(wp), INTENT(in)    :: poly_c14_in(:,:) !< polymeric-litter C14 input [mol C14 m-3 s-1]
-      REAL(wp), INTENT(in)    :: wood_c14_in(:,:) !< woody-litter C14 input [mol C14 m-3 s-1]
-      REAL(wp), INTENT(in)    :: doc_transport_in(:,:) !< downward DOC transport coefficient [s-1]
-      REAL(wp), INTENT(in)    :: desorption_mod_in(:,:) !< environmental desorption modifier [-]
-      REAL(wp), INTENT(inout) :: target_pool(:,:,:,:) !< target element pools including C14 [mol m-3]
-
-      REAL(wp) :: c_dom, c_mic, c_res, c_adom, c_ares !< target DOM/microbial/residue C pools [mol C m-3]
-      REAL(wp) :: c_poly, c_sol, c_wood !< target litter C pools [mol C m-3]
-      REAL(wp) :: d_litter              !< source rate to polymeric litter [mol C m-3 s-1]
-      REAL(wp) :: d_residue             !< source rate to microbial residue [mol C m-3 s-1]
-      REAL(wp) :: mortality_flux        !< microbial mortality C flux [mol C m-3 s-1]
-      REAL(wp) :: doc_transport_above   !< DOC transport coefficient of layer above [s-1]
-      REAL(wp) :: kdes_dom_eff          !< modified associated-DOM desorption rate [s-1]
-      REAL(wp) :: kdes_res_eff          !< modified associated-residue desorption rate [s-1]
-      REAL(wp) :: source_c              !< total source C rate for a target pool [mol C m-3 s-1]
-      REAL(wp) :: source_c14            !< total source C14 rate for a target pool [mol C14 m-3 s-1]
-      REAL(wp) :: ratio_dom, ratio_mic, ratio_res !< C14-to-C molar ratios of DOM, microbes and residue [-]
-      REAL(wp) :: ratio_poly, ratio_sol, ratio_wood !< C14-to-C molar ratios of litter pools [-]
-      REAL(wp) :: new_dom_c14           !< updated steady-state DOM C14 density [mol C14 m-3]
-      REAL(wp) :: old_dom_c14           !< previous DOM C14 iterate [mol C14 m-3]
-      REAL(wp) :: max_change            !< absolute DOM C14 iteration change [mol C14 m-3]
-      INTEGER  :: ic                    !< horizontal point index [-]
-      INTEGER  :: is                    !< soil-layer index [-]
-      INTEGER  :: iter                  !< C14 fixed-point iteration index [-]
-      INTEGER, PARAMETER :: max_c14_iterations = 100 !< maximum C14 closure iterations [-]
-
-      IF (SUM(MAX(0.0_wp, sol_c14_in)) + SUM(MAX(0.0_wp, poly_c14_in)) + &
-        & SUM(MAX(0.0_wp, wood_c14_in)) <= eps8) RETURN
-
-      DO ic = 1, nc_local
-        DO is = 1, NINT(nsl(ic))
-          c_sol  = target_pool(ix_soluable_litter,ixC,ic,is)
-          c_wood = target_pool(ix_woody_litter,ixC,ic,is)
-          c_poly = target_pool(ix_polymeric_litter,ixC,ic,is)
-          c_dom  = target_pool(ix_dom,ixC,ic,is)
-          c_mic  = target_pool(ix_microbial,ixC,ic,is)
-          c_res  = target_pool(ix_residue,ixC,ic,is)
-          c_adom = target_pool(ix_dom_assoc,ixC,ic,is)
-          c_ares = target_pool(ix_residue_assoc,ixC,ic,is)
-
-          target_pool(ix_soluable_litter,ixC14,ic,is) = tracer_steady_state( &
-            & MAX(0.0_wp, sol_c14_in(ic,is)), MAX(0.0_wp, sol_c_in(ic,is)), c_sol)
-          target_pool(ix_woody_litter,ixC14,ic,is) = tracer_steady_state( &
-            & MAX(0.0_wp, wood_c14_in(ic,is)), MAX(0.0_wp, wood_c_in(ic,is)), c_wood)
-
-          d_litter = MAX(0.0_wp, poly_c_in(ic,is) + fc_woody2polymeric * wood_c_in(ic,is))
-          ratio_wood = safe_tracer_ratio(target_pool(ix_woody_litter,ixC14,ic,is), c_wood)
-          source_c14 = MAX(0.0_wp, poly_c14_in(ic,is)) + &
-            & fc_woody2polymeric * MAX(0.0_wp, wood_c_in(ic,is)) * ratio_wood
-          target_pool(ix_polymeric_litter,ixC14,ic,is) = tracer_steady_state(source_c14, d_litter, c_poly)
-
-          mortality_flux = k_mort_microbial * c_mic
-          d_residue = (1.0_wp - f_soluable_residue) * mortality_flux
-          kdes_dom_eff = MAX(0.0_wp, k_desorpt_dom * desorption_mod_in(ic,is))
-          kdes_res_eff = MAX(0.0_wp, k_desorpt_det * desorption_mod_in(ic,is))
-
-          DO iter = 1, max_c14_iterations
-            old_dom_c14 = target_pool(ix_dom,ixC14,ic,is)
-            ratio_dom = safe_tracer_ratio(old_dom_c14, c_dom)
-
-            target_pool(ix_microbial,ixC14,ic,is) = tracer_steady_state( &
-              & mortality_flux * ratio_dom, mortality_flux, c_mic)
-            ratio_mic = safe_tracer_ratio(target_pool(ix_microbial,ixC14,ic,is), c_mic)
-
-            target_pool(ix_residue,ixC14,ic,is) = tracer_steady_state( &
-              & d_residue * ratio_mic, d_residue, c_res)
-            ratio_res = safe_tracer_ratio(target_pool(ix_residue,ixC14,ic,is), c_res)
-
-            target_pool(ix_dom_assoc,ixC14,ic,is) = tracer_steady_state( &
-              & kdes_dom_eff * c_adom * ratio_dom, kdes_dom_eff * c_adom, c_adom)
-            target_pool(ix_residue_assoc,ixC14,ic,is) = tracer_steady_state( &
-              & kdes_res_eff * c_ares * ratio_res, kdes_res_eff * c_ares, c_ares)
-
-            ratio_sol  = safe_tracer_ratio(target_pool(ix_soluable_litter,ixC14,ic,is), c_sol)
-            ratio_poly = safe_tracer_ratio(target_pool(ix_polymeric_litter,ixC14,ic,is), c_poly)
-            source_c = fc_soluable2dom * MAX(0.0_wp, sol_c_in(ic,is)) + d_litter &
-              & + f_soluable_residue * mortality_flux + d_residue &
-              & + kdes_dom_eff * c_adom + kdes_res_eff * c_ares
-            source_c14 = fc_soluable2dom * MAX(0.0_wp, sol_c_in(ic,is)) * ratio_sol &
-              & + d_litter * ratio_poly + f_soluable_residue * mortality_flux * ratio_mic &
-              & + d_residue * ratio_res &
-              & + kdes_dom_eff * target_pool(ix_dom_assoc,ixC14,ic,is) &
-              & + kdes_res_eff * target_pool(ix_residue_assoc,ixC14,ic,is)
-
-            IF (is > 1) THEN
-              doc_transport_above = MAX(0.0_wp, doc_transport_in(ic,is-1))
-              source_c = source_c + doc_transport_above * target_pool(ix_dom,ixC,ic,is-1)
-              source_c14 = source_c14 + doc_transport_above * target_pool(ix_dom,ixC14,ic,is-1)
-            END IF
-
-            new_dom_c14 = tracer_steady_state(source_c14, source_c, c_dom)
-            target_pool(ix_dom,ixC14,ic,is) = new_dom_c14
-            max_change = ABS(new_dom_c14 - old_dom_c14)
-            IF (max_change <= eps8 * MAX(1.0_wp, ABS(new_dom_c14))) EXIT
-          END DO
-        END DO
-      END DO
-    END SUBROUTINE reconstruct_target_c14
-
-    PURE REAL(wp) FUNCTION tracer_steady_state(source_tracer, source_carbon, pool_carbon) RESULT(pool_tracer)
-      REAL(wp), INTENT(in) :: source_tracer !< tracer source rate [mol tracer m-3 s-1]
-      REAL(wp), INTENT(in) :: source_carbon !< total C source rate [mol C m-3 s-1]
-      REAL(wp), INTENT(in) :: pool_carbon   !< prescribed target C density [mol C m-3]
-      ! pool_tracer is the decay-corrected steady-state tracer density [mol tracer m-3].
-
-      ! The carbon target defines the implied gross turnover rate source_carbon / pool_carbon.
-      IF (source_carbon > eps8 .AND. pool_carbon > eps8) THEN
-        pool_tracer = MAX(0.0_wp, source_tracer) * pool_carbon / &
-          & (source_carbon + lambda_C14 * pool_carbon)
-      ELSE
-        pool_tracer = 0.0_wp
-      END IF
-    END FUNCTION tracer_steady_state
-
-    PURE REAL(wp) FUNCTION safe_tracer_ratio(pool_tracer, pool_carbon) RESULT(ratio)
-      REAL(wp), INTENT(in) :: pool_tracer !< tracer pool density [mol tracer m-3]
-      REAL(wp), INTENT(in) :: pool_carbon !< carbon pool density [mol C m-3]
-      ! ratio is the non-negative tracer-to-carbon molar ratio [-].
-
-      IF (pool_carbon > eps8) THEN
-        ratio = MAX(0.0_wp, pool_tracer) / pool_carbon
-      ELSE
-        ratio = 0.0_wp
-      END IF
-    END FUNCTION safe_tracer_ratio
-
-    REAL(wp) FUNCTION default_element_ratio(ipool, ielem) RESULT(ratio)
-      INTEGER, INTENT(in) :: ipool !< biogeochemical pool identifier [-]
-      INTEGER, INTENT(in) :: ielem !< requested element identifier [-]
-      REAL(wp) :: cn_ratio         !< default pool C:N molar ratio [-]
-      REAL(wp) :: np_ratio         !< default pool N:P molar ratio [-]
-      ! ratio is the requested element-to-C molar ratio [-].
-
-      SELECT CASE(ipool)
-      CASE(ix_soluable_litter)
-        cn_ratio = k_init_soluable_litter_cn
-        np_ratio = k_init_litter_np
-      CASE(ix_polymeric_litter)
-        cn_ratio = k_init_polymeric_litter_cn
-        np_ratio = k_init_litter_np
-      CASE(ix_woody_litter)
-        cn_ratio = k_init_woody_litter_cn
-        np_ratio = k_init_litter_np
-      CASE(ix_residue, ix_residue_assoc)
-        cn_ratio = microbial_cn
-        np_ratio = k_slow_som_np
-      CASE DEFAULT
-        cn_ratio = microbial_cn
-        np_ratio = microbial_np
-      END SELECT
-
-      ratio = 0.0_wp
-      IF (ielem == ixN)  ratio = 1.0_wp / cn_ratio
-      IF (ielem == ixP)  ratio = 1.0_wp / cn_ratio / np_ratio
-      IF (ielem == ixN15) ratio = 0.0_wp
-    END FUNCTION default_element_ratio
-
-  END SUBROUTINE apply_analytical_ss_jsm_accelerator
 #endif
 END MODULE mo_sb_analytical_accelerator

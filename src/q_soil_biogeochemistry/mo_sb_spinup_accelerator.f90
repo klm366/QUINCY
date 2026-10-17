@@ -13,7 +13,7 @@
 !>
 !> Structural entry point for replaying bookkept soil forcing during spin-up.
 !> The forward relaxation is shared by JSM and simple_1d and starts from the
-!> current soil state. It has no dependency on an analytical steady-state solver.
+!> current soil state. An optional conditional carbon seed precedes later replays.
 !>
 !> Memory contract for the implementation stage:
 !> - forcing-bin weighted sums and elapsed-time weights are restart-safe SB memory;
@@ -218,6 +218,7 @@ CONTAINS
     INTEGER :: ics
     INTEGER :: ice
     INTEGER :: iblk
+    INTEGER :: ic !< Cell index for restart-completeness checks [-]
     INTEGER :: i_source
     INTEGER :: i_element
     INTEGER :: i_soil
@@ -231,6 +232,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_n_sum
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_p_sum
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_forcing_event
+    dsl4jsb_Real3D_onChunk :: sb_accel_cue_sum_sl
+    dsl4jsb_Real3D_onChunk :: sb_accel_poly_sum_sl
+    dsl4jsb_Real3D_onChunk :: sb_accel_ap_sum_sl
+    dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_poly
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_AP
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_daily_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
@@ -288,6 +295,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_n_sum)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_p_sum)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_forcing_event)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_cue_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_poly_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_ap_sum_sl)
+    IF (dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm') THEN
+      dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_poly)
+      dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_AP)
+    END IF
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_daily_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
@@ -339,6 +354,21 @@ CONTAINS
       END IF
       sb_spinup_accelerator_forcing_event = REAL(event_year, lp)
     END IF
+    ! A missing restart integral remains invalid for a partially collected window.
+    ! Initialize only genuinely empty windows; otherwise reject the analytical seed later.
+    DO ic = 1,options%nc
+      IF (SUM(sb_spinup_accelerator_forcing_time(ic,:)) == 0._lp) THEN
+        sb_accel_cue_sum_sl(ic,:) = 0._lp
+        sb_accel_poly_sum_sl(ic,:) = 0._lp
+        sb_accel_ap_sum_sl(ic,:) = 0._lp
+      END IF
+      IF (ANY(sb_accel_cue_sum_sl(ic,:) < 0._lp) .OR. ANY(sb_accel_poly_sum_sl(ic,:) < 0._lp) .OR. &
+        & ANY(sb_accel_ap_sum_sl(ic,:) < 0._lp)) CYCLE
+      IF (dsl4jsb_Config(SB_)%sb_model_scheme /= 'jsm') CYCLE
+      sb_accel_cue_sum_sl(ic,:) = sb_accel_cue_sum_sl(ic,:) + microbial_cue_eff_tmic_mavg(ic,:)*options%dtime
+      sb_accel_poly_sum_sl(ic,:) = sb_accel_poly_sum_sl(ic,:) + enzyme_frac_poly(ic,:)*options%dtime
+      sb_accel_ap_sum_sl(ic,:) = sb_accel_ap_sum_sl(ic,:) + enzyme_frac_AP(ic,:)*options%dtime
+    END DO
     sb_spinup_accelerator_daily_time(:, daily_bin) = &
       & sb_spinup_accelerator_daily_time(:, daily_bin) + options%dtime
     sb_spinup_accelerator_forcing_time(:, forcing_bin) = &
@@ -542,6 +572,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_n_sum
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_p_sum
     dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_forcing_event
+    dsl4jsb_Real3D_onChunk :: sb_accel_cue_sum_sl
+    dsl4jsb_Real3D_onChunk :: sb_accel_poly_sum_sl
+    dsl4jsb_Real3D_onChunk :: sb_accel_ap_sum_sl
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_daily_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
@@ -572,6 +605,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_n_sum)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_p_sum)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_forcing_event)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_cue_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_poly_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_ap_sum_sl)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_daily_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
@@ -597,6 +633,9 @@ CONTAINS
     sb_spinup_accelerator_plant_uptake_n_sum(:) = 0.0_lp
     sb_spinup_accelerator_plant_uptake_p_sum(:) = 0.0_lp
     sb_spinup_accelerator_forcing_event(:) = 0.0_lp
+    sb_accel_cue_sum_sl = 0._lp
+    sb_accel_poly_sum_sl = 0._lp
+    sb_accel_ap_sum_sl = 0._lp
     sb_spinup_accelerator_daily_time(:,:) = 0.0_lp
     sb_spinup_accelerator_forcing_time(:,:) = 0.0_lp
     sb_spinup_accelerator_litterfall_sum(:,:) = 0.0_lp
@@ -758,9 +797,10 @@ CONTAINS
     TYPE(t_sb_spinup_live_forcing) :: live_forcing
 
     ! Forcing is borrowed and restored; genuine soil state and its moving
-    ! averages evolve. Replay passes an explicit argument to suppress host
-    ! analytical events, rather than mutating a module-global flag across tiles.
+    ! averages evolve. The shared event owns the optional analytical seed;
+    ! internal replay steps cannot collect forcing or retrigger host events.
     CALL prepare_sb_spinup_accelerator(tile, options, forcing, live_forcing)
+    CALL seed_sb_replay_analytically(tile, options, forcing, execution_index)
     CALL run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
     CALL reset_sb_fluxes(tile, options)
@@ -769,6 +809,261 @@ CONTAINS
     CALL mark_sb_spinup_accelerator_execution(tile, options, execution_index)
 
   END SUBROUTINE execute_sb_spinup_accelerator
+
+  !> Seed an eligible replay from its own climatology; no independent clock or forcing collector.
+  !> The first COMPLETED replay is structure conditioning. Subsequent columns are transactional:
+  !> reject all layers together on invalid forcing, ambiguous composition or failed C equations.
+  SUBROUTINE seed_sb_replay_analytically(tile, options, forcing, execution_index)
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_jsb_math_constants, ONLY: one_day, eps8
+    USE mo_jsb_lctlib_class, ONLY: t_lctlib_element
+    USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
+    USE mo_lnd_bgcm_idx
+    USE mo_sb_analytical_accelerator, ONLY: t_sb_analytical_inputs, t_sb_local_target, &
+      & build_sb_analytical_inputs, diagnose_local_carbon_targets, solve_simple_carbon_target, &
+      & reconstruct_analytical_column
+    USE mo_sb_constants, ONLY: tau_metabolic_litter, tau_structural_litter, tau_woody_litter, &
+      & tau_fast, tau_slow, frac_woody2dec_litter, frac_litter2fast_som, frac_fast2slow_som, &
+      & frac_slow2fast_som, fc_soluable_max, k_fc_soluable, lc_woody_litter
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Owning SB tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options !< Global timestamp and chunk, unchanged
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing !< Validated shared replay means
+    INTEGER, INTENT(in) :: execution_index !< Shared schedule event index [-]
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_lctlib_element), POINTER :: lctlib
+    TYPE(t_sb_analytical_inputs) :: inputs
+    TYPE(t_sb_local_target), ALLOCATABLE :: targets(:,:)
+    REAL(lp), ALLOCATABLE :: candidate(:,:,:), increments(:)
+    INTEGER, ALLOCATABLE :: pool_indices(:)
+    INTEGER :: ics, ice, iblk, nc, ns, c, s, n, failed_layer, accepted_count, rejected_count
+    INTEGER :: e, element_indices(6) !< Optional element indices for diagnostic increments [-]
+    REAL(lp) :: dt, woody_fraction, woody_c, woody_n, rate(5), transfer(4)
+    REAL(lp) :: increment_total(6) !< Chunk sum for log only, NOT area-weighted global inventory [mol m-2]
+    LOGICAL :: accepted, is_jsm
+    CHARACTER(len=192) :: reason, first_rejection
+    CHARACTER(len=1024) :: report
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock, sb_spinup_accelerator_execution_count
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl, vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: sb_accel_cue_sum_sl, sb_accel_poly_sum_sl, sb_accel_ap_sum_sl
+
+    model => Get_model(tile%owner_model_id)
+    IF (.NOT. model%config%flag_analytical_ss_spinup_accelerator) RETURN
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    nc = options%nc
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
+    IF (ALL(sb_spinup_accelerator_execution_count <= 0._lp)) THEN
+      CALL message(modname//':analytical_seed', 'Conditioning replay: analytical seed skipped on '//TRIM(tile%name))
+      RETURN
+    END IF
+    ! The analytical equations omit fungal/priming pathways: retain replay rather than a false solution.
+    IF (dsl4jsb_Config(SB_)%flag_mycorrhiza .OR. dsl4jsb_Config(SB_)%flag_mycorrhiza_org .OR. &
+      & dsl4jsb_Config(SB_)%flag_mycorrhiza_prim) THEN
+      CALL message(modname//':analytical_seed', 'Analytical seed rejected: mycorrhizal pathways; replay unchanged')
+      RETURN
+    END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_cue_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_poly_sum_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_accel_ap_sum_sl)
+    sb_pool_mt => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID,ics,ice,iblk,tile%name)
+    ns = SIZE(sb_pool_mt,4)
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    is_jsm = dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm'
+    ! Same rounded substep as run_sb_climatological_year, not the host timestep.
+    dt = one_day/REAL(MAX(1,CEILING(1._lp/dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_timestep_days)),lp)
+    IF (is_jsm) THEN
+      pool_indices = [ix_soluable_litter,ix_woody_litter,ix_polymeric_litter,ix_microbial, &
+        & ix_residue,ix_dom,ix_dom_assoc,ix_residue_assoc]
+    ELSE
+      pool_indices = [ix_soluable_litter,ix_woody_litter,ix_polymeric_litter,ix_microbial,ix_residue]
+    END IF
+    transfer = [frac_woody2dec_litter,frac_litter2fast_som,frac_fast2slow_som,frac_slow2fast_som]
+    accepted_count = 0
+    rejected_count = 0
+    increment_total = 0._lp
+    element_indices = [ixC,ixN,ixP,ixC13,ixC14,ixN15]
+    first_rejection = ''
+    DO c = 1,nc
+      IF (sb_spinup_accelerator_execution_count(c) <= 0._lp) CYCLE
+      n = NINT(num_sl_above_bedrock(c))
+      IF (n <= 0) CYCLE
+      ! Build one column at a time: one invalid cell must not reject its MPI neighbours.
+      CALL build_sb_analytical_inputs(1,ns,SIZE(sb_pool_mt,1),SIZE(sb_pool_mt,2),forcing%n_litter_sources, &
+        & forcing%n_forcing_bins,forcing%n_daily_bins,dt,lctlib%sla,lctlib%growthform, &
+        & dsl4jsb_Config(SB_)%sb_model_scheme,num_sl_above_bedrock(c:c),soil_depth_sl(c:c,:), &
+        & vol_field_cap_sl(c:c,:),forcing%forcing_time(c:c,:),forcing%litterfall_rate(c:c,:), &
+        & forcing%root_fraction(c:c,:),forcing%t_soil(c:c,:),forcing%wtr_soil(c:c,:),forcing%ice_soil(c:c,:), &
+        & forcing%wtr_pot(c:c,:),forcing%wtr_down(c:c,:),forcing%wtr_lat_loss(c:c,:), &
+        & sb_accel_cue_sum_sl(c:c,:),sb_accel_poly_sum_sl(c:c,:),sb_accel_ap_sum_sl(c:c,:),inputs,reason)
+      IF (.NOT. inputs%ready) THEN
+        rejected_count = rejected_count+1
+        IF (LEN_TRIM(first_rejection) == 0) first_rejection = reason
+        IF (model%config%flag_spinup_debug) THEN
+          WRITE(report,*) 'Rejected analytical forcing: tile/block/cell=',TRIM(tile%name),iblk,ics+c-1, &
+            & '; ',TRIM(reason)
+          CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+        END IF
+        CYCLE
+      END IF
+      inputs%depth = soil_depth_sl(c:c,:)
+      IF (is_jsm) THEN
+        inputs%pore_volume = sb__mem%volume_pore_total_sl%ptr(ics+c-1:ics+c-1,:,iblk)
+        inputs%qmax_org = sb__mem%qmax_org%ptr(ics+c-1:ics+c-1,:,iblk)
+        CALL diagnose_local_carbon_targets(inputs,num_sl_above_bedrock(c:c),targets, &
+          & dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      ELSE
+        IF (ALLOCATED(targets)) DEALLOCATE(targets)
+        ALLOCATE(targets(1,ns))
+        DO s = 1,n
+          rate = inputs%rate_product_mean(1,s,6) / &
+            & [tau_metabolic_litter,tau_woody_litter,tau_structural_litter,tau_fast,tau_slow]
+          woody_c = sb_pool_mt(ix_woody_litter,ixC,c,s)
+          woody_n = sb_pool_mt(ix_woody_litter,ixN,c,s)
+          woody_fraction = 0._lp
+          ! Match the forward per-timestep N-loss threshold at the retained woody C:N.
+          IF (woody_c > 0._lp .AND. woody_n > 0._lp) THEN
+            IF (inputs%litter_mean(ix_woody_litter,ixC,1,s)*dt*(woody_n/woody_c) > eps8) &
+              & woody_fraction = MAX(0._lp,fc_soluable_max-k_fc_soluable*lc_woody_litter*woody_c/woody_n)
+          END IF
+          CALL solve_simple_carbon_target(inputs%litter_mean(pool_indices(1:3),ixC,1,s), &
+            & rate,transfer,woody_fraction,dt,targets(1,s))
+        END DO
+      END IF
+      IF (ALLOCATED(candidate)) DEALLOCATE(candidate,increments)
+      ALLOCATE(candidate(SIZE(sb_pool_mt,1),SIZE(sb_pool_mt,2),n),increments(SIZE(sb_pool_mt,2)))
+      CALL reconstruct_analytical_column(sb_pool_mt(:,:,c,1:n),targets(1,1:n),soil_depth_sl(c,1:n), &
+        & pool_indices,ixC,candidate,increments,accepted,reason)
+      IF (.NOT. accepted) THEN
+        rejected_count = rejected_count+1
+        DO failed_layer = 1,n
+          IF (targets(1,failed_layer)%status /= 0) THEN
+            reason = targets(1,failed_layer)%reason
+            EXIT
+          END IF
+        END DO
+        IF (LEN_TRIM(first_rejection) == 0) first_rejection = reason
+        IF (model%config%flag_spinup_debug) THEN
+          WRITE(report,*) 'Rejected analytical column: tile/block/cell/layer=',TRIM(tile%name),iblk,ics+c-1, &
+            & MIN(failed_layer,n),'; ',TRIM(reason)
+          CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+        END IF
+        CYCLE
+      END IF
+      sb_pool_mt(:,:,c,1:n) = candidate
+      accepted_count = accepted_count+1
+      DO e = 1,SIZE(element_indices)
+        IF (element_indices(e) < 1 .OR. element_indices(e) > SIZE(increments)) CYCLE
+        increment_total(e) = increment_total(e) + increments(element_indices(e))
+      END DO
+      IF (is_jsm) THEN
+        ! Seed carbon allocation only; preserve AP and nutrient-allocation histories.
+        DO s = 1,n
+          sb__mem%enzyme_frac_poly%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_poly
+          sb__mem%enzyme_frac_residue%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_residue
+          sb__mem%enzyme_frac_poly_c%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_poly
+          sb__mem%enzyme_frac_poly_c_mavg%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_poly
+        END DO
+      END IF
+    END DO
+    IF (accepted_count > 0) THEN
+      IF (is_jsm) CALL calibrate_sb_pore_volume(tile,options,0,l_refresh_only=.TRUE.)
+      CALL refresh_seed_pool_diagnostics(tile,options)
+      CALL tile%bgcm_store%Write_matrix_to_2l_3d_bgcm_vars(SB_BGCM_POOL_ID,ics,ice,iblk,tile%name,sb_pool_mt)
+    END IF
+    WRITE(report,*) 'Analytical seed event/tile/block=',execution_index,TRIM(tile%name),iblk, &
+      & '; accepted/rejected columns=',accepted_count,rejected_count, &
+      & '; chunk-summed artificial C,N,P,C13,C14,N15 increments [native mol or micro-mol m-2]=',increment_total
+    CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+    IF (rejected_count > 0) CALL message(modname//':analytical_seed',TRIM(first_rejection),all_print=.TRUE.)
+    ! This is an artificial carbon seed, not organic N/P or C14 equilibrium. Replay ages C14 normally.
+  END SUBROUTINE seed_sb_replay_analytically
+
+  !> Refresh diagnostic views after an artificial seed, without advancing any physical process.
+  !> Inorganic pools and lagged nutrient status are unchanged; replay updates these normally.
+  SUBROUTINE refresh_seed_pool_diagnostics(tile, options)
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
+    USE mo_lnd_bgcm_idx, ONLY: ixC, ixN, ixP, ixC13, ixC14, ixN15, ix_woody_litter
+    USE mo_q_sb_update_pools, ONLY: calculate_sb_pool_bg_soil_for_element, calculate_sb_pool_ag_litter_for_element
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    INTEGER :: ics, ice, iblk, ns, j, e, indices(6)
+    REAL(lp), POINTER :: total(:,:), below(:,:), above(:), woody(:) !< Pool diagnostics [mol m-3/m-2]
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    sb_pool_mt => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID,ics,ice,iblk,tile%name)
+    ns = SIZE(sb_pool_mt,4)
+    indices = [ixC,ixN,ixP,ixC13,ixC14,ixN15]
+    DO j = 1,6
+      e = indices(j)
+      IF (e < 1 .OR. e > SIZE(sb_pool_mt,2)) CYCLE
+      SELECT CASE (j)
+      CASE (1)
+        total => sb__mem%sb_pool_total_c%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_c%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_c%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_c%ptr(ics:ice,iblk)
+      CASE (2)
+        total => sb__mem%sb_pool_total_n%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_n%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_n%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_n%ptr(ics:ice,iblk)
+      CASE (3)
+        total => sb__mem%sb_pool_total_p%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_p%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_p%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_p%ptr(ics:ice,iblk)
+      CASE (4)
+        total => sb__mem%sb_pool_total_c13%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_c13%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_c13%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_c13%ptr(ics:ice,iblk)
+      CASE (5)
+        total => sb__mem%sb_pool_total_c14%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_c14%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_c14%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_c14%ptr(ics:ice,iblk)
+      CASE (6)
+        total => sb__mem%sb_pool_total_n15%ptr(ics:ice,:,iblk)
+        below => sb__mem%sb_pool_total_bg_soil_n15%ptr(ics:ice,:,iblk)
+        above => sb__mem%sb_pool_total_ag_litter_n15%ptr(ics:ice,iblk)
+        woody => sb__mem%sb_pool_ag_woody_litter_n15%ptr(ics:ice,iblk)
+      END SELECT
+      total = SUM(sb_pool_mt(:,e,:,:),DIM=1)
+      CALL calculate_sb_pool_bg_soil_for_element(sb_pool_mt,ns,e,below)
+      CALL calculate_sb_pool_ag_litter_for_element(sb_pool_mt,soil_depth_sl,e,above)
+      woody = sb_pool_mt(ix_woody_litter,e,:,1)*soil_depth_sl(:,1)
+    END DO
+    sb__mem%total_soil_n%ptr(ics:ice,:,iblk) = sb__mem%sb_pool_total_bg_soil_n%ptr(ics:ice,:,iblk) + &
+      & sb__mem%nh4_solute%ptr(ics:ice,:,iblk)+sb__mem%nh4_assoc%ptr(ics:ice,:,iblk) + &
+      & sb__mem%no3_solute%ptr(ics:ice,:,iblk)
+  END SUBROUTINE refresh_seed_pool_diagnostics
+
+
 
   ! ===================================================================================================== !
   !> Validate accumulated forcing and reconstruct the event-local climatology.
@@ -1109,7 +1404,7 @@ CONTAINS
   !! MAOC imposes both physical pore and chemical mineral-mass bounds. Only the
   !! structural state changes here; no CNP/isotope mass is created or removed.
   !! Density agreement is diagnostic, not an additional stock-convergence gate.
-  SUBROUTINE calibrate_sb_pore_volume(tile, options, represented_year, l_full_correction)
+  SUBROUTINE calibrate_sb_pore_volume(tile, options, represented_year, l_full_correction, l_refresh_only)
     USE mo_jsb_parallel, ONLY: my_process_is_stdio
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_, SSE_
     USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
@@ -1128,6 +1423,7 @@ CONTAINS
     TYPE(t_jsb_task_options), INTENT(in) :: options
     INTEGER, INTENT(in) :: represented_year !< artificial elapsed years; global clock is unchanged [yr]
     LOGICAL, OPTIONAL, INTENT(in) :: l_full_correction !< full one-off solution rather than replay relaxation [-]
+    LOGICAL, OPTIONAL, INTENT(in) :: l_refresh_only !< refresh occupancy/capacity with mineral structure fixed [-]
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -1233,6 +1529,9 @@ CONTAINS
     bounded_count = 0
     DO ic = 1, nc
       DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
+        IF (PRESENT(l_refresh_only)) THEN
+          IF (l_refresh_only) CYCLE
+        END IF
         CALL calc_available_pore_carbon_components(sb_pool_mt, ic, is, maoc, poc)
         CALL solve_pore_volume_for_bulk_density(maoc, poc, qmax_org_min_sl(ic,is), &
           & dsl4jsb_Config(SB_)%sb_bulk_density_target_fraction * bulk_dens_sl(ic,is), &

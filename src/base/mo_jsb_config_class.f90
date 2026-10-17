@@ -107,12 +107,6 @@ MODULE mo_jsb_config_class
     INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
     INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
     LOGICAL ::  flag_analytical_ss_spinup_accelerator          !< Enable analytical steady-state jumps
-    INTEGER ::  analytical_ss_spinup_accelerator_frequency     !< Interval between analytical jumps [years]
-    INTEGER ::  analytical_ss_spinup_accelerator_start_year    !< First analytical jump year
-    INTEGER ::  analytical_ss_spinup_accelerator_max_executions !< Maximum number of analytical jumps
-    INTEGER ::  analytical_ss_spinup_accelerator_forcing_years !< Averaging window before each jump [years]
-    INTEGER ::  analytical_ss_transport_smoothing_years        !< Bioturbation target-smoothing period [years]
-    LOGICAL ::  flag_analytical_ss_bioturbation                !< Smooth analytical targets with bioturbation
     LOGICAL ::  flag_spinup_debug                              !< Print analytical and forward SB accelerator diagnostics
 
     ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
@@ -232,12 +226,6 @@ CONTAINS
                                                                   !< executed for the first time
     INTEGER :: slow_sb_pool_spinup_accelerator_max_executions     !< Maximum number of spin-up accelerator runs
     LOGICAL :: flag_analytical_ss_spinup_accelerator
-    INTEGER :: analytical_ss_spinup_accelerator_frequency
-    INTEGER :: analytical_ss_spinup_accelerator_start_year
-    INTEGER :: analytical_ss_spinup_accelerator_max_executions
-    INTEGER :: analytical_ss_spinup_accelerator_forcing_years
-    INTEGER :: analytical_ss_transport_smoothing_years
-    LOGICAL :: flag_analytical_ss_bioturbation
     LOGICAL :: flag_spinup_debug
     LOGICAL                       :: init_from_ifs                !< Initialize ICON-Land from IFS data
     CHARACTER(len=filename_max)   :: ifs_filename                 !< File containing IFS data
@@ -275,12 +263,6 @@ CONTAINS
       slow_sb_pool_spinup_accelerator_start_year, &
       slow_sb_pool_spinup_accelerator_max_executions, &
       flag_analytical_ss_spinup_accelerator, &
-      analytical_ss_spinup_accelerator_frequency, &
-      analytical_ss_spinup_accelerator_start_year, &
-      analytical_ss_spinup_accelerator_max_executions, &
-      analytical_ss_spinup_accelerator_forcing_years, &
-      analytical_ss_transport_smoothing_years, &
-      flag_analytical_ss_bioturbation, &
       flag_spinup_debug, &
       init_from_ifs, &
       ifs_filename, &
@@ -341,12 +323,6 @@ CONTAINS
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
     flag_analytical_ss_spinup_accelerator = .FALSE.
-    analytical_ss_spinup_accelerator_frequency = 100
-    analytical_ss_spinup_accelerator_start_year = 300
-    analytical_ss_spinup_accelerator_max_executions = 5
-    analytical_ss_spinup_accelerator_forcing_years = 30
-    analytical_ss_transport_smoothing_years = 200
-    flag_analytical_ss_bioturbation = .FALSE.
     flag_spinup_debug = .FALSE.
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
@@ -427,40 +403,12 @@ CONTAINS
     model_config%slow_sb_pool_spinup_accelerator_start_year = slow_sb_pool_spinup_accelerator_start_year
     model_config%slow_sb_pool_spinup_accelerator_max_executions = slow_sb_pool_spinup_accelerator_max_executions
     model_config%flag_analytical_ss_spinup_accelerator = flag_analytical_ss_spinup_accelerator
-    model_config%analytical_ss_spinup_accelerator_frequency = analytical_ss_spinup_accelerator_frequency
-    model_config%analytical_ss_spinup_accelerator_start_year = analytical_ss_spinup_accelerator_start_year
-    model_config%analytical_ss_spinup_accelerator_max_executions = analytical_ss_spinup_accelerator_max_executions
-    model_config%analytical_ss_spinup_accelerator_forcing_years = analytical_ss_spinup_accelerator_forcing_years
-    model_config%analytical_ss_transport_smoothing_years = analytical_ss_transport_smoothing_years
-    model_config%flag_analytical_ss_bioturbation = flag_analytical_ss_bioturbation
     model_config%flag_spinup_debug = flag_spinup_debug
 
     IF (flag_analytical_ss_spinup_accelerator .AND. flag_slow_sb_pool_spinup_accelerator) THEN
       CALL finish(TRIM(routine), 'The analytical and slow-pool SB spin-up accelerators are mutually exclusive.')
     END IF
-    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_frequency <= 0) THEN
-      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_frequency must be greater than zero.')
-    END IF
-    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_max_executions <= 0) THEN
-      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_max_executions must be greater than zero.')
-    END IF
-    IF (flag_analytical_ss_spinup_accelerator .AND. analytical_ss_spinup_accelerator_forcing_years <= 0) THEN
-      CALL finish(TRIM(routine), 'analytical_ss_spinup_accelerator_forcing_years must be greater than zero.')
-    END IF
-    IF (flag_analytical_ss_spinup_accelerator .AND. &
-        & analytical_ss_spinup_accelerator_forcing_years > analytical_ss_spinup_accelerator_frequency) THEN
-      CALL finish(TRIM(routine), 'The analytical steady-state forcing window cannot exceed the jump frequency.')
-    END IF
-    IF (flag_analytical_ss_spinup_accelerator .AND. &
-        & analytical_ss_spinup_accelerator_forcing_years >= analytical_ss_spinup_accelerator_start_year) THEN
-      CALL finish(TRIM(routine), 'The first analytical jump must follow a complete forcing window.')
-    END IF
-    IF (flag_analytical_ss_bioturbation .AND. .NOT. flag_analytical_ss_spinup_accelerator) THEN
-      CALL finish(TRIM(routine), 'Analytical bioturbation requires the analytical steady-state accelerator.')
-    END IF
-    IF (flag_analytical_ss_bioturbation .AND. analytical_ss_transport_smoothing_years <= 0) THEN
-      CALL finish(TRIM(routine), 'analytical_ss_transport_smoothing_years must be greater than zero.')
-    END IF
+
 
     !>
     !> @TODO To be deleted `relative_fractions_in_file` (clean up task).

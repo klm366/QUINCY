@@ -228,11 +228,9 @@ CONTAINS
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
-    USE mo_jsb_time,                ONLY: get_year
     USE mo_lnd_time_averages        ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes SB_, HYDRO_
+    dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -244,8 +242,6 @@ CONTAINS
     INTEGER                           :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     REAL(lp)                          :: dtime                !< timestep length
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                           :: current_year, next_jump_year, i_jump, jump_year
-    LOGICAL                           :: collect_analytical_forcing
     CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L3D :: sb_formation_mt
@@ -253,7 +249,6 @@ CONTAINS
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(HYDRO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff
@@ -264,22 +259,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p
-    dsl4jsb_Real3D_onChunk      :: enzyme_frac_AP
-    dsl4jsb_Real3D_onChunk      :: rtm_depolymerisation
-    dsl4jsb_Real3D_onChunk      :: rmm_depolymerisation
-    dsl4jsb_Real3D_onChunk      :: rtm_mic_uptake
-    dsl4jsb_Real3D_onChunk      :: rmm_mic_uptake
-    dsl4jsb_Real3D_onChunk      :: rtm_sorption
-    dsl4jsb_Real3D_onChunk      :: rmm_sorption
-    dsl4jsb_Real3D_onChunk      :: rtm_desorption
-    dsl4jsb_Real3D_onChunk      :: rmm_desorption
-    dsl4jsb_Real3D_onChunk      :: rtm_hsc
-    dsl4jsb_Real3D_onChunk      :: rmm_hsc
-    dsl4jsb_Real3D_onChunk      :: k_bioturb
-    dsl4jsb_Real3D_onChunk      :: bulk_dens_corr_sl
-    dsl4jsb_Real3D_onChunk      :: frac_wtr_transp_down_sl
-    dsl4jsb_Real3D_onChunk      :: soil_depth_sl
-    dsl4jsb_Real2D_onChunk      :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_nue_eff_tmic_mavg
     dsl4jsb_Real3D_onChunk      :: microbial_pue_eff_tmic_mavg
@@ -301,21 +280,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
-    dsl4jsb_Real2D_onChunk      :: analy_ss_forcing_time
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_sol_c_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_poly_c_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_wood_c_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_sol_c14_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_poly_c14_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_input_wood_c14_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_doc_transp_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_depoly_mod_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_uptake_mod_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_sorption_mod_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_desorption_mod_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_hsc_mod_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_enzyme_ap_mean_sl
-    dsl4jsb_Real3D_onChunk      :: analy_ss_bioturb_numerator_mean_sl
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -334,9 +298,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
-    IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
-      dsl4jsb_Get_memory(HYDRO_)
-    END IF
     ! ----------------------------------------------------------------------------------------------------- !
     ! 3D SB_
     dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff)                  ! in
@@ -359,39 +320,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)            ! out
-    IF (model%config%flag_analytical_ss_spinup_accelerator) THEN
-      dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_AP)                    ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rtm_depolymerisation)              ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rmm_depolymerisation)              ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rtm_mic_uptake)                    ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rmm_mic_uptake)                    ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rtm_sorption)                      ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rmm_sorption)                      ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rtm_desorption)                    ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rmm_desorption)                    ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rtm_hsc)                           ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  rmm_hsc)                           ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  k_bioturb)                         ! in
-      dsl4jsb_Get_var3D_onChunk(SB_,  bulk_dens_corr_sl)                 ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, frac_wtr_transp_down_sl)         ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                   ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)            ! in
-      dsl4jsb_Get_var2D_onChunk(SB_,  analy_ss_forcing_time)       ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_sol_c_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_poly_c_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_wood_c_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_sol_c14_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_poly_c14_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_input_wood_c14_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_doc_transp_mean_sl)   ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_depoly_mod_mean_sl)   ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_uptake_mod_mean_sl)   ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_sorption_mod_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_desorption_mod_mean_sl) ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_hsc_mod_mean_sl)      ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_enzyme_ap_mean_sl)    ! inout
-      dsl4jsb_Get_var3D_onChunk(SB_,  analy_ss_bioturb_numerator_mean_sl) ! inout
-    END IF
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_var3D_onChunk(SB_,  residue_som_c_form_mavg_sl)         ! out
       dsl4jsb_Get_var3D_onChunk(SB_,  residue_som_c14_form_mavg_sl)       ! out
@@ -406,8 +334,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
-    IF (model%config%flag_slow_sb_pool_spinup_accelerator .OR. &
-      & model%config%flag_analytical_ss_spinup_accelerator) THEN
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
       dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
     END IF
     IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
@@ -496,82 +423,7 @@ CONTAINS
                                                                       mavg_period_tresidual)
     END IF
 
-    !> 1.6 exact time-weighted means for the analytical steady-state accelerator
-    !> Litter formation in the BGCM store is timestep-integrated; all analytical
-    !> forcing means use rate units so that they are independent of model timestep.
-    collect_analytical_forcing = .FALSE.
-    IF (model%config%flag_analytical_ss_spinup_accelerator .AND. model%config%l_spinup .AND. dtime > 0.0_lp) THEN
-      current_year = get_year(options%current_datetime)
-      next_jump_year = HUGE(next_jump_year)
-      DO i_jump = 0, model%config%analytical_ss_spinup_accelerator_max_executions - 1
-        jump_year = model%config%analytical_ss_spinup_accelerator_start_year + &
-          & i_jump * model%config%analytical_ss_spinup_accelerator_frequency
-        IF (jump_year > current_year) THEN
-          next_jump_year = jump_year
-          EXIT
-        END IF
-      END DO
-      IF (next_jump_year < HUGE(next_jump_year)) THEN
-        collect_analytical_forcing = current_year >= next_jump_year - &
-          & model%config%analytical_ss_spinup_accelerator_forcing_years
-      END IF
-    END IF
-
-    IF (collect_analytical_forcing) THEN
-      analy_ss_forcing_time(:) = analy_ss_forcing_time(:) + dtime
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & sb_formation_mt(ix_soluable_litter, ixC, :, :) / dtime, analy_ss_input_sol_c_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & sb_formation_mt(ix_polymeric_litter, ixC, :, :) / dtime, analy_ss_input_poly_c_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & sb_formation_mt(ix_woody_litter, ixC, :, :) / dtime, analy_ss_input_wood_c_mean_sl)
-      IF (model%config%include_carbon14) THEN
-        CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-          & sb_formation_mt(ix_soluable_litter, ixC14, :, :) / dtime, analy_ss_input_sol_c14_mean_sl)
-        CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-          & sb_formation_mt(ix_polymeric_litter, ixC14, :, :) / dtime, analy_ss_input_poly_c14_mean_sl)
-        CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-          & sb_formation_mt(ix_woody_litter, ixC14, :, :) / dtime, analy_ss_input_wood_c14_mean_sl)
-      END IF
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & frac_wtr_transp_down_sl, analy_ss_doc_transp_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & rtm_depolymerisation * rmm_depolymerisation, analy_ss_depoly_mod_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & rtm_mic_uptake * rmm_mic_uptake, analy_ss_uptake_mod_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & rtm_sorption * rmm_sorption, analy_ss_sorption_mod_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & rtm_desorption * rmm_desorption, analy_ss_desorption_mod_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & rtm_hsc * rmm_hsc, analy_ss_hsc_mod_mean_sl)
-      CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-        & enzyme_frac_AP, analy_ss_enzyme_ap_mean_sl)
-      IF (model%config%flag_analytical_ss_bioturbation) THEN
-        CALL update_analytical_forcing_mean(dtime, analy_ss_forcing_time, &
-          & k_bioturb * bulk_dens_corr_sl, analy_ss_bioturb_numerator_mean_sl)
-      END IF
-    END IF
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
-
-  ! ======================================================================================================= !
-  !> update a layer-wise running mean using the elapsed averaging time
-  SUBROUTINE update_analytical_forcing_mean(dtime, elapsed_time, sample, running_mean)
-
-    REAL(lp), INTENT(in)    :: dtime
-    REAL(lp), INTENT(in)    :: elapsed_time(:)
-    REAL(lp), INTENT(in)    :: sample(:,:)
-    REAL(lp), INTENT(inout) :: running_mean(:,:)
-
-    REAL(lp) :: weight(SIZE(elapsed_time))
-    INTEGER  :: is
-
-    weight(:) = dtime / MAX(elapsed_time(:), dtime)
-    DO is = 1, SIZE(sample, 2)
-      running_mean(:,is) = running_mean(:,is) + weight(:) * (sample(:,is) - running_mean(:,is))
-    END DO
-
-  END SUBROUTINE update_analytical_forcing_mean
 
   ! ======================================================================================================= !
   !>calculate sorption capacity for organic material

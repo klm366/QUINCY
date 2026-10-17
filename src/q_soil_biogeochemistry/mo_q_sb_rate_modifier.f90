@@ -25,6 +25,7 @@ MODULE mo_q_sb_rate_modifier
   IMPLICIT NONE
 
   PRIVATE
+  PUBLIC :: calc_jsm_carbon_rate_modifiers, calc_ssm_carbon_rate_modifiers
   PUBLIC :: update_sb_rate_modifier, calc_temperature_rate_modifier, calc_oxygen_rate_modifier, &
     &       calc_convert_bulk_to_liquid, calc_substrate_rate_modifier, calc_moisture_modifier, &
     &       calc_anaerobic_volume_fraction
@@ -32,6 +33,41 @@ MODULE mo_q_sb_rate_modifier
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_rate_modifier'
 
 CONTAINS
+
+  !> Shared forward/analytical modifiers; average products, not products of separate means.
+  SUBROUTINE calc_jsm_carbon_rate_modifiers(temperature, water, ice, field_capacity, depth, &
+      & rt_depoly, rt_uptake, rt_sorption, rt_desorption, rt_hsc, &
+      & rm_depoly, rm_uptake, rm_sorption, rm_desorption, rm_hsc)
+    USE mo_sb_constants, ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
+      & kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, temp_freeze_window_bio
+    REAL(lp), INTENT(in) :: temperature !< Soil temperature [K]
+    REAL(lp), INTENT(in) :: water, ice !< Liquid water and ice depth [m]
+    REAL(lp), INTENT(in) :: field_capacity, depth !< Water at field capacity and layer thickness [m]
+    REAL(lp), INTENT(out) :: rt_depoly, rt_uptake, rt_sorption, rt_desorption, rt_hsc !< T modifiers [-]
+    REAL(lp), INTENT(out) :: rm_depoly, rm_uptake, rm_sorption, rm_desorption, rm_hsc !< Water modifiers [-]
+
+    rt_depoly = calc_temperature_rate_modifier(temperature, ea_depolymerisation, temp_freeze_window_bio)
+    rt_uptake = calc_temperature_rate_modifier(temperature, ea_mic_uptake, temp_freeze_window_bio)
+    rt_sorption = calc_temperature_rate_modifier(temperature, ea_sorption)
+    rt_desorption = calc_temperature_rate_modifier(temperature, ea_desorption)
+    rt_hsc = calc_temperature_rate_modifier(temperature, ea_hsc)
+    rm_depoly = calc_oxygen_rate_modifier(water, ice, field_capacity, kmr_depolymerisation)
+    rm_uptake = calc_oxygen_rate_modifier(water, ice, field_capacity, kmr_mic_uptake)
+    rm_sorption = calc_convert_bulk_to_liquid(water, depth, kmr_sorption)
+    rm_desorption = calc_convert_bulk_to_liquid(water, depth, kmr_sorption)
+    rm_hsc = calc_substrate_rate_modifier(water, field_capacity, kmr_hsc)
+  END SUBROUTINE calc_jsm_carbon_rate_modifiers
+
+  !> SSM rate modifiers shared by the forward model and the conditional carbon target.
+  SUBROUTINE calc_ssm_carbon_rate_modifiers(temperature, water_potential, rt, rm)
+    USE mo_phy_schemes, ONLY: calc_peaked_arrhenius_function
+    USE mo_sb_constants, ONLY: ea_decomposition, ed_decomposition, t_ref_decomposition, kmr_decomposition
+    REAL(lp), INTENT(in) :: temperature !< Soil temperature [K]
+    REAL(lp), INTENT(in) :: water_potential !< Soil water potential [same unit as kmr_decomposition]
+    REAL(lp), INTENT(out) :: rt, rm !< Temperature and moisture multipliers [-]
+    rt = calc_peaked_arrhenius_function(temperature, ea_decomposition, ed_decomposition, t_ref_decomposition)
+    rm = MAX(1._lp - water_potential / kmr_decomposition, 0._lp)
+  END SUBROUTINE calc_ssm_carbon_rate_modifiers
 
   ! ======================================================================================================= !
   !>biophysical rate modifier
@@ -45,11 +81,9 @@ CONTAINS
     USE mo_jsb_model_class,        ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_physical_constants, ONLY: Tzero
-    USE mo_sb_constants,           ONLY: ea_depolymerisation, ea_mic_uptake, ea_sorption, ea_desorption, ea_hsc, &
-      &                                  kmr_depolymerisation, kmr_mic_uptake, kmr_hsc, kmr_sorption, &
-      &                                  ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
+    USE mo_sb_constants,           ONLY: ea_nitrification, ed_nitrification, ea_denitrification, ea_gasdiffusion, &
       &                                  t_opt_nitrification, lambda_anvf, k_anvf, &
-      &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, kmr_decomposition, &
+      &                                  ea_decomposition, ed_decomposition,t_ref_decomposition, &
                                          tacclim_uptake_min, tacclim_uptake_max, k_ea_uptake, &
       &                                  kmr_asymb_bnf, min_rmm_gasdiffusion, temp_freeze_window_bio
     USE mo_veg_constants,          ONLY: ea_symb_bnf, ed_symb_bnf, t_opt_symb_bnf
@@ -178,28 +212,13 @@ CONTAINS
         wtr_soil_fc_local  = vol_field_cap_sl(ic, is) * soil_depth_sl(ic, is)
         !>  1.1 simple soil model (SSM)
         !>
-        rtm_decomposition(ic, is)    = calc_peaked_arrhenius_function(t_soil_sl(ic, is), &
-          &                                                          ea_decomposition, &
-          &                                                          ed_decomposition, &
-          &                                                          t_ref_decomposition)
-        rmm_decomposition(ic, is)    = MAX(1._lp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_lp)
-        !>  1.2 JSM
-        !>
-        rtm_depolymerisation(ic, is) = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_depolymerisation, &
-          &                                                           temp_freeze_window_bio)
-        rtm_mic_uptake(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_mic_uptake, &
-          &                                                           temp_freeze_window_bio)
-        rtm_sorption(ic, is)         = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_sorption)
-        rtm_desorption(ic, is)       = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_desorption)
-        rtm_hsc(ic, is)              = calc_temperature_rate_modifier(t_soil_sl(ic, is), ea_hsc)
-
-        rmm_depolymerisation(ic, is) = calc_oxygen_rate_modifier(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                                      wtr_soil_fc_local, kmr_depolymerisation)
-        rmm_mic_uptake(ic, is)       = calc_oxygen_rate_modifier(wtr_soil_sl(ic, is), ice_soil_sl(ic, is), &
-          &                                                      wtr_soil_fc_local, kmr_mic_uptake)
-        rmm_sorption(ic, is)         = calc_convert_bulk_to_liquid(wtr_soil_sl(ic, is), soil_depth_sl(ic, is), kmr_sorption)
-        rmm_desorption(ic, is)       = calc_convert_bulk_to_liquid(wtr_soil_sl(ic, is), soil_depth_sl(ic, is), kmr_sorption)
-        rmm_hsc(ic, is)              = calc_substrate_rate_modifier(wtr_soil_sl(ic, is), wtr_soil_fc_local, kmr_hsc)
+        CALL calc_ssm_carbon_rate_modifiers(t_soil_sl(ic,is), wtr_soil_pot_sl(ic,is), &
+          & rtm_decomposition(ic,is), rmm_decomposition(ic,is))
+        CALL calc_jsm_carbon_rate_modifiers(t_soil_sl(ic,is), wtr_soil_sl(ic,is), ice_soil_sl(ic,is), &
+          & wtr_soil_fc_local, soil_depth_sl(ic,is), &
+          & rtm_depolymerisation(ic,is), rtm_mic_uptake(ic,is), rtm_sorption(ic,is), &
+          & rtm_desorption(ic,is), rtm_hsc(ic,is), rmm_depolymerisation(ic,is), &
+          & rmm_mic_uptake(ic,is), rmm_sorption(ic,is), rmm_desorption(ic,is), rmm_hsc(ic,is))
 
         !>2.0 nitrification-denitrification model
         !>
