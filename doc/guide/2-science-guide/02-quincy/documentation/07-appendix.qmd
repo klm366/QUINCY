@@ -1,18 +1,10 @@
 ---
-title: Appendix
+title: Parameter Tables 
 order: 18
 number-offset: [6]
 ---
 
-# Appendix {#sec-appendix .appendix}
-
-## Parameter Tables {#sec-appendix-parameter-tables .appendix .unnumbered}
-
-
-
-
-
-
+# Parameter Tables {#sec-appendix-parameter-tables .appendix .unnumbered}
 
 | Symbol                   | Description                                             | Value | Unit  |
 |:-------------------------|:--------------------------------------------------------|:-----:|:-----:|
@@ -33,8 +25,8 @@ number-offset: [6]
 | $j_{max}^n$ | electron-transport limited carboxylation rate per unit N | 4.4 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq:jmax}$ | @Niinemets:1997ha |
 | $v_{cmax}^n$ | Rubisco limited carboxylation rate per unit N | 1.8 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-vcmax}$ | @Niinemets:1997ha |
 | $v_{pepc}^n$ | PePC limited carboxylation rate per unit N | 98777.97 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} \mathrm{CO_2}}{mmol \hspace{0.1em} N}}$ | $\ref{eq-pepc}$ | @Tazoe:2006hc |
-| $fN_{pep}$ | fraction of N in PEP and PPKD (C4 plants only) | 0.045 | \- | Sect. | @Makino2003-kc |
-| $r_{J2V}$ | ratio of Jmax25/Vcmax25 (C3/C4) plants | 1.97 / 1.4 | \- | Sect. | @Wullschleger1993-bk |
+| $fN_{pep}$ | fraction of N in PEP and PPKD (C4 plants only) | 0.045 | \- | @sec-veg-foliar-N-fractions | @Makino2003-kc |
+| $r_{J2V}$ | ratio of Jmax25/Vcmax25 (C3/C4) plants | 1.97 / 1.4 | \- | @sec-veg-foliar-N-fractions | @Wullschleger1993-bk |
 | $a_{chl}^n$ | chlorophyll N content | 25.12 | $\mathrm{\frac{mol}{mmol}}$ | $\ref{eq:ps-lightharvesting}$ | @Evans:1989bg |
 | $\alpha_i$ | intrinsic quantum efficiency | 0.0561 | $\mathrm{\frac{{\mu}mol \hspace{0.1em} CO_2}{mol \hspace{0.2em} quanta}}$ | $\ref{eq:ps-lightharvesting}$ | @Kull:1998cr |
 | $k_a$ | extinction coefficient for PAR on chlorophyll | 0.005 | $\mathrm{mol^{-1}}$ | $\ref{eq:ps-lightharvesting}$ | @Kull:1998cr |
@@ -94,10 +86,10 @@ number-offset: [6]
 | $k_{htol}$ | Stem mass to leaf mass ratio of grasses | 0.05 | \- | $\ref{eq-l2s-grass}$ | @Zaehle:2010cz |
 | **Stoichiometry** |  |  |  |  |  |
 | $C_m$ | Carbon mass per unit dry weight of leaves | 0.48 | $\mathrm{\frac{g C}{g DW}}$ | \- | @Kattge:2011fc |
-| $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | Sect.  | @Zaehle:2010cz |
-| $\chi_{wood}^{C:N}$ | Relative C:N of woody biomass compared to leaves | 0.145 | \- | Sect.  | @Zaehle:2010cz |
-| $\chi_{root}^{N:P}$ | Relative N:P of fine roots compared to leaves | 1.0 | \- | Sect.  | @Thum:2019mm |
-| $\chi_{wood}^{N:P}$ | Relative N:P of woody biomass compared to leaves | 1.0 | \- | Sect. | @Thum:2019mm |
+| $\chi_{root}^{C:N}$ | Relative C:N of fine roots compared to leaves | 0.85 | \- | @sec-veg-stoichem  | @Zaehle:2010cz |
+| $\chi_{wood}^{C:N}$ | Relative C:N of woody biomass compared to leaves | 0.145 | \- | @sec-veg-stoichem  | @Zaehle:2010cz |
+| $\chi_{root}^{N:P}$ | Relative N:P of fine roots compared to leaves | 1.0 | \- | @sec-veg-stoichem | @Thum:2019mm |
+| $\chi_{wood}^{N:P}$ | Relative N:P of woody biomass compared to leaves | 1.0 | \- | @sec-veg-stoichem | @Thum:2019mm |
 | $\delta^{\chi}_{leaf}$ | Maximum rate of foliar stoichiometry change | 0.0048 | $\mathrm{day^{-1}}$ | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
 | $\lambda^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 2.0 | \- | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
 | $k^{\chi}_{leaf}$ | Shape parameter in leaf stoichiometry nutrient response | 8.0 | \- | $\ref{eq-veg-stoichem-dynamic}$ | @Zaehle:2010cz |
@@ -115,9 +107,9 @@ number-offset: [6]
 | $k_{sinklim}^{ps}$ | Photosynthetic sink limitation with labile C accumulation | 2.0 | \- | $\ref{eq-sinklim-c}$ | @Thum:2019mm |
 | $k^{CNP}_{sinklim}$ | Photosynthetic sink limitation with nutrient limitation | 4.0 | \- | $\ref{eq-sinklim-cnp}$ | @Thum:2019mm |
 | $\beta_{sinklim, min}^{ps}$ | Lower bound of photosynthetic sink limitation | 0.25 | \- | $\ref{eq-sinklim-c}$ | @Thum:2019mm |
-| $f_{store,max}^{leaf}$ | Maximum reserve storage in leaves relative to leaf mass | 0.02 | \- | Sect. | @Thum:2019mm |
-| $f_{store,max}^{root}$ | Maximum reserve storage in fine roots relative to fine root mass | 0.2 | \- | Sect. | @Thum:2019mm |
-| $f_{store,max}^{wood}$ | maximum reserve storage in sap wood relative to sap wood mass | 0.15 | \- | Sect. | @Thum:2019mm |
+| $f_{store,max}^{leaf}$ | Maximum reserve storage in leaves relative to leaf mass | 0.02 | \- | @sec-veg-reserve | @Thum:2019mm |
+| $f_{store,max}^{root}$ | Maximum reserve storage in fine roots relative to fine root mass | 0.2 | \- | @sec-veg-reserve | @Thum:2019mm |
+| $f_{store,max}^{wood}$ | maximum reserve storage in sap wood relative to sap wood mass | 0.15 | \- | @sec-veg-reserve | @Thum:2019mm |
 | $k_{\Phi}^{inter}$ | threshold value of $\Phi^X_{maint}$ beyond which $\Phi^X_{store}$ is reduced | 0.75 | \- | $\ref{eq-veg-phi-interact}$ | @Thum:2019mm |
 | **Phenology** |  |  |  |  |  |
 | $t_{air}^{GDD}$ | temperature threshold for the accumulation of growing degree days | $\mathrm{^\circ C}$ | 5 | \- | by convention |
@@ -133,11 +125,11 @@ number-offset: [6]
 | $k_{CA}$ | Scaling parameter in crown area to diameter relationship | 100.0 | \- | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
 | $k_{rp}$ | Scaling exponent in crown area to diameter relationship | 1.6 | \- | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
 | $CA_{max}$ | Maximum crown area | 15.0 | $m^2$ | $\ref{eq-veg-crownarea}$ | @Sitch:2003wg |
-| $k_{fpc}$ | light-extinction coefficient | 0.5 | \- | $\ref{eq-veg-fpc}$ | [Sitch:2003wg |
-| $\lambda_{est}^{T}$ | shape parameter for temperature effect on establishment | 0.075 | \- | Sect. | @Thum:2019mm |
-| $k_{est}^{T}$ | shape parameter for temperature effect on establishment | 4.0 | \- | Sect. | @Thum:2019mm |
-| $\lambda_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 10.0 | \- | Sect. | @Thum:2019mm |
-| $k_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 2.0 | \- | Sect. | @Thum:2019mm |
+| $k_{fpc}$ | light-extinction coefficient | 0.5 | \- | $\ref{eq-veg-fpc}$ | @Sitch:2003wg |
+| $\lambda_{est}^{T}$ | shape parameter for temperature effect on establishment | 0.075 | \- | @sec-veg-dynamics | @Thum:2019mm |
+| $k_{est}^{T}$ | shape parameter for temperature effect on establishment | 4.0 | \- | @sec-veg-dynamics | @Thum:2019mm |
+| $\lambda_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 10.0 | \- | @sec-veg-dynamics | @Thum:2019mm |
+| $k_{est}^{\Theta_1}$ | shape parameter for moisture effect on establishment | 2.0 | \- | @sec-veg-dynamics | @Thum:2019mm |
 | $FPC_{max}$ | maximum foliage projective cover | 0.95 | \- | $\ref{eq-veg-est_dens}$, $\ref{eq-veg-mort-selfthining}$ | @Sitch:2003wg |
 | $k1_{mort\_greff}$ | Asymptotic growth efficiency mortality rate | 0.05 | $\mathrm{year^{-1}}$ | $\ref{eq-veg-mort-greff}$ | @Sitch:2003wg |
 | $k2_{mort\_greff}$ | Scaling coefficient for growth efficiency mortality rate | 0.3 | $\mathrm{\frac{m^2 \hspace{0.2em} yr}{mol C}}$ | $\ref{eq-veg-mort-greff}$ |@Sitch:2003wg |
@@ -158,7 +150,7 @@ number-offset: [6]
 | $k_{leaf2sla}$ | slope of lignin to $sla$ relationship | -0.4328854 | $m^{-2}$ | $\ref{eq-sb-simple-leaf-lc}$ | @White:2000vl |
 | $k_{met,vp,N}$ | proportionality factor controlling C:N of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
 | $k_{met,vp,P}$ | proportionality factor controlling C:P of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
-| $\eta_{C,wl \rightarrow met,str}$ | fraction of woody litter C transformed into metabolic or structural litter | 0.3 | \- | Sect. | following @Parton:1993ud |
+| $\eta_{C,wl \rightarrow met,str}$ | fraction of woody litter C transformed into metabolic or structural litter | 0.3 | \- | @sec-sb-litter-partitionin | following @Parton:1993ud |
 | **Turnover times and their rate modifiers** |  |  |  |  |  |
 | $\tau^{base}_{met}$ | turnover time of metabolic litter | 0.033 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
 | $\tau^{base}_{str}$ | turnover time of structural litter | 0.124 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
@@ -198,7 +190,6 @@ number-offset: [6]
 | $K_{demand}^{half,N}$ | Fraction of target labile N at which uptake is reduced to 50% | 0.75 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
 | $K_{demand}^{half,P}$ | Fraction of target labile P at which uptake is reduced to 50% | 0.9 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
 | $k_{demand}$ | Nutrient uptake response function to labile nutrient concentration | 2.0 | \- | $\ref{eq-sb-simple-potential-uptake}$ | @Thum:2019mm |
-| $N_{limit}^{BNF}$ | maximum sum of $\mathrm{NH_4}$ and $\mathrm{NO_3}$ at which BNF occurs | 0.05 | $\mathrm{\frac{mol N}{m^2}}$ | Sect. | @Zaehle:2010cz |
 | $v_{max,BNF}$ | Maximum rate of BNF | 0.005 | $\mathrm{\frac{mol N}{m^2 \hspace{0.2em} s}}$ | $\ref{eq-sb-asymb-bnf}$ | @Zaehle:2010cz |
 | **Nitrification, denitrification, and BNF parameters** |  |  |  |  |  |
 | $\lambda_{anvf}$ | Weibull function to relate anaerobic volume fraction to soil moisture | 1.3 | \- | $\ref{eq-sb-simple-anaerobic-vf}$ | @Zaehle:2010cz |
@@ -282,10 +273,10 @@ number-offset: [6]
 | $\Omega_{0}$ | Canopy clumping factor | \- | $\ref{eq-rad-omega}$ | [@Campbell:1998vb] |
 | $\phi_{crown}$ | Crown shape factor | \- | $\ref{eq-rad-omega}$ | [@Campbell:1998vb] |
 | $sla$ | Specific leaf area | $\mathrm{\frac{m^{-2}}{mol C}}$ | \- | [@Kattge:2011fc] |
-| $\chi_{leaf}^{C:N}$ | Default foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | Sect. | [@Kattge:2011fc] |
+| $\chi_{leaf}^{C:N}$ | Default foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | @sec-veg-stoichem | [@Kattge:2011fc] |
 | $\chi_{leaf, min}^{C:N}$ | Minimum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
 | $\chi_{leaf, max}^{C:N}$ | Maximum foliar C:N | $\mathrm{\frac{mol C}{mol N}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
-| $\chi_{leaf}^{N:P}$ | Default foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | Sect. | [@Kattge:2011fc] |
+| $\chi_{leaf}^{N:P}$ | Default foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | @sec-veg-stoichem | [@Kattge:2011fc] |
 | $\chi_{leaf, min}^{N:P}$ | Minimum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
 | $\chi_{leaf,min}^{N:P}$ | Maximum foliar N:P | $\mathrm{\frac{mol N}{mol P}}$ | $\ref{eq-veg-stoichem-dynamic}$ | [@Kattge:2011fc] |
 | $k^{struc}_0$ | Maximum fraction of structural foliar N | \- | $\ref{eq-veg:struc_n}$ | [@Friend1997-pk; @Kattge:2011fc] |
@@ -294,23 +285,23 @@ number-offset: [6]
 | $g_0$ | Intercept of the $A_n ~ g_s$ relationship | \- | $\ref{eq:stomatal-coupling}$ | [@Lin:2015er] |
 | $g_1$ | Slope of the $A_n ~ g_s$ relationship | \- | $\ref{eq:stomatal-coupling}$ | [@Lin:2015er] |
 | $g_{min}$ | Minimum stomatal conductance | $\mathrm{\frac{m}{s}}$ | $\ref{eq:stomatal-coupling}$ | @Thum:2019mm |
-| $\tau_{leaf}$ | Turnover time of leaves | years | Sect. | [@Kattge:2011fc] |
-| $\tau_{{fine}\_{root}}$ | Turnover time of fine roots | years | Sect. | [@Ahrens:2014gi] |
-| $\tau_{{coarse}\_{root}}$ | Turnover time of coarse roots | years | Sect. | [@Ahrens:2014gi] |
-| $\tau_{branch}$ | Turnover time of branches | years | Sect. | @Thum:2019mm |
-| $\tau_{{sap}\_{wood}}$ | Turnover time of the sapwood | years | Sect. | [@Sitch:2003wg] |
-| $\tau_{fruit}$ | Turnover time of the fruit | years | Sect. | @Thum:2019mm |
-| $\tau_{{seed}\_{litter}}$ | Turnover time of the seed bed to litter | years |  | @Thum:2019mm |
+| $\tau_{leaf}$ | Turnover time of leaves | years | @sec-veg-turnover | [@Kattge:2011fc] |
+| $\tau_{{fine}\_{root}}$ | Turnover time of fine roots | years | @sec-veg-turnover | [@Ahrens:2014gi] |
+| $\tau_{{coarse}\_{root}}$ | Turnover time of coarse roots | years | @sec-veg-turnover | [@Ahrens:2014gi] |
+| $\tau_{branch}$ | Turnover time of branches | years | @sec-veg-turnover | @Thum:2019mm |
+| $\tau_{{sap}\_{wood}}$ | Turnover time of the sapwood | years | @sec-veg-turnover | [@Sitch:2003wg] |
+| $\tau_{fruit}$ | Turnover time of the fruit | years | @sec-veg-turnover | @Thum:2019mm |
+| $\tau_{{seed}\_{litter}}$ | Turnover time of the seed bed to litter | years | @sec-veg-turnover | @Thum:2019mm |
 | $\tau_{seed, est}$ | Turnover time of the seed bed to establishment | years | $\ref{eq-veg-flux_est}$ | @Thum:2019mm |
 | $v_{max,NH_4|NO_3}$ | Maximum plant N uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} N}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | $\ref{eq-sb-simple-potential-uptake}$ | [@Zaehle:2010a] |
 | $v_{max,PO_4}$ | Maximum plant P uptake rate | $\mathrm{\frac{{\mu}mol \hspace{0.1em} P}{mol \hspace{0.1em} C \hspace{0.2em} s}}$ | $\ref{eq-sb-simple-potential-uptake}$ | [@Kavka:2016] |
 | $GDD_{req}^{max}$ | Maximum GDD requirement in the absence of chilling | $\mathrm{^\circ C \hspace{0.2em} days}$ | $\ref{eq-phen-gdd}$ | @Thum:2019mm |
 | $k^{GDD}_{dormance}$ | Response of GDD to number of dormant days | days$^{-1}$ | $\ref{eq-phen-gdd}$ | @Thum:2019mm |
-| $\beta_{soil}^{flush}$ | Soil water level inducing leaf flushing | \- | Sect. | @Thum:2019mm |
-| $\beta_{soil}^{sen}$ | Soil water stress inducing leaf senescence | \- | Sect. | @Thum:2019mm |
-| $t_{air}^{sen}$ | Air temperature threshold inducing leaf senescence | $\mathrm{^\circ C}$ | Sect. | @Thum:2019mm |
-| $age^{leaf}_{min}$ | Minimum leaf age before senescence | $\mathrm{days}$ | Sect. | @Thum:2019mm |
-| $f_{sap\_wood}^{branch}$ | Fraction of sapwood in branches | \- | Sect. | @Thum:2019mm |
+| $\beta_{soil}^{flush}$ | Soil water level inducing leaf flushing | \- | @sec-veg-phen | @Thum:2019mm |
+| $\beta_{soil}^{sen}$ | Soil water stress inducing leaf senescence | \- | @sec-veg-phen | @Thum:2019mm |
+| $t_{air}^{sen}$ | Air temperature threshold inducing leaf senescence | $\mathrm{^\circ C}$ | @sec-veg-phen | @Thum:2019mm |
+| $age^{leaf}_{min}$ | Minimum leaf age before senescence | $\mathrm{days}$ | @sec-veg-phen | @Thum:2019mm |
+| $f_{sap\_wood}^{branch}$ | Fraction of sapwood in branches | \- | @sec-veg-phen | @Thum:2019mm |
 | $\rho_{wood}$ | Wood density | $\mathrm{\frac{g \hspace{0.1em} C}{cm^3}}$ | $\ref{eq-veg-latosa}$ | [@Chave2009-bl; @dryad_234] |
 | $k_{latosa}$ | Leaf area to sapwood area ratio | \- | $\ref{eq-veg-latosa}$ | [@Zaehle:2010a] |
 | $k_{ctos}$ | Coarse root to sapwood mass ratio | \- | $\ref{eq-veg-coarse-root}$ | @Thum:2019mm |
