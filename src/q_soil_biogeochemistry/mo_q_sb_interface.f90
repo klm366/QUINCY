@@ -313,7 +313,7 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     USE mo_sb_util,             ONLY: calculate_time_average_soilbiogeochemistry
-    USE mo_sb_spinup_accelerator, ONLY: apply_sb_spinup_accelerator
+    USE mo_sb_spinup_accelerator, ONLY: apply_sb_spinup_accelerator, apply_sb_coupled_pore_calibration
     dsl4jsb_Use_processes SB_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -327,6 +327,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL calculate_time_average_soilbiogeochemistry(tile, options)
+    CALL apply_sb_coupled_pore_calibration(tile, options)
     CALL apply_sb_spinup_accelerator(tile, options)
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')

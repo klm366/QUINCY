@@ -32,9 +32,9 @@ MODULE mo_sb_config_class
   PUBLIC :: SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
     &       SB_PART_RESIDUE_ASSOC_IDX
   PUBLIC :: CONST_DEP, REFYEAR_DEP, TRANS_DEP
-  PUBLIC :: sb_spinup_accelerator_max_forcing_bins
+  PUBLIC :: sb_spinup_accelerator_n_forcing_bins
 
-  INTEGER, PARAMETER :: sb_spinup_accelerator_max_forcing_bins = 365
+  INTEGER, PARAMETER :: sb_spinup_accelerator_n_forcing_bins = 12 !< fixed seasonal phase bins [-]
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
@@ -75,13 +75,14 @@ MODULE mo_sb_config_class
     LOGICAL :: flag_sb_jsm_available_pore_volume !< fixed mineral matrix with organic pore occupancy [-]
     REAL(lp) :: sb_bulk_density_target_fraction !< calibration target / input bulk density [-]
     REAL(lp) :: sb_pore_volume_relaxation !< bounded structural adjustment fraction per replay year [-]
+    REAL(lp) :: sb_spinup_lateral_return_fraction !< compensated lateral material export during spinup [0,1]
 
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
     ! forward soil-model spin-up accelerator (shared by JSM and simple_1d)
     LOGICAL               :: flag_sb_model_spinup_accelerator
-    CHARACTER(len=10)     :: sb_model_spinup_accelerator_forcing_interval
+    INTEGER :: sb_spinup_accelerator_n_daily_bins !< calendar-derived daily climatology size, not a control [-]
     INTEGER               :: sb_model_spinup_accelerator_frequency
     INTEGER               :: sb_model_spinup_accelerator_start_year
     INTEGER               :: sb_model_spinup_accelerator_max_executions
@@ -170,6 +171,7 @@ CONTAINS
     USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,              ONLY: Register_vgrid, Get_vgrid
+    USE mo_jsb_time,              ONLY: get_year_at_experiment_start, get_year_length
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
     USE mo_veg_config_class,      ONLY: Get_number_of_veg_compartments
     USE mo_lnd_bgcm_class,        ONLY: LAST_ELEM_ID
@@ -207,7 +209,6 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
     LOGICAL                     :: flag_sb_model_spinup_accelerator
-    CHARACTER(len=10)           :: sb_model_spinup_accelerator_forcing_interval
     INTEGER                     :: sb_model_spinup_accelerator_frequency
     INTEGER                     :: sb_model_spinup_accelerator_start_year
     INTEGER                     :: sb_model_spinup_accelerator_max_executions
@@ -241,6 +242,7 @@ CONTAINS
 
     LOGICAL :: flag_sb_jsm_available_pore_volume
     REAL(lp) :: sb_bulk_density_target_fraction, sb_pore_volume_relaxation
+    REAL(lp) :: sb_spinup_lateral_return_fraction
 
     NAMELIST /lnd_sb_nml/                     &
                       active                    , &
@@ -257,6 +259,7 @@ CONTAINS
                       flag_sb_jsm_available_pore_volume, &
                       sb_bulk_density_target_fraction, &
                       sb_pore_volume_relaxation, &
+                      sb_spinup_lateral_return_fraction, &
                       sb_nloss_scheme           , &
                       sb_bnf_scheme             , &
                       sb_adsorp_scheme          , &
@@ -274,7 +277,6 @@ CONTAINS
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
                       flag_sb_model_spinup_accelerator, &
-                      sb_model_spinup_accelerator_forcing_interval, &
                       sb_model_spinup_accelerator_frequency, &
                       sb_model_spinup_accelerator_start_year, &
                       sb_model_spinup_accelerator_max_executions, &
@@ -310,6 +312,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_forcing_vgrid
     TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_litter_vgrid
     TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_profile_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_daily_vgrid, sb_spinup_accelerator_daily_profile_vgrid
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_w
     INTEGER :: i_month, i_forcing_bin, i_litter_entry, i_profile_entry
     INTEGER :: n_forcing_bins, n_litter_entries, n_profile_entries
@@ -347,7 +350,6 @@ CONTAINS
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
     flag_sb_model_spinup_accelerator = .FALSE.
-    sb_model_spinup_accelerator_forcing_interval = 'yearly'
     sb_model_spinup_accelerator_frequency = 100
     sb_model_spinup_accelerator_start_year = 300
     sb_model_spinup_accelerator_max_executions = 5
@@ -382,6 +384,8 @@ CONTAINS
     flag_sb_jsm_available_pore_volume = .FALSE.
     sb_bulk_density_target_fraction = 0.95_lp
     sb_pore_volume_relaxation = 0.25_lp
+    ! No compensation by default; experiment-specific return is explicitly configured.
+    sb_spinup_lateral_return_fraction = 0.0_lp
 
     ! read the namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -406,6 +410,13 @@ CONTAINS
     config%flag_sb_jsm_available_pore_volume = flag_sb_jsm_available_pore_volume
     config%sb_bulk_density_target_fraction = sb_bulk_density_target_fraction
     config%sb_pore_volume_relaxation = sb_pore_volume_relaxation
+    IF (.NOT. (sb_spinup_lateral_return_fraction >= 0.0_lp .AND. &
+      & sb_spinup_lateral_return_fraction <= 1.0_lp)) THEN
+      CALL finish(TRIM(routine), 'sb_spinup_lateral_return_fraction must be in [0,1].')
+    END IF
+    config%sb_spinup_lateral_return_fraction = sb_spinup_lateral_return_fraction
+    WRITE(message_text,*) 'Spinup lateral material return fraction = ', sb_spinup_lateral_return_fraction
+    CALL message(TRIM(routine), TRIM(message_text))
     WRITE(message_text,*) 'SB volume scheme: available pore=', flag_sb_jsm_available_pore_volume, &
       & '; target density fraction=', sb_bulk_density_target_fraction, '; replay relaxation=', sb_pore_volume_relaxation
     CALL message(TRIM(routine), TRIM(message_text))
@@ -440,7 +451,6 @@ CONTAINS
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
     config%flag_sb_model_spinup_accelerator = flag_sb_model_spinup_accelerator
-    config%sb_model_spinup_accelerator_forcing_interval = TRIM(sb_model_spinup_accelerator_forcing_interval)
     config%sb_model_spinup_accelerator_frequency = sb_model_spinup_accelerator_frequency
     config%sb_model_spinup_accelerator_start_year = sb_model_spinup_accelerator_start_year
     config%sb_model_spinup_accelerator_max_executions = sb_model_spinup_accelerator_max_executions
@@ -483,11 +493,6 @@ CONTAINS
     END SELECT
 
     IF (flag_sb_model_spinup_accelerator) THEN
-      SELECT CASE (TRIM(sb_model_spinup_accelerator_forcing_interval))
-      CASE ('yearly', 'monthly', 'weekly', 'daily')
-      CASE DEFAULT
-        CALL finish(TRIM(routine), 'Unknown sb_model_spinup_accelerator_forcing_interval.')
-      END SELECT
       IF (sb_model_spinup_accelerator_frequency <= 0 .OR. &
           & sb_model_spinup_accelerator_start_year <= 0 .OR. &
           & sb_model_spinup_accelerator_max_executions <= 0 .OR. &
@@ -546,18 +551,16 @@ CONTAINS
       & levels=(/ (REAL(i_month, kind=lp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
 
-    SELECT CASE (TRIM(config%sb_model_spinup_accelerator_forcing_interval))
-    CASE ('yearly')
-      n_forcing_bins = 1
-    CASE ('monthly')
-      n_forcing_bins = 12
-    CASE ('weekly')
-      n_forcing_bins = 52
-    CASE ('daily')
-      n_forcing_bins = sb_spinup_accelerator_max_forcing_bins
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Unsupported forward SB accelerator forcing interval.')
-    END SELECT
+    ! Use the QS seasonal phase layout. Gregorian leap years are folded into
+    ! 365 daily bins; a 360-day host calendar uses 360 bins, never empty bins.
+    ! This is a storage dimension derived from the host calendar, not a namelist option.
+    n_forcing_bins = sb_spinup_accelerator_n_forcing_bins
+    config%sb_spinup_accelerator_n_daily_bins = MIN(365, get_year_length(get_year_at_experiment_start()))
+    sb_spinup_accelerator_daily_vgrid => new_vgrid('sb_accel_daily', ZAXIS_GENERIC, &
+      & config%sb_spinup_accelerator_n_daily_bins, &
+      & levels=(/ (REAL(i_forcing_bin, lp), i_forcing_bin = 1, &
+      & config%sb_spinup_accelerator_n_daily_bins) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_daily_vgrid)
 
     sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, n_forcing_bins, &
       & levels=(/ (REAL(i_forcing_bin, kind=lp), i_forcing_bin = 1, n_forcing_bins) /), units='')
@@ -573,6 +576,12 @@ CONTAINS
     sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
       & levels=(/ (REAL(i_profile_entry, kind=lp), i_profile_entry = 1, n_profile_entries) /), units='')
     CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
+
+    n_profile_entries = config%sb_spinup_accelerator_n_daily_bins * vgrid_soil_w%n_levels
+    ! Grid names must fit t_jsb_vgrid%name (20 characters), including lookup names.
+    sb_spinup_accelerator_daily_profile_vgrid => new_vgrid('sb_accel_day_profile', ZAXIS_GENERIC, &
+      & n_profile_entries, levels=(/ (REAL(i_profile_entry, lp), i_profile_entry = 1, n_profile_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_daily_profile_vgrid)
 
   END SUBROUTINE Init_sb_config
 

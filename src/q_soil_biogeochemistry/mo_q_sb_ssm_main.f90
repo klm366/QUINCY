@@ -45,7 +45,7 @@ CONTAINS
   !>
   !>  routine to update soil litter and mineral pools (simple version for vegetation model testing)
   !>
-  SUBROUTINE update_sb_simple_model(tile, options)
+  SUBROUTINE update_sb_simple_model(tile, options, l_balance_weathering)
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
@@ -66,6 +66,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    LOGICAL, OPTIONAL, INTENT(in) :: l_balance_weathering !< internal replay mineral P balance [-]
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
@@ -642,6 +643,23 @@ CONTAINS
         & emission_n2(:), &
         & emission_n2_n15(:) )                    ! out
 
+      ! Retain the configured fraction of lateral material export during spinup.
+      ! This represents unresolved lateral return, not water return. Apply before
+      ! loss limitation/pool updates; vertical transport and bottom leaching stay unchanged.
+      ! The same fraction applies to elements and isotopes, preserving export ratios.
+      IF (model%config%l_spinup .AND. dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction > 0.0_lp) THEN
+        lateral_loss_nh4_solute_sl = lateral_loss_nh4_solute_sl * &
+          & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+        lateral_loss_nh4_n15_solute_sl = lateral_loss_nh4_n15_solute_sl * &
+          & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+        lateral_loss_no3_solute_sl = lateral_loss_no3_solute_sl * &
+          & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+        lateral_loss_no3_n15_solute_sl = lateral_loss_no3_n15_solute_sl * &
+          & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+        lateral_loss_po4_solute_sl = lateral_loss_po4_solute_sl * &
+          & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      END IF
+
     ENDIF  ! IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')
 
     !>  2.5 transport due to bioturbation
@@ -708,6 +726,16 @@ CONTAINS
       & occlusion_po4(:,:), &
       & slow_exchange_po4(:,:), &
       & biochem_mineralisation_po4(:,:) )             ! out
+
+    ! With primary/occluded P held fixed, replay weathering replaces exactly the
+    ! dynamic occlusion loss [micro-mol P m-3 s-1], not an independent P source.
+    ! Apply before actual flux limitation. Calls without this optional argument
+    ! retain the coupled/file-driven soil model behavior.
+    IF (PRESENT(l_balance_weathering)) THEN
+      IF (l_balance_weathering .AND. dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
+        weathering_po4(:,:) = occlusion_po4(:,:)
+      END IF
+    END IF
 
     !>3.0 Actual fluxes of in and out of SOM
     !>

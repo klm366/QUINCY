@@ -789,6 +789,7 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
+    USE mo_sb_spinup_accelerator,    ONLY: resume_sb_spinup_accelerator
     USE mo_quincy_model_config,       ONLY: QCANOPY, QSOIL
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_
@@ -1132,6 +1133,12 @@ CONTAINS
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
         &                    dtime=dtime, alpha=1._lp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+
+      ! At a restart boundary, finish a pending soil replay before advancing
+      ! coupled processes. The checkpoint datetime itself is never advanced.
+      IF (jsbach_is_restarted() .AND. is_time_restart(datetime_old)) THEN
+        CALL resume_sb_spinup_accelerator(model, model%options(Get_omp_thread()))
+      END IF
 
       ! Run tasks in queue
       CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)

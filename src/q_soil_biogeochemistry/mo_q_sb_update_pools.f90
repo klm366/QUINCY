@@ -115,6 +115,7 @@ CONTAINS
     REAL(lp)                              :: dtime                          !< timestep length
     INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
     LOGICAL                               :: l_apply_plant_demand_scaling   !< use prescribed plant N/P demand fractions
+    LOGICAL :: l_internal_replay, l_allow_analytical_jump !< replay must not retrigger a host event [-]
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
@@ -145,6 +146,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_execution_count
     ! Declare pointers to variables in memory
     ! A2L
     dsl4jsb_Real2D_onChunk :: nhx_deposition
@@ -404,6 +406,8 @@ CONTAINS
     ice       = options%ice
     nc        = options%nc
     dtime     = options%dtime
+    l_internal_replay = .FALSE.
+    IF (PRESENT(l_soil_model_forcing)) l_internal_replay = l_soil_model_forcing
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
@@ -937,51 +941,63 @@ CONTAINS
     !> 7.0 analytical steady-state spin-up accelerator
     !>
     IF (model%config%flag_analytical_ss_spinup_accelerator .AND. &
-      & execute_quincy_sb_analytical_accelerator_this_timestep) THEN
-      IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) /= 'jsm') THEN
-        CALL finish(TRIM(routine), 'The analytical steady-state accelerator is available only for JSM.')
+      & execute_quincy_sb_analytical_accelerator_this_timestep .AND. .NOT. l_internal_replay) THEN
+      l_allow_analytical_jump = .TRUE.
+      IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) THEN
+        dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
+        ! The first completed replay conditions structure, without an analytical
+        ! jump. Restarted runs use the persistent completion state, not run age.
+        l_allow_analytical_jump = ALL(sb_spinup_accelerator_execution_count > 0.0_lp)
       END IF
-      IF (ANY(analy_ss_forcing_time(:) <= eps8)) THEN
-        CALL finish(TRIM(routine), 'Cannot execute analytical steady-state jump without accumulated forcing.')
-      END IF
+      IF (l_allow_analytical_jump) THEN
+        IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) /= 'jsm') THEN
+          CALL finish(TRIM(routine), 'The analytical steady-state accelerator is available only for JSM.')
+        END IF
+        IF (ANY(analy_ss_forcing_time(:) <= eps8)) THEN
+          CALL finish(TRIM(routine), 'Cannot execute analytical steady-state jump without accumulated forcing.')
+        END IF
 
 #ifdef __QUINCY_STANDALONE__
-      analytical_jump_year = get_year(options%current_datetime)
-      analytical_jump_count = (analytical_jump_year - &
-        & model%config%analytical_ss_spinup_accelerator_start_year) / &
-        & model%config%analytical_ss_spinup_accelerator_frequency + 1
-      WRITE(analytical_input_filename, &
-        & '("sb_analytical_init_vars_jump_year",I0,"_count",I0,"_block",I0,".txt")') &
-        & analytical_jump_year, analytical_jump_count, iblk
-      CALL dump_analytical_accelerator_inputs( &
-        & TRIM(analytical_input_filename), analytical_jump_year, analytical_jump_count, &
-        & model%config%analytical_ss_spinup_accelerator_forcing_years, &
-        & model%config%analytical_ss_transport_smoothing_years, &
-        & nc, nsoil_w, num_sl_above_bedrock, analy_ss_forcing_time, &
-        & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
-        & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
-        & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
-        & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
-        & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
-        & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
-        & analy_ss_bioturb_numerator_mean_sl)
+        analytical_jump_year = get_year(options%current_datetime)
+        analytical_jump_count = (analytical_jump_year - &
+          & model%config%analytical_ss_spinup_accelerator_start_year) / &
+          & model%config%analytical_ss_spinup_accelerator_frequency + 1
+        WRITE(analytical_input_filename, &
+          & '("sb_analytical_init_vars_jump_year",I0,"_count",I0,"_block",I0,".txt")') &
+          & analytical_jump_year, analytical_jump_count, iblk
+        CALL dump_analytical_accelerator_inputs( &
+          & TRIM(analytical_input_filename), analytical_jump_year, analytical_jump_count, &
+          & model%config%analytical_ss_spinup_accelerator_forcing_years, &
+          & model%config%analytical_ss_transport_smoothing_years, &
+          & nc, nsoil_w, num_sl_above_bedrock, analy_ss_forcing_time, &
+          & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
+          & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
+          & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
+          & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
+          & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
+          & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
+          & analy_ss_bioturb_numerator_mean_sl)
 #endif
 
-      CALL apply_analytical_ss_jsm_accelerator( &
-        & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, &
-        & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
-        & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
-        & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
-        & model%config%include_carbon14, &
-        & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
-        & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
-        & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
-        & model%config%flag_analytical_ss_bioturbation, &
-        & model%config%flag_spinup_debug, &
-        & model%config%analytical_ss_transport_smoothing_years, analy_ss_bioturb_numerator_mean_sl, &
-        & sb_pool_mt, qmax_org, surface_burial_frac, enzyme_frac_poly, enzyme_frac_residue, &
-        & enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p, enzyme_frac_AP)
+        CALL apply_analytical_ss_jsm_accelerator( &
+          & nc, nsoil_w, num_sl_above_bedrock, soil_depth_sl, &
+          & soil_lay_depth_center_sl, soil_lay_depth_ubound_sl, &
+          & analy_ss_input_sol_c_mean_sl, analy_ss_input_poly_c_mean_sl, analy_ss_input_wood_c_mean_sl, &
+          & analy_ss_input_sol_c14_mean_sl, analy_ss_input_poly_c14_mean_sl, analy_ss_input_wood_c14_mean_sl, &
+          & model%config%include_carbon14, &
+          & analy_ss_doc_transp_mean_sl, analy_ss_enzyme_ap_mean_sl, bulk_dens_sl, bulk_carbon_max, &
+          & qmax_org_min_sl, analy_ss_depoly_mod_mean_sl, analy_ss_uptake_mod_mean_sl, &
+          & analy_ss_sorption_mod_mean_sl, analy_ss_desorption_mod_mean_sl, analy_ss_hsc_mod_mean_sl, &
+          & model%config%flag_analytical_ss_bioturbation, &
+          & model%config%flag_spinup_debug, &
+          & model%config%analytical_ss_transport_smoothing_years, analy_ss_bioturb_numerator_mean_sl, &
+          & sb_pool_mt, qmax_org, surface_burial_frac, enzyme_frac_poly, enzyme_frac_residue, &
+          & enzyme_frac_poly_c, enzyme_frac_poly_n, enzyme_frac_poly_p, enzyme_frac_AP)
 
+      END IF ! l_allow_analytical_jump
+
+      ! Discard the skipped first-event analytical window as well as used input;
+      ! subsequent events must not combine forcing from two collection windows.
       analy_ss_forcing_time(:) = 0.0_lp
       analy_ss_input_sol_c_mean_sl(:,:) = 0.0_lp
       analy_ss_input_poly_c_mean_sl(:,:) = 0.0_lp
@@ -998,7 +1014,11 @@ CONTAINS
       analy_ss_enzyme_ap_mean_sl(:,:) = 0.0_lp
       analy_ss_bioturb_numerator_mean_sl(:,:) = 0.0_lp
 
-      WRITE(message_text,*) 'Applied analytical steady-state SB_ spinup jump at block ', iblk
+      IF (l_allow_analytical_jump) THEN
+        WRITE(message_text,*) 'Applied analytical steady-state SB_ spinup jump at block ', iblk
+      ELSE
+        WRITE(message_text,*) 'First SB replay: structure conditioning only, analytical jump skipped; block ', iblk
+      END IF
       CALL message(TRIM(routine), message_text, all_print=.TRUE.)
     END IF
 

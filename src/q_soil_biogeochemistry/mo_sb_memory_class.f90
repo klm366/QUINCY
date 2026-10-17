@@ -270,11 +270,19 @@ MODULE mo_sb_memory_class
     !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real2d) :: &
+                            sb_coupled_pore_calibration_done, & !< one-off coupled structural calibration completed [0,1]
                             analy_ss_forcing_time, &              !< elapsed time represented by analytical forcing means [s]
+                            sb_spinup_accelerator_forcing_event, & !< year owning the accumulated replay climatology [year]
+                            sb_spinup_accelerator_litter_n_sum, & !< collection-window litter_n [mol m-2]
+                            sb_spinup_accelerator_litter_p_sum, & !< collection-window litter_p [mol m-2]
+                            sb_spinup_accelerator_plant_uptake_n_sum, & !< collection-window plant_uptake_n [mol m-2]
+                            sb_spinup_accelerator_plant_uptake_p_sum, & !< collection-window plant_uptake_p [mol m-2]
                             sb_spinup_accelerator_execution_count !< number of completed forward accelerator events [-]
 
     TYPE(t_jsb_var_real3d)  :: &
-                            sb_spinup_accelerator_forcing_time, & !< elapsed sampling time in each forcing bin [s]
+                            sb_spinup_accelerator_forcing_time, & !< elapsed sampling time in each monthly phase bin [s]
+                            growth_p_limit_smoothed_sl, & !< transformed plant P limitation for phosphatase production [-]
+                            sb_spinup_accelerator_daily_time, & !< elapsed sampling time in each daily phase bin [s]
                             sb_spinup_accelerator_litterfall_sum, & !< integrated litterfall by bin, source, and element
                             sb_spinup_accelerator_fine_root_c_sum, & !< time-weighted fine-root C by forcing bin [mol C s m-2]
                             sb_spinup_accelerator_f_n_demand_sum, & !< time-weighted plant N-demand fraction by forcing bin [s]
@@ -286,8 +294,8 @@ MODULE mo_sb_memory_class
                             sb_spinup_accelerator_p_deposition_sum, & !< integrated P deposition by forcing bin [micro-mol m-2]
                             sb_spinup_accelerator_growth_p_limit_sum, & !< time-weighted plant P limitation by forcing bin [s]
                             sb_spinup_accelerator_root_fraction_sum, & !< time-weighted root fraction by bin and layer [s]
-                            sb_spinup_accelerator_wtr_down_sum, & !< time-weighted downward water-transfer fraction [s]
-                            sb_spinup_accelerator_wtr_lat_loss_sum, & !< time-weighted lateral water-loss fraction [s]
+                            sb_spinup_accelerator_wtr_down_sum, & !< daily time integral of downward transport rate [-]
+                            sb_spinup_accelerator_wtr_lat_loss_sum, & !< daily time integral of lateral transport rate [-]
                             sb_spinup_accelerator_t_soil_sum, & !< time-weighted soil temperature [K s]
                             sb_spinup_accelerator_wtr_soil_sum, & !< time-weighted liquid soil water [m s]
                             sb_spinup_accelerator_ice_soil_sum, & !< time-weighted soil ice [m s]
@@ -532,6 +540,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_forcing     !< Accelerator forcing-bin grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_litter      !< Flattened litter forcing grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_profile     !< Flattened forcing-bin by soil-layer grid
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_sb_spinup_daily, vgrid_sb_spinup_daily_profile !< daily transport grids
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
     INTEGER                                  :: output_level_local          !< add var to BASIC output_level, model specific (ssm/jsm)
@@ -550,6 +559,8 @@ CONTAINS
     vgrid_sb_spinup_forcing => Get_vgrid('sb_accel_forcing')
     vgrid_sb_spinup_litter => Get_vgrid('sb_accel_litter')
     vgrid_sb_spinup_profile => Get_vgrid('sb_accel_profile')
+    vgrid_sb_spinup_daily => Get_vgrid('sb_accel_daily')
+    vgrid_sb_spinup_daily_profile => Get_vgrid('sb_accel_day_profile')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
 
@@ -598,7 +609,53 @@ CONTAINS
         & initval_r = 0.0_lp)
     END IF
 
+    IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) THEN
+      CALL mem%Add_var('sb_coupled_pore_calibration_done', mem%sb_coupled_pore_calibration_done, &
+        & hgrid, surface, &
+        & t_cf('sb_coupled_pore_calibration_done', '1', 'one-off coupled structural calibration completed'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+    END IF
+
+    ! Derived each coupled JSM step, or loaded from the replay climatology. The
+    ! accumulated driver below is restart-persistent; this work field is not.
+    CALL mem%Add_var('growth_p_limit_smoothed_sl', mem%growth_p_limit_smoothed_sl, &
+      & hgrid, vgrid_soil_w, &
+      & t_cf('growth_p_limit_smoothed_sl', '1', 'transformed plant P limitation for phosphatase production'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .FALSE., initval_r = 0.0_lp)
+
     IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) THEN
+      CALL mem%Add_var('sb_accel_lit_n_total', mem%sb_spinup_accelerator_litter_n_sum, &
+        & hgrid, surface, &
+        & t_cf('sb_accel_lit_n_total', 'mol m-2', 'collection-window integrated litter_n'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+      CALL mem%Add_var('sb_accel_lit_p_total', mem%sb_spinup_accelerator_litter_p_sum, &
+        & hgrid, surface, &
+        & t_cf('sb_accel_lit_p_total', 'mol m-2', 'collection-window integrated litter_p'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+      CALL mem%Add_var('sb_accel_upt_n_total', mem%sb_spinup_accelerator_plant_uptake_n_sum, &
+        & hgrid, surface, &
+        & t_cf('sb_accel_upt_n_total', 'mol m-2', 'collection-window integrated plant_uptake_n'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+      CALL mem%Add_var('sb_accel_upt_p_total', mem%sb_spinup_accelerator_plant_uptake_p_sum, &
+        & hgrid, surface, &
+        & t_cf('sb_accel_upt_p_total', 'mol m-2', 'collection-window integrated plant_uptake_p'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+      CALL mem%Add_var('sb_accel_forcing_event', mem%sb_spinup_accelerator_forcing_event, &
+        & hgrid, surface, &
+        & t_cf('sb_accel_forcing_event', '1', 'scheduled event year owning the replay forcing sums'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
       CALL mem%Add_var('sb_accel_execution_count', mem%sb_spinup_accelerator_execution_count, &
         & hgrid, surface, &
         & t_cf('sb_accel_execution_count', '1', &
@@ -676,10 +733,10 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_accel_growth_p_lim_sum', mem%sb_spinup_accelerator_growth_p_limit_sum, &
-        & hgrid, vgrid_sb_spinup_forcing, &
-        & t_cf('sb_accel_growth_p_lim_sum', 's', &
-        &      'elapsed-time-weighted plant phosphorus limitation by climatology bin'), &
+      CALL mem%Add_var('sb_accel_growth_p_layer_sum', mem%sb_spinup_accelerator_growth_p_limit_sum, &
+        & hgrid, vgrid_sb_spinup_profile, &
+        & t_cf('sb_accel_growth_p_layer_sum', 's', &
+        &      'time-integrated transformed plant phosphorus limitation by seasonal bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
 
@@ -690,17 +747,25 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_accel_wtr_down_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
-        & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_accel_wtr_down_sum', 's', &
-        &      'elapsed-time-weighted downward water-transfer fraction by climatology bin and soil layer'), &
+      ! Daily transport is restart-persistent. Distinct names prevent interpreting
+      ! old monthly native-unit accumulators as the new true-rate daily arrays.
+      CALL mem%Add_var('sb_accel_daily_time', mem%sb_spinup_accelerator_daily_time, &
+        & hgrid, vgrid_sb_spinup_daily, &
+        & t_cf('sb_accel_daily_time', 's', 'elapsed sampling time by daily phase bin'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
 
-      CALL mem%Add_var('sb_accel_wtr_lat_loss_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
-        & hgrid, vgrid_sb_spinup_profile, &
-        & t_cf('sb_accel_wtr_lat_loss_sum', 's', &
-        &      'elapsed-time-weighted lateral water-loss fraction by climatology bin and soil layer'), &
+      CALL mem%Add_var('sb_accel_wtr_down_daily_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
+        & hgrid, vgrid_sb_spinup_daily_profile, &
+        & t_cf('sb_accel_wtr_down_daily_sum', '1', &
+        &      'time-integrated downward transport rate by daily phase bin and soil layer'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('sb_accel_wtr_lat_daily_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
+        & hgrid, vgrid_sb_spinup_daily_profile, &
+        & t_cf('sb_accel_wtr_lat_daily_sum', '1', &
+        &      'time-integrated lateral transport rate by daily phase bin and soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
         & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp, l_aggregate_all = .TRUE.)
 

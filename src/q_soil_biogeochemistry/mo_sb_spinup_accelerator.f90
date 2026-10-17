@@ -28,23 +28,26 @@ MODULE mo_sb_spinup_accelerator
   USE mo_jsb_model_class, ONLY: t_jsb_model
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,  ONLY: t_jsb_task_options
-  USE mo_sb_config_class, ONLY: sb_spinup_accelerator_max_forcing_bins
+  USE mo_sb_config_class, ONLY: sb_spinup_accelerator_n_forcing_bins
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: apply_sb_spinup_accelerator
+  PUBLIC :: resume_sb_spinup_accelerator
+  PUBLIC :: apply_sb_coupled_pore_calibration
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_spinup_accelerator'
-  CHARACTER(len=*), PARAMETER :: sb_spinup_debug_filename = 'sb_spinup_accelerator_debug.txt'
   INTEGER, PARAMETER :: sb_spinup_debug_years(10) = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000]
 
   !> Event-local climatology reconstructed from restart-safe accumulated sums.
   TYPE :: t_sb_spinup_forcing_climatology
     INTEGER :: n_forcing_bins = 0
+    INTEGER :: n_daily_bins = 0 !< 365, or 360 for the host 360-day calendar [-]
     INTEGER :: n_soil_layers = 0
     INTEGER :: n_litter_sources = 0
     INTEGER :: n_elements = 0
+    REAL(lp), ALLOCATABLE :: litter_to_uptake_n(:), litter_to_uptake_p(:) !< coupled reference ratios [-]
     REAL(lp), ALLOCATABLE :: forcing_time(:,:)     !< sampled time by cell and bin [s]
     REAL(lp), ALLOCATABLE :: litterfall_rate(:,:)  !< mean litterfall rate, flattened by bin/source/element [mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: fine_root_c(:,:)       !< mean fine-root carbon by cell and bin [mol C m-2]
@@ -55,10 +58,10 @@ MODULE mo_sb_spinup_accelerator
     REAL(lp), ALLOCATABLE :: nhx_n15_deposition(:,:) !< mean reduced-15N deposition [micro-mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: noy_n15_deposition(:,:) !< mean oxidized-15N deposition [micro-mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: p_deposition(:,:)      !< mean phosphorus deposition by cell and bin [micro-mol m-2 s-1]
-    REAL(lp), ALLOCATABLE :: growth_p_limit(:,:)    !< mean plant P limitation based on N demand by cell and bin [-]
+    REAL(lp), ALLOCATABLE :: growth_p_limit(:,:)    !< mean transformed P limitation by seasonal bin/layer [-]
     REAL(lp), ALLOCATABLE :: root_fraction(:,:)    !< mean root fraction, flattened by bin/layer [-]
-    REAL(lp), ALLOCATABLE :: wtr_down(:,:)         !< mean downward water-transfer fraction, flattened by bin/layer [-]
-    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)     !< mean lateral water-loss fraction, flattened by bin/layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_down(:,:)         !< mean downward transport rate, flattened by daily bin/layer [s-1]
+    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)     !< mean lateral transport rate, flattened by daily bin/layer [s-1]
     REAL(lp), ALLOCATABLE :: t_soil(:,:)           !< mean soil temperature, flattened by bin/layer [K]
     REAL(lp), ALLOCATABLE :: wtr_soil(:,:)         !< mean liquid soil water, flattened by bin/layer [m]
     REAL(lp), ALLOCATABLE :: ice_soil(:,:)         !< mean soil ice, flattened by bin/layer [m]
@@ -77,10 +80,10 @@ MODULE mo_sb_spinup_accelerator
     REAL(lp), ALLOCATABLE :: nhx_n15_deposition(:) !< reduced-15N deposition by cell [micro-mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: noy_n15_deposition(:) !< oxidized-15N deposition by cell [micro-mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: p_deposition(:)      !< phosphorus deposition by cell [micro-mol m-2 s-1]
-    REAL(lp), ALLOCATABLE :: growth_p_limit(:)    !< plant P limitation based on N demand by cell [-]
+    REAL(lp), ALLOCATABLE :: growth_p_limit(:,:)  !< transformed P driver by cell and soil layer [-]
     REAL(lp), ALLOCATABLE :: root_fraction(:,:) !< root fraction by cell and soil layer [-]
-    REAL(lp), ALLOCATABLE :: wtr_down(:,:)      !< downward water-transfer fraction by cell and layer [-]
-    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)  !< lateral water-loss fraction by cell and layer [-]
+    REAL(lp), ALLOCATABLE :: wtr_down(:,:)      !< native downward transfer coefficient [1000 s-1]
+    REAL(lp), ALLOCATABLE :: wtr_lat_loss(:,:)  !< native lateral transfer coefficient [1000 s-1]
     REAL(lp), ALLOCATABLE :: t_soil(:,:)        !< soil temperature by cell and layer [K]
     REAL(lp), ALLOCATABLE :: wtr_soil(:,:)      !< liquid soil water by cell and layer [m]
     REAL(lp), ALLOCATABLE :: ice_soil(:,:)      !< soil ice by cell and layer [m]
@@ -91,6 +94,13 @@ MODULE mo_sb_spinup_accelerator
     REAL(lp), ALLOCATABLE :: biological_n_fixation(:) !< host-timestep biological N fixation [micro-mol m-2 s-1]
   END TYPE t_sb_spinup_live_forcing
 
+  !> Event-local annual nutrient budget and next-year demand correction.
+  TYPE :: t_sb_replay_nutrient_balance
+    REAL(lp), ALLOCATABLE :: litter_n(:), litter_p(:) !< litter received in one replay year [mol m-2]
+    REAL(lp), ALLOCATABLE :: uptake_n(:), uptake_p(:) !< realized plant uptake in one replay year [mol m-2]
+    REAL(lp), ALLOCATABLE :: scale_n(:), scale_p(:) !< multipliers of recorded effective demand [-]
+  END TYPE t_sb_replay_nutrient_balance
+
 CONTAINS
 
   ! ===================================================================================================== !
@@ -100,6 +110,7 @@ CONTAINS
     USE mo_jsb_process_class, ONLY: SB_
     USE mo_jsb_time,          ONLY: get_year
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -108,10 +119,12 @@ CONTAINS
     INTEGER,                    INTENT(out)   :: execution_index
 
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_execution_count
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER :: current_year
-    INTEGER :: i_event
+    INTEGER :: i_event, ics, ice, iblk
 
     l_collect = .FALSE.
     event_year = 0
@@ -119,10 +132,18 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     IF (.NOT. model%config%l_spinup) RETURN
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
 
     current_year = get_year(options%current_datetime)
     DO i_event = 1, dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_max_executions
+      ! Completed events must not hide the start of the next collection window
+      ! in the same calendar year, notably when forcing years equal frequency.
+      IF (ALL(NINT(sb_spinup_accelerator_execution_count) >= i_event)) CYCLE
       event_year = dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_start_year + &
         & (i_event - 1) * dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_frequency
 
@@ -142,48 +163,19 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Map the current point in the model year to a fixed climatological phase bin.
-  SUBROUTINE get_sb_spinup_accelerator_forcing_bin(options, forcing_interval, forcing_bin, n_forcing_bins)
-
+  SUBROUTINE get_sb_spinup_accelerator_forcing_bin(options, forcing_bin, n_forcing_bins, daily_bin)
     USE mo_jsb_time, ONLY: get_year, get_year_day, get_year_length
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(out) :: forcing_bin, n_forcing_bins, daily_bin
+    INTEGER :: year_length, day_index
 
-    TYPE(t_jsb_task_options), INTENT(in)  :: options
-    CHARACTER(len=*),         INTENT(in)  :: forcing_interval
-    INTEGER,                  INTENT(out) :: forcing_bin
-    INTEGER,                  INTENT(out) :: n_forcing_bins
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_sb_spinup_accelerator_forcing_bin'
-    INTEGER  :: current_year
-    INTEGER  :: day_index
-    INTEGER  :: year_length
-    REAL(lp) :: year_day
-
-    SELECT CASE (TRIM(forcing_interval))
-    CASE ('yearly')
-      n_forcing_bins = 1
-    CASE ('monthly')
-      n_forcing_bins = 12
-    CASE ('weekly')
-      n_forcing_bins = 52
-    CASE ('daily')
-      n_forcing_bins = sb_spinup_accelerator_max_forcing_bins
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Unsupported forward SB accelerator forcing interval.')
-    END SELECT
-
-    current_year = get_year(options%current_datetime)
-    year_length = get_year_length(current_year)
-    year_day = get_year_day(options%current_datetime)
-#ifdef __QUINCY_STANDALONE__
-    ! The standalone adapter reports a zero-based day, whereas mtime reports a one-based day of year.
-    year_day = year_day + 1.0_lp
-#endif
-
-    ! Map whole model days with integer arithmetic. Dividing and multiplying the
-    ! floating-point year phase can place exact day boundaries just below an
-    ! integer and leave daily climatology bins unsampled.
-    day_index = MAX(0, MIN(year_length - 1, FLOOR(year_day - 1.0_lp)))
-    forcing_bin = MIN(n_forcing_bins, day_index * n_forcing_bins / year_length + 1)
-
+    year_length = get_year_length(get_year(options%current_datetime))
+    day_index = MAX(0, MIN(year_length - 1, FLOOR(get_year_day(options%current_datetime) - 1.0_lp)))
+    n_forcing_bins = sb_spinup_accelerator_n_forcing_bins
+    ! Match QS equal-phase seasonal bins, not calendar months. Compress leap
+    ! years onto 365 daily bins, and preserve all 360 days in a 360-day calendar.
+    forcing_bin = day_index * n_forcing_bins / year_length + 1
+    daily_bin = day_index * MIN(365, year_length) / year_length + 1
   END SUBROUTINE get_sb_spinup_accelerator_forcing_bin
 
   ! ===================================================================================================== !
@@ -221,6 +213,7 @@ CONTAINS
     INTEGER :: event_year
     INTEGER :: execution_index
     INTEGER :: forcing_bin
+    INTEGER :: daily_bin, daily_profile_entry, n_daily_bins
     INTEGER :: n_forcing_bins
     INTEGER :: ics
     INTEGER :: ice
@@ -233,6 +226,12 @@ CONTAINS
     INTEGER :: n_veg_sources
     INTEGER :: n_elements
     INTEGER :: nsoil
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_forcing_event
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_daily_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
@@ -260,7 +259,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real3D_onChunk :: growth_p_limit_smoothed_sl
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
@@ -276,14 +275,20 @@ CONTAINS
     CALL get_sb_spinup_accelerator_forcing_window(tile, options, l_collect, event_year, execution_index)
     IF (.NOT. l_collect) RETURN
 
-    CALL get_sb_spinup_accelerator_forcing_bin(options, &
-      & dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_forcing_interval, forcing_bin, n_forcing_bins)
+    CALL get_sb_spinup_accelerator_forcing_bin(options, forcing_bin, n_forcing_bins, daily_bin)
+    n_daily_bins = dsl4jsb_Config(SB_)%sb_spinup_accelerator_n_daily_bins
 
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_forcing_event)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_daily_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
@@ -311,7 +316,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, growth_p_limit_smoothed_sl)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
@@ -326,6 +331,16 @@ CONTAINS
       CALL finish(TRIM(routine), 'Invalid forward SB accelerator forcing-window state.')
     END IF
 
+    ! Never merge stale forcing from another event after a schedule change.
+    ! Empty storage can be assigned; populated storage must have the same owner.
+    IF (ANY(NINT(sb_spinup_accelerator_forcing_event) /= event_year)) THEN
+      IF (ANY(sb_spinup_accelerator_forcing_time > 0.0_lp)) THEN
+        CALL finish(TRIM(routine), 'Replay forcing belongs to a different event; recollect the forcing window.')
+      END IF
+      sb_spinup_accelerator_forcing_event = REAL(event_year, lp)
+    END IF
+    sb_spinup_accelerator_daily_time(:, daily_bin) = &
+      & sb_spinup_accelerator_daily_time(:, daily_bin) + options%dtime
     sb_spinup_accelerator_forcing_time(:, forcing_bin) = &
       & sb_spinup_accelerator_forcing_time(:, forcing_bin) + options%dtime
     sb_spinup_accelerator_fine_root_c_sum(:, forcing_bin) = &
@@ -345,8 +360,6 @@ CONTAINS
       & sb_spinup_accelerator_noy_n15_deposition_sum(:, forcing_bin) + noy_n15_deposition * options%dtime
     sb_spinup_accelerator_p_deposition_sum(:, forcing_bin) = &
       & sb_spinup_accelerator_p_deposition_sum(:, forcing_bin) + p_deposition * options%dtime
-    sb_spinup_accelerator_growth_p_limit_sum(:, forcing_bin) = &
-      & sb_spinup_accelerator_growth_p_limit_sum(:, forcing_bin) + growth_p_limit_based_on_n_mavg * options%dtime
 
     n_veg_sources = SIZE(veg_litterfall_mt, 1)
     n_elements = SIZE(veg_litterfall_mt, 2)
@@ -383,12 +396,20 @@ CONTAINS
 
     DO i_soil = 1, nsoil
       profile_entry = forcing_bin + n_forcing_bins * (i_soil - 1)
+      sb_spinup_accelerator_growth_p_limit_sum(:, profile_entry) = &
+        & sb_spinup_accelerator_growth_p_limit_sum(:, profile_entry) + &
+        & growth_p_limit_smoothed_sl(:, i_soil) * options%dtime
+      daily_profile_entry = daily_bin + n_daily_bins * (i_soil - 1)
       sb_spinup_accelerator_root_fraction_sum(:, profile_entry) = &
         & sb_spinup_accelerator_root_fraction_sum(:, profile_entry) + root_fraction_sl(:, i_soil) * options%dtime
-      sb_spinup_accelerator_wtr_down_sum(:, profile_entry) = &
-        & sb_spinup_accelerator_wtr_down_sum(:, profile_entry) + frac_wtr_transp_down_sl(:, i_soil) * options%dtime
-      sb_spinup_accelerator_wtr_lat_loss_sum(:, profile_entry) = &
-        & sb_spinup_accelerator_wtr_lat_loss_sum(:, profile_entry) + frac_w_lat_loss_sl(:, i_soil) * options%dtime
+      ! HYDRO coefficients are 1000 times the true per-second rate.
+      sb_spinup_accelerator_wtr_down_sum(:, daily_profile_entry) = &
+        & sb_spinup_accelerator_wtr_down_sum(:, daily_profile_entry) + &
+        & MAX(0.0_lp, frac_wtr_transp_down_sl(:, i_soil)) * options%dtime / 1000.0_lp
+      ! HYDRO coefficients are 1000 times the true per-second rate.
+      sb_spinup_accelerator_wtr_lat_loss_sum(:, daily_profile_entry) = &
+        & sb_spinup_accelerator_wtr_lat_loss_sum(:, daily_profile_entry) + &
+        & MAX(0.0_lp, frac_w_lat_loss_sl(:, i_soil)) * options%dtime / 1000.0_lp
       sb_spinup_accelerator_t_soil_sum(:, profile_entry) = &
         & sb_spinup_accelerator_t_soil_sum(:, profile_entry) + t_soil_sl(:, i_soil) * options%dtime
       sb_spinup_accelerator_wtr_soil_sum(:, profile_entry) = &
@@ -399,7 +420,11 @@ CONTAINS
         & sb_spinup_accelerator_wtr_pot_sum(:, profile_entry) + wtr_soil_pot_sl(:, i_soil) * options%dtime
     END DO
 
-    ! Subsequent bookkeeping groups will use the same bin ordering and elapsed-time denominator.
+    ! Post-pool-update uptake is the realized, demand-limited flux. Litter is a
+    ! timestep increment, uptake is a volumetric micro-mol/s rate.
+    CALL accumulate_replay_nutrient_budget(tile, options, &
+      & sb_spinup_accelerator_litter_n_sum, sb_spinup_accelerator_litter_p_sum, &
+      & sb_spinup_accelerator_plant_uptake_n_sum, sb_spinup_accelerator_plant_uptake_p_sum)
 
   END SUBROUTINE collect_sb_spinup_accelerator_forcing
 
@@ -439,6 +464,11 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
+    ! An event is atomic for a tile chunk. A mixed restart must not rerun only
+    ! some cells implicitly, nor silently replay already completed cells.
+    IF (ANY(NINT(sb_spinup_accelerator_execution_count) /= NINT(sb_spinup_accelerator_execution_count(1)))) THEN
+      CALL finish(modname//':check_sb_spinup_accelerator_schedule', 'Inconsistent replay completion state within chunk.')
+    END IF
     IF (.NOT. is_newyear(options%current_datetime, options%dtime)) RETURN
 
     current_year = get_year(options%current_datetime)
@@ -507,6 +537,12 @@ CONTAINS
     INTEGER :: ics
     INTEGER :: ice
     INTEGER :: iblk
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_forcing_event
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_daily_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
@@ -531,6 +567,12 @@ CONTAINS
     iblk = options%iblk
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_forcing_event)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_daily_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
@@ -550,6 +592,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_ice_soil_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_wtr_pot_sum)
 
+    sb_spinup_accelerator_litter_n_sum(:) = 0.0_lp
+    sb_spinup_accelerator_litter_p_sum(:) = 0.0_lp
+    sb_spinup_accelerator_plant_uptake_n_sum(:) = 0.0_lp
+    sb_spinup_accelerator_plant_uptake_p_sum(:) = 0.0_lp
+    sb_spinup_accelerator_forcing_event(:) = 0.0_lp
+    sb_spinup_accelerator_daily_time(:,:) = 0.0_lp
     sb_spinup_accelerator_forcing_time(:,:) = 0.0_lp
     sb_spinup_accelerator_litterfall_sum(:,:) = 0.0_lp
     sb_spinup_accelerator_fine_root_c_sum(:,:) = 0.0_lp
@@ -573,7 +621,35 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Apply forward soil-model relaxation at a scheduled spin-up event.
-  SUBROUTINE apply_sb_spinup_accelerator(tile, options)
+  !> Resume an event at the restart boundary before any coupled process runs.
+  !! The host supplies the unchanged checkpoint datetime and chunk. Completed
+  !! events are skipped by the persistent counter; incomplete forcing is fatal.
+  SUBROUTINE resume_sb_spinup_accelerator(model, options)
+    USE mo_jsb_process_class, ONLY: SB_
+    USE mo_jsb_model_class, ONLY: MODEL_QUINCY
+    USE mo_jsb_time, ONLY: is_newyear
+    TYPE(t_jsb_model), INTENT(inout) :: model
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER :: itile
+
+    IF (model%config%model_scheme /= MODEL_QUINCY) RETURN
+    IF (.NOT. model%config%l_spinup) RETURN
+    IF (.NOT. is_newyear(options%current_datetime, options%dtime)) RETURN
+    DO itile = 1, SIZE(model%tiles)
+      tile => model%tiles(itile)%p
+      IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
+      IF (tile%lcts(1)%lib_id == 0) CYCLE
+      CALL apply_sb_spinup_accelerator(tile, options, l_restart_boundary=.TRUE.)
+      ! PPLCC reads the variable representation before rebuilding BGCM matrices.
+      ! Publish replay state so those tasks cannot restore the pre-replay pools.
+      IF (ASSOCIATED(tile%bgcm_store)) THEN
+        CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, options%ics, options%ice, options%iblk)
+      END IF
+    END DO
+  END SUBROUTINE resume_sb_spinup_accelerator
+
+  SUBROUTINE apply_sb_spinup_accelerator(tile, options, l_restart_boundary)
 
     USE mo_jsb_process_class, ONLY: SB_
     USE mo_jsb_time,          ONLY: executed_sb_model_spinup_accelerator_this_timestep
@@ -582,6 +658,8 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    LOGICAL, OPTIONAL, INTENT(in) :: l_restart_boundary !< use saved forcing without sampling the new step
 
     dsl4jsb_Def_config(SB_)
 
@@ -606,13 +684,21 @@ CONTAINS
       CALL finish(TRIM(routine), 'The forward and slow-pool SB spin-up accelerators are mutually exclusive.')
     END IF
 
-    CALL collect_sb_spinup_accelerator_forcing(tile, options)
+    IF (PRESENT(l_restart_boundary)) THEN
+      IF (.NOT. l_restart_boundary) CALL collect_sb_spinup_accelerator_forcing(tile, options)
+    ELSE
+      CALL collect_sb_spinup_accelerator_forcing(tile, options)
+    END IF
     CALL check_sb_spinup_accelerator_schedule(tile, options, l_accelerate, execution_index)
 
     IF (.NOT. l_accelerate) RETURN
+    IF (PRESENT(l_restart_boundary)) THEN
+      IF (l_restart_boundary .AND. options%iblk == 1) &
+        & CALL message(TRIM(routine), 'Resuming pending replay before coupled tasks on tile '//TRIM(tile%name))
+    END IF
     IF (options%iblk == 1) THEN
       WRITE(message_text,*) 'Starting forward SB spin-up accelerator execution ', execution_index, &
-        & ' with forcing interval ', TRIM(dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_forcing_interval), '.'
+        & ' with monthly biological/soil-physics means and daily water transport.'
       CALL message(TRIM(routine), TRIM(message_text))
     END IF
 
@@ -657,7 +743,6 @@ CONTAINS
       & max_total_c_relative_change, l_converged)
 
     USE mo_sb_util, ONLY: reset_sb_fluxes
-    USE mo_jsb_time, ONLY: execute_quincy_sb_analytical_accelerator_this_timestep
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -671,17 +756,13 @@ CONTAINS
 
     TYPE(t_sb_spinup_forcing_climatology) :: forcing
     TYPE(t_sb_spinup_live_forcing) :: live_forcing
-    LOGICAL :: l_analytical_event
 
-    ! This sequence is intentionally visible before the numerical bodies are implemented.
+    ! Forcing is borrowed and restored; genuine soil state and its moving
+    ! averages evolve. Replay passes an explicit argument to suppress host
+    ! analytical events, rather than mutating a module-global flag across tiles.
     CALL prepare_sb_spinup_accelerator(tile, options, forcing, live_forcing)
-    ! The analytical target has already been applied by update_sb_pools. Mask its
-    ! event flag while replay repeatedly calls update_sb_pools in pseudo-time.
-    l_analytical_event = execute_quincy_sb_analytical_accelerator_this_timestep
-    execute_quincy_sb_analytical_accelerator_this_timestep = .FALSE.
     CALL run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-    execute_quincy_sb_analytical_accelerator_this_timestep = l_analytical_event
     CALL reset_sb_fluxes(tile, options)
     CALL finalize_sb_spinup_accelerator(tile, options, live_forcing)
     CALL reset_sb_spinup_accelerator_forcing(tile, options)
@@ -694,6 +775,10 @@ CONTAINS
   SUBROUTINE prepare_sb_spinup_accelerator(tile, options, forcing, live_forcing)
 
     USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_time, ONLY: get_year, get_year_length
+    USE mo_jsb_math_constants, ONLY: one_day
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    dsl4jsb_Use_config(SB_)
     USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
@@ -708,6 +793,7 @@ CONTAINS
     TYPE(t_sb_spinup_forcing_climatology), INTENT(out) :: forcing
     TYPE(t_sb_spinup_live_forcing), INTENT(out) :: live_forcing
 
+    dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -725,7 +811,14 @@ CONTAINS
     INTEGER :: iblk
     INTEGER :: i_entry
     INTEGER :: forcing_bin
-    INTEGER :: n_cells
+    INTEGER :: n_cells, sampling_year, event_year
+    REAL(lp) :: expected_seconds
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_litter_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_n_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_plant_uptake_p_sum
+    dsl4jsb_Real2D_onChunk :: sb_spinup_accelerator_forcing_event
+    dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_daily_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_forcing_time
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_litterfall_sum
     dsl4jsb_Real3D_onChunk :: sb_spinup_accelerator_fine_root_c_sum
@@ -757,7 +850,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real3D_onChunk :: growth_p_limit_smoothed_sl
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
@@ -769,11 +862,18 @@ CONTAINS
     iblk = options%iblk
     model => Get_model(tile%owner_model_id)
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_litter_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_n_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_plant_uptake_p_sum)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_forcing_event)
+    dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_daily_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_forcing_time)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_litterfall_sum)
     dsl4jsb_Get_var3D_onChunk(SB_, sb_spinup_accelerator_fine_root_c_sum)
@@ -805,7 +905,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, growth_p_limit_smoothed_sl)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
@@ -817,6 +917,7 @@ CONTAINS
 
     n_cells = SIZE(sb_spinup_accelerator_forcing_time, 1)
     forcing%n_forcing_bins = SIZE(sb_spinup_accelerator_forcing_time, 2)
+    forcing%n_daily_bins = SIZE(sb_spinup_accelerator_daily_time, 2)
     forcing%n_litter_sources = SIZE(veg_litterfall_mt, 1)
     forcing%n_elements = SIZE(veg_litterfall_mt, 2)
     IF (forcing%n_forcing_bins <= 0 .OR. &
@@ -825,8 +926,34 @@ CONTAINS
     END IF
     forcing%n_soil_layers = SIZE(sb_spinup_accelerator_root_fraction_sum, 2) / forcing%n_forcing_bins
 
-    IF (ANY(sb_spinup_accelerator_forcing_time <= 0.0_lp)) THEN
+    IF (forcing%n_forcing_bins /= sb_spinup_accelerator_n_forcing_bins .OR. &
+      & forcing%n_daily_bins /= dsl4jsb_Config(SB_)%sb_spinup_accelerator_n_daily_bins .OR. &
+      & SIZE(sb_spinup_accelerator_wtr_down_sum, 2) /= forcing%n_daily_bins * forcing%n_soil_layers .OR. &
+      & SIZE(sb_spinup_accelerator_wtr_lat_loss_sum, 2) /= forcing%n_daily_bins * forcing%n_soil_layers) THEN
+      CALL finish(TRIM(routine), 'Incompatible replay forcing layout; recollect a complete forcing window.')
+    END IF
+    IF (ANY(.NOT. ieee_is_finite(sb_spinup_accelerator_forcing_time)) .OR. &
+      & ANY(.NOT. ieee_is_finite(sb_spinup_accelerator_daily_time))) THEN
+      CALL finish(TRIM(routine), 'Non-finite replay sampling time.')
+    END IF
+    IF (ANY(sb_spinup_accelerator_forcing_time <= 0.0_lp) .OR. ANY(sb_spinup_accelerator_daily_time <= 0.0_lp)) THEN
       CALL finish(TRIM(routine), 'At least one climatological forcing bin has no sampled model time.')
+    END IF
+
+    ! A nonempty bin is not sufficient: a restart halfway through collection
+    ! must not masquerade as a complete multi-year climatology. Allow only the
+    ! current coupled step as a boundary tolerance, not missing days or years.
+    event_year = get_year(options%current_datetime)
+    IF (ANY(NINT(sb_spinup_accelerator_forcing_event) /= event_year)) THEN
+      CALL finish(TRIM(routine), 'Replay forcing event does not match the scheduled execution year.')
+    END IF
+    expected_seconds = 0.0_lp
+    DO sampling_year = event_year - dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_forcing_years, event_year - 1
+      expected_seconds = expected_seconds + REAL(get_year_length(sampling_year), lp) * one_day
+    END DO
+    IF (ANY(ABS(SUM(sb_spinup_accelerator_forcing_time, DIM=2) - expected_seconds) > options%dtime) .OR. &
+      & ANY(ABS(SUM(sb_spinup_accelerator_daily_time, DIM=2) - expected_seconds) > options%dtime)) THEN
+      CALL finish(TRIM(routine), 'Incomplete replay forcing window; restart with complete bookkeeping.')
     END IF
 
     ALLOCATE(forcing%forcing_time(n_cells, forcing%n_forcing_bins), &
@@ -839,7 +966,7 @@ CONTAINS
       & forcing%nhx_n15_deposition(n_cells, forcing%n_forcing_bins), &
       & forcing%noy_n15_deposition(n_cells, forcing%n_forcing_bins), &
       & forcing%p_deposition(n_cells, forcing%n_forcing_bins), &
-      & forcing%growth_p_limit(n_cells, forcing%n_forcing_bins), &
+      & forcing%growth_p_limit(n_cells, SIZE(sb_spinup_accelerator_growth_p_limit_sum, 2)), &
       & forcing%root_fraction(n_cells, SIZE(sb_spinup_accelerator_root_fraction_sum, 2)), &
       & forcing%wtr_down(n_cells, SIZE(sb_spinup_accelerator_wtr_down_sum, 2)), &
       & forcing%wtr_lat_loss(n_cells, SIZE(sb_spinup_accelerator_wtr_lat_loss_sum, 2)), &
@@ -847,6 +974,14 @@ CONTAINS
       & forcing%wtr_soil(n_cells, SIZE(sb_spinup_accelerator_wtr_soil_sum, 2)), &
       & forcing%ice_soil(n_cells, SIZE(sb_spinup_accelerator_ice_soil_sum, 2)), &
       & forcing%wtr_pot(n_cells, SIZE(sb_spinup_accelerator_wtr_pot_sum, 2)))
+
+    ALLOCATE(forcing%litter_to_uptake_n(n_cells), forcing%litter_to_uptake_p(n_cells))
+    CALL diagnose_replay_reference_ratio(sb_spinup_accelerator_litter_n_sum, &
+      & sb_spinup_accelerator_plant_uptake_n_sum, dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
+      & forcing%litter_to_uptake_n, 'N')
+    CALL diagnose_replay_reference_ratio(sb_spinup_accelerator_litter_p_sum, &
+      & sb_spinup_accelerator_plant_uptake_p_sum, dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
+      & forcing%litter_to_uptake_p, 'P')
 
     forcing%forcing_time = sb_spinup_accelerator_forcing_time
     forcing%fine_root_c = sb_spinup_accelerator_fine_root_c_sum / forcing%forcing_time
@@ -857,7 +992,6 @@ CONTAINS
     forcing%nhx_n15_deposition = sb_spinup_accelerator_nhx_n15_deposition_sum / forcing%forcing_time
     forcing%noy_n15_deposition = sb_spinup_accelerator_noy_n15_deposition_sum / forcing%forcing_time
     forcing%p_deposition = sb_spinup_accelerator_p_deposition_sum / forcing%forcing_time
-    forcing%growth_p_limit = sb_spinup_accelerator_growth_p_limit_sum / forcing%forcing_time
     DO i_entry = 1, SIZE(forcing%litterfall_rate, 2)
       forcing_bin = MOD(i_entry - 1, forcing%n_forcing_bins) + 1
       forcing%litterfall_rate(:, i_entry) = sb_spinup_accelerator_litterfall_sum(:, i_entry) / &
@@ -866,11 +1000,9 @@ CONTAINS
 
     DO i_entry = 1, SIZE(forcing%root_fraction, 2)
       forcing_bin = MOD(i_entry - 1, forcing%n_forcing_bins) + 1
+      forcing%growth_p_limit(:, i_entry) = sb_spinup_accelerator_growth_p_limit_sum(:, i_entry) / &
+        & forcing%forcing_time(:, forcing_bin)
       forcing%root_fraction(:, i_entry) = sb_spinup_accelerator_root_fraction_sum(:, i_entry) / &
-        & forcing%forcing_time(:, forcing_bin)
-      forcing%wtr_down(:, i_entry) = sb_spinup_accelerator_wtr_down_sum(:, i_entry) / &
-        & forcing%forcing_time(:, forcing_bin)
-      forcing%wtr_lat_loss(:, i_entry) = sb_spinup_accelerator_wtr_lat_loss_sum(:, i_entry) / &
         & forcing%forcing_time(:, forcing_bin)
       forcing%t_soil(:, i_entry) = sb_spinup_accelerator_t_soil_sum(:, i_entry) / &
         & forcing%forcing_time(:, forcing_bin)
@@ -882,6 +1014,18 @@ CONTAINS
         & forcing%forcing_time(:, forcing_bin)
     END DO
 
+    DO i_entry = 1, SIZE(forcing%wtr_down, 2)
+      forcing_bin = MOD(i_entry - 1, forcing%n_daily_bins) + 1
+      forcing%wtr_down(:, i_entry) = sb_spinup_accelerator_wtr_down_sum(:, i_entry) / &
+        & sb_spinup_accelerator_daily_time(:, forcing_bin)
+      forcing%wtr_lat_loss(:, i_entry) = sb_spinup_accelerator_wtr_lat_loss_sum(:, i_entry) / &
+        & sb_spinup_accelerator_daily_time(:, forcing_bin)
+    END DO
+    IF (ANY(.NOT. ieee_is_finite(forcing%wtr_down)) .OR. &
+      & ANY(.NOT. ieee_is_finite(forcing%wtr_lat_loss))) THEN
+      CALL finish(TRIM(routine), 'Non-finite daily transport climatology.')
+    END IF
+
     ALLOCATE(live_forcing%litterfall, SOURCE=veg_litterfall_mt)
     ALLOCATE(live_forcing%seed_litterfall, SOURCE=seed_bed_litterfall_mt)
     ALLOCATE(live_forcing%fine_root_c, SOURCE=veg_pool_mt(ix_fine_root, ixC, :))
@@ -892,7 +1036,7 @@ CONTAINS
     ALLOCATE(live_forcing%nhx_n15_deposition, SOURCE=nhx_n15_deposition)
     ALLOCATE(live_forcing%noy_n15_deposition, SOURCE=noy_n15_deposition)
     ALLOCATE(live_forcing%p_deposition, SOURCE=p_deposition)
-    ALLOCATE(live_forcing%growth_p_limit, SOURCE=growth_p_limit_based_on_n_mavg)
+    ALLOCATE(live_forcing%growth_p_limit, SOURCE=growth_p_limit_smoothed_sl)
     ALLOCATE(live_forcing%root_fraction, SOURCE=root_fraction_sl)
     ALLOCATE(live_forcing%wtr_down, SOURCE=frac_wtr_transp_down_sl)
     ALLOCATE(live_forcing%wtr_lat_loss, SOURCE=frac_w_lat_loss_sl)
@@ -908,13 +1052,65 @@ CONTAINS
   END SUBROUTINE prepare_sb_spinup_accelerator
 
   ! ===================================================================================================== !
+  !> One bounded correction after 300 completed coupled experiment years, without replay.
+  !> The experiment start survives job restarts. Pools and the host clock are unchanged.
+  !> Completion is SB-tile/chunk restart state, never a process-global latch.
+  SUBROUTINE apply_sb_coupled_pore_calibration(tile, options)
+    USE mo_jsb_process_class, ONLY: SB_
+    USE mo_jsb_time, ONLY: get_year, get_year_at_experiment_start, is_newyear
+    USE mo_quincy_model_config, ONLY: QLAND
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Real2D_onChunk :: sb_coupled_pore_calibration_done
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: ics, ice, iblk, spinup_age
+    INTEGER, PARAMETER :: calibration_age = 300 !< approved one-off conditioning age [yr]
+    CHARACTER(len=512) :: text
+    CHARACTER(len=*), PARAMETER :: routine = modname//':apply_sb_coupled_pore_calibration'
+
+    IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
+    model => Get_model(tile%owner_model_id)
+    IF (.NOT. model%config%l_spinup .OR. model%config%qmodel_id /= QLAND) RETURN
+    dsl4jsb_Get_config(SB_)
+    IF (dsl4jsb_Config(SB_)%sb_model_scheme /= 'jsm') RETURN
+    IF (.NOT. dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) RETURN
+    IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) RETURN
+    IF (.NOT. is_newyear(options%current_datetime, options%dtime)) RETURN
+    spinup_age = get_year(options%current_datetime) - get_year_at_experiment_start()
+    IF (spinup_age /= calibration_age) RETURN
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_var2D_onChunk(SB_, sb_coupled_pore_calibration_done)
+    IF (ALL(sb_coupled_pore_calibration_done == 1.0_lp)) RETURN
+    IF (ANY(sb_coupled_pore_calibration_done /= 0.0_lp)) &
+      & CALL finish(routine, 'Invalid or mixed coupled pore-calibration completion state.')
+    CALL calibrate_sb_pore_volume(tile, options, spinup_age, l_full_correction=.TRUE.)
+    sb_coupled_pore_calibration_done = 1.0_lp
+    ! There is currently no persistent coupled convergence history in ICON.
+    ! Stage 7 must invalidate its reference here when that monitor is introduced.
+    IF (my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1) THEN
+      WRITE(text,*) 'Completed one-off coupled pore calibration: tile, spinup age, calendar year = ', &
+        & TRIM(tile%name), spinup_age, get_year(options%current_datetime), &
+        & '; bounded full correction, pools unchanged; completion saved in restart.'
+      CALL message(routine, TRIM(text))
+    END IF
+  END SUBROUTINE apply_sb_coupled_pore_calibration
+
   !> Bounded annual replay calibration of SB-owned pore structure.
   !!
   !! Input SSE density remains the target reference, never an inout soil property.
   !! MAOC imposes both physical pore and chemical mineral-mass bounds. Only the
   !! structural state changes here; no CNP/isotope mass is created or removed.
   !! Density agreement is diagnostic, not an additional stock-convergence gate.
-  SUBROUTINE calibrate_sb_pore_volume(tile, options, represented_year)
+  SUBROUTINE calibrate_sb_pore_volume(tile, options, represented_year, l_full_correction)
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_, SSE_
     USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
     USE mo_q_sb_jsm_processes, ONLY: solve_pore_volume_for_bulk_density, &
@@ -931,6 +1127,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
     INTEGER, INTENT(in) :: represented_year !< artificial elapsed years; global clock is unchanged [yr]
+    LOGICAL, OPTIONAL, INTENT(in) :: l_full_correction !< full one-off solution rather than replay relaxation [-]
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -943,6 +1140,9 @@ CONTAINS
     REAL(lp) :: maoc, poc !< carbon concentrations per total soil volume [mol C m-3]
     REAL(lp) :: lower, upper, solved, old_pore !< pore fractions per total soil volume [-]
     REAL(lp) :: density, residual, max_residual, max_change !< density [kg m-3]; normalized residual/fraction [-]
+    REAL(lp) :: correction_fraction !< fraction of bounded structural correction applied [-]
+    LOGICAL :: l_report !< sparse replay diagnostics or compulsory one-off summary
+    CHARACTER(len=1024) :: calibration_message
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk :: clay_sl, silt_sl
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
@@ -984,6 +1184,12 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
     IF (.NOT. dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) RETURN
+    correction_fraction = dsl4jsb_Config(SB_)%sb_pore_volume_relaxation
+    l_report = model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(represented_year)
+    IF (PRESENT(l_full_correction)) THEN
+      IF (l_full_correction) correction_fraction = 1.0_lp
+      l_report = l_report .OR. l_full_correction
+    END IF
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
@@ -1036,11 +1242,12 @@ CONTAINS
           IF (status /= sb_density_solution_found) bounded_count = bounded_count + 1
           old_pore = volume_pore_total_sl(ic,is)
           volume_pore_total_sl(ic,is) = MIN(upper, MAX(lower, old_pore + &
-            & dsl4jsb_Config(SB_)%sb_pore_volume_relaxation * (solved - old_pore)))
+            & correction_fraction * (solved - old_pore)))
           max_change = MAX(max_change, ABS(volume_pore_total_sl(ic,is) - old_pore))
         CASE DEFAULT
-          WRITE(message_text,*) 'Pore calibration has no admissible state: block/cell/layer/status=', iblk, ic, is, status
-          CALL finish(modname//':calibrate_sb_pore_volume', TRIM(message_text))
+          WRITE(calibration_message,*) 'Pore calibration has no admissible state: block/cell/layer/status=', &
+            & iblk, ic, is, status
+          CALL finish(modname//':calibrate_sb_pore_volume', TRIM(calibration_message))
         END SELECT
       END DO
     END DO
@@ -1078,10 +1285,10 @@ CONTAINS
         max_residual = MAX(max_residual, ABS(bulk_dens_corr_sl(ic,is) - density) / MAX(1._lp, density))
       END DO
     END DO
-    IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(represented_year)) THEN
-      WRITE(message_text,*) 'Pore calibration tile/block/year=', TRIM(tile%name), iblk, represented_year, &
-        & '; max pore change, density relative residual, bounded layers=', max_change, max_residual, bounded_count
-      CALL message(modname//':calibrate_sb_pore_volume', TRIM(message_text))
+    IF (l_report .AND. my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1) THEN
+      WRITE(calibration_message,*) 'Pore calibration tile/block/year=', TRIM(tile%name), iblk, represented_year, &
+        & '; local max pore change, density relative residual, bounded layers=', max_change, max_residual, bounded_count
+      CALL message(modname//':calibrate_sb_pore_volume', TRIM(calibration_message))
     END IF
   END SUBROUTINE calibrate_sb_pore_volume
 
@@ -1109,16 +1316,23 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     INTEGER :: consecutive_converged_years
     INTEGER :: i_year
-    INTEGER :: last_debug_year
+    INTEGER :: last_debug_year, n_cells
+    TYPE(t_sb_replay_nutrient_balance) :: balance
+    LOGICAL :: l_demand_balanced
     REAL(lp), ALLOCATABLE :: previous_pool(:,:,:,:)
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
     CALL snapshot_sb_spinup_pools(tile, options, previous_pool)
 
+    n_cells = SIZE(forcing%forcing_time, 1)
+    ALLOCATE(balance%litter_n(n_cells), balance%litter_p(n_cells), &
+      & balance%uptake_n(n_cells), balance%uptake_p(n_cells), balance%scale_n(n_cells), balance%scale_p(n_cells))
+    balance%scale_n = 1.0_lp
+    balance%scale_p = 1.0_lp
     last_debug_year = -1
     IF (model%config%flag_spinup_debug) THEN
-      CALL write_sb_spinup_forcing_debug(options, execution_index, forcing)
+      CALL write_sb_spinup_forcing_debug(tile, options, execution_index, forcing)
       CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, 0)
       last_debug_year = 0
     END IF
@@ -1134,16 +1348,23 @@ CONTAINS
       represented_years = i_year
       SELECT CASE (TRIM(sb_model_scheme))
       CASE ('jsm')
-        CALL run_jsm_forward_relaxation(tile, options, forcing)
+        CALL run_jsm_forward_relaxation(tile, options, forcing, balance)
         CALL calibrate_sb_pore_volume(tile, options, i_year)
       CASE ('simple_1d')
-        CALL run_simple_1d_forward_relaxation(tile, options, forcing)
+        CALL run_simple_1d_forward_relaxation(tile, options, forcing, balance)
       CASE DEFAULT
         CALL finish(modname//':run_sb_forward_relaxation', 'Unsupported soil-biogeochemistry model scheme.')
       END SELECT
 
+      CALL update_replay_plant_np_demand_balance(tile, options, forcing, balance, &
+        & execution_index, i_year, l_demand_balanced)
+      IF (.NOT. l_demand_balanced) consecutive_converged_years = 0
       CALL check_sb_spinup_convergence(tile, options, previous_pool, consecutive_converged_years, &
         & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
+      IF (.NOT. l_demand_balanced) THEN
+        consecutive_converged_years = 0
+        l_converged = .FALSE.
+      END IF
       IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(i_year)) THEN
         CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, i_year, &
           & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
@@ -1161,33 +1382,35 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Replay forcing through the JSM process sequence without vegetation or atmospheric model updates.
-  SUBROUTINE run_jsm_forward_relaxation(tile, options, forcing)
+  SUBROUTINE run_jsm_forward_relaxation(tile, options, forcing, balance)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
 
-    CALL run_sb_climatological_year(tile, options, forcing, 'jsm')
+    CALL run_sb_climatological_year(tile, options, forcing, 'jsm', balance)
 
   END SUBROUTINE run_jsm_forward_relaxation
 
   ! ===================================================================================================== !
   !> Replay forcing through the simple_1d process sequence without vegetation or atmospheric model updates.
-  SUBROUTINE run_simple_1d_forward_relaxation(tile, options, forcing)
+  SUBROUTINE run_simple_1d_forward_relaxation(tile, options, forcing, balance)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
 
-    CALL run_sb_climatological_year(tile, options, forcing, 'simple_1d')
+    CALL run_sb_climatological_year(tile, options, forcing, 'simple_1d', balance)
 
   END SUBROUTINE run_simple_1d_forward_relaxation
 
   ! ===================================================================================================== !
   !> Advance the selected soil model through one 365-day climatological replay year.
-  SUBROUTINE run_sb_climatological_year(tile, options, forcing, sb_model_scheme)
+  SUBROUTINE run_sb_climatological_year(tile, options, forcing, sb_model_scheme, balance)
 
-    USE mo_jsb_math_constants,   ONLY: one_day, one_year
+    USE mo_jsb_math_constants,   ONLY: one_day
     USE mo_jsb_process_class,    ONLY: SB_
     USE mo_sb_util,               ONLY: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
     USE mo_q_sb_rate_modifier,    ONLY: update_sb_rate_modifier
@@ -1199,6 +1422,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme
 
     dsl4jsb_Def_config(SB_)
@@ -1206,7 +1430,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_task_options) :: replay_options
     CHARACTER(len=*), PARAMETER :: routine = modname//':run_sb_climatological_year'
-    INTEGER :: forcing_bin
+    INTEGER :: forcing_bin, daily_bin
     INTEGER :: i_step
     INTEGER :: n_steps_per_bin
     REAL(lp) :: bin_duration
@@ -1216,28 +1440,37 @@ CONTAINS
     dsl4jsb_Get_config(SB_)
 
     requested_dtime = dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_timestep_days * one_day
-    bin_duration = one_year * one_day / REAL(forcing%n_forcing_bins, lp)
+    bin_duration = one_day
     n_steps_per_bin = MAX(1, CEILING(bin_duration / requested_dtime))
 
     replay_options = options
     replay_options%dtime = bin_duration / REAL(n_steps_per_bin, lp)
 
-    DO forcing_bin = 1, forcing%n_forcing_bins
+    ! Replay a climatological year without advancing the host datetime. Use
+    ! actual daily steps (or smaller requested steps), not one step per month.
+    balance%litter_n = 0.0_lp
+    balance%litter_p = 0.0_lp
+    balance%uptake_n = 0.0_lp
+    balance%uptake_p = 0.0_lp
+    DO daily_bin = 1, forcing%n_daily_bins
+      forcing_bin = (daily_bin - 1) * forcing%n_forcing_bins / forcing%n_daily_bins + 1
       DO i_step = 1, n_steps_per_bin
-        CALL load_sb_spinup_forcing_bin(tile, replay_options, forcing, forcing_bin)
+        CALL load_sb_spinup_forcing_bin(tile, replay_options, forcing, forcing_bin, daily_bin, balance)
         CALL reset_sb_fluxes(tile, replay_options)
         CALL update_sb_rate_modifier(tile, replay_options)
 
         SELECT CASE (TRIM(sb_model_scheme))
         CASE ('jsm')
-          CALL update_sb_jsm(tile, replay_options)
+          CALL update_sb_jsm(tile, replay_options, l_soil_model_forcing=.TRUE.)
         CASE ('simple_1d')
-          CALL update_sb_simple_model(tile, replay_options)
+          CALL update_sb_simple_model(tile, replay_options, l_balance_weathering=.TRUE.)
         CASE DEFAULT
           CALL finish(TRIM(routine), 'Unsupported soil-biogeochemistry model scheme.')
         END SELECT
 
         CALL update_sb_pools(tile, replay_options, l_soil_model_forcing=.TRUE.)
+        CALL accumulate_replay_nutrient_budget(tile, replay_options, balance%litter_n, balance%litter_p, &
+          & balance%uptake_n, balance%uptake_p)
         CALL calculate_time_average_soilbiogeochemistry(tile, replay_options)
       END DO
     END DO
@@ -1245,13 +1478,15 @@ CONTAINS
   END SUBROUTINE run_sb_climatological_year
 
   ! ===================================================================================================== !
-  !> Load one annual, monthly, weekly, or daily climatological forcing bin into the replay forcing view.
-  SUBROUTINE load_sb_spinup_forcing_bin(tile, options, forcing, forcing_bin)
+  !> Load seasonal biology/soil physics and the selected daily water-transport rates.
+  SUBROUTINE load_sb_spinup_forcing_bin(tile, options, forcing, forcing_bin, daily_bin, balance)
 
-    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
@@ -1260,8 +1495,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
-    INTEGER,                    INTENT(in)    :: forcing_bin
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
+    INTEGER,                    INTENT(in)    :: forcing_bin, daily_bin
 
+    dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -1280,7 +1517,7 @@ CONTAINS
     INTEGER :: i_soil
     INTEGER :: i_source
     INTEGER :: litter_entry
-    INTEGER :: profile_entry
+    INTEGER :: profile_entry, daily_profile_entry
     INTEGER :: n_elements
     INTEGER :: n_sources
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
@@ -1292,14 +1529,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real3D_onChunk :: growth_p_limit_smoothed_sl
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
     dsl4jsb_Real2D_onChunk :: noy_n15_deposition
     dsl4jsb_Real2D_onChunk :: p_deposition
 
-    IF (forcing_bin < 1 .OR. forcing_bin > forcing%n_forcing_bins) THEN
+    IF (forcing_bin < 1 .OR. forcing_bin > forcing%n_forcing_bins .OR. &
+      & daily_bin < 1 .OR. daily_bin > forcing%n_daily_bins) THEN
       CALL finish(TRIM(routine), 'Requested forcing bin is outside the prepared climatology.')
     END IF
 
@@ -1308,6 +1546,7 @@ CONTAINS
     iblk = options%iblk
     model => Get_model(tile%owner_model_id)
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
@@ -1321,7 +1560,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, growth_p_limit_smoothed_sl)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
@@ -1332,9 +1571,8 @@ CONTAINS
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
 
     veg_pool_mt(ix_fine_root, ixC, :) = forcing%fine_root_c(:, forcing_bin)
-    f_n_demand = forcing%f_n_demand(:, forcing_bin)
-    f_p_demand = forcing%f_p_demand(:, forcing_bin)
-    growth_p_limit_based_on_n_mavg = forcing%growth_p_limit(:, forcing_bin)
+    f_n_demand = MIN(1.0_lp, MAX(0.0_lp, forcing%f_n_demand(:, forcing_bin) * balance%scale_n))
+    f_p_demand = MIN(1.0_lp, MAX(0.0_lp, forcing%f_p_demand(:, forcing_bin) * balance%scale_p))
     nhx_deposition = forcing%nhx_deposition(:, forcing_bin)
     noy_deposition = forcing%noy_deposition(:, forcing_bin)
     nhx_n15_deposition = forcing%nhx_n15_deposition(:, forcing_bin)
@@ -1356,9 +1594,19 @@ CONTAINS
 
     DO i_soil = 1, forcing%n_soil_layers
       profile_entry = forcing_bin + forcing%n_forcing_bins * (i_soil - 1)
+      growth_p_limit_smoothed_sl(:, i_soil) = forcing%growth_p_limit(:, profile_entry)
       root_fraction_sl(:, i_soil) = forcing%root_fraction(:, profile_entry)
-      frac_wtr_transp_down_sl(:, i_soil) = forcing%wtr_down(:, profile_entry)
-      frac_w_lat_loss_sl(:, i_soil) = forcing%wtr_lat_loss(:, profile_entry)
+      daily_profile_entry = daily_bin + forcing%n_daily_bins * (i_soil - 1)
+      ! Do not silently clip an unstable daily removal: that would change export.
+      ! Transport consumes true rate * dtime; restore HYDRO's native factor 1000.
+      IF (ANY((forcing%wtr_down(:, daily_profile_entry) + forcing%wtr_lat_loss(:, daily_profile_entry)) &
+        & * options%dtime > 1.0_lp + eps8)) THEN
+        WRITE(message_text,*) 'Replay transport removal exceeds one; day/layer/dtime = ', &
+          & daily_bin, i_soil, options%dtime, '; reduce sb_model_spinup_accelerator_timestep_days.'
+        CALL finish(TRIM(routine), TRIM(message_text))
+      END IF
+      frac_wtr_transp_down_sl(:, i_soil) = forcing%wtr_down(:, daily_profile_entry) * 1000.0_lp
+      frac_w_lat_loss_sl(:, i_soil) = forcing%wtr_lat_loss(:, daily_profile_entry) * 1000.0_lp
       t_soil_sl(:, i_soil) = forcing%t_soil(:, profile_entry)
       wtr_soil_sl(:, i_soil) = forcing%wtr_soil(:, profile_entry)
       ice_soil_sl(:, i_soil) = forcing%ice_soil(:, profile_entry)
@@ -1368,6 +1616,185 @@ CONTAINS
   END SUBROUTINE load_sb_spinup_forcing_bin
 
   ! ===================================================================================================== !
+  SUBROUTINE accumulate_replay_nutrient_budget(tile, options, annual_litter_n, annual_litter_p, &
+      & annual_plant_uptake_n, annual_plant_uptake_p)
+
+    USE mo_jsb_process_class,    ONLY: SB_, HYDRO_
+    USE mo_lnd_bgcm_idx,         ONLY: ixN, ixP
+    USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
+    USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    REAL(lp),                   INTENT(inout) :: annual_litter_n(:)
+    REAL(lp),                   INTENT(inout) :: annual_litter_p(:)
+    REAL(lp),                   INTENT(inout) :: annual_plant_uptake_n(:)
+    REAL(lp),                   INTENT(inout) :: annual_plant_uptake_p(:)
+
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
+
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store
+    INTEGER :: ics
+    INTEGER :: ice
+    INTEGER :: iblk
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_nh4_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_no3_sl
+    dsl4jsb_Real3D_onChunk :: plant_uptake_po4_sl
+
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_nh4_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_no3_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, plant_uptake_po4_sl)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
+
+    ! Litter matrices already contain mol m-2 for this replay timestep; uptake diagnostics are rates.
+    annual_litter_n = annual_litter_n + SUM(veg_litterfall_mt(:,ixN,:), DIM=1) + &
+      & seed_bed_litterfall_mt(ixN,:)
+    annual_litter_p = annual_litter_p + SUM(veg_litterfall_mt(:,ixP,:), DIM=1) + &
+      & seed_bed_litterfall_mt(ixP,:)
+    annual_plant_uptake_n = annual_plant_uptake_n + &
+      & SUM((plant_uptake_nh4_sl + plant_uptake_no3_sl) * soil_depth_sl, DIM=2) * options%dtime / 1.e6_lp
+    annual_plant_uptake_p = annual_plant_uptake_p + &
+      & SUM(plant_uptake_po4_sl * soil_depth_sl, DIM=2) * options%dtime / 1.e6_lp
+
+  END SUBROUTINE accumulate_replay_nutrient_budget
+
+  !> Diagnose a dimensionless coupled litter/uptake reference from integrated mol m-2 budgets.
+  !> Zero denotes an inactive reference, not a replacement ratio. Retain its recorded demand.
+  SUBROUTINE diagnose_replay_reference_ratio(litter, uptake, interactive, ratio, element_name)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_math_constants, ONLY: eps8
+    REAL(lp), INTENT(in) :: litter(:), uptake(:)
+    LOGICAL, INTENT(in) :: interactive
+    REAL(lp), INTENT(out) :: ratio(:)
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: element_name !< nutrient label for rejection diagnostics
+    INTEGER :: ic
+    CHARACTER(len=512) :: text
+    CHARACTER(len=*), PARAMETER :: routine = modname//':diagnose_replay_reference_ratio'
+
+    ratio = 0.0_lp
+    IF (.NOT. interactive) RETURN
+    DO ic = 1, SIZE(litter)
+      IF (.NOT. ieee_is_finite(litter(ic)) .OR. .NOT. ieee_is_finite(uptake(ic))) &
+        & CALL finish(routine, 'Non-finite coupled litter/uptake reference.')
+      IF (litter(ic) < 0.0_lp .OR. uptake(ic) < 0.0_lp) &
+        & CALL finish(routine, 'Negative coupled litter/uptake reference.')
+      IF (litter(ic) <= eps8 .AND. uptake(ic) <= eps8) CYCLE
+      IF (litter(ic) <= eps8 .OR. uptake(ic) <= eps8) THEN
+        WRITE(text,*) 'One-sided zero coupled reference at chunk cell ', ic, '; litter, uptake [mol m-2]: ', &
+          & litter(ic), uptake(ic)
+        IF (PRESENT(element_name)) text = TRIM(text)//'; element='//element_name
+        CALL finish(routine, TRIM(text))
+      END IF
+      ratio(ic) = litter(ic) / uptake(ic)
+    END DO
+  END SUBROUTINE diagnose_replay_reference_ratio
+
+  !> Adjust next replay year's plant demand to the coupled litter/uptake ratio, independently for N/P.
+  !> This changes a demand multiplier, not pools or nutrient supply. Actual uptake remains process-limited.
+  SUBROUTINE update_replay_plant_np_demand_balance(tile, options, forcing, balance, &
+      & execution_index, represented_year, l_balanced)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
+    dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
+    INTEGER, INTENT(in) :: execution_index, represented_year
+    LOGICAL, INTENT(out) :: l_balanced
+    dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: nh4_solute, nh4_assoc, no3_solute
+    dsl4jsb_Real3D_onChunk :: po4_solute, po4_assoc_fast, po4_assoc_slow
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: ics, ice, iblk, ic, element
+    LOGICAL :: interactive(2)
+    REAL(lp) :: litter(2), uptake(2), reference(2), scale(2), stock(2) ! [mol m-2], ratios [-]
+    REAL(lp) :: target, error, max_error, tolerance ! target [mol m-2 yr-1], errors [-]
+    CHARACTER(len=1024) :: text
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_replay_plant_np_demand_balance'
+
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_, no3_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_slow)
+    interactive = [dsl4jsb_Config(SB_)%flag_sb_interactive_n, dsl4jsb_Config(SB_)%flag_sb_interactive_p]
+    tolerance = dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_convergence_rel_tol
+    max_error = 0.0_lp
+    DO ic = 1, SIZE(balance%scale_n)
+      litter = [balance%litter_n(ic), balance%litter_p(ic)]
+      uptake = [balance%uptake_n(ic), balance%uptake_p(ic)]
+      reference = [forcing%litter_to_uptake_n(ic), forcing%litter_to_uptake_p(ic)]
+      scale = [balance%scale_n(ic), balance%scale_p(ic)]
+      stock(1) = SUM((nh4_solute(ic,:) + nh4_assoc(ic,:) + no3_solute(ic,:)) * soil_depth_sl(ic,:))
+      stock(2) = SUM((po4_solute(ic,:) + po4_assoc_fast(ic,:) + po4_assoc_slow(ic,:)) * soil_depth_sl(ic,:))
+      DO element = 1, 2
+        IF (.NOT. interactive(element) .OR. reference(element) == 0.0_lp) CYCLE
+        IF (.NOT. ieee_is_finite(litter(element)) .OR. .NOT. ieee_is_finite(uptake(element))) &
+          & CALL finish(routine, 'Non-finite annual replay nutrient budget.')
+        IF (litter(element) < 0.0_lp .OR. uptake(element) < 0.0_lp) &
+          & CALL finish(routine, 'Negative annual replay nutrient budget.')
+        target = litter(element) / reference(element)
+        error = ABS(uptake(element) - target) / MAX(ABS(uptake(element)), ABS(target), eps8)
+        max_error = MAX(max_error, error)
+        IF (stock(element) <= eps8 .AND. uptake(element) < target * (1.0_lp - tolerance)) THEN
+          WRITE(text,*) 'Active nutrient depleted: tile/block/cell/event/year/element(N=1,P=2) ', &
+            & TRIM(tile%name), iblk, ic, execution_index, represented_year, element, &
+            & '; stock, uptake, target [mol m-2] = ', stock(element), uptake(element), target
+          CALL finish(routine, TRIM(text))
+        END IF
+        IF (uptake(element) > eps8) THEN
+          ! The multiplier may exceed one; only effective demand is capped to [0,1] when loaded.
+          scale(element) = MAX(0.0_lp, scale(element) * target / uptake(element))
+        ELSE
+          scale(element) = 1.0_lp
+        END IF
+      END DO
+      IF (ANY(.NOT. ieee_is_finite(scale))) CALL finish(routine, 'Non-finite replay demand multiplier.')
+      balance%scale_n(ic) = scale(1)
+      balance%scale_p(ic) = scale(2)
+    END DO
+    l_balanced = max_error <= tolerance
+    IF (model%config%flag_spinup_debug .AND. my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1 &
+      & .AND. is_sb_spinup_debug_year(represented_year)) THEN
+      WRITE(text,*) 'Replay demand balance tile/event/year = ', TRIM(tile%name), execution_index, represented_year, &
+        & '; local max relative error, N/P scale ranges = ', max_error, &
+        & MINVAL(balance%scale_n), MAXVAL(balance%scale_n), MINVAL(balance%scale_p), MAXVAL(balance%scale_p)
+      CALL message(routine, TRIM(text))
+    END IF
+  END SUBROUTINE update_replay_plant_np_demand_balance
+
+
   !> Return true for the sparse pseudo-years included in the detailed accelerator diagnostics.
   LOGICAL FUNCTION is_sb_spinup_debug_year(represented_year)
 
@@ -1379,86 +1806,33 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Write the event-local forcing climatology used by one forward SB acceleration.
-  SUBROUTINE write_sb_spinup_forcing_debug(options, execution_index, forcing)
-
-    USE mo_mpi, ONLY: p_pe_work_only
-
+  SUBROUTINE write_sb_spinup_forcing_debug(tile, options, execution_index, forcing)
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
     INTEGER, INTENT(in) :: execution_index
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
-
+    CHARACTER(len=2048) :: text
     CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_forcing_debug'
-    INTEGER :: lun
-    INTEGER :: ios
-    INTEGER :: ic
-    INTEGER :: forcing_bin
-    INTEGER :: i_element
-    INTEGER :: i_source
-    INTEGER :: litter_entry
-    INTEGER :: i_soil
-    INTEGER :: profile_entry
 
-    ! Limit this local-file diagnostic to one work rank and block. For global runs,
-    ! it therefore represents the first local chunk rather than a global gather.
-    IF (p_pe_work_only /= 0 .OR. options%iblk /= 1) RETURN
-
-    IF (execution_index == 1) THEN
-      OPEN(newunit=lun, file=sb_spinup_debug_filename, status='replace', action='write', iostat=ios)
-    ELSE
-      OPEN(newunit=lun, file=sb_spinup_debug_filename, status='unknown', position='append', &
-        & action='write', iostat=ios)
-    END IF
-    IF (ios /= 0) CALL finish(TRIM(routine), 'Could not open '//sb_spinup_debug_filename)
-
-    WRITE(lun,'(A)') ''
-    WRITE(lun,*) 'FORCING_SUMMARY execution, n_bins, n_layers, n_litter_sources, n_elements = ', &
-      & execution_index, forcing%n_forcing_bins, forcing%n_soil_layers, &
-      & forcing%n_litter_sources, forcing%n_elements
-    WRITE(lun,'(A)') 'FORCING_SCALAR_COLUMNS execution ic bin sampled_time_s fine_root_c_mol_m-2 '// &
-      & 'f_n_demand f_p_demand nhx_dep_umol_m-2_s-1 noy_dep_umol_m-2_s-1 '// &
-      & 'nhx_n15_dep_umol_m-2_s-1 noy_n15_dep_umol_m-2_s-1 p_dep_umol_m-2_s-1 growth_p_limit'
-    DO ic = 1, SIZE(forcing%forcing_time, 1)
-      DO forcing_bin = 1, forcing%n_forcing_bins
-        WRITE(lun,*) 'FORCING_SCALAR ', execution_index, ic, forcing_bin, &
-          & forcing%forcing_time(ic,forcing_bin), forcing%fine_root_c(ic,forcing_bin), &
-          & forcing%f_n_demand(ic,forcing_bin), forcing%f_p_demand(ic,forcing_bin), &
-          & forcing%nhx_deposition(ic,forcing_bin), forcing%noy_deposition(ic,forcing_bin), &
-          & forcing%nhx_n15_deposition(ic,forcing_bin), forcing%noy_n15_deposition(ic,forcing_bin), &
-          & forcing%p_deposition(ic,forcing_bin), forcing%growth_p_limit(ic,forcing_bin)
-      END DO
-    END DO
-
-    WRITE(lun,'(A)') 'FORCING_LITTER_COLUMNS execution ic bin source element '// &
-      & 'litterfall_rate_mol_m-2_s-1; source n_litter_sources+1 is seed-bed litterfall'
-    DO ic = 1, SIZE(forcing%forcing_time, 1)
-      DO i_element = 1, forcing%n_elements
-        DO i_source = 1, forcing%n_litter_sources + 1
-          DO forcing_bin = 1, forcing%n_forcing_bins
-            litter_entry = forcing_bin + forcing%n_forcing_bins * &
-              & ((i_source - 1) + (forcing%n_litter_sources + 1) * (i_element - 1))
-            WRITE(lun,*) 'FORCING_LITTER ', execution_index, ic, forcing_bin, i_source, i_element, &
-              & forcing%litterfall_rate(ic,litter_entry)
-          END DO
-        END DO
-      END DO
-    END DO
-
-    WRITE(lun,'(A)') 'FORCING_SOIL_COLUMNS execution ic bin layer root_fraction wtr_down_fraction '// &
-      & 'wtr_lateral_loss_fraction t_soil_K wtr_soil_m ice_soil_m wtr_potential_MPa'
-    DO ic = 1, SIZE(forcing%forcing_time, 1)
-      DO i_soil = 1, forcing%n_soil_layers
-        DO forcing_bin = 1, forcing%n_forcing_bins
-          profile_entry = forcing_bin + forcing%n_forcing_bins * (i_soil - 1)
-          WRITE(lun,*) 'FORCING_SOIL ', execution_index, ic, forcing_bin, i_soil, &
-            & forcing%root_fraction(ic,profile_entry), forcing%wtr_down(ic,profile_entry), &
-            & forcing%wtr_lat_loss(ic,profile_entry), forcing%t_soil(ic,profile_entry), &
-            & forcing%wtr_soil(ic,profile_entry), forcing%ice_soil(ic,profile_entry), &
-            & forcing%wtr_pot(ic,profile_entry)
-        END DO
-      END DO
-    END DO
-    CLOSE(lun)
-
+    ! Bounded local diagnostics, not a global gather or a per-cell file writer.
+    IF (.NOT. my_process_is_stdio() .OR. options%iblk /= 1 .OR. options%ics /= 1) RETURN
+    WRITE(text,*) 'Replay forcing tile/event=', TRIM(tile%name), execution_index, &
+      & '; monthly/daily bins=', forcing%n_forcing_bins, forcing%n_daily_bins, &
+      & '; local sampled seconds min/max=', MINVAL(SUM(forcing%forcing_time, DIM=2)), &
+      & MAXVAL(SUM(forcing%forcing_time, DIM=2))
+    CALL message(routine, TRIM(text))
+    WRITE(text,*) 'Local forcing ranges: litter [mol m-2 s-1]=', &
+      & MINVAL(forcing%litterfall_rate), MAXVAL(forcing%litterfall_rate), &
+      & '; N/P demand [-]=', MINVAL(forcing%f_n_demand), MAXVAL(forcing%f_n_demand), &
+      & MINVAL(forcing%f_p_demand), MAXVAL(forcing%f_p_demand), &
+      & '; transformed plant P limitation [-]=', MINVAL(forcing%growth_p_limit), MAXVAL(forcing%growth_p_limit)
+    CALL message(routine, TRIM(text))
+    WRITE(text,*) 'Local daily transport rate ranges [s-1]: down=', &
+      & MINVAL(forcing%wtr_down), MAXVAL(forcing%wtr_down), &
+      & '; lateral=', MINVAL(forcing%wtr_lat_loss), MAXVAL(forcing%wtr_lat_loss), &
+      & '; monthly soil temperature [K]=', MINVAL(forcing%t_soil), MAXVAL(forcing%t_soil)
+    CALL message(routine, TRIM(text))
   END SUBROUTINE write_sb_spinup_forcing_debug
 
   ! ===================================================================================================== !
@@ -1466,7 +1840,7 @@ CONTAINS
   SUBROUTINE write_sb_spinup_snapshot_debug(tile, options, execution_index, represented_year, &
       & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
 
-    USE mo_mpi,               ONLY: p_pe_work_only
+    USE mo_jsb_parallel,      ONLY: my_process_is_stdio
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_
     USE mo_lnd_bgcm_idx,      ONLY: ixC
     dsl4jsb_Use_memory(SB_)
@@ -1486,8 +1860,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_snapshot_debug'
     REAL(lp), ALLOCATABLE :: pool_snapshot(:,:,:,:)
-    INTEGER :: lun
-    INTEGER :: ios
+    CHARACTER(len=2048) :: text
     INTEGER :: ics
     INTEGER :: ice
     INTEGER :: iblk
@@ -1504,7 +1877,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: surface_burial_frac
     dsl4jsb_Real3D_onChunk :: soil_lay_width_sl
 
-    IF (p_pe_work_only /= 0 .OR. options%iblk /= 1) RETURN
+    IF (.NOT. my_process_is_stdio() .OR. options%iblk /= 1 .OR. options%ics /= 1) RETURN
 
     ics = options%ics
     ice = options%ice
@@ -1523,34 +1896,28 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, surface_burial_frac)
     CALL snapshot_sb_spinup_pools(tile, options, pool_snapshot)
 
-    OPEN(newunit=lun, file=sb_spinup_debug_filename, status='unknown', position='append', &
-      & action='write', iostat=ios)
-    IF (ios /= 0) CALL finish(TRIM(routine), 'Could not open '//sb_spinup_debug_filename)
-
-    WRITE(lun,'(A)') ''
-    WRITE(lun,*) 'STATE_SNAPSHOT execution, represented_year = ', execution_index, represented_year
+    WRITE(text,*) 'Replay sample profile: tile/event/pseudo-year=', TRIM(tile%name), execution_index, represented_year
+    CALL message(routine, TRIM(text))
     IF (PRESENT(max_relative_change) .AND. PRESENT(max_total_c_absolute_change) .AND. &
         & PRESENT(max_total_c_relative_change) .AND. PRESENT(l_converged)) THEN
-      WRITE(lun,*) 'RELAXATION_STATUS max_pool_relative_change, total_C_absolute_change_mol_m-2, ', &
+      WRITE(text,*) 'RELAXATION_STATUS max_pool_relative_change, total_C_absolute_change_mol_m-2, ', &
         & 'total_C_relative_change, converged = ', max_relative_change, max_total_c_absolute_change, &
         & max_total_c_relative_change, l_converged
+      CALL message(routine, TRIM(text))
     END IF
-    WRITE(lun,'(A)') 'STATE_COLUMNS execution represented_year ic layer '// &
-      & 'C_DOM C_aDOM C_soluble_litter C_polymeric_litter C_woody_litter C_mycorrhiza '// &
-      & 'C_microbial C_residue C_aRes C_total_concentration layer_width_m layer_C_stock_mol_m-2 '// &
-      & 'bulk_soil_C soil_litter_C bulk_C_max bulk_density_corrected_kg_m-3 mineral_volume '// &
-      & 'qmax_org_mol_C_m-3 surface_burial_fraction; C pools and bulk diagnostics are mol C m-3'
-    DO ic = 1, SIZE(pool_snapshot, 3)
+    CALL message(routine, 'First local cell only: pool C [mol m-3], layer stock [mol m-2], '// &
+      & 'bulk/litter C [mol m-3], density [kg m-3], mineral fraction, qmax_org, burial fraction.')
+    DO ic = 1, MIN(1, SIZE(pool_snapshot, 3))
       n_active_layers = MIN(SIZE(pool_snapshot, 4), NINT(num_sl_above_bedrock(ic)))
       DO is = 1, n_active_layers
-        WRITE(lun,*) 'STATE ', execution_index, represented_year, ic, is, &
+        WRITE(text,*) 'STATE ', execution_index, represented_year, ic, is, &
           & pool_snapshot(:,ixC,ic,is), SUM(pool_snapshot(:,ixC,ic,is)), &
           & soil_lay_width_sl(ic,is), SUM(pool_snapshot(:,ixC,ic,is)) * soil_lay_width_sl(ic,is), &
           & bulk_soil_carbon_sl(ic,is), soil_litter_carbon_sl(ic,is), bulk_carbon_max(ic,is), &
           & bulk_dens_corr_sl(ic,is), volume_min_sl(ic,is), qmax_org(ic,is), surface_burial_frac(ic,is)
+        CALL message(routine, TRIM(text))
       END DO
     END DO
-    CLOSE(lun)
 
   END SUBROUTINE write_sb_spinup_snapshot_debug
 
@@ -1586,6 +1953,7 @@ CONTAINS
   !> Report the total and layer-resolved soil C change caused by one forward accelerator event.
   SUBROUTINE write_sb_spinup_debug(tile, options, execution_index, represented_years, pool_before, pool_after)
 
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
     USE mo_jsb_process_class, ONLY: HYDRO_
     USE mo_lnd_bgcm_idx,      ONLY: ixC
     dsl4jsb_Use_memory(HYDRO_)
@@ -1614,6 +1982,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
+    IF (.NOT. my_process_is_stdio() .OR. options%iblk /= 1 .OR. options%ics /= 1) RETURN
     ics = options%ics
     ice = options%ice
     iblk = options%iblk
@@ -1627,7 +1996,7 @@ CONTAINS
 
     total_c_before = 0.0_lp
     total_c_after = 0.0_lp
-    DO ic = 1, SIZE(pool_before, 3)
+    DO ic = 1, MIN(1, SIZE(pool_before, 3))
       n_active_layers = MIN(SIZE(pool_before, 4), NINT(num_sl_above_bedrock(ic)))
       DO is = 1, n_active_layers
         total_c_before = total_c_before + &
@@ -1637,12 +2006,12 @@ CONTAINS
       END DO
     END DO
 
-    WRITE(debug_message,*) 'DEBUG forward SB acceleration carbon totals execution/represented_years = ', &
+    WRITE(debug_message,*) 'DEBUG first local cell SB carbon totals execution/represented_years = ', &
       & execution_index, represented_years, '; before/after/delta [mol C m-2] = ', &
       & total_c_before, total_c_after, total_c_after - total_c_before
     CALL message(TRIM(routine), TRIM(debug_message))
 
-    DO ic = 1, SIZE(pool_before, 3)
+    DO ic = 1, MIN(1, SIZE(pool_before, 3))
       n_active_layers = MIN(SIZE(pool_before, 4), NINT(num_sl_above_bedrock(ic)))
       DO is = 1, n_active_layers
         layer_c_before = SUM(pool_before(:,ixC,ic,is))
@@ -1738,10 +2107,11 @@ CONTAINS
   !> Commit the relaxed SB state, restore live forcing, and refresh derived soil properties.
   SUBROUTINE finalize_sb_spinup_accelerator(tile, options, live_forcing)
 
-    USE mo_jsb_process_class, ONLY: VEG_, HYDRO_, SSE_, A2L_
+    USE mo_jsb_process_class, ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_
     USE mo_lnd_bgcm_idx,       ONLY: ix_fine_root, ixC
     USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
+    dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
     dsl4jsb_Use_memory(SSE_)
@@ -1751,6 +2121,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_sb_spinup_live_forcing), INTENT(in) :: live_forcing
 
+    dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -1777,7 +2148,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: biological_n_fixation
     dsl4jsb_Real2D_onChunk :: f_n_demand
     dsl4jsb_Real2D_onChunk :: f_p_demand
-    dsl4jsb_Real2D_onChunk :: growth_p_limit_based_on_n_mavg
+    dsl4jsb_Real3D_onChunk :: growth_p_limit_smoothed_sl
     dsl4jsb_Real2D_onChunk :: nhx_deposition
     dsl4jsb_Real2D_onChunk :: noy_deposition
     dsl4jsb_Real2D_onChunk :: nhx_n15_deposition
@@ -1789,6 +2160,7 @@ CONTAINS
     iblk = options%iblk
     model => Get_model(tile%owner_model_id)
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
@@ -1806,7 +2178,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, biological_n_fixation)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_n_demand)
     dsl4jsb_Get_var2D_onChunk(VEG_, f_p_demand)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_p_limit_based_on_n_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, growth_p_limit_smoothed_sl)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, noy_deposition)
     dsl4jsb_Get_var2D_onChunk(A2L_, nhx_n15_deposition)
@@ -1821,7 +2193,7 @@ CONTAINS
     veg_pool_mt(ix_fine_root, ixC, :) = live_forcing%fine_root_c
     f_n_demand = live_forcing%f_n_demand
     f_p_demand = live_forcing%f_p_demand
-    growth_p_limit_based_on_n_mavg = live_forcing%growth_p_limit
+    growth_p_limit_smoothed_sl = live_forcing%growth_p_limit
     nhx_deposition = live_forcing%nhx_deposition
     noy_deposition = live_forcing%noy_deposition
     nhx_n15_deposition = live_forcing%nhx_n15_deposition
@@ -1887,6 +2259,9 @@ MODULE mo_sb_spinup_qsoil_forcing
 
 #ifndef  __QUINCY_STANDALONE__
   TYPE t_soil_forcing_cache
+    TYPE(t_soil_forcing_cache), POINTER :: next => NULL() !< next independent model/grid cache
+    INTEGER :: owner_model_id = -1 !< owner of grid-distributed input streams and PFT layout [-]
+    INTEGER :: owner_grid_id = -1 !< grid used by the host NetCDF reader [-]
     TYPE(t_input_file) :: soilphysics_input_file
     TYPE(t_input_file) :: veglitterfall_input_file
     LOGICAL :: soilphysics_open = .FALSE.
@@ -1927,7 +2302,11 @@ MODULE mo_sb_spinup_qsoil_forcing
     REAL(lp), ALLOCATABLE :: scratch_4d(:,:,:,:)                      ! nproma, nsoil, nblks, 1
   END TYPE t_soil_forcing_cache
 
-  TYPE(t_soil_forcing_cache), SAVE :: soil_forcing_cache
+  ! One bounded daily cache per model/grid, shared across its PFTs. A linked
+  ! registry avoids assuming contiguous model IDs or a fixed number of domains.
+  ! Both selecting the active pointer and consuming it occur under the I/O lock.
+  TYPE(t_soil_forcing_cache), POINTER, SAVE :: soil_forcing_cache => NULL()
+  TYPE(t_soil_forcing_cache), POINTER, SAVE :: soil_forcing_cache_head => NULL()
 #endif
 
 CONTAINS
@@ -2061,6 +2440,9 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     npft = model%config%npft
     pft_idx = get_pft_tile_index(tile%name)
+    ! The cache is process-local shared scratch. Hold the lock through copying,
+    ! not just NetCDF loading: another chunk/model must not replace it meanwhile.
+    !$OMP CRITICAL (soil_forcing_netcdf_io)
     IF (trace_timing) CALL cpu_time(t_stage_start)
     CALL ensure_soil_forcing_cache_loaded(model, bgcm_store, root_fraction_sl, soilphysics_forcing_file, &
       & veglitterfall_forcing_file, year, forcing_yearday, ith_timestep, dtime, npft, &
@@ -2082,6 +2464,7 @@ CONTAINS
     END IF
 
     IF (pft_idx > 0) THEN
+      IF (pft_idx > soil_forcing_cache%npft) CALL finish(routine, 'PFT index exceeds forcing-cache layout.')
       IF (trace_timing) CALL cpu_time(t_stage_start)
       root_fraction_sl(:,:,:) = soil_forcing_cache%root_fraction_sl_preload(:,:,:,pft_idx,cache_itimestep)
       demand_uptake_n_tuptake_mavg(:,:) = soil_forcing_cache%demand_uptake_n_preload(:,:,pft_idx,cache_itimestep)
@@ -2109,6 +2492,7 @@ CONTAINS
       END IF
     END IF
 
+    !$OMP END CRITICAL (soil_forcing_netcdf_io)
     IF (trace_timing) THEN
       CALL cpu_time(t_stage_end)
       CALL log_soil_forcing_timing(routine, 'total tile='//TRIM(tile%name), t_stage_end - t_total_start)
@@ -2123,11 +2507,15 @@ CONTAINS
 
     REAL(lp), INTENT(in) :: dtime
 
-    IF (NINT(dtime) == 86400) THEN
-      get_soil_forcing_preload_nsteps = 1
-    ELSE
-      get_soil_forcing_preload_nsteps = 86400 / INT(dtime)
-    END IF
+    ! File records are equally spaced integer seconds within a daily file.
+    ! Validate before division; a fractional/truncated index would load wrong data.
+    IF (.NOT. (dtime >= 1.0_lp .AND. dtime <= 86400.0_lp)) &
+      & CALL finish(modname//':get_soil_forcing_preload_nsteps', 'QSOIL timestep must be within [1,86400] seconds.')
+    IF (REAL(NINT(dtime), lp) /= dtime) &
+      & CALL finish(modname//':get_soil_forcing_preload_nsteps', 'QSOIL file timestep must use integer seconds.')
+    IF (MOD(86400, NINT(dtime)) /= 0) &
+      & CALL finish(modname//':get_soil_forcing_preload_nsteps', 'QSOIL file timestep must divide a day exactly.')
+    get_soil_forcing_preload_nsteps = 86400 / NINT(dtime)
 
   END FUNCTION get_soil_forcing_preload_nsteps
 
@@ -2246,7 +2634,10 @@ CONTAINS
     ELSE
       cache_start_timestep = 1
     END IF
-    !$OMP CRITICAL (soil_forcing_netcdf_io)
+    ! Caller holds soil_forcing_netcdf_io until all destination copies finish.
+    ! Same-shaped grids and identical filenames do not imply the same distributed
+    ! ownership. Keep isotope-initialization state independent for each owner too.
+    CALL select_soil_forcing_cache(model%id, model%grid_id)
     IF (debug_on()) CALL cpu_time(t_stage_start)
     CALL ensure_soil_forcing_cache_shape(bgcm_store, root_fraction_sl, npft, preload_nsteps, caller)
     CALL open_cached_soil_forcing_file(model, soil_forcing_cache%soilphysics_input_file, &
@@ -2288,16 +2679,32 @@ CONTAINS
       soil_forcing_cache%cached_yearday = yearday
       soil_forcing_cache%cached_timestep = cache_start_timestep
     END IF
-    !$OMP END CRITICAL (soil_forcing_netcdf_io)
     IF (PRESENT(cache_hit_out)) cache_hit_out = cache_hit
 
   END SUBROUTINE ensure_soil_forcing_cache_loaded
+
+  !> Select/create process-local cache ownership; caller must hold the I/O lock.
+  SUBROUTINE select_soil_forcing_cache(model_id, grid_id)
+    INTEGER, INTENT(in) :: model_id, grid_id
+    soil_forcing_cache => soil_forcing_cache_head
+    DO WHILE (ASSOCIATED(soil_forcing_cache))
+      IF (soil_forcing_cache%owner_model_id == model_id .AND. &
+        & soil_forcing_cache%owner_grid_id == grid_id) RETURN
+      soil_forcing_cache => soil_forcing_cache%next
+    END DO
+    ALLOCATE(soil_forcing_cache)
+    soil_forcing_cache%owner_model_id = model_id
+    soil_forcing_cache%owner_grid_id = grid_id
+    soil_forcing_cache%next => soil_forcing_cache_head
+    soil_forcing_cache_head => soil_forcing_cache
+  END SUBROUTINE select_soil_forcing_cache
 
   ! ======================================================================================================= !
   !> Ensure that the cache arrays match the current model dimensions.
   !>
   SUBROUTINE ensure_soil_forcing_cache_shape(bgcm_store, root_fraction_sl, npft, preload_nsteps, caller)
 
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
     TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
     REAL(lp),                      INTENT(in) :: root_fraction_sl(:,:,:)
     INTEGER,                       INTENT(in) :: npft
@@ -2309,6 +2716,8 @@ CONTAINS
     INTEGER :: veg_litter_store_idx, seed_bed_store_idx
     LOGICAL :: needs_realloc
     CHARACTER(len=5) :: tile_name
+    REAL(lp) :: cache_bytes !< local payload plus NetCDF scratch, excluding framework/file buffers [byte]
+    CHARACTER(len=512) :: cache_message
 
     nproma = SIZE(root_fraction_sl, 1)
     nsoil  = SIZE(root_fraction_sl, 2)
@@ -2342,6 +2751,19 @@ CONTAINS
     soil_forcing_cache%veg_litter_nr_parts = bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_parts
     soil_forcing_cache%veg_litter_nr_elems = bgcm_store%store_2l_2d_bgcms(veg_litter_store_idx)%nr_of_elems
     soil_forcing_cache%seed_bed_nr_elems   = bgcm_store%store_1l_2d_bgcms(seed_bed_store_idx)%nr_of_elems
+    ! Physics has no PFT dimension; only biological forcing is PFT-specific.
+    ! Report before allocation so a failed large global request remains diagnosable.
+    cache_bytes = REAL(STORAGE_SIZE(0.0_lp) / 8, lp) * REAL(nproma, lp) * REAL(nblks, lp) * &
+      & (REAL(preload_nsteps, lp) * (REAL(nsoil, lp) * REAL(npft, lp) + 3.0_lp * REAL(npft, lp) + &
+      & 5.0_lp * REAL(nsoil, lp) + 5.0_lp + REAL(npft, lp) * &
+      & (REAL(soil_forcing_cache%veg_litter_nr_parts, lp) * REAL(soil_forcing_cache%veg_litter_nr_elems, lp) + &
+      & REAL(soil_forcing_cache%seed_bed_nr_elems, lp))) + REAL(nsoil + 1, lp))
+    IF (my_process_is_stdio()) THEN
+      WRITE(cache_message,*) 'QSOIL cache model/grid, local cells, PFTs, records, estimated local bytes = ', &
+        & soil_forcing_cache%owner_model_id, soil_forcing_cache%owner_grid_id, &
+        & REAL(nproma, lp) * REAL(nblks, lp), npft, preload_nsteps, cache_bytes
+      CALL message(TRIM(caller), TRIM(cache_message))
+    END IF
     ALLOCATE(soil_forcing_cache%root_fraction_sl_preload(nproma, nsoil, nblks, npft, preload_nsteps))
     ALLOCATE(soil_forcing_cache%demand_uptake_n_preload(nproma, nblks, npft, preload_nsteps))
     ALLOCATE(soil_forcing_cache%demand_uptake_p_preload(nproma, nblks, npft, preload_nsteps))
@@ -2413,6 +2835,8 @@ CONTAINS
     IF (ALLOCATED(soil_forcing_cache%scratch_4d)) DEALLOCATE(soil_forcing_cache%scratch_4d)
 
     soil_forcing_cache%arrays_initialized = .FALSE.
+    ! Reallocated isotope arrays contain no first-record forcing yet.
+    soil_forcing_cache%isotope_forcing_initialized = .FALSE.
     soil_forcing_cache%preload_loaded = .FALSE.
     soil_forcing_cache%nproma = 0
     soil_forcing_cache%nsoil = 0

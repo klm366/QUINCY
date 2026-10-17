@@ -39,7 +39,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>update soil biogeochemical pools - JSM - Jena Soil Model
   !>
-  SUBROUTINE update_sb_jsm(tile, options)
+  SUBROUTINE update_sb_jsm(tile, options, l_soil_model_forcing)
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
@@ -71,6 +71,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
+    LOGICAL, OPTIONAL, INTENT(in) :: l_soil_model_forcing !< internal replay forcing, not a namelist switch [-]
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
@@ -93,7 +94,8 @@ CONTAINS
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4_n15             !<
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_n_pot_sl                     !<
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
-    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
+    dsl4jsb_Real3D_onChunk :: growth_p_limit_smoothed_sl !< transformed P limitation, supplied during replay [-]
+    LOGICAL :: l_replay_forcing !< distinguish replay from coupled and file-driven QSOIL calls [-]
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
     REAL(lp)                              :: dtime                          !< timestep length
@@ -330,7 +332,6 @@ CONTAINS
     ALLOCATE(graze_mineralisation_nh4_n15(nc, nsoil_w))
     ALLOCATE(unit_uptake_n_pot_sl(nc, nsoil_w))
     ALLOCATE(unit_uptake_p_pot_sl(nc, nsoil_w))
-    ALLOCATE(growth_p_limit_smoothed_sl(nc, nsoil_w))
     ALLOCATE(asymb_n_fixation_rel_rate_sl(nc, nsoil_w))
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -522,6 +523,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    enzyme_frac_AP)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_pore_total_sl)
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_min_sl)                    ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,    growth_p_limit_smoothed_sl)
+    l_replay_forcing = .FALSE.
+    IF (PRESENT(l_soil_model_forcing)) l_replay_forcing = l_soil_model_forcing
     !------------------------------------------------------------------------------------------------------ !
 
     !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
@@ -529,13 +533,19 @@ CONTAINS
     DO isoil = 1,nsoil_w
       WHERE(soil_depth_sl(:,isoil) > eps8)
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
-        ! using LOG() here to smooth the response curve in case of extreme P limited condition,
-        ! avoiding drastic changes in plant phosphatase productions as it is updated at each time step
-        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_lp, LOG(growth_p_limit_based_on_n_mavg(:)))
       ELSEWHERE
         fine_root_carbon_sl(:,isoil)        = 0.0_lp
-        growth_p_limit_smoothed_sl(:,isoil) = 0.0_lp
       ENDWHERE
+      ! Transform before averaging: mean(log(x)) is not log(mean(x)). During
+      ! replay use the stored transformed driver without modifying vegetation's
+      ! moving average. File-driven QSOIL retains its existing calculation.
+      IF (.NOT. l_replay_forcing) THEN
+        WHERE(soil_depth_sl(:,isoil) > eps8)
+          growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_lp, LOG(growth_p_limit_based_on_n_mavg(:)))
+        ELSEWHERE
+          growth_p_limit_smoothed_sl(:,isoil) = 0.0_lp
+        ENDWHERE
+      END IF
     END DO
     unit_uptake_n_pot(:) = 0.0_lp
     unit_uptake_p_pot(:) = 0.0_lp
@@ -598,6 +608,17 @@ CONTAINS
       & gross_mineralisation_po4(:,:), &
       & occlusion_po4(:,:), &
       & slow_exchange_po4(:,:) )                      ! out
+
+    ! Replay with fixed primary/occluded P must not impose a net mineral P source.
+    ! Both rates are micro-mol P m-3 s-1. Match weathering to the diagnosed
+    ! occlusion before subsequent flux limitation and pool updates. This closes
+    ! only this exchange; deposition, uptake and transport retain their budgets.
+    ! Ordinary coupled and file-driven QSOIL calls retain their existing rates.
+    IF (PRESENT(l_soil_model_forcing)) THEN
+      IF (l_soil_model_forcing .AND. dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
+        weathering_po4(:,:) = occlusion_po4(:,:)
+      END IF
+    END IF
 
     !>3.0 Litter-related fluxes
     !>
@@ -718,6 +739,35 @@ CONTAINS
       & emission_n2o_n15(:), &
       & emission_n2(:), &
       & emission_n2_n15(:) )                    ! out
+
+    ! Retain the configured fraction of lateral material export during spinup.
+    ! This represents unresolved lateral return, not water return. Apply before
+    ! loss limitation/pool updates; vertical transport and bottom leaching stay unchanged.
+    ! The same fraction applies to elements and isotopes, preserving export ratios.
+    IF (model%config%l_spinup .AND. dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction > 0.0_lp) THEN
+      lateral_loss_dom_carbon_sl = lateral_loss_dom_carbon_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_dom_nitrogen_sl = lateral_loss_dom_nitrogen_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_dom_phosphorus_sl = lateral_loss_dom_phosphorus_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_dom_carbon13_sl = lateral_loss_dom_carbon13_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_dom_carbon14_sl = lateral_loss_dom_carbon14_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_dom_nitrogen15_sl = lateral_loss_dom_nitrogen15_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_nh4_solute_sl = lateral_loss_nh4_solute_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_no3_solute_sl = lateral_loss_no3_solute_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_po4_solute_sl = lateral_loss_po4_solute_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_nh4_n15_solute_sl = lateral_loss_nh4_n15_solute_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+      lateral_loss_no3_n15_solute_sl = lateral_loss_no3_n15_solute_sl * &
+        & (1.0_lp - dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+    END IF
 
     !! include the lateral loss of DOM into sb_loss_mt(ix_dom, :, :)
     sb_loss_mt(ix_dom, ixC, :, :)   = sb_loss_mt(ix_dom, ixC, :, :)   + lateral_loss_dom_carbon_sl(:,:)
@@ -1108,7 +1158,6 @@ CONTAINS
     DEALLOCATE(graze_mineralisation_nh4_n15)
     DEALLOCATE(unit_uptake_n_pot_sl)
     DEALLOCATE(unit_uptake_p_pot_sl)
-    DEALLOCATE(growth_p_limit_smoothed_sl)
     DEALLOCATE(asymb_n_fixation_rel_rate_sl)
 
   END SUBROUTINE update_sb_jsm
