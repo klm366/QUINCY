@@ -57,7 +57,7 @@ The dynamics of the inorganic phosphorus pools are described as:
 $$
 \label{eq-sb-pi-dynamics}
 \begin{align}
-    \frac{\partial}{\partial t} PO_4 &= F_{dep,PO_4} + F_{weath,PO_4} + F_{biomin,PO_4} - U_{plant,PO_4} - F_{adsorp,PO_4} - \sum(\Phi_{i,PO_4}) -  \frac{\partial v_{PO_4} PO_4}{\partial z} \\
+    \frac{\partial}{\partial t} PO_4 &= F_{dep,PO_4} + F_{weath,PO_4} + F_{biomin,PO_4} + F_{netmin,PO_4} - U_{plant,PO_4} - F_{adsorp,PO_4} - \sum(\Phi_{i,PO_4}) -  \frac{\partial v_{PO_4} PO_4}{\partial z} \\
     \frac{\partial}{\partial t} P_{lab} &= F_{adsorp,PO_4} - F_{desorp,PO_4} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{lab}}{\partial z}) \\
     \frac{\partial}{\partial t} P_{sorb} &= F_{desorp,PO_4} - F_{occlusion,PO_4} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{sorb}}{\partial z}) \\
     \frac{\partial}{\partial t} P_{ocl} &= k_{ocl} P_{sorb} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{ocl}}{\partial z}) \\
@@ -65,9 +65,9 @@ $$
 \end{align}
 $$
 
-where $P_{lab}$, $P_{sorb}$, $P_{ocl}$, and $P_{primary}$ are labile, absorbed, occluded, and
-primary P, respectively; the $F_{dep,PO_4}$, $F_{weath,PO_4}$, $F_{biomin,PO_4}$, $F_{adsorp,PO_4}$,
-and $F_{adsorp,PO_4}$ are the atmospheric deposition, weathering, fast adsorption, and phosphorus
+where $PO_4$, $P_{lab}$, $P_{sorb}$, $P_{ocl}$, and $P_{primary}$ are $PO_4$ in solution, as well as the labile, sorbed, occluded, and
+primary P pools, respectively. $F_{dep,PO_4}$, $F_{weath,PO_4}$, $F_{biomin,PO_4}$, {netmin,PO_4}$, $F_{adsorp,PO_4}$,
+and $F_{desorp,PO_4}$ are the atmospheric deposition, weathering, biomineralisation, net mineralisation, adsorption, and desorption phosphorus
 fluxes, respectively (see @sec-sb-p_flux and @sec-phosphorus-adsorption-and-absorption). All pools except the primary phosphorus pool are assumed to be
 affected by bioturbation (see @sec-sb-bioturbation).
 
