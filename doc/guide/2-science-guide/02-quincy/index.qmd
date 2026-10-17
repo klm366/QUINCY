@@ -9,11 +9,20 @@ order: 10
 to represent a consistent treatment of the element cycling, in terms of carbon (C), nitrogen (N), and phosphorus (P),
 in terrestrial ecosystems that is tightly coupled to the terrestrial water and energy balance, and suitable for the
 modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a
- stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure. It follows a modular structure
+ stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure (Zaehle et al. in review). It follows a modular structure
 to facilitate the consistent testing of multiple hypothesis for one particular process. QUINCY shares the representation of
 physical process of the land surface and the land-atmosphere coupling with JSBACH.
 
-The following gives a brief overview over the main features of QUINCY in ICON-Land. A detailed documentation of the scientific code of QUINCY can be found [here](./quincy-documentation.html).
+This pages provides a brief overview over the main features of QUINCY in ICON-Land. The detailed documentation of the scientific code of QUINCY can accessed in the [comprehensive model documentation page](./documentation/index.html), with following subsections:
+@sec-structure summarises the general structure and vertical discretisation of vegetation and soil;
+@sec-assimi describes the canopy processes, such as photosynthesis and stomatal coupling; 
+@sec-veg introduces vegetation growth, turnover and dynamics;
+@sec-soil-biogeochemistry provides an overview of the simple soil biogeochemistry implementation;
+@sec-isotopic-composition-and-fractionation introduces the isotope processes of QUINCY;
+@sec-rad describes the simplified QUINCY radiation scheme, surface energy
+balance and soil hydrology.
+
+---
 
 - [Vegetation Processes](./index.html#vegetation-processes)
 - [Soil Biogeochemistry](./index.html#soil-biogeochemistry)
@@ -27,12 +36,12 @@ The following gives a brief overview over the main features of QUINCY in ICON-La
 Vegetation is characterised by an average individual representative of a
 plant functional type (PFT). The model considers
 twelve broadly defined PFTs (see Section
-[Plant and crop functional types](./quincy-documentation.html#sec-pfts-cfts)), representing
+[Plant and crop functional types](./documentation/03-vegetation.html#sec-pfts-cfts)), representing
 different leaf types (herbaceous, broadleaved, coniferous),
 phenology (evergreen, rain green, and summer green), as well as growth
 form (grasses and trees), with a set of traits describing time-invariant
 functional differences across types (see the table of
-[PFT-specific parameters](./quincy-documentation.html#tbl-lctlib:param)).
+[PFT-specific parameters](./documentation/07-appendix.html#tbl-lctlib:param)).
 Different to other TBMs, certain "soft" plant functional type
 characteristics, such as the photosynthetic capacity of leaves or the
 temperature sensitivity of photosynthesis and respiration acclimate to
@@ -50,7 +59,7 @@ roots) are represented in addition, as are stand characteristics
 Plant growth is modelled as the balance of source processes
 (photosynthesis, nutrient uptake) and the capacity of the plant to
 create sinks (production of new biomass tissue, respiration, and
-storage; see Section [Plant Growth](./quincy-documentation.html#sec-growth)). 
+storage; see Section [Plant Growth](./documentation/03-vegetation.html#sec-growth)). 
 The capacity of the plant
 to generate sinks is dependent on *(i)* the activity of the plant’s
 meristem controlling the usage of the labile pool for growth, which
@@ -65,23 +74,23 @@ explicitly taking account of the vertical canopy gradient of light,
 foliar chlorophyll and photosynthetic N according to (Kull and Kruijt
 1998), with extensions for C4 photosynthesis (Friend et al. 2009), and
 the temperature response as in (Bernacchi et al. 2001) (see Section
-[Assimilation](./quincy-documentation.html#sec-assimi-leaf-ps)). 
+[Assimilation](./documentation/02-canopy-processes.html#sec-assimi-leaf-ps)). 
 The stomatal conductance is coupled to the calculation of photosynthesis 
 according to the USO formulation (Medlyn et al. 2011; Knauer, Werner, and Zaehle
 2015). Maintenance respiration is calculated for each tissue type as a
 function of its N content and tissue temperature(Lloyd and Taylor, 1994, see Section
-[Maintenance Respiration](./quincy-documentation.html#sec-veg-MaintResp)). 
+[Maintenance Respiration](./documentation/03-vegdocumentationhtml#sec-veg-MaintResp)). 
 Photosynthesis and respiration optima acclimate to growth temperature according to 
 (Friend 2010) and (Atkin, Meir, and Turnbull 2014), respectively.
 
 Plant nutrient uptake is dependent on fine root biomass density, soil
 soluble nutrient concentrations, temperature and moisture as well as 
 plant internal nutrient demand (Zaehle and Friend, 2010; see Section 
-[Plant Nutrient Uptake](./quincy-documentation.html#sec-sb-simple-uptake)). 
+[Plant Nutrient Uptake](./documentation/04-soil-biogeochemistry.html#sec-sb-simple-uptake)). 
 Symbiotic nitrogen fixation occurs in most PFTs as function of nitrogen update
 costs, root mass and temperature. Tissue growth follows a set of allometric equations describing
 size-dependent relationships of foliar, fine root, coarse root, sapwood and 
-fruit biomass (see Section [Allocation](./quincy-documentation.html#sec-veg-allocation)). 
+fruit biomass (see Section [Allocation](./documentation/03-vegetation.html#sec-veg-allocation)). 
 The allometric relationship between leaves and fine root responds to N, P
 and water limitation and therefore increases uptake capacity under
 nutrient limitation.
@@ -90,9 +99,9 @@ The allometric equations and the N and P content of each tissue give the
 stoichiometric constraint of plant growth. The C:N and N:P ratios of the
 leaves and fine roots are flexible within empirical bounds and respond
 dynamically to an imbalance between C and N, or N and P availability,
-respectively (see Section [Stoichiometry](./quincy-documentation.html#sec-veg-stoichem)). 
+respectively (see Section [Stoichiometry](./documentation/03-vegetation.html#sec-veg-stoichem)). 
 Photosynthesis can be down-regulated through sink-limitation (see Section
-[Sink Limitation](./quincy-documentation.html#sec-veg-sinklim)), if nutrient
+[Sink Limitation](./documentation/03-vegetation.html#sec-veg-sinklim)), if nutrient
 shortage leads to the accumulation of carbon in the labile pool.
 
 Short-term fluctuations in the balance between carbon acquisition
@@ -100,7 +109,7 @@ through photosynthesis and nutrient acquisition by roots are balanced by
 the time-scale of the labile pool turnover. Seasonal and longer-term
 fluctuations are balanced to some extend by the build-up and use of the
 reserve pool. The flow of compounds between the labile and reserve pools
-(see Section [Reserve Pool Dynamics](./quincy-documentation.html#sec-veg-reserve)) 
+(see Section [Reserve Pool Dynamics](./documentation/03-vegetation.html#sec-veg-reserve)) 
 is described by a set of pull 
 (from the reserve pool) and push (to the reserve pool) mechanisms attempting 
 to simulate the signaling related to the beginning
@@ -114,14 +123,14 @@ enzymes (N) and associated RNA (P) from tissue, and their ensuing
 replacement from the labile N and P pools (recycling; at the time scale
 of days; Zaehle and Friend, 2010); and *(ii)* the senescence of entire
 tissues and their conversion to litter, including the resorption of
-nutrients from foliage (see Section [Vegetation Turnover](./quincy-documentation.html#sec-veg-turnover)). 
+nutrients from foliage (see Section [Vegetation Turnover](./documentation/03-vegetation.html#sec-veg-turnover)). 
 Tissue senescence is calculated given a fixed  turnover time for each tissue, 
 with the exception of the leaves and fine roots, where 
 turnover is determined by the PFT-specific phenological timing
-(see Section [Phenology](./quincy-documentation.html#sec-veg-phen)). 
+(see Section [Phenology](./documentation/03-vegetation.html#sec-veg-phen)). 
 
 Stand-level vegetation dynamics (see Section 
-[Vegetation Dynamics](./quincy-documentation.html#sec-veg-dynamics)) 
+[Vegetation Dynamics](./documentation/03-vegetation.html#sec-veg-dynamics)) 
 are represented through density-dependent mortality, as well as a dynamic
 background mortality related to the overall growth efficiency of the
 plant (Sitch et al. 2003; Zaehle and Friend 2010). Re-establishment of
@@ -144,7 +153,7 @@ occluded and primary PO<sub>4</sub>).
 
 The turnover and formation of SOM follows, with some modifications, the
 CENTURY approach (Parton et al. 1993) (see Section 
-[Soil Biogeochemistry](./quincy-documentation.html#sec-soil-biogeochemistry)): The turnover
+[Soil Biogeochemistry](./documentation/04-soil-biogeochemistry.html#sec-soil-biogeochemistry)): The turnover
 of litter and SOM pools are all calculated using first-order kinetics
 with temperature and moisture dependence. The litter stoichiometry is
 determined by the stoichiometry of senescent plant tissue and
@@ -159,10 +168,10 @@ demand and uptake capacity, which varies in time and with soil depth. In
 the aerobic part of soil, NH<sub>4</sub> is oxidised to through nitrification and in
 anaerobic part of soil, NO<sub>3</sub>is reduced to through denitrification (Zaehle et
 al. 2011). Both processes produce NO<sub>x</sub>, N<sub>2</sub>O and N<sub>2</sub> as by-products 
-(see Section [Nitrification and Denitrification Processes](./quincy-documentation.html#sec-sb-nitrification-denitrification)). 
+(see Section [Nitrification and Denitrification Processes](./documentation/04-soil-biogeochemistry.html#sec-sb-nitrification-denitrification)). 
 
 The representation of soil inorganic P dynamics (see Section 
-[Soil P Processes](./quincy-documentation.html#sec-phosphorus-adsorption-and-absorption)) follow the concept
+[Soil P Processes](./documentation/04-soil-biogeochemistry.html#sec-phosphorus-adsorption-and-absorption)) follow the concept
 from (Yang et al. 2014) and (Wang, Law, and Pak 2010). The available
 soluable is exchanged via ad-/desorption with the mineral surface,
 leached with soil water, and replenished by atmospheric deposition,

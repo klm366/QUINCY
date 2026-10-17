@@ -150,7 +150,7 @@ number-offset: [6]
 | $k_{leaf2sla}$ | slope of lignin to $sla$ relationship | -0.4328854 | $m^{-2}$ | $\ref{eq-sb-simple-leaf-lc}$ | @White:2000vl |
 | $k_{met,vp,N}$ | proportionality factor controlling C:N of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
 | $k_{met,vp,P}$ | proportionality factor controlling C:P of metabolic vs. structural pool | 5.0 | \- | $\ref{eq-sb-simple-litterpartitioning-np}$ | @Parton:1993ud |
-| $\eta_{C,wl \rightarrow met,str}$ | fraction of woody litter C transformed into metabolic or structural litter | 0.3 | \- | @sec-sb-litter-partitionin | following @Parton:1993ud |
+| $\eta_{C,wl \rightarrow met,str}$ | fraction of woody litter C transformed into metabolic or structural litter | 0.3 | \- | @sec-sb-litter-partitioning | following @Parton:1993ud |
 | **Turnover times and their rate modifiers** |  |  |  |  |  |
 | $\tau^{base}_{met}$ | turnover time of metabolic litter | 0.033 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
 | $\tau^{base}_{str}$ | turnover time of structural litter | 0.124 | years | $\ref{eq-sb-simple-som-turnover}$ | @Parton:1993ud |
