@@ -3,15 +3,15 @@ title: QUINCY
 order: 10
 ---
 
-![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
-
 **QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system)** has been developed
 to represent a consistent treatment of the element cycling, in terms of carbon (C), nitrogen (N), and phosphorus (P),
 in terrestrial ecosystems that is tightly coupled to the terrestrial water and energy balance, and suitable for the
 modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a
- stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure (Zaehle et al. in review). It follows a modular structure
+stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure (Zaehle et al. in review). It follows a modular structure
 to facilitate the consistent testing of multiple hypothesis for one particular process. QUINCY shares the representation of
 physical process of the land surface and the land-atmosphere coupling with JSBACH.
+
+![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
 
 This pages provides a brief overview over the main features of QUINCY in ICON-Land. The detailed documentation of the scientific code of QUINCY can accessed in the [comprehensive model documentation page](./documentation/index.html), with following subsections:
 @sec-structure summarises the general structure and vertical discretisation of vegetation and soil;
@@ -21,6 +21,11 @@ This pages provides a brief overview over the main features of QUINCY in ICON-La
 @sec-isotopic-composition-and-fractionation introduces the isotope processes of QUINCY;
 @sec-rad describes the simplified QUINCY radiation scheme, surface energy
 balance and soil hydrology.
+
+In these pages you also find: 
+
+- an [overview of the main configurations and settings of QUINCY](quincy-configurations.qmd)
+- a [list of publications that rely on QUINCY](quincy-literature.qmd)
 
 ---
 

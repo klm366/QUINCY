@@ -5,10 +5,6 @@ order: 12
 
 This page gives an overview over the main configurations of QUINCY used in ICON-Land. 
 
-:::{.callout-warning}
-These pages are under construction!
-:::
-
 | Short-Name | Processes included |
 |---|--------|
 | **lite** (aka CANOPY) | Surface and soil physics (incl. snow) including energy and water exchange and albedo, turbulent coupling to the atmosphere, phenology, canopy carbon assimilation and conductance | 
@@ -22,8 +18,11 @@ In addition to these standard configurations, a number of options permit to furt
 
 | Namelist Keyword | Settings | Meaning |
 |---|-----|--------|
-| biomass_alloc_scheme | ... | ... | 
-| leaf_stoichom_scheme | ... | ... | 
-| flag_herbivory | ... | ... | 
-| sb_model_scheme | ... | ... | 
-| sb_nloss_scheme | ... | ... | 
+| interactive_N_flag | _TRUE_/FALSE | determines if N availability affects vegetation or soil processes | 
+| interactive_P_flag | _TRUE_/FALSE | determines if P availability affects vegetation or soil processes | 
+| biomass_alloc_scheme | fixed/_dynamic_ | determines whether root allocation varies with nutrient or water stress | 
+| leaf_stoichom_scheme | fixed/_dynamic_ | determines whether leaf stoichiometry varies with nutrient stress | 
+| flag_herbivory | _TRUE_/FALSE | determines whether herbivory process is activated or not | 
+| sb_model_scheme | _ssm_/jsm | either simple soil model (SSM) or Jena soil model (JSM) | 
+
+: Key user model settings. Italics denotes the default configuration

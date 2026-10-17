@@ -21,3 +21,7 @@ Considered processes are
 
 The detailed description of JSBACH v4 can be found under [here](./jsbach-documentation.html).
 
+In these pages you also find: 
+
+- an [overview of the main configurations and settings of JSBACH](jsbach-configurations.qmd)
+- a [list of publications that rely on JSBACH](jsbach-literature.qmd)

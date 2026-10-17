@@ -2,5 +2,8 @@
 title: Science Guide
 order: 2
 listing:
-  type: default
+  type: grid
+  contents: 
+    - "01-jsbach/index.qmd"
+    - "02-quincy/index.qmd"
 ---
