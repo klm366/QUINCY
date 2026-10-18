@@ -1,6 +1,7 @@
 ---
 title: Governance
-order: 2
+order: 1 
+image: /media/people-fill.svg
 tbl-cap-location: bottom
 ---
 
@@ -13,11 +14,13 @@ On a technical level, **gate-keepers** at MPI Meteorology and Biogeochemistry en
 
 A diverse group of **ICON-Land users** exists across several academic insitutions in Germany and beyond and meets approximately once a year to inform about ongoing activities and coordinate future development ideas. 
 
+The **QUINCY steering group** coordinates the development of the QUINCY configuration in ICON-Land and its usecases. It is composed of representatives of the main QUINCY developers and users at MPI for Biogeochemistry, the Universities of Leipzig and Hamburg, Trinity College Dublin and the Finnish Meteorological Institute.    
+
 ### ICON-Land management committee
 
 | Member | Institution | E-mail contact | 
 |:---|:---|:---|:---| 
-| Sönke Zaehle<sup>1</sup> | MPI-BGC | firstname.lastname(at)bgc-jena.mpg.de | 
+|  [Sönke Zaehle](https://www.bgc-jena.mpg.de/en/bsi/soenke-zaehle)<sup>1</sup> | MPI-BGC | firstname.lastname(at)bgc-jena.mpg.de | 
 | Reiner Schnur<sup>2</sup> | MPI-M | firstname.lastnam(at)mpimet.mpg.de |  
 | Julia Nabel | MPI-BGC | firstname.lastnam(at)bgc-jena.mpg.de | 
 | Victor Brovkin | MPI-M | firstname.lastnam(at)mpimet.mpg.de | 

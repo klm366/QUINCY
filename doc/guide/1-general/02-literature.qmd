@@ -1,6 +1,7 @@
 ---
 title: Key References
-order: 4
+image: /media/journal-text.svg
+order: 2
 ---
 
 Overview over key references describing ICON-Land and its configurations JSBACH and QUINCY.

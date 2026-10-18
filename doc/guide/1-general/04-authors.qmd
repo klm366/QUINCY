@@ -1,6 +1,6 @@
 ---
 title: Authors
-order: 1
+order: 4 
 ---
 
 {{< include ../../../AUTHORS.md >}}
