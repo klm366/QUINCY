@@ -1,6 +1,3 @@
----
-title: Authors
----
 ## ICON-Land Authors
 
 - Ana Bastos
