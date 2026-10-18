@@ -10,7 +10,7 @@ project:
     - /media/
 website:
   title: ICON-Land Guide
-  description: Guide to ICON-Land and JSBACH
+  description: Guide to ICON-Land and it's JSBACH and QUINCY configuration
   cookie-consent:
     type: express
     # Quarto emits this verbatim as the consent banner's link target: it is not

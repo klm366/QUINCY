@@ -1,10 +1,10 @@
 meta:
   name: ICON-Land Documentation
-  link: https://www.bgc-jena.mpg.de/en
+  link: https://www.icon-land.org
 
 logo:
-  medium: media/MPIB.png
-  # alt: Max Planck Institute for Biogeochemistry
+  medium: media/ICON-Land.png
+  # alt: ICON-Land
 
 # Colors extracted from bgc-jena.mpg.de
 # :root { --primary-color: #006c66; --secondary-color: #006c66 }
