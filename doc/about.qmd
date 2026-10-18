@@ -1,10 +1,10 @@
 ---
 title: "About"
 about:
-  template: jolla
+  template: solana
   image: media/ICON-Land.png
-  image-width: 25%
-  image-shape: circle 
+  image-width: 50%
+  image-shape: rectangle 
   links:
   - icon: gitlab
     text: Gitlab
