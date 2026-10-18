@@ -1,5 +1,7 @@
 ---
 title: Science Guide
+abstract: This page provides the scientific documentation of the configurations implemented in ICON-Land
+image: /media/documentation-guide.svg
 order: 2
 listing:
   type: default 

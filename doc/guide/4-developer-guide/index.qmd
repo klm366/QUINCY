@@ -1,5 +1,6 @@
 ---
 title: Developer Guide
+abstract: This page provides the developer guide for ICON-Land
 listing:
   id: developer-guide-listings
   type: grid

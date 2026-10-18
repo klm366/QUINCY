@@ -1,5 +1,6 @@
 ---
 title: General Information
+abstract: This page provides a general overview of the ICON-Land organisation
 order: 1
 listing:
   id: general-info-listings

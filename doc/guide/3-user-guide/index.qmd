@@ -1,5 +1,7 @@
 ---
 title: User Guide
+abstract: This page provides a user guide for ICON-Land
+image: /media/coding-style-guide.svg
 listing:
   id: user-guide-listings
   type: grid
