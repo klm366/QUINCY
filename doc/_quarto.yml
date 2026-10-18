@@ -25,9 +25,14 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - about.qmd
+      - href: about.qmd
+        text: About Us
       - href: guide/1-general/02-literature.qmd
         text: References
+      - href: guide/4-developer-guide/index.qmd
+        text: Documentation  
+      - href: mailto:icon-land@bgc-jena.mpg.de
+        text: Contact
   sidebar:
     contents: auto
 
