@@ -7,8 +7,8 @@ The ICON-Land team encourages the collaborative use of the ICON-Land framework f
 
 **Recognition of intellectual contributions to the ICON-Land model will be ensured by:**
 
-    Offering co-authorship on any publication that benefits of recent developments improvements in the ICON-Land model. We assume that an agreement on such matters will be reached before publishing and/or use of the model/data for publication. We deliberately refrain from specifying ‘recent’ as it should be a function of the intellectual contribution and the exposure this contribution already received. 
-    Discussing, early on, intended usage of the ICON-Land model. This discussion should prevent uses and/or applications of the ICON-Land model which are in conflict with the plans of the ICON-Land team. When using the model code or output, please reference the source of the model and its scientific documentation as a citation. 
+Offering co-authorship on any publication that benefits of recent developments improvements in the ICON-Land model. We assume that an agreement on such matters will be reached before publishing and/or use of the model/data for publication. We deliberately refrain from specifying ‘recent’ as it should be a function of the intellectual contribution and the exposure this contribution already received. 
+Discussing, early on, intended usage of the ICON-Land model. This discussion should prevent uses and/or applications of the ICON-Land model which are in conflict with the plans of the ICON-Land team. When using the model code or output, please reference the source of the model and its scientific documentation as a citation. 
 
 **Use of follow-up recent versions**
 
