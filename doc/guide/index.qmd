@@ -1,15 +1,41 @@
 ---
-title: ICON-Land Guide
-order: 3
+title: "ICON-Land"
+order: 1
+about:
+  template: solana
+  image-width: 50%
+  image-shape: rectangle 
+  links:
+  - icon: gitlab
+    text: Gitlab
+    href: https://gitlab.dkrz.de/jsbach/jsbach
+  - icon: envelope-at 
+    text: Contact
+    href: mailto:icon-land@bgc-jena.mpg.de
+listing:
+  id: guide-listings
+  type: grid
+  grid-columns: 2
+  filter-ui: false
+  sort-ui: false
+  contents: 
+    -  "./1-general/index.qmd"
+    -  "./2-science-guide/index.qmd"
+    -  "./3-user-guide/index.qmd"
+    -  "./4-developer-guide/index.qmd"
 ---
 
-:::{.callout-warning}
-These pages are under construction!
+This is the home page of the ICON-Land framework for land process representations in the Earth System model ICON.
+
+::: {.callout-tip title="What is ICON-Land?" collapse="true"}
+{{< include ../../ABOUT.md >}}
 :::
 
-# Guide to ICON-Land and JSBACH
+This page provides an overview over:
 
-1. [General Information](./1-general/index.html)
-2. [Scientific Guide](./2-science-guide/index.html)
-3. [User Guide](./3-user-guide/index.html)
-4. [Developer Guide](./4-developer-guide/index.html)
+::: {#guide-listings}
+:::
+
+::: {.callout-tip title="Impressum"}
+[Impressum](../impressum.qmd)
+:::
