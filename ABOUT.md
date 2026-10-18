@@ -6,5 +6,4 @@ It is jointly developed by the Max-Planck Institutes for Meteorology [(MPI-M)](h
 
 **ICON-Land** has been designed in a modular way that separates infrastructure from science to allow for the integration of concurrent
 and alternative process and surface descriptions in a flexible and easy-to-use way. Specific process implementations include the
-[JSBACH](guide2/2-science-guide/01-jsbach/index.html) and [QUINCY](guide2/2-science-guide/02-quincy/index.html) model configurations.
-Note that TRRA is currently not included in ICON-Land.
+JSBACH and QUINCY model configurations. Note that TERRA is currently not included in ICON-Land.

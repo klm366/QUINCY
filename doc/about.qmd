@@ -2,14 +2,17 @@
 title: "About"
 about:
   template: jolla
-  image: media/MPIB.png
-  image-width: 50%
-  image-shape: rectangle
+  image: media/ICON-Land.png
+  image-width: 25%
+  image-shape: circle 
   links:
   - icon: gitlab
     text: Gitlab
     href: https://gitlab.dkrz.de/jsbach/jsbach
-order: 1
+  - icon: envelope-at 
+    text: Contact
+    href: mailto:icon-land@bgc-jena.mpg.de
+order: 3
 ---
 
 {{< include ../ABOUT.md >}}
