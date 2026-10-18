@@ -1,6 +1,7 @@
 ---
 title: Developer Guide
 abstract: This page provides the developer guide for ICON-Land
+image: /media/coding-style-guide.svg
 listing:
   id: developer-guide-listings
   type: grid
