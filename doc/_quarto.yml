@@ -26,6 +26,8 @@ website:
       - href: index.qmd
         text: Home
       - about.qmd
+      - href: guide/1-general/02-literature.qmd
+        text: References
   sidebar:
     contents: auto
 

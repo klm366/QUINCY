@@ -4,7 +4,7 @@ image: /media/journal-text.svg
 order: 2
 ---
 
-Overview over key references describing ICON-Land and its configurations JSBACH and QUINCY.
+Overview over key references describing ICON-Land and its configurations [JSBACH](../2-science-guide/01-jsbach/index.htlm) and [QUINCY](../2-science-guide/02-quincy/index.html). For a more complete list of publications using ICON-Land or its predecessors, refer to the reference section of the scientific documentation of [JSBACH](../2-science-guide/01-jsbach/jsbach-literature.html) and [QUINCY](../2-science-guide/02-quincy/quincy-literature.html).
 
 #### ICON-Land tiling structure (and JSBACH forest management)
 
@@ -25,3 +25,4 @@ Thum, T., Caldararu, S., Engel, J., Kern, M., Pallandt, M., Schnur, R., Yu, L., 
 #### QUINCY + JSM documentation (use this as citation for studies using QUINCY-JSM)
 
 Yu, L., Ahrens, B., Wutzler, T., Schrumpf, M., & Zaehle, S. (2020). Jena Soil Model (JSM v1.0; revision 1934): A microbial soil organic carbon model integrated with nitrogen and phosphorus processes. *Geoscientific Model Development*, 13(2), 783–803. <https://doi.org/10.5194/gmd-13-783-2020>
+
