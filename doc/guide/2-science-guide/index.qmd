@@ -2,7 +2,8 @@
 title: Science Guide
 order: 2
 listing:
-  type: grid
+  type: default 
+  max-description-length: 200
   contents: 
     - "01-jsbach/index.qmd"
     - "02-quincy/index.qmd"
