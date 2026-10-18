@@ -1,0 +1,9 @@
+---
+title: ICON-Land for ATTO synthesis
+author:
+- Sönke Zaehle, Cathy Hohenegger 
+image: /media/logo_bmftr.svg
+---
+
+BMFTR-funded project to synthesise long-term observations at the [Amazon Tall Tower Observatory (ATTO)](https://www.attoproject.org). ICON-Land is involved in workpackages providing model-data synthesis based on eddy covariance data to improve site-level performance, as well as in coupled similations to investigate land-surface atmosphere interactions.
+

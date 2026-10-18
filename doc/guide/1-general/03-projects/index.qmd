@@ -3,8 +3,9 @@ title: ICON-Land Projects
 listing:
   id: general-projects-listings
   type: grid
-  grid-columns: 2
+  grid-columns: 3
 order: 4
+image: /media/universal-access-circle.svg
 number-sections: false
 ---
 
