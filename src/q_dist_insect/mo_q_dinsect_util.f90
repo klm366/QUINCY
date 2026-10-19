@@ -61,7 +61,6 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: dinsect_dropping_mt
     dsl4jsb_Def_mt2L2D :: dinsect_veg_extract_mt
     dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
-    dsl4jsb_Def_mt1L2D :: dinsect_seedb_fastl_mt
     dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
     dsl4jsb_Real2D_onChunk :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
     dsl4jsb_Real2D_onChunk :: dinsect_total_mort_dt         ! fraction of mortality rate caused by insect disturbances [fraction/timestep]
@@ -85,7 +84,6 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_VEG_EXTRACT_ID, dinsect_veg_extract_mt)
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_FAST_LITTER_ID, dinsect_fast_litter_mt)
-    dsl4jsb_Get_mt1L2D(DINSECT_BGCM_SEEDB_FASTL_ID, dinsect_seedb_fastl_mt)
     dsl4jsb_Get_mt2L2D(DINSECT_BGCM_SLOW_LITTER_ID, dinsect_slow_litter_mt)
     dsl4jsb_Get_mt1L2D(DINSECT_BGCM_DROPPING_ID, dinsect_dropping_mt)
     dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! out
@@ -99,7 +97,6 @@ CONTAINS
     !   as these values are zeroed anyway
     dinsect_veg_extract_mt(:,:,:) = zero
     dinsect_fast_litter_mt(:,:,:) = zero
-    dinsect_seedb_fastl_mt(:,:) = zero
     dinsect_slow_litter_mt(:,:,:) = zero
     dinsect_dropping_mt(:,:) = zero
     dinsect_pool_total_c = zero

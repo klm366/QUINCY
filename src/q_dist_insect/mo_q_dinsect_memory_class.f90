@@ -64,10 +64,7 @@ MODULE mo_q_dinsect_memory_class
     !                                compen_defoli_scale        , &   !< 0~1 0: no compensatory feeding; 1: completely compensatory feeding
     !------------------------------------------------------------------------------------------------------ !
     TYPE(t_jsb_var_real2d)          ::  &
-                                    defoliator_effects_triggered, &         !< the flag of calculating timelasting defoliator effects. Currenly, once triggered from 0 to 1, it will keep unchanged.
-                                    barkbeetle_effects_triggered, &         !< the flag of calculating timelasting bark beetle effects. Currenly, once triggered from 0 to 1, it will keep unchanged.
                                     defoliated_state, &                    !< the flag for notifying this timestep is under defoliation (1.0_wp) or not (0.0_wp).
-                                    is_insect_year, &                      !< the flag for notifying insect disturbance happened on this year (1.0_wp=true) or not (0.0_wp=false).
                                     dinsect_year_since_start, &            !< the number of years since the start of insect disturbance
                                     dinsect_defoliator_resp_c, &           !< the respiration of defoliator [mol C/m2/timestep]
                                     dinsect_defoliator_resp_c13, &         !< the respiration of defoliator C13 [mol C13/m2/timestep]
@@ -193,6 +190,7 @@ CONTAINS
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     vgrid_doy     => Get_vgrid('days_of_year')
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
+    vgrid_days_in_year  => Get_vgrid('q_days_in_year')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
 
@@ -375,28 +373,6 @@ CONTAINS
       !> 2.0 2D & 3D variables
       !>
 
-      CALL mem%Add_var('defoliator_effects_triggered', mem%defoliator_effects_triggered, &
-        & hgrid, surface, &
-        & t_cf('defoliator_effects_triggered', 'unitless, > 0 means triggered', 'defoliator_effects_triggered'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('barkbeetle_effects_triggered', mem%barkbeetle_effects_triggered, &
-        & hgrid, surface, &
-        & t_cf('barkbeetle_effects_triggered', 'unitless, > 0 means triggered', 'barkbeetle_effects_triggered'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
       CALL mem%Add_var('dinsect_bb_mort_dt', mem%dinsect_bb_mort_dt, &
         & hgrid, surface, &
         & t_cf('dinsect_bb_mort_dt', 'fraction ts-1', 'dinsect_bb_mort_dt'), &
@@ -455,17 +431,6 @@ CONTAINS
       CALL mem%Add_var('defoliated_state', mem%defoliated_state, &
         & hgrid, surface, &
         & t_cf('defoliated_state', 'unitless, > 0 means defoliated', 'defoliated_state'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .FALSE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('is_insect_year', mem%is_insect_year, &
-        & hgrid, surface, &
-        & t_cf('is_insect_year', 'unitless, > 0 means is insect year', 'is_insect_year'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

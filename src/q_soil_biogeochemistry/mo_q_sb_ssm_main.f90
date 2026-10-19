@@ -917,10 +917,6 @@ CONTAINS
 
     !>5.0 Update soil litter pools with litter fall
     !>
-    !> If dinsect processes are considered, then the quantity of litterfall should add the materials from dead pools
-    IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-      veg_litterfall_mt(:,:,:) = veg_litterfall_mt(:,:,:) + dinsect_slow_litter_mt(:,:,:)
-    END If
 
     CALL calc_litter_partitioning( &
       & nc, &                                         ! in
@@ -934,21 +930,6 @@ CONTAINS
       & veg_litterfall_mt(:,:,:), &
       & seed_bed_litterfall_mt(:,:), &                ! in
       & sb_formation_mt(:,:,:,:) )                    ! inout
-
-    !< When defoliation is considered, the C litter from defoliation is added to the the formation of soluable C litter
-    IF ((dsl4jsb_Config(Q_DINSECT_)%dinsect_online)) THEN
-      sb_formation_mt(ix_soluable_litter, ixC, :, 1) = & ! defoliator
-                                      sb_formation_mt(ix_soluable_litter, ixC, :, 1) &
-                                      + dinsect_dropping_mt(ixC,:) / soil_depth_sl(:,1)
-    END IF
-
-    !< After the calculation of litter fomation, the veg_litterfall_mt will extract live vegetation pools
-    !< through veg_pool_mt = veg_pool_mt - veg_litterfall_mt in veg_updata_pool
-    !< So here, after we use veg_litterfall_mt to to calculate litter formation from dead sapwood, dead heartwood, and dead leaves,
-    !< we need to exclude these parts
-    IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_online) THEN
-      veg_litterfall_mt(:,:,:) = veg_litterfall_mt(:,:,:) - dinsect_slow_litter_mt(:,:,:)
-    END If
 
     !>6.0 for 'sb_model = fixed': estimate N losses
     !>

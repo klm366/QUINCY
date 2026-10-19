@@ -60,7 +60,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
       & dinsect_veg_extract_mt        , &  !< vegetation extraction flux [mol/m2/timestep]
       & dinsect_slow_litter_mt        , &  !< slow litter production flux [mol/m2/timestep]
       & dinsect_fast_litter_mt        , &  !< fast litter production flux [mol/m2/timestep]
-      & dinsect_seedb_fastl_mt , &  !< fast litter seed bed production flux [mol/m2/timestep]
       & dinsect_barkbeetle_labile_c   , &  !< the defence used labile C from bark beetle attack [mol C/m2/timestep]
       & dinsect_barkbeetle_labile_c13 , &  !< the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
       & dinsect_barkbeetle_labile_c14 , &  !< the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
@@ -79,7 +78,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
       REAL(wp), INTENT(inout) :: dinsect_deadleaf_mt(:,:)      !< dead leaf pool [mol/m2]
       REAL(wp), INTENT(inout) :: dinsect_veg_extract_mt(:,:,:) !< extraction flux [mol/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_fast_litter_mt(:,:,:) !< fast litter flux [mol/m2/timestep]
-      REAL(wp), INTENT(inout) :: dinsect_seedb_fastl_mt(:,:) !< fast litter seed bed flux [mol/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_slow_litter_mt(:,:,:) !< slow litter flux [mol/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_barkbeetle_labile_c(:)   !< the defence used labile C from bark beetle attack [mol C/m2/timestep]
       REAL(wp), INTENT(inout) :: dinsect_barkbeetle_labile_c13(:) !< the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
@@ -151,8 +149,6 @@ MODULE mo_q_dinsect_bark_beetle_effect
           & veg_pool_mt(ix_reserve, :, ic) * mortality_dt(ic)
           dinsect_fast_litter_mt(ix_fruit, :, ic) = dinsect_fast_litter_mt(ix_fruit, :, ic) + &
           & veg_pool_mt(ix_fruit, :, ic) * mortality_dt(ic)
-          dinsect_seedb_fastl_mt(:, ic) = dinsect_seedb_fastl_mt(:, ic) + &
-          & seed_bed_pool_mt(:, ic) * mortality_dt(ic)
 
           !> 1.6 Update respiration fluxes. This part of labile C will be accounted for in veg_update_pools
           dinsect_barkbeetle_labile_c(ic) = veg_pool_mt(ix_labile, ixC, ic) * mortality_dt(ic)

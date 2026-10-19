@@ -155,7 +155,7 @@ MODULE mo_q_dinsect_init
 
     dsl4jsb_Real3D_onDomain :: dinsect_df_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(wp),           POINTER :: ptr_3D   (:,:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
@@ -172,7 +172,7 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
     dsl4jsb_Get_var3D_onDomain(Q_DINSECT_, dinsect_df_dist_fraction_read)
-    !
+
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     ALLOCATE(dinsect_init_vars%df_dist_frac(nproma, nblks, 1:366)) ! number of days in a year
@@ -274,6 +274,9 @@ MODULE mo_q_dinsect_init
     END DO
 
     CALL input_file%Close()
+
+    ! Mark process as successfully initialized
+    CALL model%processes(Q_DINSECT_)%p%Set_init_status_true
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
