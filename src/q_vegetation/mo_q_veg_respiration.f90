@@ -1,4 +1,4 @@
-!> calculate vegetation respiration (QUINCY)
+!> QUINCY calculate vegetation respiration
 !>
 !> ICON-Land
 !>
@@ -16,7 +16,7 @@
 !>#### calculate vegetation maintenance-respiration considering, e.g., temperature and acclimation
 !>
 MODULE mo_q_veg_respiration
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
   PRIVATE
@@ -40,30 +40,30 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: t_maint_k1, t_maint_k2, t_maint_k3, f_resp_acclim, t_acclim_zero
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: temp                      !< instantaneous temperature (K)
-    REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K)
-    REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10 degC)
+    REAL(lp), INTENT(in) :: temp                      !< instantaneous temperature (K)
+    REAL(lp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K)
+    REAL(lp)             :: temp_response             !< temperature response of respiration (1 at 10 degC)
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)             :: hlp1
+    REAL(lp)             :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':temperature_response_respiration'
 
 
-    hlp1 = t_maint_k3 + 1.0_wp / (1._wp / t_maint_k2 - log(eps8) / t_maint_k1)
+    hlp1 = t_maint_k3 + 1.0_lp / (1._lp / t_maint_k2 - log(eps8) / t_maint_k1)
 
     IF(temp >= hlp1) THEN
       ! IF flag_t_resp_acclimation is false: temp_mavg == t_acclim_zero
-      temp_response = (10._wp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
-                       exp(t_maint_k1 * (1._wp / t_maint_k2 - 1._wp / (temp - t_maint_k3)))
+      temp_response = (10._lp**(f_resp_acclim * (temp_mavg - t_acclim_zero))) * &         ! this term is 1 if flag_t_resp_acclimation is false
+                       exp(t_maint_k1 * (1._lp / t_maint_k2 - 1._lp / (temp - t_maint_k3)))
     ELSE
-      temp_response = 0.0_wp
+      temp_response = 0.0_lp
     ENDIF
 
   END FUNCTION temperature_response_respiration
@@ -89,22 +89,22 @@ CONTAINS
                                                         coarse_root_nitrogen)   &
                                                         RESULT(maint_respiration)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_veg_constants,           ONLY: fmaint_rate_base, fmaint_rate_wood, k_maint_resp_suppress
 
     IMPLICIT NONE
 
-    REAL(wp), INTENT(in) :: leaf_carbon              !< carbon content of leafs (veg_pool)
-    REAL(wp), INTENT(in) :: t_wood                   !< temperature of the stem (K)
-    REAL(wp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K)
-    REAL(wp), INTENT(in) :: t_root                   !< temperature of the roots (K)
-    REAL(wp), INTENT(in) :: t_root_mavg              !< average temperature for acclimation (K)
-    REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
-    REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
-    REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
+    REAL(lp), INTENT(in) :: leaf_carbon              !< carbon content of leafs (veg_pool)
+    REAL(lp), INTENT(in) :: t_wood                   !< temperature of the stem (K)
+    REAL(lp), INTENT(in) :: t_wood_mavg              !< average temperature for acclimation (K)
+    REAL(lp), INTENT(in) :: t_root                   !< temperature of the roots (K)
+    REAL(lp), INTENT(in) :: t_root_mavg              !< average temperature for acclimation (K)
+    REAL(lp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
+    REAL(lp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
+    REAL(lp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
                                                      ! (calculated in photosynthesis; micro-mol C / m2 / s)
-    REAL(wp)             :: maint_respiration        !< maintenance respiration (micro-mol C / m2 / s)
+    REAL(lp)             :: maint_respiration        !< maintenance respiration (micro-mol C / m2 / s)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 

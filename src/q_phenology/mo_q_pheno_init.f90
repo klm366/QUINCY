@@ -16,9 +16,9 @@
 !>#### initialization of phenology memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_pheno_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
 
@@ -77,7 +77,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
     INTEGER                     :: nblks, ib, nproma, ic
-    REAL(wp)                    :: config_lai_max, lctlib_phenology_type, lctlib_lai_max
+    REAL(lp)                    :: config_lai_max, lctlib_phenology_type, lctlib_lai_max
     CHARACTER(len=*), PARAMETER :: routine = modname//':q_pheno_init_bc'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -121,15 +121,15 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1,nblks
         DO ic = 1,nproma
-          IF (config_lai_max > 0.0_wp) THEN ! value is set in config script
+          IF (config_lai_max > 0.0_lp) THEN ! value is set in config script
             ! use configuration script value but constrain to plausbile values between 0.1 and 10
-            lai_max(ic,ib) = MAX(0.1_wp, MIN(10.0_wp, config_lai_max))
+            lai_max(ic,ib) = MAX(0.1_lp, MIN(10.0_lp, config_lai_max))
           ELSE ! use lctlib parameter if config%lai_max was not set (i.e., -1.0)
             lai_max(ic,ib) = lctlib_lai_max
           END IF
 
           ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
-          ! NOTE: false and true are of type REAL(wp)
+          ! NOTE: false and true are of type REAL(lp)
           IF (lctlib_phenology_type == ievergreen) THEN
             growing_season(ic,ib) = true
           ELSE
@@ -143,7 +143,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO ib = 1,nblks
         DO ic = 1,nproma
-          lai_max(ic,ib)        = 1.0_wp
+          lai_max(ic,ib)        = 1.0_lp
           growing_season(ic,ib) = false
         END DO
       END DO

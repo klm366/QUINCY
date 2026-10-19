@@ -16,7 +16,7 @@
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: lp
   USE mo_jsb_math_constants,   ONLY: eps8
 
   IMPLICIT NONE
@@ -46,18 +46,18 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element
-    REAL(wp)             :: delta               !< isotope ratio against standard (per mill)
+    REAL(lp), INTENT(in) :: element             !< base element (including the isotope)
+    REAL(lp), INTENT(in) :: isotope             !< isotope of element
+    REAL(lp)             :: delta               !< isotope ratio against standard (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
 
 
-    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
-       delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._lp) THEN
+       delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_lp ) * 1000._lp
     ELSE
-       delta = 0.0_wp
+       delta = 0.0_lp
     ENDIF
 
   END FUNCTION calc_delta_C13
@@ -79,14 +79,14 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
+    REAL(lp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
+    REAL(lp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C13C12'
 
 
-    mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * PDB_STANDARD_C13
+    mixing_ratio = ( delta / 1000._lp + 1.0_lp ) * PDB_STANDARD_C13
 
   END FUNCTION calc_mixing_ratio_C13C12
 
@@ -109,20 +109,20 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope) (mol)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element (micro-mol)
-    REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
-    REAL(wp)             :: Delta               !< C14 isotope ratio against standard, corrected for delta C13 (per mill)
+    REAL(lp), INTENT(in) :: element             !< base element (including the isotope) (mol)
+    REAL(lp), INTENT(in) :: isotope             !< isotope of element (micro-mol)
+    REAL(lp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
+    REAL(lp)             :: Delta               !< C14 isotope ratio against standard, corrected for delta C13 (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
 
 
-    IF(element > eps8 .AND. (element * isotope) > 0._wp) THEN
+    IF(element > eps8 .AND. (element * isotope) > 0._lp) THEN
        Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * &
-               (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp
+               (1._lp - (2._lp* (25._lp + delta_C13)) /1000._lp) - 1._lp) * 1000._lp
     ELSE
-       Delta = 0.0_wp
+       Delta = 0.0_lp
     ENDIF
 
   END FUNCTION calc_delta_C14
@@ -146,17 +146,17 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
-    REAL(wp), INTENT(in) :: Delta_C14           !< Delta C14 of the pool/flux
-    REAL(wp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C
+    REAL(lp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
+    REAL(lp), INTENT(in) :: Delta_C14           !< Delta C14 of the pool/flux
+    REAL(lp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C14C'
 
 
-    mixing_ratio = ( Delta_C14 / 1000._wp + 1._wp ) / &
+    mixing_ratio = ( Delta_C14 / 1000._lp + 1._lp ) / &
                    ( ( AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) ) * &
-                     (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) ) * &
+                     (1._lp - (2._lp* (25._lp + delta_C13)) /1000._lp) ) * &
                    scale_correction_C14
 
   END FUNCTION calc_mixing_ratio_C14C
@@ -178,18 +178,18 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: element             !< base element (including the isotope)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element
-    REAL(wp)             :: delta               !< isotope ratio against standard (per mill)
+    REAL(lp), INTENT(in) :: element             !< base element (including the isotope)
+    REAL(lp), INTENT(in) :: isotope             !< isotope of element
+    REAL(lp)             :: delta               !< isotope ratio against standard (per mill)
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
 
 
-    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
-       delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_wp ) * 1000._wp
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._lp) THEN
+       delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_lp ) * 1000._lp
     ELSE
-       delta = 0.0_wp
+       delta = 0.0_lp
     ENDIF
 
   END FUNCTION calc_delta_N15
@@ -211,14 +211,14 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
+    REAL(lp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
+    REAL(lp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_N15N14'
 
 
-    mixing_ratio = ( delta / 1000._wp + 1.0_wp ) * ATM_STANDARD_N15
+    mixing_ratio = ( delta / 1000._lp + 1.0_lp ) * ATM_STANDARD_N15
 
   END FUNCTION calc_mixing_ratio_N15N14
 
@@ -238,14 +238,14 @@ CONTAINS
      IMPLICIT NONE
      ! ---------------------------
      ! 0.1 InOut
-     REAL(wp), INTENT(in)           :: source_element     !< mol of element (sum of all isotopes) in source material
-     REAL(wp), INTENT(in)           :: source_isotope     !< mol of the discriminated isotope in source material
-     REAL(wp), INTENT(in)           :: discrimination     !< discrimination of transfer process (per mill)
-     REAL(wp), INTENT(in), OPTIONAL :: source_isotope2    !< mol of the co-occurring discriminated isotope in source material (13C)
-     REAL(wp)                       :: fractionation      !< fraction of the total flux that is isotope
+     REAL(lp), INTENT(in)           :: source_element     !< mol of element (sum of all isotopes) in source material
+     REAL(lp), INTENT(in)           :: source_isotope     !< mol of the discriminated isotope in source material
+     REAL(lp), INTENT(in)           :: discrimination     !< discrimination of transfer process (per mill)
+     REAL(lp), INTENT(in), OPTIONAL :: source_isotope2    !< mol of the co-occurring discriminated isotope in source material (13C)
+     REAL(lp)                       :: fractionation      !< fraction of the total flux that is isotope
      ! ---------------------------
      ! 0.2 Local
-     REAL(wp)                    :: Rsource,Rsink,hlp1,hlp2
+     REAL(lp)                    :: Rsource,Rsink,hlp1,hlp2
      CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fractionation'
 
 
@@ -256,21 +256,21 @@ CONTAINS
         IF((source_element - source_isotope) > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
         ELSE
-           Rsource = 0.0_wp
+           Rsource = 0.0_lp
         ENDIF
 
         ! molar mixing ratio of the isotope with the main element in the product of the reaction
         ! from Discrimination = ( Rsource/Rsink - 1 ) * 1000
-        Rsink = Rsource / (discrimination/1000._wp + 1._wp)
+        Rsink = Rsource / (discrimination/1000._lp + 1._lp)
 
         ! Since here the processes fluxes F are represented as the sum of all isotopes of an element
         ! (main: E and its isotope: I)
         ! F = E + I, with I/E = Rsink follows that
         !   = I/Rsink + I = ( 1/ Rsink + 1 ) * I => I = F * 1 / ( 1 + 1 / Rsink )
         IF( Rsink > eps8) THEN
-          fractionation = 1._wp / (1._wp + 1._wp/Rsink)
+          fractionation = 1._lp / (1._lp + 1._lp/Rsink)
         ELSE
-          fractionation = 0.0_wp
+          fractionation = 0.0_lp
         ENDIF
      !> 2.0  ..
      !!

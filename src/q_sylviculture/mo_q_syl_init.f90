@@ -16,9 +16,9 @@
 !>#### initialization of sylviculture memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_syl_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
@@ -83,7 +83,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(Q_SYL_, fract_wood_to_slash)
 
       ! QS previously used a wood_extraction_rate of 0.8, thus, we use an initial default slash of 0.2 (= 1.0 - 0.8)
-      fract_wood_to_slash(:,:) = 0.2_wp
+      fract_wood_to_slash(:,:) = 0.2_lp
 
 #ifndef __QUINCY_STANDALONE__
       ! for IQ slash is overwritten with spatially varrying values from a bc file
@@ -105,7 +105,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp), POINTER ::  &
+    REAL(lp), POINTER ::  &
       & ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
 
@@ -159,7 +159,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: fract_forest_harvest_y_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(lp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_harvest_data

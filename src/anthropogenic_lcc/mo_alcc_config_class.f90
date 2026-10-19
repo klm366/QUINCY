@@ -1,4 +1,4 @@
-!> alcc config - defines vgrid required in alcc memory
+!> Contains structures and methods for alcc config
 !>
 !> ICON-Land
 !>
@@ -11,16 +11,16 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain namelist info (e.g. alcc scheme), but currently of no use beyond infrastructural requirements
+!>#### Configuration of the alcc process
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
-  USE mo_util_string,        ONLY: tolower
+  USE mo_util,               ONLY: tolower
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -28,7 +28,6 @@ MODULE mo_alcc_config_class
   PUBLIC :: t_alcc_config
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
-     INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix
        !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
@@ -65,7 +64,7 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: scheme
     LOGICAL                       :: l_daily_alcc
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
-    INTEGER                       :: i, nr_of_pfts
+    INTEGER                       :: i
 
     NAMELIST /jsb_alcc_nml/      &
          active,                 &
@@ -74,8 +73,7 @@ CONTAINS
          bc_filename,            &
          alcc_filename_prefix,   &
          scheme,                 &
-         l_daily_alcc,           &
-         nr_of_pfts
+         l_daily_alcc
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -89,8 +87,7 @@ CONTAINS
     lrestart_cont        = .FALSE.       ! TRUE: Continue although ALCC variables are missing in restart file
     bc_filename          = 'bc_land_alcc.nc'
     ic_filename          = 'ic_land_alcc.nc'
-    alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    nr_of_pfts           = 11
+    alcc_filename_prefix = 'bc_land_frac_'
     scheme               = 'maps'
     l_daily_alcc         = .TRUE.
 
@@ -108,31 +105,25 @@ CONTAINS
     config%alcc_filename_prefix = alcc_filename_prefix
     config%scheme               = scheme
     config%l_daily_alcc         = l_daily_alcc
-    config%nr_of_pfts           = nr_of_pfts
 
-    SELECT CASE (TRIM(tolower(config%scheme)))
-    CASE ('maps')
-      CALL message(TRIM(routine), 'Reading land use data from maps.')
-      config%scheme=tolower(config%scheme)
+    IF (config%active) THEN
+      SELECT CASE (TRIM(tolower(config%scheme)))
+      CASE ('maps')
+        CALL message(TRIM(routine), 'Reading land use data from maps.')
+        config%scheme=tolower(config%scheme)
 
-      IF (l_daily_alcc) THEN
-        CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
-          &                       //' as target land cover to reach by the end of the year.')
-      ELSE
-        CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
-          &                       //' reading the land cover map of the current year to be applied in the first timestep.')
-      END IF
+        IF (l_daily_alcc) THEN
+          CALL message(TRIM(routine), '... land use change will be applied on a daily basis, reading next years land cover map' &
+            &                       //' as target land cover to reach by the end of the year.')
+        ELSE
+          CALL message(TRIM(routine), '... land use change will be applied on an annual basis,' &
+            &                       //' reading the land cover map of the current year to be applied in the first timestep.')
+        END IF
 
-    CASE DEFAULT
-      CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
-    END SELECT
-
-    ! Create vertical axis
-    ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?
-    ! -> + this grid might be useful in other contexts, too?
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
-      & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
-    CALL register_vgrid(pft_layer)
+      CASE DEFAULT
+        CALL finish(TRIM(routine), 'Not implemented alcc scheme specified: '// TRIM(config%scheme))
+      END SELECT
+    END IF
 
   END SUBROUTINE Init_alcc_config
 

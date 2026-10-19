@@ -23,8 +23,8 @@
   * provide a brief description of the changes
 * compile with NAG / nvhpc at levante and run:
   * JSBACH:
-    * [ ] land_jsbach_R2B4_test with `--enable-quincy` CPU (NAG)
-    * [ ] land_jsbach_R2B4_test with `--disable-quincy` CPU (NAG)
+    * [ ] land_jsbach_R2B4_test with CPU (NAG)
+    * [ ] land_jsbach_R2B4_test with CPU (NAG)
   * QUINCY with JSBACH soil-physics enabled:
     * [ ] exp.land_quincy_canopy_R2B4_test (NAG)
     * [ ] exp.land_quincy_canopy_R2B4_test with gpu.nvhpc
@@ -34,5 +34,3 @@
 * ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository
-
-closes issue [add link (full url) to issue]

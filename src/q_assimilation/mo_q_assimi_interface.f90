@@ -16,9 +16,9 @@
 !>#### definition and init of tasks for the assimilation process (photosynthesis) incl. update and aggregate routines
 !>
 MODULE mo_q_assimi_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
@@ -27,6 +27,7 @@ MODULE mo_q_assimi_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_quincy_model_config, ONLY: QLAND, QPLANT
 
   dsl4jsb_Use_processes Q_ASSIMI_
   dsl4jsb_Use_config(Q_ASSIMI_)
@@ -257,7 +258,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model
     CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
-    REAL(wp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
+    REAL(lp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
     INTEGER                           :: iblk, nc, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -275,18 +276,13 @@ CONTAINS
 
     ! Q_ASSIMI_ 2D
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C13      , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, gross_assimilation_C14      , weighted_by_fract)
+    END SELECT
     dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, canopy_cond                 , weighted_by_fract)
-    IF (model%config%use_soil_phys_jsbach) THEN
-      ! only with jsbach soil physics processes enabled, otherwise calculated with SPQ_
-      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
-    END IF
-    ! Q_ASSIMI_ 3D
-    IF (.NOT. model%config%use_soil_phys_jsbach) THEN
-      ! only with SPQ_ calculated in update_canopy_fluxes
-      dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, ftranspiration_sl           , weighted_by_fract)
-    END IF
+    dsl4jsb_Aggregate_onChunk(Q_ASSIMI_, wtr_soil_root_pot           , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE aggregate_canopy_fluxes
@@ -294,7 +290,6 @@ CONTAINS
   ! ======================================================================================================= !
   !>Implementation of "update": ftranspiration_per_sl task
   !>
-  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
   !>
   SUBROUTINE update_ftranspiration_per_sl(tile, options)
     USE mo_q_assimi_process, ONLY: real_update_ftranspiration_per_sl => update_ftranspiration_per_sl
@@ -321,7 +316,7 @@ CONTAINS
   !>
   !>  plus: correction of ftranspiration_sl after aggregation
   !>
-  !>  called only with QUINCY and jsbach soil physics processes (not with SPQ_)
+  !>  called only with QUINCY and jsbach soil physics processes
   !>
   SUBROUTINE aggregate_ftranspiration_per_sl(tile, options)
     USE mo_jsb_math_constants,     ONLY: eps8
@@ -333,9 +328,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model
     CLASS(t_jsb_aggregator),  POINTER :: weighted_by_fract
-    REAL(wp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
-    REAL(wp)                          :: ftranspiration_sum_mult(options%nc)      !< SUM(ftranspiration_sl) across soil layers
-                                                                                  !! multiplied by 1.E6_wp to avoide precision issues at some grid cells
+    REAL(lp)                          :: ftranspiration_sum(options%nc)           !< SUM(ftranspiration_sl) across soil layers
+    REAL(lp)                          :: ftranspiration_sum_mult(options%nc)      !< SUM(ftranspiration_sl) across soil layers
+                                                                                  !! multiplied by 1.E6_lp to avoide precision issues at some grid cells
     INTEGER                           :: iblk, ics, ice
     INTEGER                           :: nc, ic, is
     INTEGER                           :: nsoil
@@ -372,8 +367,8 @@ CONTAINS
     ! init ftranspiration_sum with zero
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
-      ftranspiration_sum(ic)      = 0.0_wp
-      ftranspiration_sum_mult(ic) = 0.0_wp
+      ftranspiration_sum(ic)      = 0.0_lp
+      ftranspiration_sum_mult(ic) = 0.0_lp
     END DO
     !$ACC END PARALLEL LOOP
     ! calc ftranspiration_sum across soil layers
@@ -387,7 +382,7 @@ CONTAINS
       !$ACC LOOP GANG VECTOR
       DO ic = 1, nc
         ftranspiration_sum(ic)      = ftranspiration_sum(ic)      + ftranspiration_sl(ic, is)
-        ftranspiration_sum_mult(ic) = ftranspiration_sum_mult(ic) + ftranspiration_sl(ic, is) * 1.E6_wp
+        ftranspiration_sum_mult(ic) = ftranspiration_sum_mult(ic) + ftranspiration_sl(ic, is) * 1.E6_lp
       END DO
     END DO
     !$ACC END PARALLEL
@@ -398,14 +393,14 @@ CONTAINS
         IF (ftranspiration_sum(ic) > eps8) THEN
           ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) / ftranspiration_sum(ic)
         ELSE IF (ftranspiration_sum_mult(ic) > eps8) THEN
-          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) * 1.E6_wp / ftranspiration_sum_mult(ic)
+          ftranspiration_sl(ic, is) = ftranspiration_sl(ic, is) * 1.E6_lp / ftranspiration_sum_mult(ic)
         ELSE
         ! this may lead to a detectable mass balance error in the water balance
         ! the code cannot deal with fractions of a bare tile larger than 0.9999 (E-14)
           IF (is == 1) THEN
-            ftranspiration_sl(ic, is) = 1.0_wp
+            ftranspiration_sl(ic, is) = 1.0_lp
           ELSE
-            ftranspiration_sl(ic, is) = 0.0_wp
+            ftranspiration_sl(ic, is) = 0.0_lp
           END IF
         END IF
       END DO

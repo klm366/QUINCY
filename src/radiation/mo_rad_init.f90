@@ -14,7 +14,7 @@
 MODULE mo_rad_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
@@ -36,7 +36,7 @@ MODULE mo_rad_init
   PUBLIC :: rad_init
 
   TYPE t_rad_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(lp), POINTER ::  &
       & alb_background(:,:), &
       & alb_vis_soil  (:,:), &
       & alb_nir_soil  (:,:), &
@@ -119,11 +119,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
 
-    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
-    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
+    ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_lp
+    ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_lp
 
-    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
-    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
+    ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_lp
+    ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_lp
 
     ! these variables are initialized with the mem%Add_var() routine in addition (same values) !
     alb_vis(:,:)                        = AlbedoVisInitial
@@ -155,7 +155,7 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
 
     TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER  :: ptr_2D(:,:)
+    REAL(lp), POINTER  :: ptr_2D(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_read_init_vars'
 
@@ -193,19 +193,19 @@ CONTAINS
     ptr_2D => input_file%Read_2d( &
       & variable_name='albedo',           &
       & fill_array = rad_init_vars%alb_background)
-    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    ptr_2D = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
 
     ! soil albedo
     IF (tile%contains_soil) THEN
       ptr_2D => input_file%Read_2d( &
         & variable_name='albedo_soil_vis',  &
         & fill_array = rad_init_vars%alb_vis_soil)
-      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ptr_2D = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
 
       ptr_2D => input_file%Read_2d( &
         & variable_name='albedo_soil_nir',  &
         & fill_array = rad_init_vars%alb_nir_soil)
-      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ptr_2D = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
     END IF
 
     IF (tile%contains_vegetation) THEN
@@ -214,7 +214,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d( &
           & variable_name='albedo_veg_vis',   &
           & fill_array = rad_init_vars%alb_vis_can)
-        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        ptr_2D = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
       ELSE
         rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
       END IF
@@ -222,7 +222,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d( &
           & variable_name='albedo_veg_nir',   &
           & fill_array = rad_init_vars%alb_nir_can)
-        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        ptr_2D = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
       ELSE
         rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
@@ -269,7 +269,7 @@ CONTAINS
     dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_memory(RAD_)
 
-    REAL(wp) :: albedo_age_weight
+    REAL(lp) :: albedo_age_weight
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
@@ -351,15 +351,14 @@ CONTAINS
 
       ! Weight between age and temperature impact on snow albedo for snow on canopy
       dsl4jsb_Config(RAD_)%AlbedoCanopySnow = &
-        & albedo_age_weight * AlbedoCanopySnow_age + (1._wp - albedo_age_weight) * AlbedoCanopySnow_temp
+        & albedo_age_weight * AlbedoCanopySnow_age + (1._lp - albedo_age_weight) * AlbedoCanopySnow_temp
 
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)   =  150.0_wp
-        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)    =  150.0_wp
-        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)   =  10.0_wp
-        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_wp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)   =  150.0_lp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)    =  150.0_lp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)   =  10.0_lp
+        dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)    =  10.0_lp
 
         !$ACC UPDATE ASYNC(1) &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_sunlit_tfrac_mavg_cl)) &
@@ -367,8 +366,6 @@ CONTAINS
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)) &
         !$ACC   DEVICE(dsl4jsb_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl))
       END SELECT
-#endif
-
     END IF
     !$ACC WAIT(1)
 

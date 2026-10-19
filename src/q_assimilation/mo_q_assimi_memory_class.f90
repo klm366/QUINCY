@@ -16,9 +16,9 @@
 !>#### definition and init of (memory) variables for the assimilation process
 !>
 MODULE mo_q_assimi_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -253,7 +253,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('gross_assimilation_cl', mem%gross_assimilation_cl, &
@@ -265,7 +265,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('ftranspiration_sl', mem%ftranspiration_sl, &
@@ -277,7 +277,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('aerodyn_cond', mem%aerodyn_cond, &
         & hgrid, surface, &
@@ -288,7 +288,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('canopy_cond_cl', mem%canopy_cond_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -299,7 +299,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_conc_leaf_cl', mem%co2_conc_leaf_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -310,7 +310,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('gross_assimilation_C13', mem%gross_assimilation_C13, &
         & hgrid, surface, &
@@ -321,7 +321,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('gross_assimilation_C14', mem%gross_assimilation_C14, &
@@ -333,7 +333,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation', mem%net_assimilation, &
@@ -345,7 +345,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation_boc', mem%net_assimilation_boc, &
@@ -357,7 +357,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('maint_respiration_leaf', mem%maint_respiration_leaf, &
@@ -369,7 +369,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('net_assimilation_cl', mem%net_assimilation_cl, &
@@ -381,7 +381,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
@@ -393,7 +393,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('beta_air', mem%beta_air, &
@@ -405,7 +405,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soa', mem%beta_soa, &
         & hgrid, surface, &
@@ -416,7 +416,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_ps', mem%beta_soil_ps, &
         & hgrid, surface, &
@@ -427,7 +427,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs', mem%beta_soil_gs, &
         & hgrid, surface, &
@@ -438,7 +438,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('canopy_cond', mem%canopy_cond, &
         & hgrid, surface, &
@@ -449,7 +449,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_conc_leaf', mem%co2_conc_leaf, &
         & hgrid, surface, &
@@ -460,7 +460,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_jmax_opt', mem%t_jmax_opt, &
         & hgrid, surface, &
@@ -471,7 +471,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('vpd', mem%vpd, &
         & hgrid, surface, &
@@ -482,7 +482,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('jmax_cl', mem%jmax_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -493,7 +493,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('vcmax_cl', mem%vcmax_cl, &
@@ -505,7 +505,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all=.TRUE.)
 
       CALL mem%Add_var('chlfl_yield_cl', mem%chlfl_yield_cl, &
@@ -517,7 +517,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('soa_tsoa_mavg', mem%soa_tsoa_mavg, &
         & hgrid, surface, &
@@ -528,7 +528,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_air_daytime', mem%beta_air_daytime, &
         & hgrid, surface, &
@@ -539,7 +539,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_air_daytime_dacc', mem%beta_air_daytime_dacc, &
         & hgrid, surface, &
@@ -550,7 +550,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_air_tfrac_mavg', mem%beta_air_tfrac_mavg, &
         & hgrid, surface, &
@@ -561,7 +561,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_air_tcnl_mavg', mem%beta_air_tcnl_mavg, &
         & hgrid, surface, &
@@ -572,7 +572,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soa_tphen_mavg', mem%beta_soa_tphen_mavg, &
         & hgrid, surface, &
@@ -583,7 +583,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_ps_daytime', mem%beta_soil_ps_daytime, &
         & hgrid, surface, &
@@ -594,7 +594,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_ps_daytime_dacc', mem%beta_soil_ps_daytime_dacc, &
         & hgrid, surface, &
@@ -605,7 +605,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_ps_tfrac_mavg', mem%beta_soil_ps_tfrac_mavg, &
         & hgrid, surface, &
@@ -616,7 +616,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_ps_tcnl_mavg', mem%beta_soil_ps_tcnl_mavg, &
         & hgrid, surface, &
@@ -627,7 +627,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs_daytime', mem%beta_soil_gs_daytime, &
         & hgrid, surface, &
@@ -638,7 +638,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs_daytime_dacc', mem%beta_soil_gs_daytime_dacc, &
         & hgrid, surface, &
@@ -649,7 +649,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs_tphen_mavg', mem%beta_soil_gs_tphen_mavg, &
         & hgrid, surface, &
@@ -660,7 +660,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs_tfrac_mavg', mem%beta_soil_gs_tfrac_mavg, &
         & hgrid, surface, &
@@ -671,7 +671,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_soil_gs_tcnl_mavg', mem%beta_soil_gs_tcnl_mavg, &
         & hgrid, surface, &
@@ -682,7 +682,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var( 'wtr_soil_root_pot', mem%wtr_soil_root_pot, &
         & hgrid, surface, &
@@ -691,7 +691,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & lrestart = .TRUE., &
-        & initval_r=0.0_wp)
+        & initval_r=0.0_lp)
 
     END IF
   END SUBROUTINE Init_q_assimi_memory

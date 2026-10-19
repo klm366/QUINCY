@@ -33,7 +33,7 @@ comp=gfortran
 if [[ $OSTYPE = "darwin"* ]]; then
 	cdo=${HOME}/anaconda3/envs/dyhdenv/bin/cdo
 else
-	cdo=cdo
+	cdo=$cdo
 fi
 
 # **** Zusammenfassen der Parameterdateien in Inputdatei hdpara.srv

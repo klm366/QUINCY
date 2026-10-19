@@ -1,4 +1,4 @@
-!> Contains structures and methods for soil and snow energy config
+!> Contains the configuration type and setup routines for the soil and snow energy process.
 !>
 !> ICON-Land
 !>
@@ -11,12 +11,19 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Configuration of the soil and snow energy process
+!>
+!> The module defines the data structure [[t_sse_config]] that contains the soil and snow energy
+!> configuration, i.e. all soil and snow energy variables that are configurable via namelist.
+!> In subroutine [[Init_sse_config]] we read the soil and snow energy namelist 'jsb_sse_nml'
+!> and set the configuration data structure accordingly. We also perform some consistency checks.
+!>
 MODULE mo_sse_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_util,              ONLY: real2string, int2string
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -25,36 +32,43 @@ MODULE mo_sse_config_class
   PRIVATE
 
   PUBLIC :: t_sse_config
+  PUBLIC :: max_soil_layers, max_snow_layers
 
+  !> The data structure contains the configurable parameters of the SSE process. It extends
+  !> [[mo_jsb_config_class:t_jsb_config]], which provides the common process settings shared
+  !> by all ICON-Land processes.
+  !>
+  !> The additional fields in this type control the snow discretization, the soil thermal
+  !> parameterization, and the treatment of freezing, soil-texture-based properties, and
+  !> QUINCY-specific data.
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
-    INTEGER  :: nsnow           !< Maximum number of snow layers
-    LOGICAL  :: l_snow          !< T: Use multi-layer snow scheme;
-                                !  Note: This affects thermal snow and soil properties:
-                                !  l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective if l_snow=.true.
-    LOGICAL  :: l_dynsnow       !< T: Calculate snow heat cond. and heat cap. dynamically depending on snow density
-    LOGICAL  :: l_heat_cap_dyn  !< T: Dynamic calculation of soil heat capacity;
-                                !  F: Static map or FAO data, depending on l_heat_cap_map
-    LOGICAL  :: l_heat_cond_dyn !< T: Dynamic calculation of soil heat conductivity;
-                                !  F: Static map or FAO data, depending on l_heat_cond_map
+    INTEGER  :: nsnow           !< Maximum number of snow layers used in the vertical snow discretization
+    LOGICAL  :: l_dynsnow       !< Switch for dynamic snow heat conductivity and heat capacity depending on snow density
+    LOGICAL  :: l_heat_cap_dyn  !< Switch for dynamic soil heat capacity; .TRUE. uses dynamic calculation,
+                                !< .FALSE. uses a static map or FAO-based estimate depending on l_heat_cap_map
+    LOGICAL  :: l_heat_cond_dyn !< Switch for dynamic soil heat conductivity; .TRUE. uses dynamic calculation,
+                                !< .FALSE. uses a static map or FAO-based estimate depending on l_heat_cond_map
     !
-    LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
-    LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
-    LOGICAL  :: l_heat_cap_pond !< T: Account for the heat capacity of ponds in the top soil layer heat capacity.
-    LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
-    LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
-    LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
-    LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
-    REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
-                                !! temperature for freezing/melting [m water equivalent]
-    ! quincy
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
-    INTEGER                     :: quincy_nsoil_e           !< number of soil layers for soil energy calculations (equivalent 'quincy_nsoil_w' in HYDRO_)
+    LOGICAL  :: l_heat_cap_map  !< Use soil heat capacity from an input map instead of deriving it from other soil properties
+    LOGICAL  :: l_heat_cond_map !< Use soil heat conductivity from an input map instead of
+                                !< deriving it from heat capacity and FAO data
+    LOGICAL  :: l_heat_cap_pond !< Account for the heat capacity of pond water in the top soil layer heat capacity
+    LOGICAL  :: l_soil_texture  !< Derive mineral soil thermal parameters from soil texture information
+    LOGICAL  :: l_freeze        !< Consider freezing and thawing of soil water
+    LOGICAL  :: l_supercool     !< Allow for supercooled soil water
+    LOGICAL  :: l_uniform_snow  !< Temporary workaround to use a uniform snow fraction for soil temperature computations
+    REAL(lp) :: w_soil_critical !< Critical water/ice content in the upper soil layer used to correct
+                                !< the surface temperature during freezing and melting [m water equivalent]
+    ! QUINCY-specific configuration
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< Name of the input file containing QUINCY soil data
+    INTEGER                     :: quincy_nsoil_e           !< Number of soil layers for soil energy calculations
+                                !< (equivalent to quincy_nsoil_w in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
-    ! quincy standalone
-    REAL(wp) :: qs_soil_sand         !< soil sand proportion - site specific from forcing info file
-    REAL(wp) :: qs_soil_silt         !< soil silt proportion - site specific from forcing info file
-    REAL(wp) :: qs_soil_clay         !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp) :: qs_bulk_density      !< soil bulk density
+    ! QUINCY standalone options
+    REAL(lp) :: qs_soil_sand         !< Site-specific sand fraction for the standalone setup
+    REAL(lp) :: qs_soil_silt         !< Site-specific silt fraction for the standalone setup
+    REAL(lp) :: qs_soil_clay         !< Site-specific clay fraction, derived as clay = 1 - sand - silt
+    REAL(lp) :: qs_bulk_density      !< Soil bulk density [kg m-3]
 #endif
 
   CONTAINS
@@ -68,6 +82,19 @@ MODULE mo_sse_config_class
 
 CONTAINS
 
+  ! ============================================================================================== !
+  !>
+  !>#### Configuration of the soil and snow energy process
+  !>
+  !> Configure the soil and snow energy process from the settings in the namelist
+  !> 'jsb_sse_nml'. Init_sse_config is a type-bound procedure of [[t_sse_config]] and is
+  !> called during the model initialization phase from
+  !> [[mo_jsb_model_class:Configure_model_processes]].
+  !>
+  !> The routine validates the requested configuration, creates the vertical grid for the
+  !> soil-energy scheme when needed, and stores the resulting settings in the configuration
+  !> object. For a more extensive description of the namelist parameters, see [[t_sse_config]].
+  !>
   SUBROUTINE Init_sse_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -80,33 +107,47 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, lrestart_cont
-    LOGICAL  :: l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_heat_cap_pond
-    LOGICAL  :: l_freeze, l_supercool, l_soil_texture, l_uniform_snow
-    REAL(wp) :: w_soil_critical
-    INTEGER  :: nsnow
-    REAL(wp) :: dz_snow(max_snow_layers)
-    CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    LOGICAL  :: active           !< Switch that activates the soil and snow energy process.
+    LOGICAL  :: lrestart_cont    !< Continue even if SSE variables are missing in the restart data.
+    LOGICAL  :: l_dynsnow        !< Switch for dynamic snow heat conductivity and heat capacity depending on snow density.
+    LOGICAL  :: l_heat_cap_dyn   !< Switch for dynamic soil heat capacity.
+    LOGICAL  :: l_heat_cond_dyn  !< Switch for dynamic soil heat conductivity.
+    LOGICAL  :: l_heat_cap_map   !< Use soil heat capacity from an input map
+                                 !< instead of deriving it from other soil properties.
+    LOGICAL  :: l_heat_cond_map  !< Use soil heat conductivity from an input map
+                                 !< instead of deriving it from heat capacity and FAO data.
+    LOGICAL  :: l_heat_cap_pond  !< Account for the heat capacity of pond water in the top soil layer.
+    LOGICAL  :: l_freeze         !< Consider freezing and thawing of soil water.
+    LOGICAL  :: l_supercool      !< Allow for supercooled soil water.
+    LOGICAL  :: l_soil_texture   !< Derive mineral soil thermal parameters from soil texture information.
+    LOGICAL  :: l_uniform_snow   !< Temporary workaround to use a uniform snow fraction for soil temperature computations.
+    REAL(lp) :: w_soil_critical  !< Critical water/ice content in the upper soil layer used to correct the surface temperature
+                                 !< during freezing and melting [m water equivalent].
+    INTEGER  :: nsnow            !< Maximum number of snow layers used in the vertical snow discretization.
+    REAL(lp) :: dz_snow(max_snow_layers) !< Snow-layer thicknesses [m] used to define the vertical snow discretization.
+    CHARACTER(len=filename_max) :: ic_filename !< Name of the input file containing the initial-condition data.
+    CHARACTER(len=filename_max) :: bc_filename !< Name of the input file containing the boundary-condition data.
 
-    ! quincy
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
-    REAL(wp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
-    REAL(wp) :: k_soil_profile  !< for soil layer calculations
-    REAL(wp) :: min_layer_depth !< for soil layer calculations
-    INTEGER  :: isoil           !< loop over soil layers
-    INTEGER  :: quincy_nsoil_e  !< quincy specific number of soil layers
+    ! QUINCY-specific configuration
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename !< Name of the input file containing QUINCY soil data.
+    REAL(lp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< Initial estimate of the
+                                 !< soil-layer upper bounds used to build the default profile [m].
+    REAL(lp) :: k_soil_profile   !< Exponential growth factor for the default QUINCY soil-layer profile.
+    REAL(lp) :: min_layer_depth  !< Minimum thickness enforced for each soil layer.
+    INTEGER  :: isoil            !< Loop index over soil layers.
+    INTEGER  :: quincy_nsoil_e   !< Number of soil layers for soil energy calculations, equivalent to quincy_nsoil_w in HYDRO_.
 #ifdef __QUINCY_STANDALONE__
-    ! quincy standalone
-    REAL(wp) :: qs_soil_sand
-    REAL(wp) :: qs_soil_silt
-    REAL(wp) :: qs_soil_clay
-    REAL(wp) :: qs_bulk_density
+    ! QUINCY standalone options
+    REAL(lp) :: qs_soil_sand     !< Site-specific sand fraction for the standalone setup.
+    REAL(lp) :: qs_soil_silt     !< Site-specific silt fraction for the standalone setup.
+    REAL(lp) :: qs_soil_clay     !< Site-specific clay fraction, derived as clay = 1 - sand - silt.
+    REAL(lp) :: qs_bulk_density  !< Soil bulk density [kg m-3].
 #endif
 
     NAMELIST /jsb_sse_nml/                      &
       & active,                                 &
       & lrestart_cont,                          &
-      & nsnow, dz_snow, l_snow, l_dynsnow,      &
+      & nsnow, dz_snow, l_dynsnow,              &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
       & l_heat_cap_pond,                        &
@@ -123,15 +164,20 @@ CONTAINS
 #endif
       & quincy_nsoil_e
 
-    INTEGER :: nml_handler, nml_unit, istat, i
-    TYPE(t_input_file) :: input_file
-    REAL(wp), POINTER :: ptr_1D(:)
-    REAL(wp), ALLOCATABLE :: depths(:), mids(:)
-    REAL(wp), ALLOCATABLE :: dz_energy(:)               !< thickness of soil layers
-    REAL(wp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< upper bound of soil layers (larger value compared to lower bound)
-    INTEGER :: nsoil
+    INTEGER :: nml_handler                              !< Handle for the namelist input file.
+    INTEGER :: nml_unit                                 !< IO unit number used to read the namelist.
+    INTEGER :: istat                                    !< Status flag returned by namelist handling routines.
+    INTEGER :: i                                        !< Loop index
+    TYPE(t_input_file) :: input_file                    !< Input-file descriptor used for initial data.
+    REAL(lp), POINTER  :: ptr_1D(:)                     !< Temporary pointer to a one-dimensional real field.
+    REAL(lp), ALLOCATABLE :: depths(:)                  !< Depth levels used to construct the soil-layer profile.
+    REAL(lp), ALLOCATABLE :: mids(:)                    !< Midpoint depths of the vertical layers.
+    REAL(lp), ALLOCATABLE :: dz_energy(:)               !< Thickness of the soil layers.
+    REAL(lp), ALLOCATABLE :: ubounds_soil_lay_energy(:) !< Cumulative upper bounds of the soil layers.
+    INTEGER :: nsoil                                    !< Number of soil layers used in the SSE process.
 
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_e, vgrid_snow_e
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_e !< Vertical grid for the soil layers.
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_snow_e !< Vertical grid for the snow layers.
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_config'
 
@@ -141,9 +187,8 @@ CONTAINS
     active           = .TRUE.
     lrestart_cont    = .FALSE.  ! TRUE: Continue although SSE variables are missing in restart file
     nsnow            = 5
-    dz_snow(:)       = 0._wp
-    dz_snow(1:nsnow) = 0.05_wp
-    l_snow           = .TRUE.
+    dz_snow(:)       = 0._lp
+    dz_snow(1:nsnow) = 0.05_lp
     l_dynsnow        = .TRUE.
     l_heat_cap_dyn   = .TRUE.
     l_heat_cond_dyn  = .TRUE.
@@ -154,16 +199,17 @@ CONTAINS
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
     l_uniform_snow   = .TRUE.
-    w_soil_critical  = 5.85036E-3_wp
+    w_soil_critical  = 5.85036E-3_lp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
-    qs_soil_sand            = 0.3_wp
-    qs_soil_silt            = 0.4_wp
-    qs_soil_clay            = 0.3_wp
-    qs_bulk_density         = 1500.0_wp
+    quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
+    qs_soil_sand            = 0.3_lp
+    qs_soil_silt            = 0.4_lp
+    qs_soil_clay            = 0.3_lp
+    qs_bulk_density         = 1500.0_lp
 #endif
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -180,37 +226,17 @@ CONTAINS
     config%bc_quincy_soil_filename = bc_quincy_soil_filename
 
     config%nsnow         = nsnow
-    IF (l_snow .AND. nsnow > max_snow_layers) THEN
+    IF (nsnow > max_snow_layers) THEN
       CALL finish(TRIM(routine), 'Too many snow layers, maximum is '//TRIM(int2string(max_snow_layers)))
-    END IF
-    IF (l_snow .AND. nsnow < 3) THEN
+    ELSE IF (nsnow < 3) THEN
       CALL finish(TRIM(routine), 'Number of snow layers must be larger than 2.')
-    END IF
-    config%l_snow        = l_snow
-    IF (l_snow) THEN
-      CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     ELSE
-      CALL message(TRIM(routine), 'Not using multi-layer snow model')
+      CALL message(TRIM(routine), 'Using '//TRIM(int2string(nsnow))//' snow layers.')
     END IF
 
-    IF (.NOT. l_snow .AND. l_dynsnow) THEN
-      config%l_dynsnow = .FALSE.
-      CALL message(TRIM(routine), 'l_dynsnow not in effect for l_snow=.false.')
-    ELSE
-      config%l_dynsnow       = l_dynsnow
-    END IF
-    IF (.NOT. l_snow .AND. l_heat_cap_dyn) THEN
-      config%l_heat_cap_dyn = .FALSE.
-      CALL message(TRIM(routine), 'l_heat_cap_dyn not in effect for l_snow=.false.')
-    ELSE
-      config%l_heat_cap_dyn  = l_heat_cap_dyn
-    END IF
-    IF (.NOT. l_snow .AND. l_heat_cond_dyn) THEN
-      config%l_heat_cond_dyn = .FALSE.
-      CALL message(TRIM(routine), 'l_heat_cond_dyn not in effect for l_snow=.false.')
-    ELSE
-      config%l_heat_cond_dyn = l_heat_cond_dyn
-    END IF
+    config%l_dynsnow       = l_dynsnow
+    config%l_heat_cap_dyn  = l_heat_cap_dyn
+    config%l_heat_cond_dyn = l_heat_cond_dyn
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
     config%l_soil_texture  = l_soil_texture
@@ -228,6 +254,7 @@ CONTAINS
       CALL message(TRIM(routine), 'Assuming uniform snow cover for soil temperature computation')
     END IF
 
+    ! @Todo: This parameter does not seem to be used anywhere in the code. Check and remove if not needed.
     config%w_soil_critical     = w_soil_critical
     CALL message(TRIM(routine), 'Critical water/ice content in upper soil layer for correction of '// &
       &                         'surface temperature for freezing/melting: '//TRIM(real2string(w_soil_critical)))
@@ -238,7 +265,7 @@ CONTAINS
     ! quincy standalone
     config%qs_soil_sand    = qs_soil_sand
     config%qs_soil_silt    = qs_soil_silt
-    config%qs_soil_clay    = 1.0_wp - qs_soil_sand - qs_soil_silt
+    config%qs_soil_clay    = 1.0_lp - qs_soil_sand - qs_soil_silt
     config%qs_bulk_density = qs_bulk_density
 
     ! check for an error in clay content of soil
@@ -258,14 +285,14 @@ CONTAINS
 #ifndef __QUINCY_STANDALONE__
       input_file = jsb_netcdf_open_input(ic_filename)
 
-      ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
+      ! Note: At the moment, the soil layers for the energy calculations are the same as for the hydrology
       ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
       nsoil = SIZE(ptr_1D)
       ALLOCATE(depths(nsoil+1))
       ALLOCATE(mids(nsoil))
-      depths(1) = 0._wp
+      depths(1) = 0._lp
       depths(2:nsoil+1) = ptr_1D(1:nsoil)
-      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+      mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._lp
       DEALLOCATE(ptr_1D)
 
       CALL input_file%Close()
@@ -290,8 +317,8 @@ CONTAINS
       END IF
 
       ! parameter for soil layer calculations
-      k_soil_profile  = 0.25_wp
-      min_layer_depth = 0.065_wp
+      k_soil_profile  = 0.25_lp
+      min_layer_depth = 0.065_lp
 
       nsoil = config%quincy_nsoil_e
       ALLOCATE(ubounds_soil_lay_energy(nsoil))
@@ -302,17 +329,18 @@ CONTAINS
         DO isoil = 1,nsoil
           soil_layer_profile_ubound_estimate(isoil) = &
             &   min_layer_depth &
-            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, wp) / REAL(nsoil, wp)) &
+            &   * EXP(k_soil_profile * isoil * REAL(max_soil_layers, lp) / REAL(nsoil, lp)) &
             &   - min_layer_depth
         END DO
-        ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness
+        ! Final calculation of the soil profile, including layer thicknesses and the minimum
+        ! layer-thickness constraint
         dz_energy(1) = min_layer_depth
         DO isoil = 2,nsoil
           dz_energy(isoil) = MAX(min_layer_depth, &
             &   soil_layer_profile_ubound_estimate(isoil) - soil_layer_profile_ubound_estimate(isoil-1))
         END DO
       ELSE
-        dz_energy(1:nsoil) = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
+        dz_energy(1:nsoil) = (/0.065_lp,0.254_lp,0.913_lp,2.902_lp,5.700_lp/)
       END IF
 
       ! calc upper bound of soil layers (water and energy) from layer thickness
@@ -326,9 +354,9 @@ CONTAINS
       !!
       !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
       !!
-      !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
+      !! site-specific soil-layer thickness values are stored in soil_depth_sl \n
       !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
-      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+      !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_lp * (lbounds(:) + ubounds(:))
       vgrid_soil_e => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
         &   longname='Soil (energy) layers from SSE_ config', &
         &   units='m', &
@@ -355,37 +383,35 @@ CONTAINS
     !
     !> create vertical grid for snow energy calculations
     !
-    IF (l_snow) THEN
-      IF (dz_snow(1) < snow_depth_min) THEN
-        CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
-          &                         //real2string(snow_depth_min))
-      END IF
-      ALLOCATE(depths(nsnow+1))
-      ALLOCATE(mids(nsnow))
-      depths(1) = 0._wp
-      DO i=1,nsnow
-        depths(i+1) = depths(i) + dz_snow(i)
-      END DO
-      mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
-
-      vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
-        & levels    = mids                 (1:nsnow  ),                         &
-        & lbounds   = depths               (1:nsnow  ),                         &
-        & ubounds   = depths               (2:nsnow+1),                         &
-        & units='m')
-      CALL register_vgrid(vgrid_snow_e)
-
-      ! Info saved to logfile
-      WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_e%lbounds
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_e%levels
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_e%ubounds
-      CALL message(TRIM(routine), message_text)
-      WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_e%dz
-      CALL message(TRIM(routine), message_text)
-      DEALLOCATE(depths, mids)
+    IF (dz_snow(1) < snow_depth_min) THEN
+      CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
+        &                         //real2string(snow_depth_min))
     END IF
+    ALLOCATE(depths(nsnow+1))
+    ALLOCATE(mids(nsnow))
+    depths(1) = 0._lp
+    DO i=1,nsnow
+      depths(i+1) = depths(i) + dz_snow(i)
+    END DO
+    mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._lp
+
+    vgrid_snow_e  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
+      & levels    = mids                 (1:nsnow  ),                         &
+      & lbounds   = depths               (1:nsnow  ),                         &
+      & ubounds   = depths               (2:nsnow+1),                         &
+      & units='m')
+    CALL register_vgrid(vgrid_snow_e)
+
+    ! Info saved to logfile
+    WRITE(message_text, *) 'Snow levels in soil energy (upper) [m]: ', vgrid_snow_e%lbounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (mid)   [m]: ', vgrid_snow_e%levels
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow levels in soil energy (lower) [m]: ', vgrid_snow_e%ubounds
+    CALL message(TRIM(routine), message_text)
+    WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', vgrid_snow_e%dz
+    CALL message(TRIM(routine), message_text)
+    DEALLOCATE(depths, mids)
 
   END SUBROUTINE Init_sse_config
 

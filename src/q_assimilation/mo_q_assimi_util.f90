@@ -14,9 +14,9 @@
 !>#### various helper routines for the assimilation process
 !>
 MODULE mo_q_assimi_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_jsb_control, ONLY: debug_on
   USE mo_exception,   ONLY: message
 
@@ -129,7 +129,7 @@ CONTAINS
   !> calculate time moving averages and daytime averages for Q_ASSIMI_
   !>
   SUBROUTINE calculate_time_average_q_assimilation(tile, options)
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: test_false_true
@@ -149,8 +149,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER              :: model
     LOGICAL                                 :: l_growing_season     !< indicating if growing season or not
-    REAl(wp)                                :: hlp                  !< helper
-    REAL(wp)                                :: dtime                !< timestep
+    REAl(lp)                                :: hlp                  !< helper
+    REAL(lp)                                :: dtime                !< timestep
     INTEGER                                 :: ic                   !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_assimilation'
@@ -261,9 +261,9 @@ CONTAINS
           beta_soil_gs_daytime(ic) = beta_soil_gs_daytime_dacc(ic) / daytime_counter(ic)
         END IF
         ! zero the accumulation variables after daily average has been calculated
-        beta_air_daytime_dacc(ic)     = 0.0_wp
-        beta_soil_ps_daytime_dacc(ic) = 0.0_wp
-        beta_soil_gs_daytime_dacc(ic) = 0.0_wp
+        beta_air_daytime_dacc(ic)     = 0.0_lp
+        beta_soil_ps_daytime_dacc(ic) = 0.0_lp
+        beta_soil_gs_daytime_dacc(ic) = 0.0_lp
       END IF
 
       ! ----------------------------------------------------------------------------------------------------- !

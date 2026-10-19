@@ -16,9 +16,9 @@
 !>#### calculate decay of product pools
 !>
 MODULE mo_q_veg_products_decay
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -45,12 +45,13 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_
+    USE mo_jsb_process_class,     ONLY: VEG_, Q_SYL_, Q_AGR_, ALCC_
     USE mo_veg_constants,         ONLY: tau_pp_crop, tau_pp_fuelwood, tau_pp_paper, tau_pp_fiberboard, &
       &                                 tau_pp_oirw, tau_pp_pv, tau_pp_sawnwood
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
+    dsl4jsb_Use_config(ALCC_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -59,12 +60,13 @@ CONTAINS
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store                 !< the bgcm store of this tile
     INTEGER                           :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                           :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
-    REAL(wp)                          :: dtime                      !< timestep length
+    REAL(lp)                          :: dtime                      !< timestep length
     INTEGER                           :: iblk, ics, ice, nc         !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':update_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
+    dsl4jsb_Def_config(ALCC_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt1L2D :: veg_pp_crop_mt
     dsl4jsb_Def_mt1L2D :: veg_pp_fuel_mt
@@ -85,54 +87,51 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (dsl4jsb_Lctlib_param(BareSoilFlag)) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
-    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
+    dsl4jsb_Get_config(ALCC_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active)) THEN
+      ! The product pools are only filled by either sylviculture, agriculture or anthropogenic land cover change
+      ! if non of of these processes is active there is no need to calculate the decay
+      RETURN
+    END IF
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
 
-    IF ((dsl4jsb_Config(Q_SYL_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
-        & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
+    IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
+    END IF
 
-      dsl4jsb_Get_mt1L2D(VEG_BGCM_PROD_DECAY_ID, prod_decay_mt)
-
-      IF (dsl4jsb_Lctlib_param(CropFlag)) THEN
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_CROP_ID, veg_pp_crop_mt)
-      END IF
-
-      IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
-        dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
-      END IF
+    IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PAPER_ID, veg_pp_paper_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_FIBERBOARD_ID, veg_pp_fiberboard_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_OIRW_ID, veg_pp_oirw_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_PV_ID, veg_pp_pv_mt)
+      dsl4jsb_Get_mt1L2D(VEG_BGCM_PP_SAWNWOOD_ID, veg_pp_sawnwood_mt)
     END IF
     ! ----------------------------------------------------------------------------------------------------- !
 
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    IF ((dsl4jsb_Config(Q_SYL_)%active .AND. dsl4jsb_Lctlib_param(ForestFlag)) &
-        & .OR. (dsl4jsb_Config(Q_AGR_)%active .AND. dsl4jsb_Lctlib_param(CropFlag))) THEN
+    prod_decay_mt(:,:) = 0._lp
 
-      prod_decay_mt(:,:) = 0._wp
+    IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_crop, veg_pp_crop_mt, prod_decay_mt)
+    END IF
 
-      IF (dsl4jsb_Lctlib_param(CropFlag)) THEN
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_crop, veg_pp_crop_mt, prod_decay_mt)
-      END IF
-
-      IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
-        CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
-      END IF
+    IF (dsl4jsb_Config(Q_SYL_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fuelwood, veg_pp_fuel_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_paper, veg_pp_paper_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_fiberboard, veg_pp_fiberboard_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_oirw, veg_pp_oirw_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_pv, veg_pp_pv_mt, prod_decay_mt)
+      CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_sawnwood, veg_pp_sawnwood_mt, prod_decay_mt)
     END IF
 
   END SUBROUTINE update_products_decay
@@ -151,27 +150,27 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in) :: nc                    !< block dimension
-    REAL(wp),     INTENT(in) :: dtime                 !< timestep length
+    REAL(lp),     INTENT(in) :: dtime                 !< timestep length
     LOGICAL,      INTENT(in) :: l_element_used(:)     !< indicates which elements are in use
     INTEGER,      INTENT(in) :: elements_index_map(:) !< map bgcm element ID -> IX
-    REAL(wp),     INTENT(in) :: tau                   !< decay time of decaying product pool
-    REAL(wp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
-    REAL(wp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
+    REAL(lp),     INTENT(in) :: tau                   !< decay time of decaying product pool
+    REAL(lp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
+    REAL(lp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                          :: fract_turnover    !< turnover fraction
+    REAL(lp)                          :: fract_turnover    !< turnover fraction
     INTEGER                           :: ic, id_elem       !< loop counter
     INTEGER                           :: ix_elem           !< element index
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
     ! turnover fraction
-    fract_turnover = 1.0_wp / tau / one_day / one_year * dtime
+    fract_turnover = 1.0_lp / tau / one_day / one_year * dtime
 
     DO ic = 1,nc
       DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
         IF (l_element_used(id_elem)) THEN
           ix_elem = elements_index_map(id_elem)
           prod_decay_mt(ix_elem , ic) = prod_decay_mt(ix_elem , ic) + (veg_pp_mt(ix_elem , ic) * fract_turnover)
-          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._wp - fract_turnover)
+          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._lp - fract_turnover)
         END IF
       END DO
     END DO

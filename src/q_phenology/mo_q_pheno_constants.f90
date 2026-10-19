@@ -16,9 +16,9 @@
 !>#### declare and define phenology constants
 !>
 MODULE mo_q_pheno_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
 
   IMPLICIT NONE
   PUBLIC

@@ -1,4 +1,4 @@
-!> vegetation process config (QUINCY)
+!> QUINCY vegetation process config
 !>
 !> ICON-Land
 !>
@@ -16,14 +16,14 @@
 !>#### define vegetation config structure, read vegetation namelist and init configuration parameters
 !>
 MODULE mo_veg_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_io_units,            ONLY: filename_max
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
   USE mo_jsb_config_class,    ONLY: t_jsb_config
 
@@ -65,7 +65,6 @@ MODULE mo_veg_config_class
     LOGICAL          :: read_veg_state             !< TRUE: call veg_read_states (mo_veg_init) after init/restart from file
     LOGICAL          :: flag_dynamic_roots         !< roots across soil layers: fixed after init or dynamic over time
                                                    !! for the models QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION fixed roots are used
-                                                   !! by default; this is hard-coded in SPQ_ init
     LOGICAL          :: l_use_product_pools        !< enable product pools (required for crop/ and wood harvest processes); default: FALSE
     LOGICAL          :: flag_dynroots_h2o_n_limit  !< root growth across layers limited/affected by H2O and Nitrogen availability (needs flag_dynamic_roots="T")
     LOGICAL          :: flag_herbivory             !< whether herbivory (on grass PFT) is enabled
@@ -76,15 +75,15 @@ MODULE mo_veg_config_class
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of veg_constants parameters by the values of the below nml_* variables
-    REAL(wp)         :: nml_fmaint_rate_base
-    REAL(wp)         :: nml_fstore_sap_wood_max
-    REAL(wp)         :: nml_k_f_demand
-    REAL(wp)         :: nml_omega_nutrient_demand
-    REAL(wp)         :: nml_background_mort_rate_tree
-    REAL(wp)         :: nml_k_herbivory_grass
-    REAL(wp)         :: nml_k_herbivory_pasture
-    REAL(wp)         :: nml_sm2lm_grass
-    REAL(wp)         :: nml_k1_root_alloc
+    REAL(lp)         :: nml_fmaint_rate_base
+    REAL(lp)         :: nml_fstore_sap_wood_max
+    REAL(lp)         :: nml_k_f_demand
+    REAL(lp)         :: nml_omega_nutrient_demand
+    REAL(lp)         :: nml_background_mort_rate_tree
+    REAL(lp)         :: nml_k_herbivory_grass
+    REAL(lp)         :: nml_k_herbivory_pasture
+    REAL(lp)         :: nml_sm2lm_grass
+    REAL(lp)         :: nml_k1_root_alloc
 
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
@@ -138,15 +137,15 @@ CONTAINS
     LOGICAL                     :: flag_veg_interactive_p
     LOGICAL                     :: l_use_product_pools
     LOGICAL                     :: flag_apply_nml_parameters
-    REAL(wp)                    :: nml_fmaint_rate_base
-    REAL(wp)                    :: nml_fstore_sap_wood_max
-    REAL(wp)                    :: nml_k_f_demand
-    REAL(wp)                    :: nml_omega_nutrient_demand
-    REAL(wp)                    :: nml_background_mort_rate_tree
-    REAL(wp)                    :: nml_k_herbivory_grass
-    REAL(wp)                    :: nml_k_herbivory_pasture
-    REAL(wp)                    :: nml_sm2lm_grass
-    REAL(wp)                    :: nml_k1_root_alloc
+    REAL(lp)                    :: nml_fmaint_rate_base
+    REAL(lp)                    :: nml_fstore_sap_wood_max
+    REAL(lp)                    :: nml_k_f_demand
+    REAL(lp)                    :: nml_omega_nutrient_demand
+    REAL(lp)                    :: nml_background_mort_rate_tree
+    REAL(lp)                    :: nml_k_herbivory_grass
+    REAL(lp)                    :: nml_k_herbivory_pasture
+    REAL(lp)                    :: nml_sm2lm_grass
+    REAL(lp)                    :: nml_k1_root_alloc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
     NAMELIST /lnd_veg_nml/          &

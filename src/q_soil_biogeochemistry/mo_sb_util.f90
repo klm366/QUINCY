@@ -16,9 +16,9 @@
 !>#### various helper routines for the soil-beogeochemistry process
 !>
 MODULE mo_sb_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: zero
@@ -30,7 +30,7 @@ MODULE mo_sb_util
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
+  PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry, calc_qmax_texture
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
@@ -241,7 +241,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER   :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_w         !< Vertical grid
     INTEGER                           :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
-    REAL(wp)                          :: dtime                !< timestep length
+    REAL(lp)                          :: dtime                !< timestep length
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -422,6 +422,24 @@ CONTAINS
                                                                       mavg_period_tresidual)
     END IF
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
+
+  ! ======================================================================================================= !
+  !>calculate sorption capacity for organic material
+  !>
+  ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
+
+    REAL(lp), INTENT(in) :: qmax_fine_particle    !< maximum sorption capacity of fine soil particle [mol / kg fine particle (silt or clay)]
+    REAL(lp), INTENT(in) :: silt_sl               !< silt content of the mineral soil [kg silt / kg mineral soil]
+    REAL(lp), INTENT(in) :: clay_sl               !< clay content of the mineral soil [kg clay / kg mineral soil]
+    REAL(lp)             :: qmax_texture          !< maximum sorption capacity of the soil [mol / kg]
+
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_qmax_texture'
+
+    ! maximum sorption capacity per kg mineral soil (mol/kg)
+    qmax_texture = qmax_fine_particle * (silt_sl + clay_sl)
+
+  END FUNCTION calc_qmax_texture
+
 
 #endif
 END MODULE mo_sb_util

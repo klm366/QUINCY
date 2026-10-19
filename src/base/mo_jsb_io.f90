@@ -14,7 +14,7 @@
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp, dp
+  USE mo_kind, ONLY: lp, dp
   USE mo_jsb_io_iface, ONLY:                                           &
     Get_netcdf_precision,                                              &
     DATATYPE_FLT32, DATATYPE_FLT64, DATATYPE_PACK16, DATATYPE_PACK24,  &
@@ -30,11 +30,13 @@ MODULE mo_jsb_io
 
   PUBLIC
 
+  ! Provide precision definitions for GRIB and NetCDF I/O
   INTEGER, PARAMETER :: grib_bits     = DATATYPE_PACK16, &
                         grib_extbits  = DATATYPE_PACK24, &
                         nc_bits       = DATATYPE_FLT32,  &
                         nc_extbits    = DATATYPE_FLT64
 
+  ! CF parameter definition type for NetCDF I/O
   TYPE t_cf
     CHARACTER(len=128) :: standard_name = ''
     CHARACTER(len=128) :: units         = ''
@@ -42,6 +44,7 @@ MODULE mo_jsb_io
     INTEGER            :: datatype      = -1
   END TYPE t_cf
 
+  ! GRIB1 and GRIB2 parameter definition types
   TYPE t_grib1
     INTEGER :: table
     INTEGER :: parameter
@@ -62,6 +65,7 @@ MODULE mo_jsb_io
 
   INTEGER, PARAMETER :: max_tables = 5
 
+  !  GRIB1 parameter tables used in ICON-LAND
   INTEGER :: tables(max_tables) = (/186, 187, 188, 189, 190/)
 
   ! Remark on usage of "cdiDefMissval" (taken from icon:mo_initicon.f90)
@@ -77,23 +81,32 @@ MODULE mo_jsb_io
   ! instructions for floating-point data instead of instructions for
   ! integers. Therefore, the operation result is not guaranteed if the
   ! value cannot be represented as integer within 53 bits."
+  ! TODO: ICON-LAND should not overwrite standard ICON behavior --> revise/remove
   REAL(dp), PARAMETER :: missval = -9.E+15_dp
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_io'
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !>#### Derived-type constructor for t_cf objects for NetCDF I/O
+  !>
+  !> Add standard_name, units, long_name, and optionally datatype to a t_cf object
+  !>
   FUNCTION Construct_cf(standard_name, units, long_name, datatype) RESULT(return_value)
 
-    CHARACTER(len=*), INTENT(in) :: standard_name
-    CHARACTER(len=*), INTENT(in) :: units
-    CHARACTER(len=*), INTENT(in) :: long_name
-    INTEGER, OPTIONAL,  INTENT(in) :: datatype
-    TYPE(t_cf)         :: return_value
+    CHARACTER(len=*), INTENT(in) :: standard_name       !< CF standard name
+    CHARACTER(len=*), INTENT(in) :: units               !< CF unit
+    CHARACTER(len=*), INTENT(in) :: long_name           !< CF long name
+    INTEGER, OPTIONAL,  INTENT(in) :: datatype          !< Data type (NetCDF precision)
+    TYPE(t_cf)         :: return_value                  !< CF parameter definition object
 
     return_value%standard_name = TRIM(standard_name)
     return_value%units         = TRIM(units)
     return_value%long_name     = TRIM(long_name)
+    ! Either set specified datatype or use default NetCDF precision
+    ! NetCDF precision defined in ICON's mo_util_jsbach
     IF (PRESENT(datatype)) THEN
       return_value%datatype = datatype
     ELSE
@@ -104,10 +117,11 @@ CONTAINS
 
   !>
   !> Initialize io control for JSBACH
+  !  Calls the io namelist
   !!
   SUBROUTINE init_jsb_io(namelist_filename)
 
-    CHARACTER(len=*), INTENT(in) :: namelist_filename
+    CHARACTER(len=*), INTENT(in) :: namelist_filename   !< Name of the ICON namelist file to read
 
     CALL read_jsb_io_namelist(TRIM(namelist_filename))
 

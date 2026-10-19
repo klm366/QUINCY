@@ -16,9 +16,9 @@
 !>#### routines for litter transport and partitioning for the both JSM and SSM (soil models in QUINCY)
 !>
 MODULE mo_q_sb_litter_processes
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_lnd_bgcm_idx
 
   IMPLICIT NONE
@@ -58,37 +58,37 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                        !< dimension
     INTEGER,                           INTENT(in)    :: nsoil_w                   !< nr soil layer
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp),                          INTENT(in)    :: lctlib_sla                !< lctlib parameter
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp),                          INTENT(in)    :: lctlib_sla                !< lctlib parameter
     INTEGER,                           INTENT(in)    :: lctlib_growthform         !< lctlib parameter
     CHARACTER(len=*),                  INTENT(in)    :: sb_model_scheme           !< config option: soil model
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
-    REAL(wp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
-    REAL(wp),                          INTENT(in)    :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: litterfall from seed bed turnover
-    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl             !< soil layer thickness
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: root_fraction_sl          !< root fraction per soil layer
+    REAL(lp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
+    REAL(lp),                          INTENT(in)    :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: litterfall from seed bed turnover
+    REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
-    REAL(wp), DIMENSION(nc) :: fc_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fc_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fc_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fc_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fc_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fc_soluable_reserve
-    REAL(wp), DIMENSION(nc) :: fn_soluable_leaf           !< fn: ...
-    REAL(wp), DIMENSION(nc) :: fn_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fn_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fn_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fn_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fn_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fn_soluable_reserve
-    REAL(wp), DIMENSION(nc) :: fp_soluable_leaf           !< fp: ...
-    REAL(wp), DIMENSION(nc) :: fp_soluable_fine_root
-    REAL(wp), DIMENSION(nc) :: fp_soluable_coarse_root
-    REAL(wp), DIMENSION(nc) :: fp_soluable_fruit
-    REAL(wp), DIMENSION(nc) :: fp_soluable_seed_bed
-    REAL(wp), DIMENSION(nc) :: fp_soluable_labile
-    REAL(wp), DIMENSION(nc) :: fp_soluable_reserve
+    REAL(lp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
+    REAL(lp), DIMENSION(nc) :: fc_soluable_fine_root
+    REAL(lp), DIMENSION(nc) :: fc_soluable_coarse_root
+    REAL(lp), DIMENSION(nc) :: fc_soluable_fruit
+    REAL(lp), DIMENSION(nc) :: fc_soluable_seed_bed
+    REAL(lp), DIMENSION(nc) :: fc_soluable_labile
+    REAL(lp), DIMENSION(nc) :: fc_soluable_reserve
+    REAL(lp), DIMENSION(nc) :: fn_soluable_leaf           !< fn: ...
+    REAL(lp), DIMENSION(nc) :: fn_soluable_fine_root
+    REAL(lp), DIMENSION(nc) :: fn_soluable_coarse_root
+    REAL(lp), DIMENSION(nc) :: fn_soluable_fruit
+    REAL(lp), DIMENSION(nc) :: fn_soluable_seed_bed
+    REAL(lp), DIMENSION(nc) :: fn_soluable_labile
+    REAL(lp), DIMENSION(nc) :: fn_soluable_reserve
+    REAL(lp), DIMENSION(nc) :: fp_soluable_leaf           !< fp: ...
+    REAL(lp), DIMENSION(nc) :: fp_soluable_fine_root
+    REAL(lp), DIMENSION(nc) :: fp_soluable_coarse_root
+    REAL(lp), DIMENSION(nc) :: fp_soluable_fruit
+    REAL(lp), DIMENSION(nc) :: fp_soluable_seed_bed
+    REAL(lp), DIMENSION(nc) :: fp_soluable_labile
+    REAL(lp), DIMENSION(nc) :: fp_soluable_reserve
     INTEGER                 :: ic, is                     !< loop over dimensions
     INTEGER                 :: isoil                      !< loop over soil layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'
@@ -97,81 +97,81 @@ CONTAINS
     !>0.9 init local variables
     !>  labile and reserve compartments are init with 1.0
     !>
-    fc_soluable_leaf        = 0.0_wp
-    fc_soluable_fine_root   = 0.0_wp
-    fc_soluable_coarse_root = 0.0_wp
-    fc_soluable_fruit       = 0.0_wp
-    fc_soluable_seed_bed    = 0.0_wp
-    fn_soluable_leaf        = 0.0_wp
-    fn_soluable_fine_root   = 0.0_wp
-    fn_soluable_coarse_root = 0.0_wp
-    fn_soluable_fruit       = 0.0_wp
-    fn_soluable_seed_bed    = 0.0_wp
-    fp_soluable_leaf        = 0.0_wp
-    fp_soluable_fine_root   = 0.0_wp
-    fp_soluable_coarse_root = 0.0_wp
-    fp_soluable_fruit       = 0.0_wp
-    fp_soluable_seed_bed    = 0.0_wp
+    fc_soluable_leaf        = 0.0_lp
+    fc_soluable_fine_root   = 0.0_lp
+    fc_soluable_coarse_root = 0.0_lp
+    fc_soluable_fruit       = 0.0_lp
+    fc_soluable_seed_bed    = 0.0_lp
+    fn_soluable_leaf        = 0.0_lp
+    fn_soluable_fine_root   = 0.0_lp
+    fn_soluable_coarse_root = 0.0_lp
+    fn_soluable_fruit       = 0.0_lp
+    fn_soluable_seed_bed    = 0.0_lp
+    fp_soluable_leaf        = 0.0_lp
+    fp_soluable_fine_root   = 0.0_lp
+    fp_soluable_coarse_root = 0.0_lp
+    fp_soluable_fruit       = 0.0_lp
+    fp_soluable_seed_bed    = 0.0_lp
     ! labile & reserve
-    fc_soluable_labile      = 1.0_wp
-    fc_soluable_reserve     = 1.0_wp
-    fn_soluable_labile      = 1.0_wp
-    fn_soluable_reserve     = 1.0_wp
-    fp_soluable_labile      = 1.0_wp
-    fp_soluable_reserve     = 1.0_wp
+    fc_soluable_labile      = 1.0_lp
+    fc_soluable_reserve     = 1.0_lp
+    fn_soluable_labile      = 1.0_lp
+    fn_soluable_reserve     = 1.0_lp
+    fp_soluable_labile      = 1.0_lp
+    fp_soluable_reserve     = 1.0_lp
 
     !>1.0 determine allocation of fresh litter fall to litter pools
     !>
     DO ic = 1,nc
       ! leaf
       IF(veg_litterfall_mt(ix_leaf, ixN, ic) > eps8) THEN
-        fc_soluable_leaf(ic) = MAX(0.0_wp, fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib_sla) &
+        fc_soluable_leaf(ic) = MAX(0.0_lp, fc_soluable_max - k_fc_soluable * (lc_leaf_max + lc_leaf2sla * lctlib_sla) &
           &                    * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_litterfall_mt(ix_leaf, ixN, ic))
         IF(fc_soluable_leaf(ic) > eps8) THEN
-          fn_soluable_leaf(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(ic)) / (k_fn_soluable * fc_soluable_leaf(ic)))
-          fp_soluable_leaf(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_leaf(ic)) / (k_fp_soluable * fc_soluable_leaf(ic)))
+          fn_soluable_leaf(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_leaf(ic)) / (k_fn_soluable * fc_soluable_leaf(ic)))
+          fp_soluable_leaf(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_leaf(ic)) / (k_fp_soluable * fc_soluable_leaf(ic)))
         END IF
       END IF
       ! fine_root
       IF(veg_litterfall_mt(ix_fine_root, ixN, ic) > eps8) THEN
-        fc_soluable_fine_root(ic) = MAX(0.0_wp, fc_soluable_max - k_fc_soluable * lc_fine_root &
+        fc_soluable_fine_root(ic) = MAX(0.0_lp, fc_soluable_max - k_fc_soluable * lc_fine_root &
           &                         * veg_litterfall_mt(ix_fine_root, ixC, ic) / veg_litterfall_mt(ix_fine_root, ixN, ic))
         IF(fc_soluable_fine_root(ic) > eps8) THEN
-          fn_soluable_fine_root(ic) = 1._wp &
-            &                         / (1._wp + (1._wp - fc_soluable_fine_root(ic)) / (k_fn_soluable * fc_soluable_fine_root(ic)))
-          fp_soluable_fine_root(ic) = 1._wp &
-            &                         / (1._wp + (1._wp - fc_soluable_fine_root(ic)) / (k_fp_soluable * fc_soluable_fine_root(ic)))
+          fn_soluable_fine_root(ic) = 1._lp &
+            &                         / (1._lp + (1._lp - fc_soluable_fine_root(ic)) / (k_fn_soluable * fc_soluable_fine_root(ic)))
+          fp_soluable_fine_root(ic) = 1._lp &
+            &                         / (1._lp + (1._lp - fc_soluable_fine_root(ic)) / (k_fp_soluable * fc_soluable_fine_root(ic)))
         END IF
       END IF
       ! coarse_root
       IF(veg_litterfall_mt(ix_coarse_root, ixN, ic) > eps8) THEN
-        fc_soluable_coarse_root(ic) = MAX(0.0_wp, fc_soluable_max - k_fc_soluable * lc_coarse_root &
+        fc_soluable_coarse_root(ic) = MAX(0.0_lp, fc_soluable_max - k_fc_soluable * lc_coarse_root &
           &                           * veg_litterfall_mt(ix_coarse_root, ixC, ic) / veg_litterfall_mt(ix_coarse_root, ixN, ic))
         IF(fc_soluable_coarse_root(ic) > eps8) THEN
-          fn_soluable_coarse_root(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(ic)) &
+          fn_soluable_coarse_root(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_coarse_root(ic)) &
             &                           / (k_fn_soluable*fc_soluable_coarse_root(ic)))
-          fp_soluable_coarse_root(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_coarse_root(ic)) &
+          fp_soluable_coarse_root(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_coarse_root(ic)) &
             &                           / (k_fp_soluable*fc_soluable_coarse_root(ic)))
          END IF
       END IF
       ! fruit
       IF(veg_litterfall_mt(ix_fruit, ixN, ic) > eps8) THEN
-        fc_soluable_fruit(ic) = MAX(0.0_wp, fc_soluable_max - k_fc_soluable * lc_fruit &
+        fc_soluable_fruit(ic) = MAX(0.0_lp, fc_soluable_max - k_fc_soluable * lc_fruit &
           &                     * veg_litterfall_mt(ix_fruit, ixC, ic) / veg_litterfall_mt(ix_fruit, ixN, ic))
         IF(fc_soluable_fruit(ic) > eps8) THEN
-          fn_soluable_fruit(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(ic)) / (k_fn_soluable * fc_soluable_fruit(ic)))
-          fp_soluable_fruit(ic) = 1._wp / (1._wp + (1._wp - fc_soluable_fruit(ic)) / (k_fp_soluable * fc_soluable_fruit(ic)))
+          fn_soluable_fruit(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_fruit(ic)) / (k_fn_soluable * fc_soluable_fruit(ic)))
+          fp_soluable_fruit(ic) = 1._lp / (1._lp + (1._lp - fc_soluable_fruit(ic)) / (k_fp_soluable * fc_soluable_fruit(ic)))
         END IF
       END IF
       ! seed_bed
       IF(seed_bed_litterfall_mt(ixN, ic) > eps8) THEN
-        fc_soluable_seed_bed(ic) = MAX(0.0_wp, fc_soluable_max - k_fc_soluable * lc_seed_bed &
+        fc_soluable_seed_bed(ic) = MAX(0.0_lp, fc_soluable_max - k_fc_soluable * lc_seed_bed &
           &                        * seed_bed_litterfall_mt(ixC, ic) / seed_bed_litterfall_mt(ixN, ic))
         IF(fc_soluable_seed_bed(ic) > eps8) THEN
-          fn_soluable_seed_bed(ic) = 1._wp &
-            &                        / (1._wp + (1._wp - fc_soluable_seed_bed(ic)) / (k_fn_soluable * fc_soluable_seed_bed(ic)))
-          fp_soluable_seed_bed(ic) = 1._wp &
-            &                        / (1._wp + (1._wp - fc_soluable_seed_bed(ic)) / (k_fp_soluable * fc_soluable_seed_bed(ic)))
+          fn_soluable_seed_bed(ic) = 1._lp &
+            &                        / (1._lp + (1._lp - fc_soluable_seed_bed(ic)) / (k_fn_soluable * fc_soluable_seed_bed(ic)))
+          fp_soluable_seed_bed(ic) = 1._lp &
+            &                        / (1._lp + (1._lp - fc_soluable_seed_bed(ic)) / (k_fp_soluable * fc_soluable_seed_bed(ic)))
         END IF
       END IF
     END DO ! loop over nc
@@ -232,51 +232,51 @@ CONTAINS
     !>
     sb_formation_mt(ix_polymeric_litter, ixC, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixC, :, 1) &
-      &                              + ((1.0_wp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC, :)      &
-      &                                 + (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC, :)     &
-      &                                 + (1.0_wp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC, :)    &
-      &                                 + (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC, :)   &
-      &                                 + (1.0_wp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC, :)) &
+      &                              + ((1.0_lp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC, :)      &
+      &                                 + (1.0_lp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC, :)     &
+      &                                 + (1.0_lp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC, :)    &
+      &                                 + (1.0_lp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC, :)   &
+      &                                 + (1.0_lp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC, :)) &
       &                              / soil_depth_sl(:,1)
     sb_formation_mt(ix_polymeric_litter, ixN, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixN, :, 1) &
-      &                              + ((1.0_wp - fn_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixN, :)      &
-      &                                 + (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixN, :)     &
-      &                                 + (1.0_wp - fn_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixN, :)    &
-      &                                 + (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixN, :)   &
-      &                                 + (1.0_wp - fn_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixN, :)) &
+      &                              + ((1.0_lp - fn_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixN, :)      &
+      &                                 + (1.0_lp - fn_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixN, :)     &
+      &                                 + (1.0_lp - fn_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixN, :)    &
+      &                                 + (1.0_lp - fn_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixN, :)   &
+      &                                 + (1.0_lp - fn_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixN, :)) &
       &                              / soil_depth_sl(:,1)
     sb_formation_mt(ix_polymeric_litter, ixP, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixP, :, 1) &
-      &                              + ((1.0_wp - fp_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixP, :)      &
-      &                                 + (1.0_wp - fp_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixP, :)     &
-      &                                 + (1.0_wp - fp_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixP, :)    &
-      &                                 + (1.0_wp - fp_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixP, :)   &
-      &                                 + (1.0_wp - fp_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixP, :)) &
+      &                              + ((1.0_lp - fp_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixP, :)      &
+      &                                 + (1.0_lp - fp_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixP, :)     &
+      &                                 + (1.0_lp - fp_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixP, :)    &
+      &                                 + (1.0_lp - fp_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixP, :)   &
+      &                                 + (1.0_lp - fp_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixP, :)) &
       &                              / soil_depth_sl(:,1)
     sb_formation_mt(ix_polymeric_litter, ixC13, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixC13, :, 1) &
-      &                              + ((1.0_wp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC13, :)      &
-      &                                 + (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC13, :)     &
-      &                                 + (1.0_wp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC13, :)    &
-      &                                 + (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC13, :)   &
-      &                                 + (1.0_wp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC13, :)) &
+      &                              + ((1.0_lp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC13, :)      &
+      &                                 + (1.0_lp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC13, :)     &
+      &                                 + (1.0_lp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC13, :)    &
+      &                                 + (1.0_lp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC13, :)   &
+      &                                 + (1.0_lp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC13, :)) &
       &                              / soil_depth_sl(:,1)
     sb_formation_mt(ix_polymeric_litter, ixC14, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixC14, :, 1) &
-      &                              + ((1.0_wp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC14, :)      &
-      &                                 + (1.0_wp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC14, :)     &
-      &                                 + (1.0_wp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC14, :)    &
-      &                                 + (1.0_wp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC14, :)   &
-      &                                 + (1.0_wp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC14, :)) &
+      &                              + ((1.0_lp - fc_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixC14, :)      &
+      &                                 + (1.0_lp - fc_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixC14, :)     &
+      &                                 + (1.0_lp - fc_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixC14, :)    &
+      &                                 + (1.0_lp - fc_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixC14, :)   &
+      &                                 + (1.0_lp - fc_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixC14, :)) &
       &                              / soil_depth_sl(:,1)
     sb_formation_mt(ix_polymeric_litter, ixN15, :, 1) = &
       &                              sb_formation_mt(ix_polymeric_litter, ixN15, :, 1) &
-      &                              + ((1.0_wp - fn_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixN15, :)      &
-      &                                 + (1.0_wp - fn_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixN15, :)     &
-      &                                 + (1.0_wp - fn_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixN15, :)    &
-      &                                 + (1.0_wp - fn_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixN15, :)   &
-      &                                 + (1.0_wp - fn_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixN15, :)) &
+      &                              + ((1.0_lp - fn_soluable_leaf(:))       * veg_litterfall_mt(ix_leaf, ixN15, :)      &
+      &                                 + (1.0_lp - fn_soluable_fruit(:))    * veg_litterfall_mt(ix_fruit, ixN15, :)     &
+      &                                 + (1.0_lp - fn_soluable_labile(:))   * veg_litterfall_mt(ix_labile, ixN15, :)    &
+      &                                 + (1.0_lp - fn_soluable_reserve(:))  * veg_litterfall_mt(ix_reserve, ixN15, :)   &
+      &                                 + (1.0_lp - fn_soluable_seed_bed(:)) * seed_bed_litterfall_mt(ixN15, :)) &
       &                              / soil_depth_sl(:,1)
 
     !>3.0 Add surface litter fall from sapwood and heartwood pools to surface woody litter pool for trees
@@ -341,32 +341,32 @@ CONTAINS
       ! polymeric litter
       sb_formation_mt(ix_polymeric_litter, ixC, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixC, :, 1) &
-        &             + (1.0_wp - fc_soluable_fine_root(:)) &
+        &             + (1.0_lp - fc_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixC, :) + veg_litterfall_mt(ix_heart_wood, ixC, :)) &
         &             / soil_depth_sl(:,1)
       sb_formation_mt(ix_polymeric_litter, ixN, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixN, :, 1) &
-        &             + (1.0_wp - fn_soluable_fine_root(:)) &
+        &             + (1.0_lp - fn_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixN, :) + veg_litterfall_mt(ix_heart_wood, ixN, :)) &
         &             / soil_depth_sl(:,1)
       sb_formation_mt(ix_polymeric_litter, ixP, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixP, :, 1) &
-        &             + (1.0_wp - fp_soluable_fine_root(:)) &
+        &             + (1.0_lp - fp_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixP, :) + veg_litterfall_mt(ix_heart_wood, ixP, :)) &
         &             / soil_depth_sl(:,1)
       sb_formation_mt(ix_polymeric_litter, ixC13, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixC13, :, 1) &
-        &             + (1.0_wp - fc_soluable_fine_root(:)) &
+        &             + (1.0_lp - fc_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixC13, :) + veg_litterfall_mt(ix_heart_wood, ixC13, :)) &
         &             / soil_depth_sl(:,1)
       sb_formation_mt(ix_polymeric_litter, ixC14, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixC14, :, 1) &
-        &             + (1.0_wp - fc_soluable_fine_root(:)) &
+        &             + (1.0_lp - fc_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixC14, :) + veg_litterfall_mt(ix_heart_wood, ixC14, :)) &
         &             / soil_depth_sl(:,1)
       sb_formation_mt(ix_polymeric_litter, ixN15, :, 1) = &
         &             sb_formation_mt(ix_polymeric_litter, ixN15, :, 1) &
-        &             + (1.0_wp - fn_soluable_fine_root(:)) &
+        &             + (1.0_lp - fn_soluable_fine_root(:)) &
         &             * (veg_litterfall_mt(ix_sap_wood, ixN15, :) + veg_litterfall_mt(ix_heart_wood, ixN15, :)) &
         &             / soil_depth_sl(:,1)
     END SELECT
@@ -412,84 +412,84 @@ CONTAINS
           ! polymeric litter (fine root & coarse root)
           sb_formation_mt(ix_polymeric_litter, ixC, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixC, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC, ic) &
-            &           +  (1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC, ic) &
+            &           +  (1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixN, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixN, ic, is) &
-            &           + ((1.0_wp - fn_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixN, ic) &
-            &           +  (1.0_wp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN, ic)) &
+            &           + ((1.0_lp - fn_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixN, ic) &
+            &           +  (1.0_lp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixP, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixP, ic, is) &
-            &           + ((1.0_wp - fp_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixP, ic) &
-            &           +  (1.0_wp - fp_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixP, ic)) &
+            &           + ((1.0_lp - fp_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixP, ic) &
+            &           +  (1.0_lp - fp_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixP, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixC13, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixC13, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC13, ic) &
-            &           +  (1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC13, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC13, ic) &
+            &           +  (1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC13, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixC14, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixC14, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC14, ic) &
-            &           +  (1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC14, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixC14, ic) &
+            &           +  (1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC14, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixN15, ic, is)    = &
             &           sb_formation_mt(ix_polymeric_litter, ixN15, ic, is) &
-            &           + ((1.0_wp - fn_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixN15, ic) &
-            &           +  (1.0_wp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN15, ic)) &
+            &           + ((1.0_lp - fn_soluable_fine_root(ic))   * veg_litterfall_mt(ix_fine_root, ixN15, ic) &
+            &           +  (1.0_lp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN15, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
         CASE ("jsm")
           ! polymeric litter (fine root)
           sb_formation_mt(ix_polymeric_litter, ixC, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixC, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixN, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixN, ic, is) &
-            &           + ((1.0_wp - fn_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixN, ic)) &
+            &           + ((1.0_lp - fn_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixN, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixP, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixP, ic, is) &
-            &           + ((1.0_wp - fp_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixP, ic)) &
+            &           + ((1.0_lp - fp_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixP, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixC13, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixC13, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC13, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC13, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixC14, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixC14, ic, is) &
-            &           + ((1.0_wp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC14, ic)) &
+            &           + ((1.0_lp - fc_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixC14, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_polymeric_litter, ixN15, ic, is) = &
             &           sb_formation_mt(ix_polymeric_litter, ixN15, ic, is) &
-            &           + ((1.0_wp - fn_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixN15, ic)) &
+            &           + ((1.0_lp - fn_soluable_fine_root(ic)) * veg_litterfall_mt(ix_fine_root, ixN15, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           ! polymeric litter (coarse root)
           sb_formation_mt(ix_woody_litter, ixC, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixC, ic, is) &
-            &           + ((1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC, ic)) &
+            &           + ((1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_woody_litter, ixN, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixN, ic, is) &
-            &           + ((1.0_wp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN, ic)) &
+            &           + ((1.0_lp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_woody_litter, ixP, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixP, ic, is) &
-            &           + ((1.0_wp - fp_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixP, ic)) &
+            &           + ((1.0_lp - fp_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixP, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_woody_litter, ixC13, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixC13, ic, is) &
-            &           + ((1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC13, ic)) &
+            &           + ((1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC13, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_woody_litter, ixC14, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixC14, ic, is) &
-            &           + ((1.0_wp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC14, ic)) &
+            &           + ((1.0_lp - fc_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixC14, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
           sb_formation_mt(ix_woody_litter, ixN15, ic, is) = &
             &           sb_formation_mt(ix_woody_litter, ixN15, ic, is) &
-            &           + ((1.0_wp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN15, ic)) &
+            &           + ((1.0_lp - fn_soluable_coarse_root(ic)) * veg_litterfall_mt(ix_coarse_root, ixN15, ic)) &
             &           * root_fraction_sl(ic,is) / soil_depth_sl(ic,is)
         END SELECT
       END DO

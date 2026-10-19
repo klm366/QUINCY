@@ -16,9 +16,9 @@
 !>#### definition and init of (memory) variables for the quincy sylviculture process
 !>
 MODULE mo_q_syl_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -101,7 +101,7 @@ CONTAINS
         & output_level = NONE, &
         & lrestart = .TRUE., &
         & lrestart_cont = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
         CALL mem%Add_var('fract_wood_to_slash', mem%fract_wood_to_slash, &
@@ -113,7 +113,7 @@ CONTAINS
           & output_level = NONE, &
           & lrestart = .TRUE., &
           & lrestart_cont = .TRUE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
       END IF ! IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
     END IF
 
@@ -128,7 +128,7 @@ CONTAINS
         & output_level = BASIC, &
         & lrestart = .TRUE., &
         & lrestart_cont = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
     END IF
   END SUBROUTINE Init_q_syl_memory
 

@@ -15,7 +15,7 @@
 MODULE mo_seb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
@@ -51,7 +51,6 @@ MODULE mo_seb_memory_class
       & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
                                   !! This is the qsat_srf that is used in the vertical diffusion
                                   !! scheme in the atmosphere
-      & q_sat_srf,              & !< surface saturated specific humidity  [?]
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
       & sensible_hflx,          & !< Sensible heat flux                                              [W m-2]
@@ -173,7 +172,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC, &
-      & initval_r=280.0_wp )
+      & initval_r=280.0_lp )
 
     IF (model%config%use_tmx) THEN
       CALL mem%Add_var( 't_rad**4', mem%t_rad4,                                      &
@@ -181,7 +180,7 @@ CONTAINS
         & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
-        & initval_r=280.0_wp**4 )
+        & initval_r=280.0_lp**4 )
     END IF
 
     CALL mem%Add_var( 't_old', mem%t_old,                                            &
@@ -190,14 +189,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart = lrestart_local,                                                   &
-      & initval_r=280.0_wp )
+      & initval_r=280.0_lp )
 
     CALL mem%Add_var( 't_unfilt', mem%t_unfilt,                                      &
       & hgrid, surface,                                                              &
       & t_cf('sfc_temp_unfilt', 'K', 'unfiltered surface temperature'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & initval_r=280.0_wp )
+      & initval_r=280.0_lp )
 
     CALL mem%Add_var( 'le_phase_change', mem%le_phase_change,                        &
       & hgrid, surface,                                                              &
@@ -206,7 +205,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE., output_level=MEDIUM,                                       &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
       & hgrid, surface,                                                              &
@@ -214,7 +213,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=MEDIUM,                                                         &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'latent_hflx', mem%latent_hflx,                                &
       & hgrid, surface,                                                              &
@@ -223,7 +222,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'sensible_hflx', mem%sensible_hflx,                            &
       & hgrid, surface,                                                              &
@@ -232,7 +231,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'forc_hflx', mem%forc_hflx,                                    &
       & hgrid, surface,                                                              &
@@ -241,7 +240,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'net_srf_rad_balance', mem%net_srf_rad_balance,                &
       & hgrid, surface,                                                              &
@@ -251,7 +250,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & output_level=BASIC, &
-      & initval_r=0.0_wp)
+      & initval_r=0.0_lp)
 
     IF (jsbach_runs_standalone()) THEN
       CALL mem%Add_var( 'richardson', mem%richardson,                                &
@@ -260,7 +259,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.TRUE.,                                                           &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
     END IF
 
     IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
@@ -270,13 +269,11 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=280.0_wp**4 )
+        & initval_r=280.0_lp**4 )
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
-      ! NOTE  temporary solution to run the SPQ_ process with SEB_ variables at PFT tiles
-      & .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
@@ -285,7 +282,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
         & output_level=FULL,                                                                 &
-        & initval_r=2.9E5_wp)
+        & initval_r=2.9E5_lp)
 
       CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
         & hgrid, surface,                                                                    &
@@ -294,23 +291,7 @@ CONTAINS
         & prefix, suffix,                                                                    &
         & lrestart=.TRUE.,                                                                   &
         & output_level=FULL,                                                                 &
-        & initval_r=0.0075_wp)
-
-#ifndef __NO_QUINCY__
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        CALL mem%Add_var('q_sat_srf', mem%q_sat_srf, &
-          & hgrid, surface, &
-          & t_cf('q_sat_srf', '[?]', 'surface saturated specific humidity'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & output_level = BASIC, &
-          & loutput = .TRUE., &
-          & lrestart=.TRUE., &
-          & initval_r=0.0_wp)
-      END SELECT
-#endif
+        & initval_r=0.0075_lp)
 
       CALL mem%Add_var( 't_unfilt_old', mem%t_unfilt_old,                                    &
         & hgrid, surface,                                                                    &
@@ -318,7 +299,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=280.0_wp )
+        & initval_r=280.0_lp )
 
       CALL mem%Add_var( 't_filt', mem%t_filt,                                                &
         & hgrid, surface,                                                                    &
@@ -326,7 +307,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=280.0_wp )
+        & initval_r=280.0_lp )
 
       CALL mem%Add_var( 't_srf', mem%t_srf,                                                  &
         & hgrid, surface,                                                                    &
@@ -336,7 +317,7 @@ CONTAINS
         & lrestart=(    (.NOT. model%config%use_tmx .AND. .NOT. jsbach_runs_standalone())    &
         &           .OR. dsl4jsb_Config(SEB_)%l_skin_temp),                                  &
         & output_level = BASIC,                                                              &
-        & initval_r=280.0_wp )
+        & initval_r=280.0_lp )
 
       CALL mem%Add_var( 'dt_sk_dt_srf', mem%dt_sk_dt_srf,                                    &
         & hgrid, surface,                                                                    &
@@ -344,7 +325,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=1._wp )
+        & initval_r=1._lp )
 
       CALL mem%Add_var( 'latent_hflx_lnd', mem%latent_hflx_lnd,                              &
         & hgrid, surface,                                                                    &
@@ -352,7 +333,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'sensible_hflx_lnd', mem%sensible_hflx_lnd,                          &
         & hgrid, surface,                                                                    &
@@ -360,70 +341,70 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'previous_day_temp_mean', mem%previous_day_temp_mean,      &
         & hgrid, surface,                                                          &
         & t_cf('previous_day_temp_mean', '', ''),                                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                          &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_lp )
 
       CALL mem%Add_var( 'previous_day_temp_min', mem%previous_day_temp_min,      &
         & hgrid, surface,                                                        &
         & t_cf('previous_day_temp_min', '', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=5.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=5.0_lp )
 
       CALL mem%Add_var( 'previous_day_temp_max', mem%previous_day_temp_max,      &
         & hgrid, surface,                                                        &
         & t_cf('albedo_nir_previous_day_temp_maxsnow', '', ''),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=15.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=15.0_lp )
 
       CALL mem%Add_var( 'pseudo_soil_temp', mem%pseudo_soil_temp,                &
         & hgrid, surface,                                                        &
         & t_cf('pseudo_soil_temp', '', ''),                                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10.0_lp )
 
       CALL mem%Add_var('day_temp_sum', mem%day_temp_sum,                         &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_sum', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._lp )
 
       CALL mem%Add_var('day_temp_min', mem%day_temp_min,                         &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_min', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._lp )
 
       CALL mem%Add_var('day_temp_max', mem%day_temp_max,                         &
         & hgrid, surface,                                                        &
         & t_cf('day_temp_max', '', ''),                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0._lp)
 
       CALL mem%Add_var('N_pseudo_soil_temp', mem%N_pseudo_soil_temp,             &
         & hgrid, surface,                                                        &
         & t_cf('N_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._lp )
 
       CALL mem%Add_var('F_pseudo_soil_temp', mem%F_pseudo_soil_temp,             &
         & hgrid, surface,                                                        &
         & t_cf('F_pseudo_soil_temp', '', ''),                                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=10._lp )
 
       IF (dsl4jsb_Config(SEB_)%l_skin_temp) THEN
         CALL mem%Add_var( 'skin_conductivity', mem%skin_conductivity,              &
@@ -432,7 +413,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
           & prefix, suffix,                                                        &
           & lrestart=.FALSE., isteptype=TSTEP_CONSTANT,                            &
-          & initval_r=0._wp )
+          & initval_r=0._lp )
       END IF
 
     END IF
@@ -445,7 +426,7 @@ CONTAINS
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=280.0_wp )
+        & initval_r=280.0_lp )
 
       CALL mem%Add_var( 's_lwtr', mem%s_lwtr,                                                  &
         & hgrid, surface,                                                                      &
@@ -453,7 +434,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
         & lrestart=.FALSE.,                                                                    &
-        & initval_r=2.9E5_wp )
+        & initval_r=2.9E5_lp )
 
       CALL mem%Add_var( 'qsat_lwtr', mem%qsat_lwtr,                                              &
         & hgrid, surface,                                                                        &
@@ -461,7 +442,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
         & prefix, suffix,                                                                        &
         & lrestart=.FALSE.,                                                                      &
-        & initval_r=0.0075_wp )
+        & initval_r=0.0075_lp )
 
       CALL mem%Add_var( 'latent_hflx_wtr', mem%latent_hflx_wtr,                        &
         & hgrid, surface,                                                              &
@@ -469,7 +450,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.TRUE.,                                                             &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'sensible_hflx_wtr', mem%sensible_hflx_wtr,                    &
         & hgrid, surface,                                                              &
@@ -477,7 +458,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.TRUE.,                                                             &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
       ! Fraction of ice on lake
       CALL mem%Add_var( 'fract_lice', mem%fract_lice,                                  &
@@ -485,7 +466,7 @@ CONTAINS
         & t_cf('fract_lice', '', 'fraction of ice on lake'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
 
@@ -494,7 +475,7 @@ CONTAINS
           & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=tmelt )
+          & initval_r=REAL(tmelt,KIND=lp) )
 
         CALL mem%Add_var( 's_lice', mem%s_lice,                                                  &
           & hgrid, surface,                                                                      &
@@ -502,7 +483,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
           & prefix, suffix,                                                                      &
           & lrestart=.FALSE.,                                                                    &
-          & initval_r=2.9E5_wp )
+          & initval_r=2.9E5_lp )
 
         CALL mem%Add_var( 'qsat_lice', mem%qsat_lice,                                              &
           & hgrid, surface,                                                                        &
@@ -510,7 +491,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
           & prefix, suffix,                                                                        &
           & lrestart=.FALSE.,                                                                      &
-          & initval_r=0.0075_wp )
+          & initval_r=0.0075_lp )
 
         CALL mem%Add_var( 'latent_hflx_ice', mem%latent_hflx_ice,                        &
           & hgrid, surface,                                                              &
@@ -518,7 +499,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & lrestart=.TRUE.,                                                             &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         CALL mem%Add_var( 'sensible_hflx_ice', mem%sensible_hflx_ice,                    &
           & hgrid, surface,                                                              &
@@ -526,42 +507,42 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
           & lrestart=.TRUE.,                                                             &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         CALL mem%Add_var( 'depth_lice', mem%depth_lice,                                  &
           & hgrid, surface,                                                              &
           & t_cf('ice_thickness', 'm', 'thickness of ice on lake'),                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_lp )
 
         CALL mem%Add_var( 'hflx_form_ice', mem%hflx_form_ice,                            &
           & hgrid, surface,                                                              &
           & t_cf('hflx_form_ice', 'W m-2)', 'heat flux for ice formation on lake ice'),  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         CALL mem%Add_var( 'hflx_cond_ice', mem%hflx_cond_ice,                            &
           & hgrid, surface,                                                              &
           & t_cf('hflx_cond_ice', 'W m-2)', 'conductive heat flux on lake ice'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         CALL mem%Add_var( 'hflx_melt_lice', mem%hflx_melt_lice,                          &
           & hgrid, surface,                                                              &
           & t_cf('hflx_melt_lice', 'W m-2)', 'heat flux from ice melt on lakes'),        &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         CALL mem%Add_var( 'hflx_melt_snow', mem%hflx_melt_snow,                          &
           & hgrid, surface,                                                              &
           & t_cf('hflx_melt_snow', 'W m-2)', 'heat_flux from snow melt on lakes'),       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
           & prefix, suffix,                                                              &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
         END IF
 
@@ -576,7 +557,7 @@ CONTAINS
         & t_cf('t_gmean', 'K', 'Global land mean surface temperature'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
-        & output_groups=['mon'], lrestart=.FALSE., initval_r=280.0_wp )
+        & output_groups=['mon'], lrestart=.FALSE., initval_r=280.0_lp )
 
     END IF
 

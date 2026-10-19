@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --partition=shared
-# #SBATCH --partition=compute # Use in case of too little memory (OOM error)
-# #SBATCH --mem=450G          #  ""
-#SBATCH --account=mh1421
+#SBATCH --partition=shared     # Use compute node for R2B9 and higher
+# #SBATCH --partition=compute  # Use in case of too little memory (OOM error)
+# #SBATCH --mem=450G           #  ""
+#SBATCH --account=mh0287
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
+#SBATCH --ntasks-per-node=8    # Use 128 for R2B9 and higher
 #SBATCH --output=create_icon-land_ini_files.o%j
 #SBATCH --time=08:00:00
 #-----------------------------------------------------------------------------
@@ -85,7 +85,7 @@ run_generate_fractional_mask=false # Only needed for coupled setups with new gri
 run_bc_files_from_extpar=true
 run_adapt_nwp_extpar_file=true     # Only needed for configurations with NWP atmosphere
 run_calc_hd_receive_mask=false     # Only needed for coupled setups with external HD model
-run_generate_hdpara_file=true      # Needed with internal HD model; only up to res. R02B06
+run_generate_hdpara_file=true      # Needed with internal HD model
 
 #-----------------------------------------------------------------------------
 #
@@ -99,7 +99,8 @@ run_generate_hdpara_file=true      # Needed with internal HD model; only up to r
 # - coupled
 # - atmGridID and refinement
 # - oceGridID (if coupled=true)
-# - start_year and end_year or year_list
+# - start_year and end_year or year_list (for natural vegetation use year_list="natveg"
+#                                         or add "natveg" to the year_list)
 # - extpar_dir and extpar_file
 # - extpar_source_dir (if extpar_file not yet existing)
 # - nwp_extpar_file (for simulations with NWP atmosphere)
@@ -162,8 +163,8 @@ for ((yr=${start_year}; yr<=${end_year}; yr++)); do
   export year_list="${year_list} $yr"
 done
 #---
-# b) Define list of years
-#export year_list="1850 1979 1990 1992 2005 2015"
+# b) Define list of years - use/add "natveg" for natural vegetation only
+#export year_list="1850 1979 1990 1992 2005 2015 natveg"
 
 # For years after 2015: chose scenario (not available for all resolutions)
 export scenario="ssp119"   # ssp119 / ssp126 / ssp245 / ssp370 / ssp434 / ssp460 / ssp534os / ssp585
@@ -259,16 +260,21 @@ fi
 # --------------------------------------
 # Definitions needed with HD input file generation
 #
-# --- Definitions needed with run_calc_hd_receive_mask
+# --- Definitions needed with run_calc_hd_receive_mask (external HD)
 # (existing) HD parameter file on 0.5 grid
 export hdpara05_file=/pool/data/ICON/edzw-shadow/indepedent/hd/input/05deg/hdpara_vs1_12.nc
 # HD receive mask file (to be generated)
 export hd_receive=${hd_file_dir}/hd_receive_${grid_label}.nc
 
-# --- Definitions needed with run_generate_hdpara_file
-# Depending min- and max_fract, the fractional mask in bc_land_frac ('notsea') might
-# not be identical to the mask in ${fractional_mask}, we thus use the bc_land file.
+# --- Definitions needed with run_generate_hdpara_file (internal HD)
+# Depending on min- and max_fract, the fractional mask in bc_land_frac ('notsea') might
+# not be identical to the mask in ${fractional_mask}. For a consistent setup, we thus use
+# the bc_land_frac fractions also for hd parameter generation. The defaults set here refer
+# to a setup where land bc/ic files are generated anew (run_bc_files_from_extpar=true).
+export keep_hd_output_dir=false   # keep additional output from HD parameter generation
+                                  # for debugging etc.
 export hd_fractional_mask=${bc_file_dir}/bc_land_frac.nc
+export hd_orography_file=${bc_file_dir}/bc_land_sso.nc    # needed with R02B07 and higher
 
 ### End of settings ###
 
@@ -311,7 +317,7 @@ fi
 if [[ ${run_generate_fractional_mask} == true ]]; then
   [[ -d ${fractional_mask%/*}/scripts ]] || mkdir -p ${fractional_mask%/*}/scripts
 fi
-if [[ ${run_calc_hd_receive_mask} == true ]]; then
+if [[ ${run_calc_hd_receive_mask} == true  || ${run_generate_hdpara_file} == true ]]; then
   [[ -d ${hd_file_dir}/scripts ]] || mkdir -p ${hd_file_dir}/scripts
 fi
 
@@ -321,6 +327,7 @@ set +u
 . ${MODULESHOME}/init/bash
 module purge
 module load git
+module load julia
 case $(hostname) in
   levante* | *.lvt.dkrz.de)
     module load python3/2023.01-gcc-11.2.0
@@ -463,7 +470,7 @@ fi
 # 6. Generate the hdpara file: generate HD parameter file for internal HD
 if [[ ${run_generate_hdpara_file} == true ]]; then
   ${scripts_dir}/generate_hdpara_file.sh
-  cp ${scripts_dir}/generate_hdpara_file.sh ${bc_file_dir}/scripts
+  cp ${scripts_dir}/generate_hdpara_file.sh ${hd_file_dir}/scripts
 fi
 
 cp ${scripts_dir}/${script_name}            ${bc_file_dir}/scripts
