@@ -1605,18 +1605,18 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)  :: nc                !< dimensions
-    REAL(wp),                                         INTENT(in)  :: dtime             !< timestep length
-    REAL(wp), DIMENSION(nc),                          INTENT(in)  :: wind_air, &       !< surface near wind speed [m/s]
+    REAL(lp),                                         INTENT(in)  :: dtime             !< timestep length
+    REAL(lp), DIMENSION(nc),                          INTENT(in)  :: wind_air, &       !< surface near wind speed [m/s]
                                                                      t_air, &          !< surface near air temperature [K]
                                                                      pH_l1, &          !< soil pH of first soil layer
                                                                      t_soil_l1, &      !< soil temperature of first soil layer [K]
                                                                      nh4_solute_l1     !< NH4 in solution in first soil layer [mol / m3]
-    REAL(wp), DIMENSION(nc),                 INTENT(out) :: volatilisation_nh4         !< potential volatilisation rate [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc),                 INTENT(out) :: volatilisation_nh4         !< potential volatilisation rate [mol / m3 / timestep]
     ! 0.2 Local
-    REAL(wp)                    :: surface_drag
-    REAL(wp)                    :: henry_coef
-    REAL(wp)                    :: dissociation_coef
-    REAL(wp)                    :: fract_nh4_as_nh3
+    REAL(lp)                    :: surface_drag
+    REAL(lp)                    :: henry_coef
+    REAL(lp)                    :: dissociation_coef
+    REAL(lp)                    :: fract_nh4_as_nh3
     INTEGER                     :: ic       !< loop over dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_nh4_volatilisation_rate'
 
@@ -1625,13 +1625,13 @@ CONTAINS
       surface_drag = k1_nh3_drag * wind_air(ic)**k1_nh3_wind * t_air(ic)**k1_nh3_temp * k1_nh3_rough
 
       ! Henry coefficient of Ammoniak (NH3)
-      henry_coef = (k1_nh3_henry / t_air(ic)) * 10._wp ** (k2_nh3_henry - k3_nh3_henry / t_air(ic))
+      henry_coef = (k1_nh3_henry / t_air(ic)) * 10._lp ** (k2_nh3_henry - k3_nh3_henry / t_air(ic))
 
       ! dissociation constant Ka for NH3
-      dissociation_coef = 10._wp**(k1_nh3_diss - k2_nh3_diss / t_soil_l1(ic))
+      dissociation_coef = 10._lp**(k1_nh3_diss - k2_nh3_diss / t_soil_l1(ic))
 
       ! fraction of ammonium that is present as NH3
-      fract_nh4_as_nh3 = 1._wp / (1._wp + (10._wp**(-pH_l1(ic)))/dissociation_coef)
+      fract_nh4_as_nh3 = 1._lp / (1._lp + (10._lp**(-pH_l1(ic)))/dissociation_coef)
 
       ! potential volatilisation rate of NH4 as NH3 [mol/m3/timestep]
       ! J = drag * NH3_soilair = drag * henry_coeff * NH3_soilsolution = see below
@@ -2328,7 +2328,7 @@ CONTAINS
       DO ic = 1, nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
           hlp1(ic, is) = plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) + mycorrhiza_uptake_nh4_sl(ic, is) + &
-                         volatilisation_nh4(:,:)
+                         volatilisation_nh4(ic,is)
           hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is) - microbial_uptake_nh4_sl(ic, is)
           IF (hlp2(ic, is) < hlp1(ic, is)) THEN
             IF (hlp1(ic, is) > eps8) THEN
@@ -2726,7 +2726,20 @@ CONTAINS
       denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)      * dtime / 1.e6_lp
       denitrification_n2_local(:,:)       = denitrification_n2(:,:)       * dtime / 1.e6_lp
     ELSE
-      hlp_timestep = 1.0_wp
+      plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)
+      plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)
+      mycorrhiza_uptake_nh4_local_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:)
+      mycorrhiza_uptake_no3_local_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:)
+      microbial_uptake_nh4_local_sl(:,:)  = microbial_uptake_nh4_sl(:,:)
+      microbial_uptake_no3_local_sl(:,:)  = microbial_uptake_no3_sl(:,:)
+      asymb_n_fixation_local(:,:)         = asymb_n_fixation(:,:)
+      volatilisation_nh4_n15_local(:,:)   = volatilisation_nh4_n15(:,:)
+      nitrification_no3_local(:,:)        = nitrification_no3(:,:)
+      nitrification_noy_local(:,:)        = nitrification_noy(:,:)
+      nitrification_n2o_local(:,:)        = nitrification_n2o(:,:)
+      denitrification_noy_local(:,:)      = denitrification_noy(:,:)
+      denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)
+      denitrification_n2_local(:,:)       = denitrification_n2(:,:)
     ENDIF
 
     !> 1.0 calculate the actual discrimination for NH4,
@@ -2758,25 +2771,25 @@ CONTAINS
       DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_nh4_n15_sl(ic, is)      = plant_uptake_nh4_local_sl(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_plant_uptake_nh4 * hlp2)
+          &                                    eta_plant_uptake_nh4 * hlp2(ic, is))
         mycorrhiza_uptake_nh4_n15_sl(ic, is) = mycorrhiza_uptake_nh4_sl(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_plant_uptake_nh4 * hlp2)
+          &                                    eta_plant_uptake_nh4 * hlp2(ic, is))
         microbial_uptake_nh4_n15_sl(ic, is)  = microbial_uptake_nh4_sl(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_mic_uptake_nh4 * hlp2)
+          &                                    eta_mic_uptake_nh4 * hlp2(ic, is))
         volatilisation_nh4_n15(ic, is)       = volatilisation_nh4(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_volatilisation_nh3 * hlp2)
+          &                                    eta_volatilisation_nh3 * hlp2(ic, is))
         nitrification_no3_n15(ic, is)        = nitrification_no3(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_nitrate_production * hlp2)
+          &                                    eta_nitrate_production * hlp2(ic, is))
         nitrification_noy_n15(ic, is)        = nitrification_noy(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_nitrification * hlp2)
+          &                                    eta_nitrification * hlp2(ic, is))
         nitrification_n2o_n15(ic, is)        = nitrification_n2o(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
-          &                                    eta_nitrification * hlp2)
+          &                                    eta_nitrification * hlp2(ic, is))
       ENDDO
     ENDDO
 
@@ -2838,22 +2851,22 @@ CONTAINS
       DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_no3_n15_sl(ic, is)      = plant_uptake_no3_local_sl(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_plant_uptake_no3 * hlp2)
+          &                                                    eta_plant_uptake_no3 * hlp2(ic, is))
         mycorrhiza_uptake_no3_n15_sl(ic, is) = mycorrhiza_uptake_no3_sl(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_plant_uptake_no3 * hlp2)
+          &                                                    eta_plant_uptake_no3 * hlp2(ic, is))
         microbial_uptake_no3_n15_sl(ic, is)  = microbial_uptake_no3_sl(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_mic_uptake_no3 * hlp2)
+          &                                                    eta_mic_uptake_no3 * hlp2(ic, is))
         denitrification_noy_n15(ic, is)      = denitrification_noy(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_denitrification * hlp2)
+          &                                                    eta_denitrification * hlp2(ic, is))
         denitrification_n2o_n15(ic, is)      = denitrification_n2o(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_denitrification * hlp2)
+          &                                                    eta_denitrification * hlp2(ic, is))
         denitrification_n2_n15(ic, is)       = denitrification_n2(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
-          &                                                    eta_denitrification * hlp2)
+          &                                                    eta_denitrification * hlp2(ic, is))
       ENDDO
     ENDDO
 
