@@ -23,9 +23,13 @@ MODULE mo_q_dinsect_init
     USE mo_jsb_control,             ONLY: debug_on
     USE mo_jsb_math_constants,      ONLY: eps8
 
+    USE mo_jsb_io,                  ONLY: missval
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+
+    USE mo_jsb_grid_class,          ONLY: t_jsb_grid
+    USE mo_jsb_grid,                ONLY: Get_grid
 
     USE mo_lnd_bgcm_idx
     USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
@@ -58,10 +62,6 @@ MODULE mo_q_dinsect_init
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_process_class,               ONLY: Q_DINSECT_
-    USE mo_jsb_grid_class,                  ONLY: t_jsb_grid
-    USE mo_jsb_grid,                        ONLY: Get_grid
-
-    USE mo_q_dinsect_constants,               ONLY: !
 
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -77,8 +77,8 @@ MODULE mo_q_dinsect_init
     TYPE(t_jsb_grid),               POINTER :: hgrid               !< Horizontal grid
     TYPE(t_lctlib_element),         POINTER :: lctlib              !< land-cover-type library - parameter across pft's
 
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1                !< dummy variable
-    INTEGER                                 :: iblk, ic            !< loop indices
+    INTEGER                                 :: iblk, ic, i_doy     !< loop indices
+    INTEGER                                 :: ics, ice
     INTEGER                                 :: nproma, nblks       !< dimensions
     INTEGER                     :: dinsect_swood_idx               !< index of the dead sapwood within the bgcm store
     INTEGER                     :: dinsect_hwood_idx               !< index of the dead heartwood within the bgcm store
@@ -109,8 +109,6 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(hlp1(nproma, nblks))
-    ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     !> init '?_pool_mt' with zero below
     dinsect_swood_idx = get_bgcm_idx(bgcm_store, DINSECT_BGCM_DEADSAPWOOD_ID, tile%name, routine)
@@ -127,8 +125,6 @@ MODULE mo_q_dinsect_init
     dinsect_hwood_mt_domain(:,:,:) = 0.0_wp
     dinsect_leaf_mt_domain(:,:,:) = 0.0_wp
     dinsect_larva_mt_domain(:,:,:) = 0.0_wp
-
-    DEALLOCATE(hlp1)
 
   END SUBROUTINE dinsect_init
 
@@ -150,29 +146,36 @@ MODULE mo_q_dinsect_init
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),            POINTER :: model
-    TYPE(t_jsb_grid),             POINTER :: hgrid
+    TYPE(t_jsb_grid),             POINTER :: grid
     CLASS(t_jsb_tile_abstract),   POINTER :: tile
     CHARACTER(len=:), ALLOCATABLE         :: fullpath
 
     dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(Q_DINSECT_)
 
-    dsl4jsb_Real2D_onDomain :: dinsect_df_dist_fraction_read
+    dsl4jsb_Real3D_onDomain :: dinsect_df_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
+    INTEGER                     :: nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
     ! -------------------------------------------------------------------------------------------------- !
-    model => Get_model(model_id)
+    model  => Get_model(model_id)
+    grid   => Get_grid(model%grid_id)
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
+    ! -------------------------------------------------------------------------------------------------- !
     CALL model%Get_top_tile(tile)
-
+    ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
-    dsl4jsb_Get_var2D_onDomain(Q_DINSECT_, dinsect_df_dist_fraction_read)
-
+    dsl4jsb_Get_var3D_onDomain(Q_DINSECT_, dinsect_df_dist_fraction_read)
+    !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    ALLOCATE(dinsect_init_vars%df_dist_frac(nproma, nblks, 1:366)) ! number of days in a year
 
     current_year  = get_year(current_datetime)
 
@@ -190,9 +193,9 @@ MODULE mo_q_dinsect_init
 
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_path) // fname
 
-    input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
-    ptr_2D => input_file%Read_2d(variable_name='dist_fract', fill_array = dinsect_df_dist_fraction_read(:,:))
-    CALL input_file%Close()
+    ! input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
+    ! ptr_2D => input_file%Read_2d(variable_name='dist_frac', fill_array = dinsect_df_dist_fraction_read(:,:))
+    ! CALL input_file%Close()
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
@@ -215,29 +218,38 @@ MODULE mo_q_dinsect_init
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),            POINTER :: model
-    TYPE(t_jsb_grid),             POINTER :: hgrid
+    TYPE(t_jsb_grid),             POINTER :: grid
     CLASS(t_jsb_tile_abstract),   POINTER :: tile
     CHARACTER(len=:), ALLOCATABLE         :: fullpath
 
     dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(Q_DINSECT_)
-
-    dsl4jsb_Real2D_onDomain :: dinsect_bb_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(wp),           POINTER :: ptr_2Dt(:,:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
+    INTEGER                     :: nproma, nblks, i_doy
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
     ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Real3D_onDomain :: dinsect_bb_dist_fraction_read ! out
+    ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(model_id)
-    CALL model%Get_top_tile(tile)
+    grid   => Get_grid(model%grid_id)
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
 
+    CALL model%Get_top_tile(tile)
+    ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
     dsl4jsb_Get_memory(Q_DINSECT_)
-    dsl4jsb_Get_var2D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
-
+    dsl4jsb_Get_var3D_onDomain(Q_DINSECT_, dinsect_bb_dist_fraction_read)
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    ALLOCATE(dinsect_init_vars%bb_dist_frac(nproma, nblks, 366))
+    dinsect_init_vars%bb_dist_frac = missval
+
     current_year  = get_year(current_datetime)
 
     !>
@@ -253,9 +265,13 @@ MODULE mo_q_dinsect_init
       & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
 
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
-
     input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
-    ptr_2D => input_file%Read_2d(variable_name='dist_fract', fill_array = dinsect_bb_dist_fraction_read(:,:))
+    ptr_2Dt => input_file%Read_2d_time(variable_name='dist_frac')!, fill_array=dinsect_bb_dist_fraction_read) ! add here fill_array=some_array(:,:)
+
+    dinsect_bb_dist_fraction_read = 0._wp
+    DO i_doy = 1,SIZE(ptr_2Dt, dim=3) ! 3=number of days in a year
+      dinsect_bb_dist_fraction_read(:,i_doy,:) = ptr_2Dt(:,:,i_doy)
+    END DO
 
     CALL input_file%Close()
 

@@ -273,6 +273,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_
   USE mo_q_dinsect_constants
+  USE mo_q_dinsect_init,          ONLY: dinsect_init_vars
 #ifdef __QUINCY_STANDALONE__
   USE mo_qs_forcing,              ONLY: forcing_options
 #else
@@ -295,6 +296,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   TYPE(t_jsb_model),      POINTER       :: model
   TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
+  CLASS(t_jsb_tile_abstract), POINTER   :: box_tile      !< pointer to the box tile to get the fertiliser data
 
   INTEGER                               :: iblk, ics, ice, ic, nc, iy
 
@@ -327,6 +329,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Def_config(VEG_)
   dsl4jsb_Def_memory(Q_DINSECT_)
   dsl4jsb_Def_memory(VEG_)
+  dsl4jsb_Def_memory_tile(Q_DINSECT_, box_tile)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliator_effects_triggered   ! counter for accumulating the sum of timesteps
@@ -343,7 +346,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c13 ! the defence used labile C13 from bark beetle attack [mol C13/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_barkbeetle_labile_c14 ! the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
-  dsl4jsb_Real2D_onChunk      :: dinsect_bb_dist_fraction_read ! bark beetle disturbance fraction [fraction/day]
+  dsl4jsb_Real3D_onChunk      :: dinsect_bb_dist_fraction_read ! bark beetle disturbance fraction [fraction/day]
   ! ----------------------------------------------------------------------------------------------------- !
   iblk    = options%iblk
   ics     = options%ics
@@ -356,6 +359,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   model  => Get_model(tile%owner_model_id)
   lctlib => model%lctlib(tile%lcts(1)%lib_id)
+  CALL model%Get_top_tile(box_tile)
   ! ----------------------------------------------------------------------------------------------------- !
   IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
   IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
@@ -399,8 +403,8 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_bb_dist_fraction_read) ! in
-
+  dsl4jsb_Get_memory_tile(Q_DINSECT_, box_tile)
+  dsl4jsb_Get_var3D_onChunk_tile(Q_DINSECT_, dinsect_bb_dist_fraction_read, box_tile) ! out
 
 #ifdef __QUINCY_STANDALONE__
       year = forcing_options%forcing_year
@@ -416,7 +420,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
     ! (fake) read input data (daily), import from namelist, apply same data to every year
     dinsect_bb_mort_dt(:) = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_bb_forcing_dist_frac(doy) / (one_day / dtime) ! distribute bb outbreak accross the whole day
   ELSE
-    dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:) / (one_day / dtime)
+    dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:,doy) / (one_day / dtime)
   ENDIF
 
   ! ======================================================================================================= !

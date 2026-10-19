@@ -71,6 +71,10 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_dinsect_config(config)
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+
     IMPLICIT NONE
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_q_dinsect_config), INTENT(inout) :: config    !< config type for dinsect
@@ -98,6 +102,8 @@ CONTAINS
     REAL(wp)          :: dinsect_dev_bb_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
     REAL(wp)          :: dinsect_dev_df_forcing_dist_frac(366) !< Prescribed for an entire year (daily data). For dev purposes only.
 
+    TYPE(t_jsb_vgrid), POINTER  :: time_doy_vgrid
+
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_dinsect_config'
     ! ----------------------------------------------------------------------------------------------------- !
     NAMELIST /lnd_q_dinsect_nml/     &
@@ -114,6 +120,8 @@ CONTAINS
       dinsect_dev_df_forcing_dist_frac
 
     ! ----------------------------------------------------------------------------------------------------- !
+    ! New Vgrid
+    INTEGER :: i_doy
     ! variables for reading model-options from namelist
     INTEGER  :: nml_handler, nml_unit, istat
     ! ----------------------------------------------------------------------------------------------------- !
@@ -156,6 +164,11 @@ CONTAINS
 
     config%dinsect_dev_bb_forcing_dist_frac = dinsect_dev_bb_forcing_dist_frac
     config%dinsect_dev_df_forcing_dist_frac = dinsect_dev_df_forcing_dist_frac
+
+    ! create vertical grid
+    time_doy_vgrid => new_vgrid('days_of_year', ZAXIS_GENERIC, 366, &
+      & levels=(/ (REAL(i_doy, kind=wp), i_doy = 1,366) /), units='')
+    CALL register_vgrid(time_doy_vgrid)
 
     CALL close_nml(nml_handler)
   END SUBROUTINE Init_dinsect_config

@@ -667,7 +667,7 @@ CONTAINS
       END IF
 
       IF (model%config%qmodel_id == QLAND) THEN
-        ! For the Q_SYL_ and the Q_AGR_ process data might have to be read once a year / at the beginning of a simulation
+        ! For the Q_DINSECT_ process data have to be read once a year / at the beginning of a simulation
         IF ((is_newyear(current_datetime,dtime) .OR. is_time_experiment_start(current_datetime))) THEN
           IF (model%processes(Q_DINSECT_)%p%config%active) THEN
             IF (.NOT. dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
