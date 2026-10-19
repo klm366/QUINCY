@@ -734,6 +734,7 @@ CONTAINS
     USE mo_carbon_interface,   ONLY: yday_carbon_conservation_test
     USE mo_seb_interface,      ONLY: seb_check_temperature_range
     USE mo_veg_util,           ONLY: test_carbon_conservation
+    USE mo_sb_convergence,     ONLY: report_sb_convergence
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
@@ -812,6 +813,8 @@ CONTAINS
 
     ! Global diagnostics
     CALL global_diagnostics(tile)
+    ! Report after all tile work/events, independent of output-variable selection.
+    IF (.NOT. linit) CALL report_sb_convergence(model_id, current_datetime, dtime_lp)
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())

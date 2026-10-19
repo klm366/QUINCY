@@ -109,6 +109,8 @@ CONTAINS
       &                                         def_co2_deltaC13, def_co2_deltaC14
     USE mo_sb_constants,                  ONLY: microbial_cue_max, microbial_nue, microbial_pue, microbial_cn, microbial_np, &
       &   k_weath_mineral, &
+      &   k_mort_microbial, microbial_mortality_exponent, microbial_mortality_reference, &
+      &   min_dom_uptake_concentration, min_persistent_enzyme, calc_persistent_enzyme_floor, &
       &   temp_freeze_thres_bio, temp_freeze_window_bio, frac_woody2dec_litter, frac_litter2fast_som, f_nit_noy, f_nit_n2o, &
       &   vmax_nitrification, vmax_denitrification, t_ref_decomposition, ea_decomposition, ed_decomposition
     USE mo_isotope_util,                  ONLY: calc_fractionation, calc_mixing_ratio_C14C
@@ -136,6 +138,7 @@ CONTAINS
     INTEGER                         :: sb_pool_idx           !< index of the sb pool within the bgcm store
     REAL(lp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_ic_bc'
+    CHARACTER(len=512) :: mortality_report !< One initialization record of the scientific policy [-]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
@@ -236,6 +239,14 @@ CONTAINS
     nproma        =  hgrid%nproma
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
+    IF (dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm' .AND. tile%Is_last_process_tile(SB_)) THEN
+      WRITE(mortality_report,*) 'JSM mortality beta, B_ref [mol C m-3 total soil], k_ref [s-1] = ', &
+        & microbial_mortality_exponent, microbial_mortality_reference, k_mort_microbial, &
+        & '; effective persistent enzyme [mol C m-3], DOM division cutoff [mol m-3] = ', &
+        & calc_persistent_enzyme_floor(microbial_mortality_exponent, min_persistent_enzyme), &
+        & min_dom_uptake_concentration
+      CALL message(routine, TRIM(mortality_report))
+    END IF
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)

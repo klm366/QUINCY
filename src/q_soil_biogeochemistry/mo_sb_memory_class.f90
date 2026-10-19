@@ -45,6 +45,13 @@ MODULE mo_sb_memory_class
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_sb_memory
 
+    ! Annual grid-level history is registered on the root after the forcing
+    ! namelist is known, before restart input and output-list configuration.
+    INTEGER :: convergence_cycle_years = 0 !< Runtime forcing cycle length [years], not a namelist control
+    INTEGER :: convergence_forcing_start_year = 0 !< Runtime forcing-cycle origin [calendar year]
+    TYPE(t_jsb_var_real3d) :: convergence_history !< Flattened annual stocks and sampling metadata [mixed]
+    TYPE(t_jsb_var_real2d) :: convergence_event_count !< Completed artificial state changes per tile/cell [-]
+
     !------------------------------------------------------------------------------------------------------ !
     !> bgc_material structures
     !>
@@ -594,6 +601,14 @@ CONTAINS
         & output_level = NONE, &
         & lrestart = .TRUE., &
         & initval_r = 0.0_lp)
+    END IF
+
+    IF (model%config%l_spinup) THEN
+      CALL mem%Add_var('convergence_event_count', mem%convergence_event_count, &
+        & hgrid, surface, &
+        & t_cf('convergence_event_count', '1', 'artificial state change serial for SOC monitoring'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+        & output_level = NONE, loutput = .FALSE., lrestart = .TRUE., lrestart_cont = .TRUE., initval_r = 0._lp)
     END IF
 
     IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) THEN

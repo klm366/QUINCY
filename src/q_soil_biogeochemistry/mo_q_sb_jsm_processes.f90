@@ -23,11 +23,13 @@ MODULE mo_q_sb_jsm_processes
   USE mo_jsb_math_constants,  ONLY: one_day, eps4, eps8
   USE mo_lnd_bgcm_idx
 
+  USE mo_sb_constants, ONLY: min_dom_uptake_concentration, calc_persistent_enzyme_floor
+
   IMPLICIT NONE
 
   PRIVATE
   PUBLIC :: calc_litter_turnover, &
-    &       calc_microbial_turnover, calc_asymb_bnf_fraction, calc_microbial_growth, &
+    &       calc_microbial_turnover, calc_microbial_mortality_fraction, calc_asymb_bnf_fraction, calc_microbial_growth, &
     &       calc_bulk_soil_carbon, &
     &       calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
     &       calc_sorption_desorption_of_org_material, calc_depolymerisation_SESAM, &
@@ -279,7 +281,7 @@ CONTAINS
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         hlp1     = dom_carbon(ic,is) / (km_mic_uptake * rtm_hsc(ic,is) * rmm_hsc(ic,is) + dom_carbon(ic,is) )
         uptake_c = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) * hlp1 * microbial_carbon(ic,is)
-        IF (dom_carbon(ic,is) > eps8) THEN
+        IF (dom_carbon(ic,is) > min_dom_uptake_concentration) THEN
           f_uptake = MIN(uptake_c / dom_carbon(ic,is), 1._lp * 1.E6_lp / dtime)
         ELSE
           f_uptake = 0.0_lp
@@ -802,6 +804,41 @@ CONTAINS
   END SUBROUTINE calc_nitri_denitri_partitioning_rate
 
   ! ======================================================================================================= !
+  !> Realized loss for M(B)=k_ref*B*(B/B_ref)**(beta-1), capped at the biomass floor.
+  !> B and B_ref refer to TOTAL soil volume. One fraction applies to C,N,P and isotopes.
+  !> Caller validates finite nonnegative inputs, B_ref>0 and beta>=1.
+  !> Log evaluation avoids overflow of the nonlinear power; eps8 floor protection is retained.
+  PURE ELEMENTAL FUNCTION calc_microbial_mortality_fraction(biomass, reference_rate, reference_biomass, &
+      & exponent, dtime, minimum_biomass) RESULT(fraction)
+    REAL(lp), INTENT(in) :: biomass, reference_biomass, minimum_biomass !< C per total volume [mol C m-3]
+    REAL(lp), INTENT(in) :: reference_rate !< Per-capita turnover at reference biomass [s-1]
+    REAL(lp), INTENT(in) :: exponent !< Biomass exponent beta [-]
+    REAL(lp), INTENT(in) :: dtime !< Timestep duration [s]
+    REAL(lp) :: fraction !< Realized loss fraction, shared by all elements [-]
+    REAL(lp) :: available_fraction, log_fraction !< Floor-limited fraction and log potential fraction [-]
+
+    fraction = 0._lp
+    IF (biomass <= minimum_biomass .OR. reference_rate == 0._lp .OR. dtime == 0._lp) RETURN
+    available_fraction = MAX(0._lp, 1._lp - minimum_biomass / biomass)
+    IF (available_fraction == 0._lp) RETURN
+    IF (exponent == 1._lp) THEN
+      ! Preserve the original linear calculation bit-for-bit for ordinary timesteps.
+      fraction = reference_rate * dtime
+      IF (biomass - fraction * biomass < minimum_biomass) THEN
+        fraction = 0._lp
+        IF (biomass > eps8) fraction = available_fraction
+      END IF
+    ELSE
+      log_fraction = LOG(reference_rate) + LOG(dtime) + &
+        & (exponent - 1._lp) * (LOG(biomass) - LOG(reference_biomass))
+      IF (log_fraction > LOG(available_fraction)) THEN
+        IF (biomass > eps8) fraction = available_fraction
+      ELSE
+        fraction = EXP(log_fraction)
+      END IF
+    END IF
+  END FUNCTION calc_microbial_mortality_fraction
+
   !> Nutrient fraction redirected from otherwise-residue material to DOM during mortality.
   !> r(s) = r_min + (r_max-r_min)/(1+(max(s-0.1,0)/K)**3), where
   !> r_min = min(minimum_fraction,r_max). A zero maximum disables recycling exactly.
@@ -893,7 +930,7 @@ CONTAINS
     END IF
   END SUBROUTINE calc_microbial_nutrient_regulation
 
-  !> Turnover of microbial biomass (pi * Cb in Ahrens et al. 2015, eq. 7).
+  !> Microbial turnover: linear at beta=1; normalized density dependence for beta>1.
   !> Transfers the realized biomass loss to DOM and residue, conserving each element/isotope.
   SUBROUTINE calc_microbial_turnover( &
     & nc, &
@@ -911,6 +948,7 @@ CONTAINS
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue, &
       &                                 fc_p_res2dom_max, fc_n_res2dom_max, &
+      &                                 microbial_mortality_exponent, microbial_mortality_reference, &
       &                                 km_microbial_nutrient_recycling, min_fraction_default_sb, &
       &                                 microbial_nue, microbial_cue_min, microbial_cue_max
     ! ----------------------------------------------------------------------------------------------------- !
@@ -936,11 +974,12 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_turnover'
     ! ----------------------------------------------------------------------------------------------------- !
 
-    ! Linear mortality is retained in Stage 2; density dependence is a separate increment.
-    IF (.NOT. ALL(ieee_is_finite([k_mort_microbial, min_mic_biomass, dtime]))) &
+    IF (.NOT. ALL(ieee_is_finite([k_mort_microbial, min_mic_biomass, dtime, &
+        & microbial_mortality_exponent, microbial_mortality_reference]))) &
       & CALL finish(routine, 'Nonfinite microbial mortality parameter or timestep.')
-    IF (MIN(k_mort_microbial, min_mic_biomass, dtime) < 0._lp) &
-      & CALL finish(routine, 'Mortality requires nonnegative rate, biomass floor and timestep.')
+    IF (MIN(k_mort_microbial, min_mic_biomass, dtime) < 0._lp .OR. &
+        & microbial_mortality_reference <= 0._lp .OR. microbial_mortality_exponent < 1._lp) &
+      & CALL finish(routine, 'Mortality requires k>=0, dt>=0, B_min>=0, B_ref>0 and beta>=1.')
 
     IF (.NOT. ALL(ieee_is_finite([fc_n_res2dom_max, fc_p_res2dom_max, &
         & km_microbial_nutrient_recycling, min_fraction_default_sb]))) &
@@ -966,7 +1005,7 @@ CONTAINS
         !> r = r_min + (r_max-r_min)/(1+(max(s-0.1,0)/K)**3). Status may exceed one:
         !> nutrient surplus suppresses recycling towards min_fraction_default_sb.
         !> A zero maximum disables selective recycling (P by default). The existing
-        !> undefined-growth status of one is retained.
+        !> undefined-growth status of one is retained, giving approximately 0.799 for N.
         !>
         IF (.NOT. ALL(ieee_is_finite([fact_n_status_mic_c_growth(ic,is), &
             & fact_p_status_mic_c_growth(ic,is)]))) &
@@ -984,15 +1023,8 @@ CONTAINS
           & CALL finish(routine, 'Nonfinite microbial carbon in mortality calculation.')
         IF (sb_pool_mt_microbial(ixC, ic, is) < 0._lp) &
           & CALL finish(routine, 'Negative microbial carbon in mortality calculation.')
-        mortality_rate(ic,is) = k_mort_microbial * dtime
-        hlp1(ic,is)           = mortality_rate(ic,is) * sb_pool_mt_microbial(ixC, ic, is)
-        IF ((sb_pool_mt_microbial(ixC, ic, is) - hlp1(ic,is)) < min_mic_biomass) THEN
-          IF (sb_pool_mt_microbial(ixC, ic, is) > eps8) THEN
-            mortality_rate(ic,is) = MAX(0._lp, 1._lp - (min_mic_biomass / sb_pool_mt_microbial(ixC, ic, is)))
-          ELSE
-            mortality_rate(ic,is) = 0._lp
-          END IF
-        END IF
+        mortality_rate(ic,is) = calc_microbial_mortality_fraction(sb_pool_mt_microbial(ixC, ic, is), &
+          & k_mort_microbial, microbial_mortality_reference, microbial_mortality_exponent, dtime, min_mic_biomass)
 
         !>2.0 calculate matter fluxes associated with microbial death
         !>  a fraction turns to DOM, the remainder becomes residue
@@ -1103,6 +1135,8 @@ CONTAINS
     & microbial_cue_eff_tmic_mavg, &
     & asymb_n_fixation_rel_rate, &
     & sb_pool_mt, &
+    & sb_transport_mt, &
+    & l_soil_model_forcing, &
     & microbial_uptake_nh4_sl, &
     & microbial_uptake_nh4_n15_sl, &
     & microbial_uptake_no3_sl, &
@@ -1147,6 +1181,8 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: microbial_cue_eff_tmic_mavg  !< microbial effective CUE given NP constraints
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: asymb_n_fixation_rel_rate    !< asymb N fixation rate relative to demand []
     REAL(lp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)          !< bgcm sb_pool [mol/m3]
+    REAL(lp),                           INTENT(in)    :: sb_transport_mt(:,:,:,:)     !< accumulated bgcm transport [mol/m3/timestep]
+    LOGICAL,                            INTENT(in)    :: l_soil_model_forcing         !< TRUE during soil-only forcing replay
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [micro-mol N/m3/s]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [micro-mol N/m3/s]
@@ -1185,8 +1221,13 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: scal
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4
     REAL(lp), DIMENSION(nc, nsoil_w)                 :: gross_mineralisation_nh4_n15
+    REAL(lp) :: dom_available_c !< DOC remaining after already allocated fluxes [mol C m-3]
+    REAL(lp) :: dom_available_n !< DON remaining after already allocated fluxes [mol N m-3]
+    REAL(lp) :: dom_available_p !< DOP remaining after already allocated fluxes [mol P m-3]
+    REAL(lp) :: f_uptake_max !< Availability-limited uptake multiplier [micro-mol mol-1 s-1]
     REAL(lp)                                         :: microbial_cue_cap !< incoming turnover CUE ceiling [-]
     INTEGER                                          :: ic, is
+    CHARACTER(len=1024)                              :: message_text
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_microbial_growth'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1208,12 +1249,63 @@ CONTAINS
           &               * rmm_hsc(ic,is) + sb_pool_mt(ix_dom, ixC, ic, is) )
         uptake_c(ic,is) = vmax_mic_uptake * rtm_mic_uptake(ic,is) * rmm_mic_uptake(ic,is) &
           &               * hlp1(ic,is) * sb_pool_mt(ix_microbial, ixC, ic, is)
-        IF (sb_pool_mt(ix_dom, ixC, ic, is) > eps8) THEN
+        ! Tiny positive DOC remains available in deep soil; this is not a prescribed pool floor.
+        IF (sb_pool_mt(ix_dom, ixC, ic, is) > min_dom_uptake_concentration) THEN
           f_uptake(ic,is) = MIN(uptake_c(ic,is) / sb_pool_mt(ix_dom, ixC, ic, is), 1._lp * 1.E6_lp / dtime)
         ELSE
           f_uptake(ic,is) = 0.0_lp
         END IF
 
+        ! Earlier JSM processes have already allocated DOM formation, loss, and
+        ! transport. Keep uptake kinetics based on the previous-timestep pool,
+        ! but limit microbial uptake to the DOM remaining after those fluxes.
+        dom_available_c = sb_pool_mt(ix_dom, ixC, ic, is) + sb_formation_mt(ix_dom, ixC, ic, is) &
+          &             - sb_loss_mt(ix_dom, ixC, ic, is) + sb_transport_mt(ix_dom, ixC, ic, is)
+        dom_available_n = sb_pool_mt(ix_dom, ixN, ic, is) + sb_formation_mt(ix_dom, ixN, ic, is) &
+          &             - sb_loss_mt(ix_dom, ixN, ic, is) + sb_transport_mt(ix_dom, ixN, ic, is)
+        dom_available_p = sb_pool_mt(ix_dom, ixP, ic, is) + sb_formation_mt(ix_dom, ixP, ic, is) &
+          &             - sb_loss_mt(ix_dom, ixP, ic, is) + sb_transport_mt(ix_dom, ixP, ic, is)
+
+        IF (dom_available_c < -eps8) THEN
+          WRITE(message_text,*) 'Negative pre-growth DOM availability for C at ic/is = ', ic, is, &
+            & '; soil_model_forcing = ', l_soil_model_forcing, &
+            & '; pool, formation, loss, transport, available = ', &
+            & sb_pool_mt(ix_dom, ixC, ic, is), sb_formation_mt(ix_dom, ixC, ic, is), &
+            & sb_loss_mt(ix_dom, ixC, ic, is), sb_transport_mt(ix_dom, ixC, ic, is), dom_available_c
+          CALL finish(TRIM(routine), TRIM(message_text))
+        ELSE IF (dom_available_n < -eps8) THEN
+          WRITE(message_text,*) 'Negative pre-growth DOM availability for N at ic/is = ', ic, is, &
+            & '; soil_model_forcing = ', l_soil_model_forcing, &
+            & '; pool, formation, loss, transport, available = ', &
+            & sb_pool_mt(ix_dom, ixN, ic, is), sb_formation_mt(ix_dom, ixN, ic, is), &
+            & sb_loss_mt(ix_dom, ixN, ic, is), sb_transport_mt(ix_dom, ixN, ic, is), dom_available_n
+          CALL finish(TRIM(routine), TRIM(message_text))
+        ELSE IF (dom_available_p < -eps8) THEN
+          WRITE(message_text,*) 'Negative pre-growth DOM availability for P at ic/is = ', ic, is, &
+            & '; soil_model_forcing = ', l_soil_model_forcing, &
+            & '; pool, formation, loss, transport, available = ', &
+            & sb_pool_mt(ix_dom, ixP, ic, is), sb_formation_mt(ix_dom, ixP, ic, is), &
+            & sb_loss_mt(ix_dom, ixP, ic, is), sb_transport_mt(ix_dom, ixP, ic, is), dom_available_p
+          CALL finish(TRIM(routine), TRIM(message_text))
+        END IF
+
+        f_uptake_max = 1.0_lp * 1.E6_lp / dtime
+        IF (sb_pool_mt(ix_dom, ixC, ic, is) > min_dom_uptake_concentration) THEN
+          f_uptake_max = MIN(f_uptake_max, MAX(0.0_lp, dom_available_c) / &
+            & sb_pool_mt(ix_dom, ixC, ic, is) * 1.E6_lp / dtime)
+        END IF
+        IF (sb_pool_mt(ix_dom, ixN, ic, is) > min_dom_uptake_concentration) THEN
+          f_uptake_max = MIN(f_uptake_max, MAX(0.0_lp, dom_available_n) / &
+            & sb_pool_mt(ix_dom, ixN, ic, is) * 1.E6_lp / dtime)
+        END IF
+        IF (sb_pool_mt(ix_dom, ixP, ic, is) > min_dom_uptake_concentration) THEN
+          f_uptake_max = MIN(f_uptake_max, MAX(0.0_lp, dom_available_p) / &
+            & sb_pool_mt(ix_dom, ixP, ic, is) * 1.E6_lp / dtime)
+        END IF
+        f_uptake(ic,is) = MIN(f_uptake(ic,is), f_uptake_max)
+
+        ! Use consistently availability-limited C, N and P uptake for nutrient status and CUE.
+        uptake_c(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is)
         uptake_n(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is)
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
 
@@ -1237,8 +1329,8 @@ CONTAINS
         END SELECT
 
         ! Disabled nutrients cover maximum-CUE demand, the reference used for status below.
-        ! Using the cap here would diagnose false limitation and could restrict uptake
-        ! while the moving-average CUE still exceeds the cap.
+        ! Using the cap here would diagnose false limitation (e.g. 0.45/0.6) and could
+        ! restrict uptake while the moving-average CUE still exceeds the cap.
         !> this ensures fact_n_status_mic_c_growth >= 1, which will affect calc_depolymerisation_SESAM and calc_microbial_turnover
         IF (.NOT. flag_sb_interactive_n) THEN
           microbial_uptake_nh4_sl(ic,is) = &
@@ -1524,14 +1616,26 @@ CONTAINS
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         !>1.0 calculate polymeric litter depolymerisation rate
         !>
-        hlp1(ic,is) = 1._lp
-        hlp1(ic,is) = enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is) &
-          &         / (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is))
+        ! Zero enzyme means zero removal, including when the effective Km is zero.
+        hlp1(ic,is) = 0._lp
+        IF (enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is) > 0._lp) THEN
+          hlp1(ic,is) = enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is) &
+            & / (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) &
+            & + enzyme_depoly(ic,is) * enzyme_frac_poly(ic,is))
+        END IF
         hlp2(ic,is) = vmax_depolymerisation_litter * rtm_depolymerisation(ic,is) * rmm_depolymerisation(ic,is) &
           &           * hlp1(ic,is) * dtime &
           &           * sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
 
-        IF (sb_pool_mt(ix_polymeric_litter, ixC, ic, is) > eps8) THEN
+        ! For beta>1, evaluate the per-timestep removal fraction [-] directly,
+        ! avoiding multiplication/division by tiny C pools [mol C/m3]. Keep the
+        ! historical pool cutoff and arithmetic for the beta=1 regression path.
+        IF (microbial_mortality_exponent > 1._lp) THEN
+          poly_depolymerisation_rate(ic,is) = 0._lp
+          IF (sb_pool_mt(ix_polymeric_litter, ixC, ic, is) > 0._lp) &
+            & poly_depolymerisation_rate(ic,is) = vmax_depolymerisation_litter &
+            & * rtm_depolymerisation(ic,is) * rmm_depolymerisation(ic,is) * hlp1(ic,is) * dtime
+        ELSE IF (sb_pool_mt(ix_polymeric_litter, ixC, ic, is) > eps8) THEN
           poly_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
         ELSE
           poly_depolymerisation_rate(ic,is) = 0.0_lp
@@ -1540,14 +1644,23 @@ CONTAINS
         !>2.0 calculate microbial residue depolymerisation rate
         !>
         enzyme_residue_local = MAX(enzyme_depoly(ic,is) * enzyme_frac_residue(ic,is), &
-          &                        min_persistent_enzyme)
-        hlp1(ic,is) = enzyme_residue_local / &
-          &         (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_residue_local)
+          & calc_persistent_enzyme_floor(microbial_mortality_exponent, min_persistent_enzyme))
+        hlp1(ic,is) = 0._lp
+        IF (enzyme_residue_local > 0._lp) THEN
+          hlp1(ic,is) = enzyme_residue_local / &
+            & (km_depolymerisation * rtm_hsc(ic,is) * rmm_hsc(ic,is) + enzyme_residue_local)
+        END IF
         hlp2(:,:) = vmax_depolymerisation_residue * rtm_depolymerisation(ic,is) &
           &         * rmm_depolymerisation(ic,is) * hlp1(ic,is) * dtime &
           &         * sb_pool_mt(ix_residue, ixC, ic, is)
 
-        IF (sb_pool_mt(ix_residue, ixC, ic, is) > eps8) THEN
+        ! Apply the same mortality-dependent activation rule to microbial residue.
+        IF (microbial_mortality_exponent > 1._lp) THEN
+          residue_depolymerisation_rate(ic,is) = 0._lp
+          IF (sb_pool_mt(ix_residue, ixC, ic, is) > 0._lp) &
+            & residue_depolymerisation_rate(ic,is) = vmax_depolymerisation_residue &
+            & * rtm_depolymerisation(ic,is) * rmm_depolymerisation(ic,is) * hlp1(ic,is) * dtime
+        ELSE IF (sb_pool_mt(ix_residue, ixC, ic, is) > eps8) THEN
           residue_depolymerisation_rate(ic,is) = hlp2(ic,is) / sb_pool_mt(ix_residue, ixC, ic, is)
         ELSE
           residue_depolymerisation_rate(ic,is) = 0.0_lp

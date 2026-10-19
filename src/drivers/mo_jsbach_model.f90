@@ -95,7 +95,8 @@ CONTAINS
     USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_control,             ONLY: get_no_of_models, force_from_observations
-    USE mo_jsb4_forcing,            ONLY: setup_forcing, init_forcing, finalize_external_forcing
+    USE mo_jsb4_forcing,            ONLY: setup_forcing, init_forcing, finalize_external_forcing, forcing_options
+    USE mo_sb_convergence,          ONLY: init_sb_convergence
     USE mo_jsb_parallel,            ONLY: Get_omp_no_of_threads
 
     USE mo_build_decomposition,     ONLY: build_decomposition
@@ -385,6 +386,8 @@ CONTAINS
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
       IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, REAL(dtime,KIND=lp))
+      IF (force_from_observations()) CALL init_sb_convergence(jg, forcing_options(jg)%cyclic_nyears, &
+        & forcing_options(jg)%cyclic_start_year)
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1134,11 +1137,9 @@ CONTAINS
         &                    dtime=dtime, alpha=1._lp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
-      ! At a restart boundary, finish a pending soil replay before advancing
-      ! coupled processes. The checkpoint datetime itself is never advanced.
-      IF (jsbach_is_restarted() .AND. is_time_restart(datetime_old)) THEN
-        CALL resume_sb_spinup_accelerator(model, model%options(Get_omp_thread()))
-      END IF
+      ! Fresh and restarted runs execute the same pending grid replay BEFORE
+      ! coupled processes. No artificial elapsed time changes the host timestamp.
+      CALL resume_sb_spinup_accelerator(model, model%options(Get_omp_thread()))
 
       ! Run tasks in queue
       CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)

@@ -101,6 +101,17 @@ MODULE mo_sb_spinup_accelerator
     REAL(lp), ALLOCATABLE :: scale_n(:), scale_p(:) !< multipliers of recorded effective demand [-]
   END TYPE t_sb_replay_nutrient_balance
 
+  ! One grid cell at a time, with all calculated tiles at the same artificial year.
+  ! Context is event-local; no checkpoint can be written midway through replay.
+  TYPE :: t_sb_grid_replay_tile
+    LOGICAL :: active = .FALSE. !< Tile has positive cell area and a pending event [-]
+    LOGICAL :: pending = .FALSE. !< Event has not yet been committed [-]
+    TYPE(t_sb_spinup_forcing_climatology) :: forcing
+    TYPE(t_sb_spinup_live_forcing) :: live
+    TYPE(t_sb_replay_nutrient_balance) :: balance
+    REAL(lp), ALLOCATABLE :: before(:,:,:,:) !< Optional debug snapshot [mol m-3]
+  END TYPE t_sb_grid_replay_tile
+
 CONTAINS
 
   ! ===================================================================================================== !
@@ -548,6 +559,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
 
     sb_spinup_accelerator_execution_count(:) = REAL(execution_index, lp)
+    IF (model%config%l_spinup) sb__mem%convergence_event_count%ptr(ics:ice,iblk) = &
+      & sb__mem%convergence_event_count%ptr(ics:ice,iblk) + 1._lp
 
   END SUBROUTINE mark_sb_spinup_accelerator_execution
 
@@ -664,152 +677,296 @@ CONTAINS
   !! The host supplies the unchanged checkpoint datetime and chunk. Completed
   !! events are skipped by the persistent counter; incomplete forcing is fatal.
   SUBROUTINE resume_sb_spinup_accelerator(model, options)
-    USE mo_jsb_process_class, ONLY: SB_
     USE mo_jsb_model_class, ONLY: MODEL_QUINCY
+    USE mo_jsb_process_class, ONLY: SB_
     USE mo_jsb_time, ONLY: is_newyear
-    TYPE(t_jsb_model), INTENT(inout) :: model
+    USE mo_sb_config_class, ONLY: t_sb_config
+    TYPE(t_jsb_model), POINTER, INTENT(in) :: model
     TYPE(t_jsb_task_options), INTENT(in) :: options
-    CLASS(t_jsb_tile_abstract), POINTER :: tile
-    INTEGER :: itile
-
-    IF (model%config%model_scheme /= MODEL_QUINCY) RETURN
-    IF (.NOT. model%config%l_spinup) RETURN
-    IF (.NOT. is_newyear(options%current_datetime, options%dtime)) RETURN
-    DO itile = 1, SIZE(model%tiles)
-      tile => model%tiles(itile)%p
-      IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
-      IF (tile%lcts(1)%lib_id == 0) CYCLE
-      CALL apply_sb_spinup_accelerator(tile, options, l_restart_boundary=.TRUE.)
-      ! PPLCC reads the variable representation before rebuilding BGCM matrices.
-      ! Publish replay state so those tasks cannot restore the pre-replay pools.
-      IF (ASSOCIATED(tile%bgcm_store)) THEN
-        CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name, options%ics, options%ice, options%iblk)
-      END IF
+    TYPE(t_jsb_task_options) :: cell_options
+    INTEGER :: c
+    IF (model%config%model_scheme /= MODEL_QUINCY .OR. .NOT. model%config%l_spinup) RETURN
+    IF (.NOT. is_newyear(options%current_datetime,options%dtime)) RETURN
+    IF (.NOT. model%processes(SB_)%p%config%active) RETURN
+    SELECT TYPE (conf => model%processes(SB_)%p%config)
+    TYPE IS (t_sb_config)
+      IF (.NOT. conf%flag_sb_model_spinup_accelerator) RETURN
+      IF (conf%sb_convergence_cycle_years <= 0) &
+        & CALL finish(modname, 'Grid replay convergence requires a positive configured climate forcing cycle.')
+    END SELECT
+    cell_options=options
+    cell_options%nc=1
+    DO c=options%ics,options%ice
+      cell_options%ics=c
+      cell_options%ice=c
+      CALL execute_sb_grid_replay(model,cell_options)
     END DO
   END SUBROUTINE resume_sb_spinup_accelerator
 
-  SUBROUTINE apply_sb_spinup_accelerator(tile, options, l_restart_boundary)
+  !> Run all positive-area SB tiles in a cell for one artificial year at a time.
+  !! Completion depends only on the area-weighted, depth-integrated grid SOC,
+  !! not on the number of tiles, MPI decomposition or nproma grouping. Each cell
+  !! may finish its local replay independently; its GLOBAL timestamp never moves.
+  !! Live forcing is restored after every tile/year because physics memory may
+  !! be inherited/shared between PFTs. The driver cannot checkpoint inside this call.
+  SUBROUTINE execute_sb_grid_replay(model, options)
+    USE mo_jsb_control, ONLY: debug_on
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_hydro_interface, ONLY: update_soil_properties
+    USE mo_q_sb_rate_modifier, ONLY: update_sb_rate_modifier
+    USE mo_sb_config_class, ONLY: t_sb_config
+    USE mo_sb_util, ONLY: reset_sb_fluxes
+    USE mo_sb_convergence_kernel, ONLY: stock_relative_change, soc_window_pass
+    USE mo_jsb_time, ONLY: executed_sb_model_spinup_accelerator_this_timestep, get_year
+    TYPE(t_jsb_model), POINTER, INTENT(in) :: model
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    TYPE(t_sb_config), POINTER :: conf
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    TYPE(t_sb_grid_replay_tile), ALLOCATABLE :: context(:)
+    REAL(lp), ALLOCATABLE :: history(:,:), after(:,:,:,:)
+    REAL(lp) :: stocks(5), initial(5), previous(5), relative(5), fraction, tolerance
+    REAL(lp) :: clock_start, clock_end
+    INTEGER :: it, event, index, n, y, slot, old_slot, consecutive
+    LOGICAL :: pending, converged, balanced, any_pending
+    CHARACTER(len=1024) :: text
+    CHARACTER(len=32) :: tile_action !< Event-level integration decision, not a yearly trace
+    SELECT TYPE (c => model%processes(SB_)%p%config)
+    TYPE IS (t_sb_config)
+      conf => c
+    END SELECT
+    ALLOCATE(context(SIZE(model%tiles)))
+    any_pending=.FALSE.; event=0
+    ! First audit completion across ALL tiles before mutating any of them.
+    DO it=1,SIZE(model%tiles)
+      tile => model%tiles(it)%p
+      IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
+      IF (tile%lcts(1)%lib_id == 0) CYCLE
+      CALL check_sb_spinup_accelerator_schedule(tile,options,pending,index)
+      context(it)%pending=pending
+      IF (.NOT. pending) CYCLE
+      IF (event /= 0 .AND. event /= index) CALL finish(modname, 'Inconsistent pending grid replay event indices.')
+      event=index
+      any_pending=.TRUE.
+    END DO
+    IF (.NOT. any_pending) RETURN
+    DO it=1,SIZE(model%tiles)
+      tile => model%tiles(it)%p
+      IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
+      IF (tile%lcts(1)%lib_id == 0) CYCLE
+      IF (.NOT. context(it)%pending) CALL finish(modname, 'Mixed completed/pending tile restart for grid replay.')
+    END DO
+    IF (model%config%flag_slow_sb_pool_spinup_accelerator) &
+      & CALL finish(modname, 'Forward and conventional slow-pool acceleration cannot run together.')
+    ! Replay precedes the coupled task queue, including soil_properties. Its derived
+    ! field capacity and porosity are not restart variables: after restart they
+    ! still contain initialization values (potentially from 3D inputs), whereas a
+    ! continuous run has the last coupled-task values. Rebuild them with the SAME
+    ! coupled routine before any replay/analytical rate calculation. Visit actual
+    ! HYDRO owners, not the PFTs inheriting their memory. No water, pools, forcing
+    ! integrals, lagged biology or global datetime are advanced by this refresh.
+    DO it=1,SIZE(model%tiles)
+      tile => model%tiles(it)%p
+      IF (tile%Is_process_calculated(HYDRO_)) CALL update_soil_properties(tile,options)
+    END DO
+    n=conf%sb_convergence_cycle_years
+    tolerance=conf%sb_model_spinup_accelerator_convergence_rel_tol
+    ALLOCATE(history(5,0:n))
+    CALL CPU_TIME(clock_start)
+    CALL grid_replay_stocks(model,options,initial,fraction)
+    DO it=1,SIZE(model%tiles)
+      IF (.NOT. context(it)%pending) CYCLE
+      tile => model%tiles(it)%p
+      ! Report once per pending event, before zero-area tiles are skipped.
+      ! Fractions are absolute grid-cell fractions, not renormalized PFT weights.
+      IF (debug_on() .OR. model%config%flag_spinup_debug) THEN
+        tile_action='integrated'
+        IF (tile%fract(options%ics,options%iblk) <= 0._lp) tile_action='skipped: nonpositive area'
+        WRITE(text,*) 'Replay tile decision: model/year/event/ic/iblk=',model%id, &
+          & get_year(options%current_datetime),event,options%ics,options%iblk, &
+          & '; tile=',TRIM(tile%name),'; grid area fraction=',tile%fract(options%ics,options%iblk), &
+          & '; action=',TRIM(tile_action)
+        CALL message(modname,TRIM(text),all_print=.TRUE.)
+      END IF
+      IF (tile%fract(options%ics,options%iblk) <= 0._lp) CYCLE
+      context(it)%active=.TRUE.
+      ! In particular rmm_sorption is diagnostic, not restart state, and is used
+      ! when the analytical seed refreshes nutrient sorption capacities. Rebuild
+      ! it from live physics before preparing the seed; replay steps subsequently
+      ! recompute all modifiers from each loaded climatology bin as before.
+      CALL update_sb_rate_modifier(tile,options)
+      IF (model%config%flag_spinup_debug) CALL write_sb_replay_entry_debug(tile,options,event)
+      IF (model%config%flag_spinup_debug) CALL snapshot_sb_spinup_pools(tile,options,context(it)%before)
+      CALL prepare_sb_spinup_accelerator(tile,options,context(it)%forcing,context(it)%live)
+      CALL seed_sb_replay_analytically(tile,options,context(it)%forcing,event)
+      ALLOCATE(context(it)%balance%litter_n(1),context(it)%balance%litter_p(1), &
+        & context(it)%balance%uptake_n(1),context(it)%balance%uptake_p(1), &
+        & context(it)%balance%scale_n(1),context(it)%balance%scale_p(1))
+      context(it)%balance%scale_n=1._lp
+      context(it)%balance%scale_p=1._lp
+      CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
+      IF (model%config%flag_spinup_debug) THEN
+        CALL write_sb_spinup_forcing_debug(tile,options,event,context(it)%forcing)
+        CALL write_sb_spinup_snapshot_debug(tile,options,event,0)
+      END IF
+    END DO
+    ! The optional analytical seed is outside the replay convergence window.
+    CALL grid_replay_stocks(model,options,stocks,fraction)
+    history=0._lp
+    history(:,0)=stocks
+    consecutive=0; converged=.FALSE.; y=0
+    DO index=1,conf%sb_model_spinup_accelerator_max_relaxation_years
+      IF (fraction <= 0._lp) EXIT
+      y=index
+      DO it=1,SIZE(model%tiles)
+        IF (.NOT. context(it)%active) CYCLE
+        tile => model%tiles(it)%p
+        SELECT CASE(TRIM(conf%sb_model_scheme))
+        CASE('jsm')
+          CALL run_jsm_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
+          CALL calibrate_sb_pore_volume(tile,options,y)
+        CASE('simple_1d')
+          CALL run_simple_1d_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
+        CASE DEFAULT
+          CALL finish(modname, 'Unsupported grid replay soil model.')
+        END SELECT
+        CALL update_replay_plant_np_demand_balance(tile,options,context(it)%forcing, &
+          & context(it)%balance,event,y,balanced)
+        ! Nutrient balance still controls next-year demand, but does not veto SOC.
+        CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
+      END DO
+      CALL grid_replay_stocks(model,options,stocks,fraction)
+      slot=MODULO(y,n+1)
+      IF (conf%sb_model_spinup_accelerator_convergence_mode == 'cycle_window') THEN
+        old_slot=MODULO(y-n,n+1)
+        IF (y >= n) converged=soc_window_pass(history(1,old_slot),stocks(1),tolerance)
+      ELSE
+        old_slot=MODULO(y-1,n+1)
+        IF (soc_window_pass(history(1,old_slot),stocks(1),tolerance)) THEN
+          consecutive=consecutive+1
+        ELSE
+          consecutive=0
+        END IF
+        converged=consecutive >= n
+      END IF
+      previous=history(:,old_slot)
+      relative=stock_relative_change(previous,stocks)
+      history(:,slot)=stocks
+      IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(y)) THEN
+        DO it=1,SIZE(model%tiles)
+          IF (.NOT. context(it)%active) CYCLE
+          tile => model%tiles(it)%p
+          CALL write_sb_spinup_snapshot_debug(tile,options,event,y)
+        END DO
+      END IF
+      IF (converged) EXIT
+    END DO
+    DO it=1,SIZE(model%tiles)
+      IF (.NOT. context(it)%pending) CYCLE
+      tile => model%tiles(it)%p
+      IF (context(it)%active) THEN
+        CALL reset_sb_fluxes(tile,options)
+        CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
+        IF (model%config%flag_spinup_debug) THEN
+          CALL write_sb_spinup_snapshot_debug(tile,options,event,y)
+          CALL snapshot_sb_spinup_pools(tile,options,after)
+          CALL write_sb_spinup_debug(tile,options,event,y,context(it)%before,after)
+          DEALLOCATE(after)
+        END IF
+      END IF
+      CALL reset_sb_spinup_accelerator_forcing(tile,options)
+      CALL mark_sb_spinup_accelerator_execution(tile,options,event)
+      CALL tile%bgcm_store%Write_matrices_to_bgcm_vars(tile%name,options%ics,options%ice,options%iblk)
+    END DO
+    CALL CPU_TIME(clock_end)
+    executed_sb_model_spinup_accelerator_this_timestep=.TRUE.
+    WRITE(text,*) 'Grid replay: model/year/event/ic/iblk=',model%id,get_year(options%current_datetime), &
+      & event,options%ics,options%iblk,'; mode/N/tolerance=',TRIM(conf%sb_model_spinup_accelerator_convergence_mode), &
+      & n,tolerance,'; internal years/SOC pass=',y,converged,'; before/after C,N,P,SIN,SIP mol/m2=',initial,stocks, &
+      & '; CPU seconds=',clock_end-clock_start,'; returning to unchanged global timestamp.'
+    CALL message(modname,TRIM(text),all_print=.TRUE.)
+    IF (y > 0) THEN
+      WRITE(text,*) 'Grid replay final diagnostic: signed stock changes=',stocks-previous, &
+        & '; relative changes C,N,P,SIN,SIP=',relative, &
+        & '; cycle-window comparison valid=',y >= n,'; nutrient diagnostics do not gate SOC.'
+      CALL message(modname,TRIM(text),all_print=.TRUE.)
+    END IF
+  END SUBROUTINE execute_sb_grid_replay
 
+  !> Actual BG soil inventory, depth integrated BEFORE weighting calculated tiles.
+  !! Reuse the ordinary diagnostic definition; exclude first-layer litter only.
+  !! Called after each tile has restored live physics to avoid inherited forcing leakage.
+  SUBROUTINE grid_replay_stocks(model,options,stocks,fraction)
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_sb_memory_class, ONLY: t_sb_memory
+    USE mo_hydro_memory_class, ONLY: t_hydro_memory
+    USE mo_lnd_bgcm_idx, ONLY: ixC, ixN, ixP
+    USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
+    USE mo_q_sb_update_pools, ONLY: calculate_sb_pool_bg_soil_for_element
+    TYPE(t_jsb_model), POINTER, INTENT(in) :: model
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    REAL(lp), INTENT(out) :: stocks(5) !< Active-soil-area C, N, P, SIN, SIP [mol m-2]
+    REAL(lp), INTENT(out) :: fraction !< Sum of calculated soil tile fractions [-]
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    TYPE(t_sb_memory), POINTER :: soil
+    TYPE(t_hydro_memory), POINTER :: hydro
+    REAL(lp), POINTER :: pool(:,:,:,:)
+    REAL(lp), ALLOCATABLE :: layer(:,:)
+    REAL(lp) :: f
+    INTEGER :: it,e,c,b,nz,elem(3)
+    stocks=0._lp; fraction=0._lp
+    c=options%ics; b=options%iblk
+    elem=[ixC,ixN,ixP]
+    DO it=1,SIZE(model%tiles)
+      tile => model%tiles(it)%p
+      IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
+      IF (tile%lcts(1)%lib_id == 0) CYCLE
+      f=tile%fract(c,b)
+      IF (f <= 0._lp) CYCLE
+      SELECT TYPE (s => tile%mem(SB_)%p)
+      TYPE IS (t_sb_memory)
+        soil => s
+      END SELECT
+      SELECT TYPE (h => tile%mem(HYDRO_)%p)
+      TYPE IS (t_hydro_memory)
+        hydro => h
+      END SELECT
+      pool => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID,c,c,b,tile%name)
+      nz=SIZE(pool,4)
+      ALLOCATE(layer(1,nz))
+      DO e=1,3
+        CALL calculate_sb_pool_bg_soil_for_element(pool,nz,elem(e),layer)
+        stocks(e)=stocks(e)+f*SUM(layer(1,:)*hydro%soil_depth_sl%ptr(c,:,b))
+      END DO
+      stocks(4)=stocks(4)+f*SUM(hydro%soil_depth_sl%ptr(c,:,b)*(soil%nh4_solute%ptr(c,:,b)+ &
+        & soil%nh4_assoc%ptr(c,:,b)+soil%no3_solute%ptr(c,:,b)))
+      stocks(5)=stocks(5)+f*SUM(hydro%soil_depth_sl%ptr(c,:,b)*(soil%po4_solute%ptr(c,:,b)+ &
+        & soil%po4_assoc_fast%ptr(c,:,b)+soil%po4_assoc_slow%ptr(c,:,b)))
+      fraction=fraction+f
+      DEALLOCATE(layer)
+    END DO
+    IF (fraction > 0._lp) stocks=stocks/fraction
+  END SUBROUTINE grid_replay_stocks
+
+  SUBROUTINE apply_sb_spinup_accelerator(tile, options)
     USE mo_jsb_process_class, ONLY: SB_
-    USE mo_jsb_time,          ONLY: executed_sb_model_spinup_accelerator_this_timestep
-    USE mo_quincy_model_config, ONLY: QLAND, QSOIL
     dsl4jsb_Use_config(SB_)
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    LOGICAL, OPTIONAL, INTENT(in) :: l_restart_boundary !< use saved forcing without sampling the new step
-
-    dsl4jsb_Def_config(SB_)
-
+    TYPE(t_jsb_task_options), INTENT(in) :: options
     TYPE(t_jsb_model), POINTER :: model
-    CHARACTER(len=*), PARAMETER :: routine = modname//':apply_sb_spinup_accelerator'
-    LOGICAL :: l_accelerate
-    LOGICAL :: l_converged
+    LOGICAL :: pending
     INTEGER :: execution_index
-    INTEGER :: represented_years
-    REAL(lp) :: max_relative_change
-    REAL(lp) :: max_total_c_absolute_change
-    REAL(lp) :: max_total_c_relative_change
-    REAL(lp), ALLOCATABLE :: pool_before(:,:,:,:)
-    REAL(lp), ALLOCATABLE :: pool_after(:,:,:,:)
-
+    dsl4jsb_Def_config(SB_)
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SB_)
-    IF (.NOT. dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) RETURN
-    IF (model%config%qmodel_id /= QLAND .AND. model%config%qmodel_id /= QSOIL) RETURN
-    IF (.NOT. model%config%l_spinup) RETURN
-    IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
-      CALL finish(TRIM(routine), 'The forward and slow-pool SB spin-up accelerators are mutually exclusive.')
-    END IF
-
-    IF (PRESENT(l_restart_boundary)) THEN
-      IF (.NOT. l_restart_boundary) CALL collect_sb_spinup_accelerator_forcing(tile, options)
-    ELSE
-      CALL collect_sb_spinup_accelerator_forcing(tile, options)
-    END IF
-    CALL check_sb_spinup_accelerator_schedule(tile, options, l_accelerate, execution_index)
-
-    IF (.NOT. l_accelerate) RETURN
-    IF (PRESENT(l_restart_boundary)) THEN
-      IF (l_restart_boundary .AND. options%iblk == 1) &
-        & CALL message(TRIM(routine), 'Resuming pending replay before coupled tasks on tile '//TRIM(tile%name))
-    END IF
-    IF (options%iblk == 1) THEN
-      WRITE(message_text,*) 'Starting forward SB spin-up accelerator execution ', execution_index, &
-        & ' with monthly biological/soil-physics means and daily water transport.'
-      CALL message(TRIM(routine), TRIM(message_text))
-    END IF
-
-    IF (model%config%flag_spinup_debug) THEN
-      CALL snapshot_sb_spinup_pools(tile, options, pool_before)
-    END IF
-
-    CALL execute_sb_spinup_accelerator(tile, options, dsl4jsb_Config(SB_)%sb_model_scheme, &
-      & execution_index, represented_years, max_relative_change, max_total_c_absolute_change, &
-      & max_total_c_relative_change, l_converged)
-    executed_sb_model_spinup_accelerator_this_timestep = .TRUE.
-
-    IF (model%config%flag_spinup_debug) THEN
-      CALL snapshot_sb_spinup_pools(tile, options, pool_after)
-      CALL write_sb_spinup_debug(tile, options, execution_index, represented_years, &
-        & pool_before, pool_after)
-    END IF
-
-    IF (options%iblk == 1) THEN
-      IF (l_converged) THEN
-        WRITE(message_text,*) 'Finished forward SB spin-up accelerator execution ', execution_index, &
-          & '; represented years = ', represented_years, '; converged = ', l_converged, &
-          & '; maximum annual relative pool change = ', max_relative_change, &
-          & '; maximum annual total-C absolute and relative changes = ', &
-          & max_total_c_absolute_change, ' mol C m-2; ', max_total_c_relative_change
-      ELSE
-        WRITE(message_text,*) 'WARNING: forward SB spin-up accelerator execution ', execution_index, &
-          & ' reached sb_model_spinup_accelerator_max_relaxation_years without convergence; continuing normal simulation.', &
-          & ' Represented years = ', represented_years, '; maximum annual relative pool change = ', max_relative_change, &
-          & '; maximum annual total-C absolute and relative changes = ', &
-          & max_total_c_absolute_change, ' mol C m-2; ', max_total_c_relative_change
-      END IF
-      CALL message(TRIM(routine), TRIM(message_text))
-    END IF
-
+    IF (.NOT. model%config%l_spinup .OR. .NOT. sb__conf%flag_sb_model_spinup_accelerator) RETURN
+    ! The driver must execute all pending grid events before coupled tasks.
+    ! Never silently fall back to the old tile/chunk-local replay scheduler.
+    CALL check_sb_spinup_accelerator_schedule(tile,options,pending,execution_index)
+    IF (pending) CALL finish(modname, 'Pending replay reached coupled tasks; grid replay driver was not called.')
+    CALL collect_sb_spinup_accelerator_forcing(tile,options)
   END SUBROUTINE apply_sb_spinup_accelerator
 
   ! ===================================================================================================== !
-  !> Execute one scheduled accelerator event once forcing storage and scheduling are implemented.
-  SUBROUTINE execute_sb_spinup_accelerator(tile, options, sb_model_scheme, execution_index, &
-      & represented_years, max_relative_change, max_total_c_absolute_change, &
-      & max_total_c_relative_change, l_converged)
-
-    USE mo_sb_util, ONLY: reset_sb_fluxes
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme
-    INTEGER,                    INTENT(in)    :: execution_index
-    INTEGER,                    INTENT(out)   :: represented_years
-    REAL(lp),                   INTENT(out)   :: max_relative_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
-    LOGICAL,                    INTENT(out)   :: l_converged
-
-    TYPE(t_sb_spinup_forcing_climatology) :: forcing
-    TYPE(t_sb_spinup_live_forcing) :: live_forcing
-
-    ! Forcing is borrowed and restored; genuine soil state and its moving
-    ! averages evolve. The shared event owns the optional analytical seed;
-    ! internal replay steps cannot collect forcing or retrigger host events.
-    CALL prepare_sb_spinup_accelerator(tile, options, forcing, live_forcing)
-    CALL seed_sb_replay_analytically(tile, options, forcing, execution_index)
-    CALL run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
-      & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-    CALL reset_sb_fluxes(tile, options)
-    CALL finalize_sb_spinup_accelerator(tile, options, live_forcing)
-    CALL reset_sb_spinup_accelerator_forcing(tile, options)
-    CALL mark_sb_spinup_accelerator_execution(tile, options, execution_index)
-
-  END SUBROUTINE execute_sb_spinup_accelerator
-
   !> Seed an eligible replay from its own climatology; no independent clock or forcing collector.
   !> The first COMPLETED replay is structure conditioning. Subsequent columns are transactional:
   !> reject all layers together on invalid forcing, ambiguous composition or failed C equations.
@@ -1388,8 +1545,9 @@ CONTAINS
       & CALL finish(routine, 'Invalid or mixed coupled pore-calibration completion state.')
     CALL calibrate_sb_pore_volume(tile, options, spinup_age, l_full_correction=.TRUE.)
     sb_coupled_pore_calibration_done = 1.0_lp
-    ! There is currently no persistent coupled convergence history in ICON.
-    ! Stage 7 must invalidate its reference here when that monitor is introduced.
+    ! Retain history but label windows crossing this one-off structural intervention.
+    sb__mem%convergence_event_count%ptr(ics:ice,iblk) = &
+      & sb__mem%convergence_event_count%ptr(ics:ice,iblk) + 1._lp
     IF (my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1) THEN
       WRITE(text,*) 'Completed one-off coupled pore calibration: tile, spinup age, calendar year = ', &
         & TRIM(tile%name), spinup_age, get_year(options%current_datetime), &
@@ -1593,91 +1751,6 @@ CONTAINS
 
 
   !> Replay the bookkept climatology until the maximum pseudo-time or convergence criterion is reached.
-  SUBROUTINE run_sb_forward_relaxation(tile, options, sb_model_scheme, forcing, execution_index, represented_years, &
-      & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-
-    USE mo_jsb_process_class, ONLY: SB_
-    dsl4jsb_Use_config(SB_)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme
-    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
-    INTEGER,                    INTENT(in)    :: execution_index
-    INTEGER,                    INTENT(out)   :: represented_years
-    REAL(lp),                   INTENT(out)   :: max_relative_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
-    LOGICAL,                    INTENT(out)   :: l_converged
-
-    dsl4jsb_Def_config(SB_)
-
-    TYPE(t_jsb_model), POINTER :: model
-    INTEGER :: consecutive_converged_years
-    INTEGER :: i_year
-    INTEGER :: last_debug_year, n_cells
-    TYPE(t_sb_replay_nutrient_balance) :: balance
-    LOGICAL :: l_demand_balanced
-    REAL(lp), ALLOCATABLE :: previous_pool(:,:,:,:)
-
-    model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(SB_)
-    CALL snapshot_sb_spinup_pools(tile, options, previous_pool)
-
-    n_cells = SIZE(forcing%forcing_time, 1)
-    ALLOCATE(balance%litter_n(n_cells), balance%litter_p(n_cells), &
-      & balance%uptake_n(n_cells), balance%uptake_p(n_cells), balance%scale_n(n_cells), balance%scale_p(n_cells))
-    balance%scale_n = 1.0_lp
-    balance%scale_p = 1.0_lp
-    last_debug_year = -1
-    IF (model%config%flag_spinup_debug) THEN
-      CALL write_sb_spinup_forcing_debug(tile, options, execution_index, forcing)
-      CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, 0)
-      last_debug_year = 0
-    END IF
-
-    represented_years = 0
-    consecutive_converged_years = 0
-    max_relative_change = HUGE(1.0_lp)
-    max_total_c_absolute_change = HUGE(1.0_lp)
-    max_total_c_relative_change = HUGE(1.0_lp)
-    l_converged = .FALSE.
-
-    DO i_year = 1, dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_max_relaxation_years
-      represented_years = i_year
-      SELECT CASE (TRIM(sb_model_scheme))
-      CASE ('jsm')
-        CALL run_jsm_forward_relaxation(tile, options, forcing, balance)
-        CALL calibrate_sb_pore_volume(tile, options, i_year)
-      CASE ('simple_1d')
-        CALL run_simple_1d_forward_relaxation(tile, options, forcing, balance)
-      CASE DEFAULT
-        CALL finish(modname//':run_sb_forward_relaxation', 'Unsupported soil-biogeochemistry model scheme.')
-      END SELECT
-
-      CALL update_replay_plant_np_demand_balance(tile, options, forcing, balance, &
-        & execution_index, i_year, l_demand_balanced)
-      IF (.NOT. l_demand_balanced) consecutive_converged_years = 0
-      CALL check_sb_spinup_convergence(tile, options, previous_pool, consecutive_converged_years, &
-        & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-      IF (.NOT. l_demand_balanced) THEN
-        consecutive_converged_years = 0
-        l_converged = .FALSE.
-      END IF
-      IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(i_year)) THEN
-        CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, i_year, &
-          & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-        last_debug_year = i_year
-      END IF
-      IF (l_converged) EXIT
-    END DO
-
-    IF (model%config%flag_spinup_debug .AND. represented_years /= last_debug_year) THEN
-      CALL write_sb_spinup_snapshot_debug(tile, options, execution_index, represented_years, &
-        & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-    END IF
-
-  END SUBROUTINE run_sb_forward_relaxation
 
   ! ===================================================================================================== !
   !> Replay forcing through the JSM process sequence without vegetation or atmospheric model updates.
@@ -2104,6 +2177,70 @@ CONTAINS
   END FUNCTION is_sb_spinup_debug_year
 
   ! ===================================================================================================== !
+  !> Bounded pre-seed diagnostics to distinguish restored state from derived physics.
+  !! First owned sample only, once per active tile/event, never per replay step.
+  SUBROUTINE write_sb_replay_entry_debug(tile, options, event)
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_jsb_parallel, ONLY: my_process_is_stdio
+    dsl4jsb_Use_memory(SB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: event !< Scheduled replay index [-]
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    INTEGER :: ics, ice, iblk, is
+    CHARACTER(len=2048) :: text
+    dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
+    dsl4jsb_Real3D_onChunk :: nh4_solute
+    dsl4jsb_Real3D_onChunk :: nh4_assoc
+    dsl4jsb_Real3D_onChunk :: no3_solute
+    dsl4jsb_Real3D_onChunk :: po4_solute
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast
+    dsl4jsb_Real3D_onChunk :: po4_assoc_slow
+    dsl4jsb_Real3D_onChunk :: enzyme_frac_AP
+    dsl4jsb_Real3D_onChunk :: fact_n_status_mic_c_growth
+    dsl4jsb_Real3D_onChunk :: fact_p_status_mic_c_growth
+    dsl4jsb_Real3D_onChunk :: microbial_cue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk :: microbial_nue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl
+
+    IF (.NOT. my_process_is_stdio() .OR. options%iblk /= 1 .OR. options%ics /= 1) RETURN
+    ics=options%ics; ice=options%ice; iblk=options%iblk
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_, no3_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_solute)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_slow)
+    dsl4jsb_Get_var3D_onChunk(SB_, enzyme_frac_AP)
+    dsl4jsb_Get_var3D_onChunk(SB_, fact_n_status_mic_c_growth)
+    dsl4jsb_Get_var3D_onChunk(SB_, fact_p_status_mic_c_growth)
+    dsl4jsb_Get_var3D_onChunk(SB_, microbial_cue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, microbial_nue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(SB_, microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
+    DO is=1,MIN(SIZE(vol_porosity_sl,2),NINT(num_sl_above_bedrock(1)))
+      WRITE(text,*) 'Replay entry tile/event/layer=',TRIM(tile%name),event,is, &
+        & '; field capacity/porosity [-]=',vol_field_cap_sl(1,is),vol_porosity_sl(1,is), &
+        & '; NH4sol/NH4assoc/NO3/PO4sol/PO4fast/PO4slow [mol m-3]=', &
+        & nh4_solute(1,is),nh4_assoc(1,is),no3_solute(1,is), &
+        & po4_solute(1,is),po4_assoc_fast(1,is),po4_assoc_slow(1,is)
+      CALL message(modname,TRIM(text))
+      WRITE(text,*) 'Replay entry biology tile/event/layer=',TRIM(tile%name),event,is, &
+        & '; enzymeAP/Nstatus/Pstatus/CUEavg/NUEavg/PUEavg [-]=',enzyme_frac_AP(1,is), &
+        & fact_n_status_mic_c_growth(1,is),fact_p_status_mic_c_growth(1,is), &
+        & microbial_cue_eff_tmic_mavg(1,is),microbial_nue_eff_tmic_mavg(1,is),microbial_pue_eff_tmic_mavg(1,is)
+      CALL message(modname,TRIM(text))
+    END DO
+  END SUBROUTINE write_sb_replay_entry_debug
+
   !> Write the event-local forcing climatology used by one forward SB acceleration.
   SUBROUTINE write_sb_spinup_forcing_debug(tile, options, execution_index, forcing)
     USE mo_jsb_parallel, ONLY: my_process_is_stdio
@@ -2113,6 +2250,7 @@ CONTAINS
     TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
     CHARACTER(len=2048) :: text
     CHARACTER(len=*), PARAMETER :: routine = modname//':write_sb_spinup_forcing_debug'
+    INTEGER :: bin !< Monthly climatology index; bounds log volume to 12 records per event/tile [-]
 
     ! Bounded local diagnostics, not a global gather or a per-cell file writer.
     IF (.NOT. my_process_is_stdio() .OR. options%iblk /= 1 .OR. options%ics /= 1) RETURN
@@ -2132,6 +2270,16 @@ CONTAINS
       & '; lateral=', MINVAL(forcing%wtr_lat_loss), MAXVAL(forcing%wtr_lat_loss), &
       & '; monthly soil temperature [K]=', MINVAL(forcing%t_soil), MAXVAL(forcing%t_soil)
     CALL message(routine, TRIM(text))
+    ! Min/max alone cannot detect reordered bins or loss of partial-window sums.
+    ! Report the actual demand/deposition means and weights used by replay.
+    DO bin=1,forcing%n_forcing_bins
+      WRITE(text,*) 'Replay monthly forcing tile/event/bin=',TRIM(tile%name),execution_index,bin, &
+        & '; seconds/rootC/Ndemand/Pdemand/NHx/NOy/Pdep=',forcing%forcing_time(1,bin), &
+        & forcing%fine_root_c(1,bin),forcing%f_n_demand(1,bin),forcing%f_p_demand(1,bin), &
+        & forcing%nhx_deposition(1,bin),forcing%noy_deposition(1,bin),forcing%p_deposition(1,bin), &
+        & '; units: s, mol C m-2, 1, 1, micro-mol m-2 s-1 (depositions)'
+      CALL message(routine,TRIM(text))
+    END DO
   END SUBROUTINE write_sb_spinup_forcing_debug
 
   ! ===================================================================================================== !
@@ -2328,79 +2476,6 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> Test annual layer-, pool-, and element-wise changes and update the convergence state.
-  SUBROUTINE check_sb_spinup_convergence(tile, options, previous_pool, consecutive_converged_years, &
-      & max_relative_change, max_total_c_absolute_change, max_total_c_relative_change, l_converged)
-
-    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
-    USE mo_jsb_math_constants,   ONLY: eps8
-    USE mo_jsb_process_class,    ONLY: SB_, HYDRO_
-    USE mo_lnd_bgcm_idx,         ONLY: ixC
-    USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
-    USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
-    dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_memory(HYDRO_)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    REAL(lp), ALLOCATABLE,      INTENT(inout) :: previous_pool(:,:,:,:)
-    INTEGER,                    INTENT(inout) :: consecutive_converged_years
-    REAL(lp),                   INTENT(out)   :: max_relative_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_absolute_change
-    REAL(lp),                   INTENT(out)   :: max_total_c_relative_change
-    LOGICAL,                    INTENT(out)   :: l_converged
-
-    dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_mt2L3D :: sb_pool_mt
-
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store
-    CHARACTER(len=*), PARAMETER :: routine = modname//':check_sb_spinup_convergence'
-    INTEGER :: ics
-    INTEGER :: ice
-    INTEGER :: iblk
-    REAL(lp), ALLOCATABLE :: current_total_c(:)
-    REAL(lp), ALLOCATABLE :: previous_total_c(:)
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-
-    ics = options%ics
-    ice = options%ice
-    iblk = options%iblk
-    model => Get_model(tile%owner_model_id)
-    bgcm_store => tile%bgcm_store
-    dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
-    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
-
-    IF (ANY(SHAPE(previous_pool) /= SHAPE(sb_pool_mt))) THEN
-      CALL finish(TRIM(routine), 'Stored and current SB pool dimensions differ.')
-    END IF
-    IF (.NOT. ALL(ieee_is_finite(sb_pool_mt))) THEN
-      CALL finish(TRIM(routine), 'Non-finite SB pool encountered during forward relaxation.')
-    END IF
-
-    max_relative_change = MAXVAL(ABS(sb_pool_mt - previous_pool) / &
-      & MAX(ABS(sb_pool_mt), ABS(previous_pool), eps8))
-
-    ALLOCATE(current_total_c(SIZE(sb_pool_mt, 3)), previous_total_c(SIZE(sb_pool_mt, 3)))
-    current_total_c = SUM(SUM(sb_pool_mt(:, ixC, :, :), DIM=1) * soil_depth_sl, DIM=2)
-    previous_total_c = SUM(SUM(previous_pool(:, ixC, :, :), DIM=1) * soil_depth_sl, DIM=2)
-    max_total_c_absolute_change = MAXVAL(ABS(current_total_c - previous_total_c))
-    max_total_c_relative_change = MAXVAL(ABS(current_total_c - previous_total_c) / &
-      & MAX(ABS(current_total_c), ABS(previous_total_c), eps8))
-
-    IF (max_relative_change <= dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_convergence_rel_tol) THEN
-      consecutive_converged_years = consecutive_converged_years + 1
-    ELSE
-      consecutive_converged_years = 0
-    END IF
-    l_converged = consecutive_converged_years >= &
-      & dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_convergence_years
-
-    previous_pool = sb_pool_mt
-
-  END SUBROUTINE check_sb_spinup_convergence
 
   ! ===================================================================================================== !
   !> Commit the relaxed SB state, restore live forcing, and refresh derived soil properties.

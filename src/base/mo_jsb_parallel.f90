@@ -24,6 +24,16 @@ MODULE mo_jsb_parallel
 
 CONTAINS
 
+  !> Sum an owned-cell field for land diagnostics on the host work communicator.
+  !! The caller supplies zero for halos/padding and calls on all participating ranks.
+  FUNCTION sum_land_diagnostic(field) RESULT(total)
+    USE mo_kind, ONLY: lp
+    USE mo_sync, ONLY: global_sum_array
+    REAL(lp), INTENT(in) :: field(:,:) !< Local contributions [caller units]
+    REAL(lp) :: total !< Collective sum [caller units]
+    total = global_sum_array(field)
+  END FUNCTION sum_land_diagnostic
+
   LOGICAL FUNCTION Is_enabled_openmp()
 
 #ifdef _OPENMP

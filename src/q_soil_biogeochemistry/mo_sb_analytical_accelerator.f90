@@ -24,6 +24,7 @@ MODULE mo_sb_analytical_accelerator
   PUBLIC :: t_sb_local_coefficients, t_sb_local_target, solve_local_carbon_target
   PUBLIC :: solve_analytical_maoc_partition, reconstruct_analytical_column
   PUBLIC :: t_sb_analytical_inputs, build_sb_analytical_inputs, diagnose_local_carbon_targets
+  PUBLIC :: solve_density_dependent_microbial_target
   PUBLIC :: solve_simple_carbon_target
 
   !> Local pool order is S,W,L,B,R,D,AD,AR; concentrations refer to TOTAL soil volume.
@@ -35,6 +36,8 @@ MODULE mo_sb_analytical_accelerator
     REAL(lp) :: litter_turnover_rate(2) = 0.0_lp !< Effective soluble and woody decay constants [s-1]
     REAL(lp) :: carbon_transfer_fraction(3) = 0.0_lp !< Soluble-to-DOM, woody-to-poly, mortality-to-DOM fractions [-]
     REAL(lp) :: microbial_decay_rate = 0.0_lp, minimum_microbial_carbon = 0.0_lp !< Mortality [s-1], floor [mol C m-3]
+    REAL(lp) :: mortality_exponent = 1._lp !< beta=1 linear regression; beta>1 density dependence [-]
+    REAL(lp) :: mortality_reference = 1._lp !< Reference biomass per TOTAL soil volume [mol C m-3]
     REAL(lp) :: microbial_cue = 0.0_lp, enzyme_frac_ap_layer = 0.0_lp !< Prescribed CUE and AP allocation [-]
     REAL(lp) :: alpha_poly = 0.0_lp !< Historical allocation for input validation only; target solves its own [-]
     REAL(lp) :: vmax_uptake_eff = 0.0_lp, km_uptake_eff = 0.0_lp !< Molar uptake capacity [s-1], HSC [mol C m-3]
@@ -299,6 +302,7 @@ CONTAINS
       & fc_woody2polymeric, f_soluable_residue, k_mort_microbial, min_mic_biomass, &
       & vmax_mic_uptake, km_mic_uptake, vmax_depolymerisation_litter, vmax_depolymerisation_residue, &
       & km_depolymerisation, enzyme_frac_total, min_persistent_enzyme, k_adsorpt_dom, k_adsorpt_det, &
+      & microbial_mortality_exponent, microbial_mortality_reference, calc_persistent_enzyme_floor, &
       & k_desorpt_dom, k_desorpt_det, carbon_per_dryweight_SOM, rho_solid_maoc, rho_bulk_org
     TYPE(t_sb_analytical_inputs), INTENT(in) :: inputs !< Prepared forcing and fixed geometry [various]
     REAL(lp), INTENT(in) :: nactive(:) !< Active soil-layer count per cell [-]
@@ -316,9 +320,12 @@ CONTAINS
     coefficients%dtime = inputs%timestep
     coefficients%carbon_transfer_fraction = [fc_soluable2dom, fc_woody2polymeric, f_soluable_residue]
     coefficients%microbial_decay_rate = k_mort_microbial
+    coefficients%mortality_exponent = microbial_mortality_exponent
+    coefficients%mortality_reference = microbial_mortality_reference
     coefficients%minimum_microbial_carbon = min_mic_biomass
     coefficients%enzyme_frac_total_local = enzyme_frac_total
-    coefficients%persistent_enzyme_carbon = min_persistent_enzyme
+    coefficients%persistent_enzyme_carbon = &
+      & calc_persistent_enzyme_floor(microbial_mortality_exponent, min_persistent_enzyme)
     !> Eq. (1): gamma_A=M_C/(1000*f_C*rho_A), gamma_P=M_C/(1000*f_C*rho_P) [m3/mol C].
     !> Multiplication by a concentration per TOTAL soil volume gives an occupied volume fraction.
     !> These are dry-solid occupancies; neither dissolved DOM nor woody litter occupies these pores.
@@ -416,7 +423,7 @@ CONTAINS
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_jsb_math_constants, ONLY: eps8
     USE mo_q_sb_jsm_processes, ONLY: calc_enzyme_allocation
-    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    USE mo_sb_constants, ONLY: min_enzyme_fraction, min_dom_uptake_concentration
     TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients !< Fixed coefficients [see type declaration]
     TYPE(t_sb_local_target), INTENT(out) :: target !< Candidate, validity and balance diagnostics
     REAL(lp) :: carbon_pools(8) !< Candidate concentrations in S,W,L,B,R,D,AD,AR order [mol C m-3]
@@ -431,6 +438,7 @@ CONTAINS
     REAL(lp) :: residual_scale(8) !< Per-pool numerical balance tolerance [mol C m-3 s-1]
     REAL(lp) :: volume_pore_available !< Pore fraction available after MAOC occupancy [-]
     LOGICAL :: l_maoc_solution !< Finite-timestep MAOC solve passed [-]
+    LOGICAL :: l_microbial_solution !< Nonlinear unrestricted root is resolved and admissible [-]
     REAL(lp) :: dom_lower_bound, dom_upper_bound, dom_removal !< DOC bracket [mol C/m3], removal [mol C/m3/s]
     INTEGER :: iter_dom !< Bounded monotonic DOC root iteration [-]
 
@@ -455,6 +463,7 @@ CONTAINS
     IF (.NOT. ALL(ieee_is_finite([coefficients%dtime,coefficients%litter_input_carbon, &
       & coefficients%litter_turnover_rate,coefficients%carbon_transfer_fraction, &
       & coefficients%microbial_decay_rate,coefficients%minimum_microbial_carbon, &
+      & coefficients%mortality_exponent,coefficients%mortality_reference, &
       & coefficients%microbial_cue,coefficients%alpha_poly,coefficients%enzyme_frac_ap_layer, &
       & coefficients%vmax_uptake_eff,coefficients%km_uptake_eff,coefficients%vmax_depoly_eff, &
       & coefficients%km_depoly_eff,coefficients%enzyme_frac_total_local,coefficients%persistent_enzyme_carbon, &
@@ -463,6 +472,7 @@ CONTAINS
       & coefficients%volume_per_carbon_poc,coefficients%transport_dom_inflow,coefficients%dom_export_rate]))) RETURN
     IF (coefficients%dtime <= 0.0_lp .OR. coefficients%microbial_decay_rate <= 0.0_lp .OR. &
       & coefficients%microbial_cue <= 0.0_lp .OR. coefficients%microbial_cue >= 1.0_lp) RETURN
+    IF (coefficients%mortality_exponent < 1._lp .OR. coefficients%mortality_reference <= 0._lp) RETURN
     IF (MINVAL([coefficients%litter_input_carbon,coefficients%litter_turnover_rate, &
       & coefficients%minimum_microbial_carbon,coefficients%vmax_uptake_eff,coefficients%vmax_depoly_eff, &
       & coefficients%enzyme_frac_total_local, &
@@ -492,14 +502,26 @@ CONTAINS
     !> Eq. (15): cancel B>0 in e*vU*B*D/(KU+D)=kB*B to obtain D=kB*KU/(e*vU-kB).
     !> This is not a DOC prescription for a dormant layer or a layer where actual U is capped.
     target%l_minimum_microbial_seed = .TRUE.
-    IF (coefficients%microbial_cue*coefficients%vmax_uptake_eff > coefficients%microbial_decay_rate) THEN
+    IF (coefficients%mortality_exponent > 1._lp) THEN
+      ! q(B)=k_ref*(B/B_ref)**(beta-1); e*U=M and J=(1-e)*M/e+ell*D.
+      ! A failed nonlinear solve is NOT a reason to prescribe a dormant layer. Only a resolved
+      ! root at/below B_min (or J=0) enters the explicit zero-mortality quasi-steady branch.
+      CALL solve_density_dependent_microbial_target(carbon_source, coefficients%dom_export_rate, &
+        & coefficients%microbial_cue, coefficients%vmax_uptake_eff, coefficients%km_uptake_eff, &
+        & coefficients%microbial_decay_rate, coefficients%mortality_reference, coefficients%mortality_exponent, &
+        & microbial_carbon, dom_carbon, microbial_decay, l_microbial_solution)
+      target%reason = 'Nonlinear microbial/DOC root absent or unresolved; no analytical jump'
+      IF (.NOT. l_microbial_solution) RETURN
+      target%l_minimum_microbial_seed = microbial_carbon <= coefficients%minimum_microbial_carbon
+    ELSE IF (coefficients%microbial_cue*coefficients%vmax_uptake_eff > coefficients%microbial_decay_rate) THEN
       dom_carbon = coefficients%microbial_decay_rate*coefficients%km_uptake_eff/(coefficients%microbial_cue* &
         & coefficients%vmax_uptake_eff-coefficients%microbial_decay_rate)
       microbial_carbon = coefficients%microbial_cue*(carbon_source-coefficients%dom_export_rate*dom_carbon)/ &
         & (coefficients%microbial_decay_rate*(1.0_lp-coefficients%microbial_cue))
       target%l_minimum_microbial_seed = microbial_carbon <= coefficients%minimum_microbial_carbon
     END IF
-    microbial_decay = coefficients%microbial_decay_rate*microbial_carbon
+    IF (coefficients%mortality_exponent == 1._lp) &
+      & microbial_decay = coefficients%microbial_decay_rate*microbial_carbon
     IF (target%l_minimum_microbial_seed) THEN
       microbial_carbon = coefficients%minimum_microbial_carbon
       microbial_decay = 0.0_lp
@@ -530,7 +552,7 @@ CONTAINS
     END IF
     target%microbial_mortality = microbial_decay
     !> Eq. (8): E=max(fE*(1-AP)*B,E0), EL=alpha*E, ER=max((1-alpha)*E,E0).
-    !> This Stage 5 path uses linear mortality and the existing forward persistent-enzyme policy.
+    !> E0 is retained only for beta=1; nonlinear mortality uses E0=0 in both forward and target.
     !> Only ER has the additional independent floor. For small B with ER=E0, Eq. (18) gives R -> 0
     !> as B -> 0 while linear microbial_decay holds; dropping that floor can leave a spurious finite R.
     !> Eqs. (21)-(22): derive allocation from stationary carbon fluxes, not the historical allocation.
@@ -613,28 +635,75 @@ CONTAINS
     IF (coefficients%l_surface_layer .AND. target%poc_volume > eps8) &
       & target%burial = MIN(1.0_lp,volume_pore_available/target%poc_volume)
 
-    !> Eq. (7): unrestricted M(B) requires B-M*dt>=B_min for the linear mortality law.
+    !> Eq. (7): unrestricted M(B) requires B-M*dt>=B_min for either mortality law.
     !> U*dt>D is diagnostic only: continuous substrate_input_rate can replenish DOC within the interval.
     !> Forward replay caps actual microbial_uptake against DOC availability. This can cause adjustment away
     !> from the continuous carbon root, but is not itself a reason to reject that root.
     !> Additional C/N/P availability caps in calc_microbial_growth are NOT proved inactive here.
-    !> Retain the current ICON forward DOC activation cutoff eps8 [mol C/m3].
-    !> The shared smaller cutoff and nonlinear mortality are a separate Stage 6 increment.
+    !> The DOC activation cutoff is shared with forward uptake (1.e-16 mol C/m3), not generic eps8.
+    !> This admits low-DOC deep-soil roots without imposing a DOC floor or changing their carbon balance.
     !> The conservative donor checks kS*dt,kW*dt,aL*dt<=1 and dR*dt+ads_R_step<=R avoid
     !> requiring more old substrate than exists; the latter is a sufficient guard, not a complete
     !> reconstruction of the staged forward CNP update including concurrent formation and transport.
     target%status = 3
-    target%reason = 'Unrestricted seed activates a microbial floor, small-DOC branch or timestep pool limit'
+    ! Report the first failing guard in the original order. Internal formatted
+    ! writes keep this pure solver independent of logging; the caller supplies
+    ! tile/cell/layer context. Each message fits the existing 192-character field.
     IF (.NOT. target%l_minimum_microbial_seed) THEN
-      IF (microbial_carbon-microbial_decay*coefficients%dtime < coefficients%minimum_microbial_carbon .OR. &
-        & dom_carbon <= eps8) RETURN
+      IF (microbial_carbon-microbial_decay*coefficients%dtime < coefficients%minimum_microbial_carbon) THEN
+        WRITE(target%reason,'(A,5(1X,ES16.8))') &
+          & 'Microbial floor: B,B-M*dt,Bmin [mol C/m3], M [mol C/m3/s], dt [s]=', &
+          & microbial_carbon,microbial_carbon-microbial_decay*coefficients%dtime, &
+          & coefficients%minimum_microbial_carbon,microbial_decay,coefficients%dtime
+        RETURN
+      END IF
+      IF (dom_carbon <= min_dom_uptake_concentration) THEN
+        WRITE(target%reason,'(A,2(1X,ES16.8))') &
+          & 'DOC activation: D <= cutoff [mol C/m3]; D,cutoff=',dom_carbon,min_dom_uptake_concentration
+        RETURN
+      END IF
     END IF
-    IF ((d_litter > 0.0_lp .AND. polymeric_carbon <= eps8) .OR. &
-      & (d_residue > 0.0_lp .AND. residue_carbon <= eps8)) RETURN
-    IF (ANY(coefficients%litter_turnover_rate*coefficients%dtime > 1.0_lp)) RETURN
-    IF (coefficients%dom_export_rate*coefficients%dtime > 1.0_lp) RETURN
-    IF (depolymerisation_rate(1)*coefficients%dtime > 1.0_lp .OR. d_residue*coefficients%dtime+ &
-      & sorption_increment(2) > residue_carbon) RETURN
+    ! Match forward depolymerisation: only the linear regression path uses eps8
+    ! as a pool activation cutoff. Density-dependent mortality permits tiny positive pools.
+    IF (coefficients%mortality_exponent == 1._lp .AND. &
+      & d_litter > 0.0_lp .AND. polymeric_carbon <= eps8) THEN
+      WRITE(target%reason,'(A,3(1X,ES16.8))') &
+        & 'Poly pool cutoff: positive dL [mol C/m3/s], L <= eps8 [mol C/m3]; dL,L,eps8=', &
+        & d_litter,polymeric_carbon,eps8
+      RETURN
+    END IF
+    IF (coefficients%mortality_exponent == 1._lp .AND. &
+      & d_residue > 0.0_lp .AND. residue_carbon <= eps8) THEN
+      WRITE(target%reason,'(A,3(1X,ES16.8))') &
+        & 'Residue pool cutoff: positive dR [mol C/m3/s], R <= eps8 [mol C/m3]; dR,R,eps8=', &
+        & d_residue,residue_carbon,eps8
+      RETURN
+    END IF
+    IF (ANY(coefficients%litter_turnover_rate*coefficients%dtime > 1.0_lp)) THEN
+      WRITE(target%reason,'(A,3(1X,ES16.8))') &
+        & 'Litter turnover: kS*dt or kW*dt > 1; kS*dt,kW*dt [-], dt [s]=', &
+        & coefficients%litter_turnover_rate*coefficients%dtime,coefficients%dtime
+      RETURN
+    END IF
+    IF (coefficients%dom_export_rate*coefficients%dtime > 1.0_lp) THEN
+      WRITE(target%reason,'(A,3(1X,ES16.8))') &
+        & 'DOM export: rate*dt > 1; rate [s-1], dt [s], rate*dt [-]=', &
+        & coefficients%dom_export_rate,coefficients%dtime,coefficients%dom_export_rate*coefficients%dtime
+      RETURN
+    END IF
+    IF (depolymerisation_rate(1)*coefficients%dtime > 1.0_lp) THEN
+      WRITE(target%reason,'(A,3(1X,ES16.8))') &
+        & 'Poly removal: aL*dt > 1; aL [s-1], dt [s], aL*dt [-]=', &
+        & depolymerisation_rate(1),coefficients%dtime,depolymerisation_rate(1)*coefficients%dtime
+      RETURN
+    END IF
+    IF (d_residue*coefficients%dtime+sorption_increment(2) > residue_carbon) THEN
+      WRITE(target%reason,'(A,5(1X,ES16.8))') &
+        & 'Residue donor: dR*dt+ads > R; dR*dt,ads,R,total [mol C/m3], dt [s]=', &
+        & d_residue*coefficients%dtime,sorption_increment(2),residue_carbon, &
+        & d_residue*coefficients%dtime+sorption_increment(2),coefficients%dtime
+      RETURN
+    END IF
     target%status = 4
     target%reason = 'Deep solid POC requires displacement: no local transport-free equilibrium'
     IF (.NOT. coefficients%l_surface_layer .AND. target%poc_excess > 1.e-12_lp) RETURN
@@ -806,6 +875,98 @@ CONTAINS
     l_column_accepted = .TRUE.
     reason = 'Accepted: advective C target; old organic ratios retained, including non-equilibrium 14C/C'
   END SUBROUTINE reconstruct_analytical_column
+
+  !> Nonlinear microbial-DOC balances: e*U=M and J=(1-e)*M/e+ell*D.
+  !> Per-capita mortality q=k_ref*(B/B_ref)**(beta-1)=e*v*D/(K+D).
+  !> For ell>0 bracket D in (0,J/ell) in log space and recover B from q.
+  !> For ell=0 use M=e*J/(1-e), then B from the mortality law and D=K*q/(e*v-q).
+  !> Reject the uptake saturation pole, unrepresentable roots and failed balances.
+  !> The caller handles the B_min boundary and finite-step donor/pore restrictions.
+  !> Uses the approved outer 1e-18+1e-9*throughput tolerance, not a spinup criterion.
+  PURE SUBROUTINE solve_density_dependent_microbial_target(carbon_source, export_rate, cue, uptake_rate, &
+      & uptake_half_saturation, reference_rate, reference_biomass, exponent, biomass, dom, mortality, valid)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: carbon_source !< Effective litter plus upstream DOC [mol C m-3 s-1]
+    REAL(lp), INTENT(in) :: export_rate, uptake_rate, reference_rate !< DOC export, uptake and reference death [s-1]
+    REAL(lp), INTENT(in) :: cue, exponent !< Effective CUE and mortality exponent [-]
+    REAL(lp), INTENT(in) :: uptake_half_saturation, reference_biomass !< Concentrations [mol C m-3]
+    REAL(lp), INTENT(out) :: biomass, dom !< Unrestricted stationary concentrations [mol C m-3]
+    REAL(lp), INTENT(out) :: mortality !< Stationary mortality flux [mol C m-3 s-1]
+    LOGICAL, INTENT(out) :: valid !< Both balances close and the finite positive root is resolved [-]
+    REAL(lp) :: log_lower, log_upper, log_dom, log_biomass !< Logarithmic concentration bracket/work values [-]
+    REAL(lp) :: per_capita_death, growth_capacity !< q=M/B and e*v [s-1]
+    REAL(lp) :: removal, uptake, tolerance !< Total removal, DOC uptake and balance allowance [mol C m-3 s-1]
+    INTEGER :: iteration !< Scalar root iteration [-]
+
+    valid = .FALSE.
+    biomass = 0._lp
+    dom = 0._lp
+    mortality = 0._lp
+    IF (.NOT. ALL(ieee_is_finite([carbon_source,export_rate,cue,uptake_rate, &
+        & uptake_half_saturation,reference_rate,reference_biomass,exponent]))) RETURN
+    IF (MIN(carbon_source,export_rate) < 0._lp .OR. cue <= 0._lp .OR. cue >= 1._lp .OR. &
+        & MIN(uptake_rate,uptake_half_saturation,reference_rate,reference_biomass) <= 0._lp .OR. &
+        & exponent <= 1._lp) RETURN
+    IF (carbon_source == 0._lp) THEN
+      valid = .TRUE.
+      RETURN
+    END IF
+    growth_capacity = cue * uptake_rate
+    IF (export_rate == 0._lp) THEN
+      mortality = cue * carbon_source / (1._lp-cue)
+      log_biomass = (LOG(mortality)-LOG(reference_rate)+ &
+        & (exponent-1._lp)*LOG(reference_biomass))/exponent
+      IF (log_biomass >= LOG(HUGE(1._lp)) .OR. log_biomass <= LOG(TINY(1._lp))) RETURN
+      biomass = EXP(log_biomass)
+      per_capita_death = mortality / biomass
+      IF (per_capita_death >= growth_capacity) RETURN
+      dom = uptake_half_saturation * per_capita_death / (growth_capacity-per_capita_death)
+    ELSE
+      log_lower = LOG(TINY(1._lp))
+      log_upper = LOG(carbon_source)-LOG(export_rate)
+      IF (log_upper >= LOG(HUGE(1._lp)) .OR. log_upper <= log_lower) RETURN
+      DO iteration = 1,160
+        log_dom = log_lower + 0.5_lp*(log_upper-log_lower)
+        dom = EXP(log_dom)
+        per_capita_death = growth_capacity * (dom/(uptake_half_saturation+dom))
+        IF (per_capita_death <= 0._lp) THEN
+          log_lower = log_dom
+          CYCLE
+        END IF
+        ! q rounding to e*v loses the finite-root information; shrink the upper bracket.
+        IF (per_capita_death >= growth_capacity) THEN
+          log_upper = log_dom
+          CYCLE
+        END IF
+        log_biomass = LOG(reference_biomass) + &
+          & (LOG(per_capita_death)-LOG(reference_rate))/(exponent-1._lp)
+        IF (log_biomass >= LOG(HUGE(1._lp))) THEN
+          log_upper = log_dom
+          CYCLE
+        END IF
+        biomass = 0._lp
+        IF (log_biomass > LOG(TINY(1._lp))) biomass = EXP(log_biomass)
+        mortality = per_capita_death * biomass
+        removal = (1._lp-cue)*mortality/cue + export_rate*dom
+        IF (removal > carbon_source) THEN
+          log_upper = log_dom
+        ELSE
+          log_lower = log_dom
+        END IF
+      END DO
+    END IF
+    IF (.NOT. ALL(ieee_is_finite([biomass,dom,mortality]))) RETURN
+    IF (MIN(biomass,dom,mortality) <= 0._lp) RETURN
+    ! Independently verify the mortality law, not only uptake and total carbon balance.
+    per_capita_death = reference_rate * EXP((exponent-1._lp)*(LOG(biomass)-LOG(reference_biomass)))
+    IF (ABS(per_capita_death-mortality/biomass) > &
+        & 1.e-9_lp*MAX(per_capita_death,mortality/biomass)) RETURN
+    uptake = uptake_rate * biomass * (dom/(uptake_half_saturation+dom))
+    removal = (1._lp-cue)*mortality/cue + export_rate*dom
+    tolerance = 1.e-18_lp + 1.e-9_lp*MAX(carbon_source,removal)
+    valid = ABS(removal-carbon_source) <= tolerance .AND. &
+      & ABS(cue*uptake-mortality) <= 1.e-18_lp+1.e-9_lp*MAX(cue*uptake,mortality)
+  END SUBROUTINE solve_density_dependent_microbial_target
 
 #endif
 END MODULE mo_sb_analytical_accelerator

@@ -23,6 +23,9 @@ MODULE mo_sb_constants
   IMPLICIT NONE
   PUBLIC
 
+  ! Numerical activation/division cutoff, not a prescribed pool minimum (QS transfer).
+  REAL(lp), PARAMETER :: min_dom_uptake_concentration = 1.e-16_lp !< DOM cutoff [mol element m-3]
+
   ! turnover times (mostly for simple_1d model)
   REAL(lp), SAVE :: &
       tau_soluable_litter, &    !< turnover time of soluable litter [s]
@@ -118,6 +121,8 @@ MODULE mo_sb_constants
       fc_woody2polymeric, &             !< fraction of woody litter transformed into polymeric litter (JSM version)
       fc_soluable2dom, &                !< fraction of soluable litter transformed into dom pool (JSM version)
       k_mort_microbial, &               !< mortality rate of microbes [s-1]
+      microbial_mortality_exponent, &   !< normalized biomass exponent beta [-]
+      microbial_mortality_reference, &  !< reference biomass per TOTAL soil volume [mol C m-3]
       min_mic_biomass, &                !< minimum microbial biomass density (stopping mortality) [mol C/m3]
       min_volume_min_surface_analytical_ss, & !< minimum mineral-soil volume fraction in first layer for analytical SS init [-]
       min_volume_min_gradient_analytical_ss, & !< minimum mineral-soil volume gradient with depth for analytical SS init [m-1]
@@ -338,6 +343,16 @@ MODULE mo_sb_constants
 
 CONTAINS
 
+  !> QS development policy: persistent enzymes only for the linear mortality law.
+  !> Callers validate beta>=1. This numerical experiment is not a calibrated enzyme pool.
+  PURE ELEMENTAL FUNCTION calc_persistent_enzyme_floor(exponent, configured_floor) RESULT(enzyme_floor)
+    REAL(lp), INTENT(in) :: exponent !< Mortality exponent beta [-]
+    REAL(lp), INTENT(in) :: configured_floor !< Linear-law persistent enzyme floor [mol C m-3]
+    REAL(lp) :: enzyme_floor !< Effective floor, zero for beta>1 [mol C m-3]
+    enzyme_floor = 0._lp
+    IF (exponent == 1._lp) enzyme_floor = configured_floor
+  END FUNCTION calc_persistent_enzyme_floor
+
   !-----------------------------------------------------------------------------------------------------
   !> initialize constants from soil_biogeochemistry
   !!
@@ -441,6 +456,11 @@ CONTAINS
     fc_woody2polymeric            = 0.3_lp                                        ! Yu et al. 2020, GMD
     fc_soluable2dom               = 0.7_lp                                        ! Yu et al. 2020, GMD
     k_mort_microbial              = 7.48_lp * 1.e-8_lp                            ! COMISSION, Ahrens et al. 2015
+    ! Provisional feature-branch experiment, approved 2026-10-17; not global calibration.
+    ! Density dependence: Georgiou et al. (2017), doi:10.1038/s41467-017-01116-z.
+    ! B_ref follows the QS SPP1685 L2-L3 experiment; beta=1 retains the linear-law path.
+    microbial_mortality_exponent  = 2._lp
+    microbial_mortality_reference = 50._lp
     min_mic_biomass               = 1.e-16_lp                                     ! temporary near-zero floor for analytical SS testing
     min_volume_min_surface_analytical_ss = 0.05_lp                                ! steady-state-only first-layer mineral volume floor
     min_volume_min_gradient_analytical_ss = 0.01_lp                               ! steady-state-only mineral volume floor gradient with depth [m-1]

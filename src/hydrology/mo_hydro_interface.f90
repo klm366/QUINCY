@@ -67,12 +67,14 @@ MODULE mo_hydro_interface
   PRIVATE
 
   PUBLIC :: Register_hydro_tasks
+  ! Replay entry rebuilds non-restart soil properties using the coupled task's calculation.
+  PUBLIC :: update_soil_properties
 #ifndef __QUINCY_STANDALONE__
   PUBLIC :: global_hydrology_diagnostics
 #endif
 #ifdef __QUINCY_STANDALONE__
   ! USEd by the mo_qs_model_interface
-  PUBLIC :: update_surface_hydrology, update_soil_properties, update_soil_hydrology, update_evaporation, &
+  PUBLIC :: update_surface_hydrology, update_soil_hydrology, update_evaporation, &
     &       update_canopy_cond_unstressed, update_water_stress, update_canopy_cond_stressed, &
     &       update_snow_and_wet_fraction, update_water_balance
   ! Currently done in SEB process

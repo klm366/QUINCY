@@ -1282,6 +1282,8 @@ CONTAINS
       ! only execute spin-up accelerator when running in LAND or SOIL mode
       CASE(QLAND, QSOIL)
         IF (execute_quincy_sb_accelerator_this_timestep) THEN
+          IF (model%config%l_spinup) sb__mem%convergence_event_count%ptr(ics:ice,iblk) = &
+            & sb__mem%convergence_event_count%ptr(ics:ice,iblk) + 1._lp
           IF (model%config%flag_spinup_debug) THEN
             ALLOCATE(slow_pool_before, SOURCE=sb_pool_mt)
           END IF

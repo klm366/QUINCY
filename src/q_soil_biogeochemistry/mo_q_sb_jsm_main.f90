@@ -1023,9 +1023,10 @@ CONTAINS
 
     !>8.0 co-metabolisation of polymeric litter & residues
     !>
-    ! Include persistent extracellular-enzyme capacity where microbial enzyme investment is very small.
+    ! Persistent capacity is retained only for beta=1; nonlinear mortality uses microbial enzymes alone.
     arr_hlp1(:,:) = MAX(sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * &
-      &                  (1._lp - enzyme_frac_AP(:,:)), min_persistent_enzyme)
+      & (1._lp - enzyme_frac_AP(:,:)), &
+      & calc_persistent_enzyme_floor(microbial_mortality_exponent, min_persistent_enzyme))
     CALL calc_depolymerisation_SESAM( &
       & nc, &                                 ! in
       & nsoil_w, &
@@ -1120,6 +1121,8 @@ CONTAINS
       & microbial_cue_eff_tmic_mavg(:,:), &
       & asymb_n_fixation_rel_rate_sl(:,:), &
       & sb_pool_mt(:,:,:,:), &                    ! in
+      & sb_transport_mt(:,:,:,:), &               ! already allocated transport [mol m-3 per step]
+      & l_replay_forcing, &                       ! diagnostic context; same uptake guard in coupled mode
       & microbial_uptake_nh4_sl(:,:), &           ! inout
       & microbial_uptake_nh4_n15_sl(:,:), &
       & microbial_uptake_no3_sl(:,:), &
