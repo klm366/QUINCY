@@ -51,8 +51,9 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_sb_pools(tile, options, l_soil_model_forcing)
+  SUBROUTINE update_sb_pools(tile, options, l_soil_model_forcing, combined_uptake)
 
+    USE mo_sb_plant_uptake_adapter, ONLY: t_sb_plant_uptake, valid_sb_plant_uptake
     USE mo_jsb_class,              ONLY: Get_model
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
@@ -91,6 +92,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     LOGICAL, OPTIONAL,          INTENT(in)        :: l_soil_model_forcing !< apply QSOIL plant-demand forcing
+    TYPE(t_sb_plant_uptake), OPTIONAL, INTENT(in) :: combined_uptake !< Shared replay uptake/demand
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
@@ -115,6 +117,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc, ic, is     !< grid dimensions
     LOGICAL                               :: l_apply_plant_demand_scaling   !< use prescribed plant N/P demand fractions
     LOGICAL :: l_internal_replay !< replay must not retrigger a host event [-]
+    REAL(lp) :: demand_n, demand_p !< Effective cell/layer demand, applied once after supply limiting [-]
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
@@ -683,14 +686,27 @@ CONTAINS
     IF (PRESENT(l_soil_model_forcing)) THEN
       l_apply_plant_demand_scaling = l_apply_plant_demand_scaling .OR. l_soil_model_forcing
     END IF
+    IF (PRESENT(combined_uptake)) THEN
+      IF (.NOT. l_internal_replay) CALL finish(routine, 'Combined uptake requires internal replay.')
+      IF (.NOT. valid_sb_plant_uptake(combined_uptake,nc,nsoil_w)) &
+        & CALL finish(routine, 'Invalid combined plant demand.')
+    END IF
     IF (l_apply_plant_demand_scaling) THEN
       DO ic = 1,nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
-          plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * f_n_demand(ic)
-          plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * f_n_demand(ic)
-          plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * f_n_demand(ic)
-          plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * f_n_demand(ic)
-          plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * f_p_demand(ic)
+          demand_n = f_n_demand(ic)
+          demand_p = f_p_demand(ic)
+          IF (PRESENT(combined_uptake)) THEN
+            ! The adapter already includes the recorded demand and annual budget
+            ! multiplier. Do not multiply by representative-PFT demand again.
+            demand_n = combined_uptake%demand(1,ic,is)
+            demand_p = combined_uptake%demand(2,ic,is)
+          END IF
+          plant_uptake_nh4_sl(ic, is)     = plant_uptake_nh4_sl(ic, is)     * demand_n
+          plant_uptake_nh4_n15_sl(ic, is) = plant_uptake_nh4_n15_sl(ic, is) * demand_n
+          plant_uptake_no3_sl(ic, is)     = plant_uptake_no3_sl(ic, is)     * demand_n
+          plant_uptake_no3_n15_sl(ic, is) = plant_uptake_no3_n15_sl(ic, is) * demand_n
+          plant_uptake_po4_sl(ic, is)     = plant_uptake_po4_sl(ic, is)     * demand_p
         END DO
       END DO
     END IF

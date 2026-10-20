@@ -39,7 +39,8 @@ CONTAINS
   ! ======================================================================================================= !
   !>update soil biogeochemical pools - JSM - Jena Soil Model
   !>
-  SUBROUTINE update_sb_jsm(tile, options, l_soil_model_forcing)
+  SUBROUTINE update_sb_jsm(tile, options, l_soil_model_forcing, combined_uptake, combined_litter)
+    USE mo_sb_plant_uptake_adapter, ONLY: t_sb_plant_uptake, valid_sb_plant_uptake
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
@@ -72,6 +73,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     LOGICAL, OPTIONAL, INTENT(in) :: l_soil_model_forcing !< internal replay forcing, not a namelist switch [-]
+    TYPE(t_sb_plant_uptake), OPTIONAL, INTENT(in) :: combined_uptake !< Shared replay uptake coefficients
+    REAL(lp), OPTIONAL, INTENT(in) :: combined_litter(:,:,:,:)
+      !< Prepartitioned pool/element/cell/layer litter [mol m-3 timestep-1]
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
@@ -526,6 +530,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    growth_p_limit_smoothed_sl)
     l_replay_forcing = .FALSE.
     IF (PRESENT(l_soil_model_forcing)) l_replay_forcing = l_soil_model_forcing
+    IF (PRESENT(combined_uptake)) THEN
+      IF (.NOT. l_replay_forcing) CALL finish(routine, 'Combined uptake is restricted to internal replay.')
+      IF (.NOT. valid_sb_plant_uptake(combined_uptake,nc,nsoil_w,dsl4jsb_Config(SB_)%sb_adsorp_scheme)) &
+        & CALL finish(routine, 'Invalid combined JSM plant uptake.')
+    END IF
     !------------------------------------------------------------------------------------------------------ !
 
     !>1.0 calc fine root carbon, used for N & P calculations below, and smooth the plant growth P limitation
@@ -547,6 +556,7 @@ CONTAINS
         ENDWHERE
       END IF
     END DO
+    IF (PRESENT(combined_uptake)) fine_root_carbon_sl = combined_uptake%root
     unit_uptake_n_pot(:) = 0.0_lp
     unit_uptake_p_pot(:) = 0.0_lp
 
@@ -670,7 +680,8 @@ CONTAINS
       & root_fraction_sl(:,:), &
       & veg_litterfall_mt(:,:,:), &
       & seed_bed_litterfall_mt(:,:), &                ! in
-      & sb_formation_mt(:,:,:,:) )                    ! inout
+      & sb_formation_mt(:,:,:,:), &                  ! inout
+      & prescribed_formation=combined_litter )
 
     !>5.0 vertical transport
     !>
@@ -845,7 +856,8 @@ CONTAINS
       &   microbial_uptake = microbial_uptake_po4_sl(:,:), &         ! inout
       &   plant_uptake     = plant_uptake_po4_sl(:,:), &             ! out
       &   plant_uptake_pot = unit_uptake_p_pot_sl(:,:), &            ! out
-      &   fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
+      &   fast_adsorpt     = fast_adsorpt_po4(:,:), &                ! OPTIONAL (out)
+      &   combined_uptake = combined_uptake)
     !! calculate potential P uptake (micro-mol P / mol C fine-root / s), weighted by root distribution
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
@@ -896,7 +908,8 @@ CONTAINS
       &   plant_uptake       = plant_uptake_nh4_sl(:,:), &           ! out
       &   plant_uptake_pot   = unit_uptake_n_pot_sl(:,:), &          ! out
       &   fast_adsorpt       = fast_adsorpt_nh4(:,:), &              ! OPTIONAL (out)
-      &   flux_nitri_denitri = nitrification_no3(:,:))               ! OPTIONAL (out)
+      &   flux_nitri_denitri = nitrification_no3(:,:), &             ! OPTIONAL (out)
+      &   combined_uptake = combined_uptake)
     !! update potential N uptake due to nh4 uptake
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
@@ -945,7 +958,8 @@ CONTAINS
       &   microbial_uptake   = microbial_uptake_no3_sl(:,:), &       ! inout
       &   plant_uptake       = plant_uptake_no3_sl(:,:), &           ! out
       &   plant_uptake_pot   = unit_uptake_n_pot_sl(:,:), &          ! out
-      &   flux_nitri_denitri = denitrification_n2(:,:))              ! OPTIONAL (out)
+      &   flux_nitri_denitri = denitrification_n2(:,:), &            ! OPTIONAL (out)
+      &   combined_uptake = combined_uptake)
     !! update potential N uptake due to no3 uptake
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))

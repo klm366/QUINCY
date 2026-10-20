@@ -447,9 +447,11 @@ CONTAINS
     &                                        plant_uptake, &            ! out
     &                                        plant_uptake_pot, &        ! out
     &                                        fast_adsorpt, &            ! OPTIONAL (out)
-    &                                        flux_nitri_denitri)        ! OPTIONAL (out)
+    &                                        flux_nitri_denitri, &      ! OPTIONAL (out)
+    &                                        combined_uptake)          ! OPTIONAL (in)
 
     USE mo_sb_constants
+    USE mo_sb_plant_uptake_adapter, ONLY: t_sb_plant_uptake, valid_sb_plant_uptake
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                     INTENT(in)        :: nc                        !< dimensions
     INTEGER,                                     INTENT(in)        :: nsoil_w                   !< number of soil layers
@@ -485,6 +487,7 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(out)       :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
     REAL(lp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(out)       :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
     REAL(lp), OPTIONAL, DIMENSION(nc, nsoil_w),  INTENT(out)       :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
+    TYPE(t_sb_plant_uptake), OPTIONAL, INTENT(in) :: combined_uptake !< Shared replay root coefficients
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                             :: ic, is       !< loop over dimensions
     REAL(lp)                            :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp
@@ -495,6 +498,8 @@ CONTAINS
                                            k_desorpt_f, vmax_nit_denit, km_nit_denit, &
                                            k_nit_denit, f_nit_carrier, fast_desorpt
     REAL(lp), DIMENSION(nc, nsoil_w)    :: reaction_volume
+    REAL(lp), DIMENSION(nc, nsoil_w) :: root_c !< Unmodified total roots for all ECA competitors [mol C m-3]
+    INTEGER :: nutrient !< N=1, P=2 adapter index [-]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sinking_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -502,6 +507,14 @@ CONTAINS
     !>
     !> unit conversion from mol to micro-mol is introduced in the calculation when necessary
     !>
+    root_c = fine_root_carbon
+    nutrient = 1
+    IF (substrate == 'po4') nutrient = 2
+    IF (PRESENT(combined_uptake)) THEN
+      IF (.NOT. valid_sb_plant_uptake(combined_uptake,nc,nsoil_w,sb_adsorp_scheme)) &
+        & CALL finish(routine, 'Invalid combined plant uptake coefficients or scheme.')
+      root_c = combined_uptake%root
+    END IF
     plant_uptake(:,:)         = 0.0_lp
     plant_uptake_pot(:,:)     = 0.0_lp
     IF (substrate == "po4" .OR. substrate == "nh4") THEN
@@ -581,15 +594,15 @@ CONTAINS
       DO ic = 1,nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
           mic_hlp     = km1_mic_uptake + solute_available(ic,is) + f_mic_carrier * microbial_carbon(ic,is) + &
-            &           km1_mic_uptake / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
-          plant_hlp   = km_plant_uptake + solute_available(ic,is) + f_plant_carrier * fine_root_carbon(ic,is) + &
+            &           km1_mic_uptake / km_plant_uptake * f_plant_carrier * root_c(ic,is)
+          plant_hlp   = km_plant_uptake + solute_available(ic,is) + f_plant_carrier * root_c(ic,is) + &
             &           km_plant_uptake / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
           mineral_hlp = km_adsorpt_sl(ic,is) + solute_available(ic,is) + avail_soil_surface_sorption_capacity_sl(ic,is) + &
-            &           km_adsorpt_sl(ic,is) / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is) + &
+            &           km_adsorpt_sl(ic,is) / km_plant_uptake * f_plant_carrier * root_c(ic,is) + &
             &           km_adsorpt_sl(ic,is) / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is)
           nitri_hlp   = km_nit_denit + solute_available(ic,is) + f_nit_carrier * microbial_carbon(ic,is) + &
             &            km_nit_denit / km1_mic_uptake * f_mic_carrier * microbial_carbon(ic,is) + &
-            &            km_nit_denit / km_plant_uptake * f_plant_carrier * fine_root_carbon(ic,is)
+            &            km_nit_denit / km_plant_uptake * f_plant_carrier * root_c(ic,is)
           ! nh4 & no3
           ! including the effects of alternative solute and nitrification/denitrification process
           IF (substrate == "nh4" .OR. substrate == "no3") THEN
@@ -651,6 +664,19 @@ CONTAINS
                 &                         * solute_available(ic,is) * microbial_carbon(ic,is) / nitri_hlp
             END IF
           END IF
+          ! Combine only the plant numerator. All ECA denominators above use
+          ! total roots, not moisture-reduced roots or independently limited PFTs.
+          ! The common supply limiter below still sees the full potential sink;
+          ! effective demand is applied later by update_sb_pools.
+          IF (PRESENT(combined_uptake)) THEN
+            IF (sb_adsorp_scheme == 'eca_part') THEN
+              plant_uptake(ic,is) = vmax_plant_uptake * solute_available(ic,is) * &
+                & combined_uptake%activity(ic,is) / plant_hlp
+            ELSE
+              plant_uptake(ic,is) = k_plant_uptake * f_plant_carrier * solute_available(ic,is) * &
+                & combined_uptake%activity(ic,is) / plant_hlp
+            END IF
+          END IF
         END DO
       END DO
 
@@ -664,6 +690,10 @@ CONTAINS
           plant_uptake(ic,is)   = rtm_plant_uptake(ic,is) * rmm_plant_uptake(ic,is) * fine_root_carbon(ic,is) &
             &                     * lctlib_vmax_uptake * solute(ic,is) &
             &                     * (km1_upt(ic,is) + 1._lp / (km2_upt(ic,is) + solute(ic,is)))
+          IF (PRESENT(combined_uptake)) THEN
+            plant_uptake(ic,is) = combined_uptake%capacity(nutrient,ic,is) * solute(ic,is) * &
+              & (km1_upt(ic,is) + 1._lp / (km2_upt(ic,is) + solute(ic,is)))
+          END IF
           IF (substrate == "po4" .OR. substrate == "nh4") THEN
             fast_adsorpt(ic,is) = 0._lp
           END IF

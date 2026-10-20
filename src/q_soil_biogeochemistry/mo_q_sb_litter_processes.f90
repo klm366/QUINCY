@@ -25,10 +25,80 @@ MODULE mo_q_sb_litter_processes
 
   PRIVATE
   PUBLIC :: calc_litter_partitioning
+  PUBLIC :: combine_sb_litter_inputs
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_sb_litter_processes'
 
 CONTAINS
+
+  !> Partition individual PFT tissues before taking their area mean.
+  !> Shared columns require common active layer geometry. Fractions need not
+  !> sum to one: outputs are per represented vegetated area, not per grid box.
+  !> Use the replay timestep to retain the forward partitioner's numerical
+  !> branches. Conservation is checked in rates using the approved adapter
+  !> tolerance [mol element m-2 s-1], independently for every element/cell.
+  SUBROUTINE combine_sb_litter_inputs(nc, ns, npool, nelem, nsource, ntile, dt, scheme, &
+      & fraction, nactive, depth, sla, growthform, roots, veg_rate, seed_rate, formation_rate, accepted)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    INTEGER, INTENT(in) :: nc, ns, npool, nelem, nsource, ntile !< Dimensions [-]
+    REAL(lp), INTENT(in) :: dt !< Actual replay substep [s]
+    CHARACTER(len=*), INTENT(in) :: scheme !< Existing JSM/simple_1d scheme [-]
+    REAL(lp), INTENT(in) :: fraction(nc,ntile) !< Absolute PFT areas [-]
+    REAL(lp), INTENT(in) :: nactive(nc), depth(nc,ns) !< Common active layers [-], thickness [m]
+    REAL(lp), INTENT(in) :: sla(ntile) !< PFT specific leaf area [m2 mol C-1]
+    INTEGER, INTENT(in) :: growthform(ntile) !< PFT growth form [-]
+    REAL(lp), INTENT(in) :: roots(nc,ns,ntile) !< Individual root fractions [-]
+    REAL(lp), INTENT(in) :: veg_rate(nsource,nelem,nc,ntile), seed_rate(nelem,nc,ntile)
+      !< Tissue and seed-bed litter rates [mol element m-2 s-1]
+    REAL(lp), INTENT(out) :: formation_rate(npool,nelem,nc,ns)
+      !< Combined pool litter sources [mol element m-3 s-1]; zero if rejected
+    LOGICAL, INTENT(out) :: accepted !< All geometry and elemental budget checks passed [-]
+    REAL(lp) :: trial(npool,nelem,nc,ns), single(npool,nelem,1,ns)
+    REAL(lp) :: reference, recovered, weight, area !< Rates [mol m-2 s-1], weights [-]
+    INTEGER :: c, t, e, s !< Cell, tile, element, layer [-]
+
+    accepted = .FALSE.
+    formation_rate = 0._lp
+    trial = 0._lp
+    IF (.NOT. ieee_is_finite(dt)) RETURN
+    IF (dt <= 0._lp) RETURN
+    IF (.NOT. ALL(ieee_is_finite(fraction))) RETURN
+    IF (ANY(fraction < 0._lp)) RETURN
+    IF (.NOT. ALL(ieee_is_finite(nactive)) .OR. .NOT. ALL(ieee_is_finite(depth))) RETURN
+    DO c = 1,nc
+      IF (nactive(c) < 1._lp .OR. nactive(c) > REAL(ns,lp)) RETURN
+      IF (nactive(c) /= REAL(NINT(nactive(c)),lp)) RETURN
+      IF (ANY(depth(c,1:NINT(nactive(c))) <= 0._lp)) RETURN
+      area = SUM(fraction(c,:))
+      IF (.NOT. ieee_is_finite(area) .OR. area <= 0._lp) RETURN
+      DO t = 1,ntile
+        IF (fraction(c,t) == 0._lp) CYCLE
+        IF (.NOT. ieee_is_finite(sla(t))) RETURN
+        IF (.NOT. ALL(ieee_is_finite(roots(c,:,t)))) RETURN
+        IF (ANY(roots(c,:,t) < 0._lp)) RETURN
+        IF (.NOT. ALL(ieee_is_finite(veg_rate(:,:,c,t)))) RETURN
+        IF (.NOT. ALL(ieee_is_finite(seed_rate(:,c,t)))) RETURN
+        IF (ANY(veg_rate(:,:,c,t) < 0._lp) .OR. ANY(seed_rate(:,c,t) < 0._lp)) RETURN
+        single = 0._lp
+        CALL calc_litter_partitioning(1,ns,nactive(c:c),sla(t),growthform(t),scheme,depth(c:c,:), &
+          & roots(c:c,:,t),veg_rate(:,:,c:c,t)*dt,seed_rate(:,c:c,t)*dt,single)
+        IF (.NOT. ALL(ieee_is_finite(single)) .OR. ANY(single < 0._lp)) RETURN
+        weight = fraction(c,t)/area
+        DO e = 1,nelem
+          reference = SUM(veg_rate(:,e,c,t)) + seed_rate(e,c,t)
+          recovered = 0._lp
+          DO s = 1,NINT(nactive(c))
+            recovered = recovered + SUM(single(:,e,1,s))/dt*depth(c,s)
+          END DO
+          IF (ABS(recovered-reference) > 1.e-18_lp + 1.e-10_lp*reference) RETURN
+        END DO
+        trial(:,:,c,:) = trial(:,:,c,:) + weight*single(:,:,1,:)/dt
+      END DO
+    END DO
+    IF (.NOT. ALL(ieee_is_finite(trial))) RETURN
+    formation_rate = trial
+    accepted = .TRUE.
+  END SUBROUTINE combine_sb_litter_inputs
 
   ! ======================================================================================================= !
   !>Calculates the partitioning of litter fall from vegetation into metabolic, structural,
@@ -49,8 +119,11 @@ CONTAINS
     & root_fraction_sl, &
     & veg_litterfall_mt, &             ! in
     & seed_bed_litterfall_mt, &        ! in
-    & sb_formation_mt )                ! inout
+    & sb_formation_mt, &               ! inout
+    & prescribed_formation )           ! optional in: already partitioned combined replay litter
 
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_exception, ONLY: finish
     USE mo_veg_constants,           ONLY: ITREE, IGRASS, ICROP
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_sb_constants,            ONLY: fc_soluable_max, k_fc_soluable, k_fn_soluable, k_fp_soluable, &
@@ -67,6 +140,8 @@ CONTAINS
     REAL(lp),                          INTENT(in)    :: veg_litterfall_mt(:,:,:)  !< bgcm flux: vegetation litterfall
     REAL(lp),                          INTENT(in)    :: seed_bed_litterfall_mt(:,:)  !< bgcm flux: litterfall from seed bed turnover
     REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)  !< bgcm flux: soil biogeochemistry formation flux
+    REAL(lp), OPTIONAL, INTENT(in) :: prescribed_formation(:,:,:,:)
+      !< PFT-partitioned pool,element,cell,layer litter increments [mol m-3 timestep-1]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp), DIMENSION(nc) :: fc_soluable_leaf           !< fc: ...
     REAL(lp), DIMENSION(nc) :: fc_soluable_fine_root
@@ -91,8 +166,37 @@ CONTAINS
     REAL(lp), DIMENSION(nc) :: fp_soluable_reserve
     INTEGER                 :: ic, is                     !< loop over dimensions
     INTEGER                 :: isoil                      !< loop over soil layers
+    INTEGER :: pool !< Validation index [-]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_partitioning'
     ! ----------------------------------------------------------------------------------------------------- !
+
+    ! A shared replay column must not partition mixed tissue with a representative
+    ! PFT's SLA/growth form. Partition each PFT first, then add the conservative
+    ! area mean here. Preserve other formation terms already calculated this step.
+    ! Source budgets remain the combined raw litter matrices, also used by replay
+    ! diagnostics. Exact shape/finite checks precede mutation of the formation.
+    IF (PRESENT(prescribed_formation)) THEN
+      IF (ANY(SHAPE(prescribed_formation) /= SHAPE(sb_formation_mt))) &
+        & CALL finish(routine, 'Invalid prescribed litter shape.')
+      IF (.NOT. ALL(ieee_is_finite(prescribed_formation))) &
+        & CALL finish(routine, 'Non-finite prescribed litter.')
+      IF (ANY(prescribed_formation < 0._lp)) CALL finish(routine, 'Negative prescribed litter.')
+      DO pool = 1, SIZE(sb_formation_mt,1)
+        IF (pool == ix_soluable_litter .OR. pool == ix_polymeric_litter .OR. pool == ix_woody_litter) CYCLE
+        IF (ANY(prescribed_formation(pool,:,:,:) /= 0._lp)) &
+          & CALL finish(routine, 'Prescribed litter contains a non-litter source.')
+      END DO
+      DO ic = 1, nc
+        DO isoil = NINT(num_sl_above_bedrock(ic))+1, nsoil_w
+          IF (ANY(prescribed_formation(:,:,ic,isoil) /= 0._lp)) &
+            & CALL finish(routine, 'Prescribed litter below active soil.')
+        END DO
+      END DO
+      ! The constructor checks flux-rate conservation with the approved rate
+      ! tolerance. Do not introduce a timestep-dependent absolute tolerance here.
+      sb_formation_mt = sb_formation_mt + prescribed_formation
+      RETURN
+    END IF
 
     !>0.9 init local variables
     !>  labile and reserve compartments are init with 1.0

@@ -146,7 +146,7 @@ CONTAINS
   !> Prepare coefficients and litter on scratch arrays only; no target solve or live-state update.
   SUBROUTINE build_sb_analytical_inputs(nc, ns, npool, nelem, nsource, nbin, nday, dt, sla, growthform, scheme, &
       & nactive, depth, field_cap, forcing_time, litter, roots, temperature, water, ice, water_potential, &
-      & down_daily, lateral_daily, cue_sum, poly_sum, ap_sum, inputs, reason)
+      & down_daily, lateral_daily, cue_sum, poly_sum, ap_sum, inputs, reason, partitioned_litter_rate)
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     USE mo_q_sb_rate_modifier, ONLY: calc_jsm_carbon_rate_modifiers, calc_ssm_carbon_rate_modifiers
@@ -166,6 +166,8 @@ CONTAINS
     REAL(lp), INTENT(in) :: cue_sum(nc,ns), poly_sum(nc,ns), ap_sum(nc,ns) !< Coupled biological integrals [s]
     TYPE(t_sb_analytical_inputs), INTENT(out) :: inputs !< Prepared read-only inputs; ready false on rejection
     CHARACTER(len=*), INTENT(out) :: reason !< Preparation outcome [-]
+    REAL(lp), OPTIONAL, INTENT(in) :: partitioned_litter_rate(:,:,:,:,:)
+      !< Prepartitioned pool/element/cell/layer/month input [mol m-3 s-1]
     REAL(lp) :: veg(nsource,nelem,nc), seed(nelem,nc) !< Scratch litter per replay step [mol m-2]
     REAL(lp) :: formation(npool,nelem,nc,ns), root(nc,ns) !< Scratch increments [mol m-3], roots [-]
     REAL(lp) :: coverage(nc), reference(nelem,nc), reconstructed, tolerance !< Time [s], rates [mol m-2 s-1]
@@ -196,6 +198,19 @@ CONTAINS
         & .NOT. ALL(ieee_is_finite(ice))) RETURN
     IF (.NOT. ALL(ieee_is_finite(down_daily)) .OR. .NOT. ALL(ieee_is_finite(lateral_daily))) RETURN
     IF (ANY(down_daily < 0.0_lp) .OR. ANY(lateral_daily < 0.0_lp)) RETURN
+    IF (PRESENT(partitioned_litter_rate)) THEN
+      reason = 'Input preparation rejected: invalid prepartitioned litter.'
+      IF (ANY(SHAPE(partitioned_litter_rate) /= [npool,nelem,nc,ns,nbin])) RETURN
+      IF (.NOT. ALL(ieee_is_finite(partitioned_litter_rate))) RETURN
+      IF (ANY(partitioned_litter_rate < 0._lp)) RETURN
+      DO k = 1,npool
+        IF (k == ix_soluable_litter .OR. k == ix_polymeric_litter .OR. k == ix_woody_litter) CYCLE
+        IF (ANY(partitioned_litter_rate(k,:,:,:,:) /= 0._lp)) RETURN
+      END DO
+      DO c = 1,nc
+        IF (ANY(partitioned_litter_rate(:,:,c,NINT(nactive(c))+1:ns,:) /= 0._lp)) RETURN
+      END DO
+    END IF
 
     inputs%timestep = dt
     ALLOCATE(inputs%month_weight(nbin), SOURCE=0.0_lp)
@@ -257,7 +272,12 @@ CONTAINS
       END DO
       formation = 0.0_lp
       ! Preserve tissue CNP, seed input, coarse-root depth distribution and the forward eps8 branches.
-      CALL calc_litter_partitioning(nc,ns,nactive,sla,growthform,scheme,depth,root,veg,seed,formation)
+      IF (PRESENT(partitioned_litter_rate)) THEN
+        ! Same per-PFT partition as replay, not a new partition of mixed tissues.
+        formation = partitioned_litter_rate(:,:,:,:,b)*dt
+      ELSE
+        CALL calc_litter_partitioning(nc,ns,nactive,sla,growthform,scheme,depth,root,veg,seed,formation)
+      END IF
       inputs%litter_mean = inputs%litter_mean + inputs%month_weight(b)*formation/dt
       DO k = 1,5
         inputs%rate_product_mean(:,:,k) = inputs%rate_product_mean(:,:,k) + inputs%month_weight(b) * &

@@ -29,6 +29,7 @@ MODULE mo_q_sb_ssm_main
     &                                   SB_BGCM_MYCO_EXPORT_ID
 
   USE mo_jsb_math_constants,      ONLY: one_day, one_year, eps8, eps4
+  USE mo_sb_plant_uptake_adapter, ONLY: t_sb_plant_uptake, valid_sb_plant_uptake
 
   IMPLICIT NONE
 
@@ -45,7 +46,7 @@ CONTAINS
   !>
   !>  routine to update soil litter and mineral pools (simple version for vegetation model testing)
   !>
-  SUBROUTINE update_sb_simple_model(tile, options, l_balance_weathering)
+  SUBROUTINE update_sb_simple_model(tile, options, l_balance_weathering, combined_uptake, combined_litter)
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
@@ -67,6 +68,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     LOGICAL, OPTIONAL, INTENT(in) :: l_balance_weathering !< internal replay mineral P balance [-]
+    TYPE(t_sb_plant_uptake), OPTIONAL, INTENT(in) :: combined_uptake !< Shared replay uptake coefficients
+    REAL(lp), OPTIONAL, INTENT(in) :: combined_litter(:,:,:,:)
+      !< Prepartitioned pool/element/cell/layer litter [mol m-3 timestep-1]
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store           !< the bgcm store of this tile
@@ -520,7 +524,8 @@ CONTAINS
       & plant_uptake_no3_sl(:,:), &
       & plant_uptake_po4_sl(:,:), &
       & unit_uptake_n_pot(:), &
-      & unit_uptake_p_pot(:) )                    ! out
+      & unit_uptake_p_pot(:), &                   ! out
+      & combined_uptake=combined_uptake)
 
     !>  2.2 Potential mycorrhiza nutrient uptake rates
     !>
@@ -701,6 +706,7 @@ CONTAINS
         fine_root_carbon_sl(:,isoil) = 0.0_lp
       ENDWHERE
     ENDDO
+    IF (PRESENT(combined_uptake)) fine_root_carbon_sl = combined_uptake%root
     ! calculate the potential PO4 flux rate
     CALL calc_potential_p_flux_rate( &
       & nc, &                                         ! in
@@ -945,7 +951,8 @@ CONTAINS
       & root_fraction_sl(:,:), &
       & veg_litterfall_mt(:,:,:), &
       & seed_bed_litterfall_mt(:,:), &                ! in
-      & sb_formation_mt(:,:,:,:) )                    ! inout
+      & sb_formation_mt(:,:,:,:), &                  ! inout
+      & prescribed_formation=combined_litter )
 
     !>6.0 for 'sb_model = fixed': estimate N losses
     !>
@@ -1270,7 +1277,7 @@ CONTAINS
                                               plant_uptake_no3_sl, &
                                               plant_uptake_po4_sl, &
                                               unit_uptake_n_pot, &
-                                              unit_uptake_p_pot  )
+                                              unit_uptake_p_pot, combined_uptake)
 
     USE mo_sb_constants,            ONLY: f_surface_myc2fineroot, myc_root_coverage_max, fract_vmax_low_affinity
 
@@ -1279,6 +1286,7 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                     INTENT(in)  :: nc, &                      !< dimensions
                                                                 nsoil_w
+    TYPE(t_sb_plant_uptake), OPTIONAL, INTENT(in) :: combined_uptake !< Shared replay uptake coefficients
     REAL(lp),                                    INTENT(in)  :: dtime                      !< timestep length
     REAL(lp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(lp),                                    INTENT(in)  :: lctlib_vmax_uptake_n       !< lctlib parameter
@@ -1310,9 +1318,18 @@ CONTAINS
     INTEGER                                          :: ic, is       !< loop over dimensions
     REAL(lp), DIMENSION(nc)                          :: myc_root_coverage_act, f_vmax_uptake_act
     REAL(lp), DIMENSION(nc,nsoil_w)                  :: hlp1, hlp2   !< helpers
+    REAL(lp) :: coefficient_n, coefficient_p !< Capacity per column root C [umol X mol-1 C s-1]
+    REAL(lp) :: root_stock(nc) !< Column fine-root stock [mol C m-2]
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_potential_plant_uptake_rate'
-
-
+    root_stock = veg_pool_fine_root_carbon
+    IF (PRESENT(combined_uptake)) THEN
+      IF (.NOT. valid_sb_plant_uptake(combined_uptake,nc,nsoil_w,'simple_1d')) &
+        & CALL finish(routine, 'Invalid combined simple_1d plant uptake.')
+      DO ic = 1, nc
+        root_stock(ic) = SUM(combined_uptake%root(ic,1:NINT(num_sl_above_bedrock(ic))) * &
+          & soil_depth_sl(ic,1:NINT(num_sl_above_bedrock(ic))))
+      END DO
+    END IF
 
     !> 0.9 zero output variables
     !!
@@ -1328,12 +1345,12 @@ CONTAINS
     !! only root tips without mycorrhiza are allowed to take up N // max 30% of roots are infected! 'longer' myco if limited
     IF (flag_mycorrhiza) THEN
       DO ic = 1,nc
-        IF (veg_pool_fine_root_carbon(ic) > eps8) THEN
+        IF (root_stock(ic) > eps8) THEN
           ! myc_root_coverage_act(ic) = myc_root_coverage_max
           ! dynamical root coverage to account for explorative mycorrhizae (idea for later...)
           myc_root_coverage_act(ic) = MIN(myc_root_coverage_max, &
             &                         SUM(sb_pool_mycorrhiza_carbon(ic,:) * soil_depth_sl(ic,:)) &
-            &                         / veg_pool_fine_root_carbon(ic))
+            &                         / root_stock(ic))
           f_vmax_uptake_act(ic)     = 1.0_lp / (1.0_lp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
         ELSE
           myc_root_coverage_act(ic) = 0.0_lp
@@ -1347,6 +1364,13 @@ CONTAINS
 
     DO ic = 1,nc
       DO is = 1,NINT(num_sl_above_bedrock(ic))
+        IF (PRESENT(combined_uptake)) THEN
+          ! Capacity is volumetric; normalize only for the existing unit-uptake
+          ! diagnostic. No PFT solute reservoirs or separate supply limits.
+          IF (root_stock(ic) <= 0._lp) CYCLE
+          coefficient_n = combined_uptake%capacity(1,ic,is) * soil_depth_sl(ic,is) / root_stock(ic)
+          coefficient_p = combined_uptake%capacity(2,ic,is) * soil_depth_sl(ic,is) / root_stock(ic)
+        END IF
         !> 2.1 inorganic plant N uptake
         !!
         !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
@@ -1358,14 +1382,22 @@ CONTAINS
                         (1.0_lp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
                         no3_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_no3_act(ic, is) + no3_solute(ic, is)) + &
                         1._lp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
+        IF (PRESENT(combined_uptake)) THEN
+          hlp1(ic,is) = coefficient_n * (1._lp-myc_root_coverage_act(ic)) * f_vmax_uptake_act(ic) * &
+            & nh4_solute(ic,is) * (fract_vmax_low_affinity / (km1_uptake_nh4_act(ic,is)+nh4_solute(ic,is)) + &
+            & 1._lp / (km2_uptake_nh4_act(ic,is)+nh4_solute(ic,is)))
+          hlp2(ic,is) = coefficient_n * (1._lp-myc_root_coverage_act(ic)) * f_vmax_uptake_act(ic) * &
+            & no3_solute(ic,is) * (fract_vmax_low_affinity / (km1_uptake_no3_act(ic,is)+no3_solute(ic,is)) + &
+            & 1._lp / (km2_uptake_no3_act(ic,is)+no3_solute(ic,is)))
+        END IF
         unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + hlp1(ic, is) + hlp2(ic, is)
 
         ! potential uptake rate in mol N / m3 / timestep
         plant_uptake_nh4_sl(ic, is) = hlp1(ic, is) * &
-                                       veg_pool_fine_root_carbon(ic) / &
+                                       root_stock(ic) / &
                                        soil_depth_sl(ic, is) * dtime / 1.e6_lp
         plant_uptake_no3_sl(ic, is) = hlp2(ic, is) * &
-                                       veg_pool_fine_root_carbon(ic) / &
+                                       root_stock(ic) / &
                                        soil_depth_sl(ic, is) * dtime / 1.e6_lp
 
         !> 2.2 inorganic plant P uptake
@@ -1375,9 +1407,14 @@ CONTAINS
                         (1.0_lp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
                         po4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_po4_act(ic, is) + po4_solute(ic, is)) + &
                         1._lp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
+        IF (PRESENT(combined_uptake)) THEN
+          hlp1(ic,is) = coefficient_p * (1._lp-myc_root_coverage_act(ic)) * f_vmax_uptake_act(ic) * &
+            & po4_solute(ic,is) * (fract_vmax_low_affinity / (km1_uptake_po4_act(ic,is)+po4_solute(ic,is)) + &
+            & 1._lp / (km2_uptake_po4_act(ic,is)+po4_solute(ic,is)))
+        END IF
         unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + hlp1(ic, is)
         ! potential uptake rate in mol P / m3 / timestep
-        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_lp
+        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * root_stock(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_lp
       ENDDO
     ENDDO
   END SUBROUTINE calc_potential_plant_uptake_rate
