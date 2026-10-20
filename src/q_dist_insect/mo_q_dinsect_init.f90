@@ -155,7 +155,6 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Real3D_onDomain :: dinsect_df_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER                     :: current_year
-    CHARACTER(len=filename_max) :: fname
     INTEGER                     :: nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
     ! -------------------------------------------------------------------------------------------------- !
@@ -174,20 +173,10 @@ MODULE mo_q_dinsect_init
 
     current_year  = get_year(current_datetime)
 
-    !>
-    !> Assertion: routine currently expects filenames with 4 digits
-    !>
-    IF ( current_year > 9999) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
-    ELSE IF (current_year < 1000) THEN
-      CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
-                                  //' for years < 1000 leading zeros are expected.')
-    END IF
-    WRITE (fname,'(a,a,I4.4,a)') &
-      & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_filename_prefix), '_', current_year, ".nc"
-
-    fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_path) // fname
-
+    CALL gen_full_filename(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_path, &
+                            dsl4jsb_Config(Q_DINSECT_)%dinsect_df_filename_prefix, &
+                            current_year, &
+                            fullpath)
     CALL read_dist_frac(model%grid_id, fullpath, "dist_frac", dinsect_df_dist_fraction_read)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
@@ -218,8 +207,7 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Def_memory(Q_DINSECT_)
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER                     :: current_year
-    CHARACTER(len=filename_max) :: fname
-    INTEGER                     :: nproma, nblks, i_doy
+    INTEGER                     :: nproma, nblks!, i_doy
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain :: dinsect_bb_dist_fraction_read ! out
@@ -239,20 +227,10 @@ MODULE mo_q_dinsect_init
 
     current_year  = get_year(current_datetime)
 
-    !>
-    !> Assertion: routine currently expects filenames with 4 digits
-    !>
-    IF ( current_year > 9999) THEN
-      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
-    ELSE IF (current_year < 1000) THEN
-      CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
-                                  //' for years < 1000 leading zeros are expected.')
-    END IF
-    WRITE (fname,'(a,a,I4.4,a)') &
-      & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
-
-    fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
-
+    CALL gen_full_filename(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path, &
+                            dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix, &
+                            current_year, &
+                            fullpath)
     CALL read_dist_frac(model%grid_id, fullpath, "dist_frac", dinsect_bb_dist_fraction_read)
 
     ! Mark process as successfully initialized
@@ -264,9 +242,38 @@ MODULE mo_q_dinsect_init
 
 
   ! ====================================================================================================== !
-  !
+  !>
+  !> Generate file name
+  !>
+  SUBROUTINE gen_full_filename(path, prefix, year, filename)
+    USE mo_io_units,              ONLY: filename_max
+
+    CHARACTER(LEN=*), INTENT(IN)               :: path
+    CHARACTER(LEN=*), INTENT(IN)               :: prefix
+    INTEGER, INTENT(in)                    :: year
+    CHARACTER(LEN=:), ALLOCATABLE, INTENT(out) :: filename
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':gen_full_filename'
+    CHARACTER(len=filename_max) :: fname
+    !>
+    !> Assertion: routine currently expects filenames with 4 digits
+    !>
+    IF ( year > 9999) THEN
+      CALL finish(TRIM(routine), 'Violation of assertion: this routine currently expects filenames with 4 digits.')
+    ELSE IF (year < 1000) THEN
+      CALL message(TRIM(routine), 'Warning: this routine currently expects filenames with 4 digits, '&
+                                  //' for years < 1000 leading zeros are expected.')
+    END IF
+    WRITE (fname,'(a,a,I4.4,a)') TRIM(prefix), '_', year, ".nc"
+
+    filename = TRIM(path) // fname
+  END SUBROUTINE gen_full_filename
+
+
+  ! ====================================================================================================== !
+  !>
   !> Load netcdf data
-  !
+  !>
   SUBROUTINE read_dist_frac(grid_id, fullpath, varname, data)
     USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
 
