@@ -80,6 +80,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   TYPE(t_jsb_model),      POINTER       :: model
   LOGICAL                               :: is_growing_season(options%nc)
   TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
+  CLASS(t_jsb_tile_abstract), POINTER   :: box_tile           !< pointer to the box tile to get the dist_frac data
 
   INTEGER                               :: iblk, ics, ice, ic, nc, iy
 
@@ -112,6 +113,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Def_memory(Q_DINSECT_)
   dsl4jsb_Def_memory(VEG_)
   dsl4jsb_Def_memory(Q_PHENO_)
+  dsl4jsb_Def_memory_tile(Q_DINSECT_, box_tile)
   ! ----------------------------------------------------------------------------------------------------- !
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
@@ -140,6 +142,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   model  => Get_model(tile%owner_model_id)
   lctlib => model%lctlib(tile%lcts(1)%lib_id)
+  CALL model%Get_top_tile(box_tile)
   ! ----------------------------------------------------------------------------------------------------- !
   IF (lctlib%BareSoilFlag) RETURN !< do not run this routine at tiles like "bare soil" and "urban area"
   IF (lctlib%PastureFlag) RETURN !< do not run this routine at tiles like "pasture pft"
@@ -181,7 +184,9 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c13) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_barkbeetle_labile_c14) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_pool_total_c) ! inout
-  dsl4jsb_Get_var3D_onChunk(Q_DINSECT_, dinsect_df_dist_fraction_read) ! in
+  dsl4jsb_Get_memory_tile(Q_DINSECT_, box_tile)
+  dsl4jsb_Get_var3D_onChunk_tile(Q_DINSECT_, dinsect_df_dist_fraction_read, box_tile) ! out
+
   ! Q_PHENO_
   dsl4jsb_Get_var2D_onChunk(Q_PHENO_, growing_season) ! in
 
@@ -289,7 +294,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ! ----------------------------------------------------------------------------------------------------- !
   TYPE(t_jsb_model),      POINTER       :: model
   TYPE(t_lctlib_element), POINTER       :: lctlib             !< land-cover-type library - parameter across pft's
-  CLASS(t_jsb_tile_abstract), POINTER   :: box_tile      !< pointer to the box tile to get the fertiliser data
+  CLASS(t_jsb_tile_abstract), POINTER   :: box_tile           !< pointer to the box tile to get the dist_frac data
 
   INTEGER                               :: iblk, ics, ice, ic, nc, iy
 
