@@ -137,7 +137,6 @@ MODULE mo_q_dinsect_init
     USE mo_io_units,              ONLY: filename_max
     USE mo_jsb_time_iface,        ONLY: t_datetime
     USE mo_jsb_time,              ONLY: is_time_experiment_start, get_year
-    USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_class,             ONLY: Get_model
     dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_memory(Q_DINSECT_)
@@ -155,9 +154,7 @@ MODULE mo_q_dinsect_init
 
     dsl4jsb_Real3D_onDomain :: dinsect_df_dist_fraction_read
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_3D   (:,:,:)  ! tmp pointer
     INTEGER                     :: current_year
-    TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
     INTEGER                     :: nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
@@ -191,9 +188,7 @@ MODULE mo_q_dinsect_init
 
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_df_path) // fname
 
-    ! input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
-    ! ptr_2D => input_file%Read_2d(variable_name='dist_frac', fill_array = dinsect_df_dist_fraction_read(:,:))
-    ! CALL input_file%Close()
+    CALL read_dist_frac(model%grid_id, fullpath, "dist_frac", dinsect_df_dist_fraction_read)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
@@ -207,7 +202,6 @@ MODULE mo_q_dinsect_init
     USE mo_io_units,              ONLY: filename_max
     USE mo_jsb_time_iface,        ONLY: t_datetime
     USE mo_jsb_time,              ONLY: is_time_experiment_start, get_year
-    USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
     USE mo_jsb_class,             ONLY: Get_model
     dsl4jsb_Use_config(Q_DINSECT_)
     dsl4jsb_Use_memory(Q_DINSECT_)
@@ -223,9 +217,7 @@ MODULE mo_q_dinsect_init
     dsl4jsb_Def_config(Q_DINSECT_)
     dsl4jsb_Def_memory(Q_DINSECT_)
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2Dt(:,:,:)  ! tmp pointer
     INTEGER                     :: current_year
-    TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: fname
     INTEGER                     :: nproma, nblks, i_doy
     CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
@@ -260,15 +252,8 @@ MODULE mo_q_dinsect_init
       & TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_filename_prefix), '_', current_year, ".nc"
 
     fullpath = TRIM(dsl4jsb_Config(Q_DINSECT_)%dinsect_bb_path) // fname
-    input_file = jsb_netcdf_open_input(TRIM(fullpath), model%grid_id)
-    ptr_2Dt => input_file%Read_2d_time(variable_name='dist_frac')!, fill_array=dinsect_bb_dist_fraction_read) ! add here fill_array=some_array(:,:)
 
-    dinsect_bb_dist_fraction_read = 0._wp
-    DO i_doy = 1,SIZE(ptr_2Dt, dim=3) ! 3=number of days in a year
-      dinsect_bb_dist_fraction_read(:,i_doy,:) = ptr_2Dt(:,:,i_doy)
-    END DO
-
-    CALL input_file%Close()
+    CALL read_dist_frac(model%grid_id, fullpath, "dist_frac", dinsect_bb_dist_fraction_read)
 
     ! Mark process as successfully initialized
     !CALL model%processes(Q_DINSECT_)%p%Set_init_status_true
@@ -276,6 +261,35 @@ MODULE mo_q_dinsect_init
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE read_bb_dist_fraction
+
+
+  ! ====================================================================================================== !
+  !
+  !> Load netcdf data
+  !
+  SUBROUTINE read_dist_frac(grid_id, fullpath, varname, data)
+    USE mo_jsb_io_netcdf,         ONLY: t_input_file, jsb_netcdf_open_input
+
+    INTEGER, INTENT(in)          :: grid_id
+    CHARACTER(LEN=*), INTENT(in) :: fullpath
+    CHARACTER(LEN=*), INTENT(in) :: varname
+    REAL(wp), INTENT(inout)      :: data(:,:,:)
+
+    REAL(wp),           POINTER  :: ptr_2Dt(:,:,:)  ! tmp pointer
+    TYPE(t_input_file)           :: input_file
+    INTEGER                      :: i_doy
+
+    input_file = jsb_netcdf_open_input(TRIM(fullpath), grid_id)
+    ptr_2Dt => input_file%Read_2d_time(variable_name=varname)
+
+    data = 0._wp
+    DO i_doy = 1,SIZE(ptr_2Dt, dim=3) ! 3=number of days in a year
+      data(:,i_doy,:) = ptr_2Dt(:,:,i_doy)
+    END DO
+
+    CALL input_file%Close()
+    ptr_2Dt => NULL()
+  END SUBROUTINE read_dist_frac
 
 #endif
 END MODULE mo_q_dinsect_init
