@@ -156,7 +156,7 @@ MODULE mo_q_dinsect_init
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER                     :: current_year
     INTEGER                     :: nproma, nblks
-    CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_df_dist_fraction'
     ! -------------------------------------------------------------------------------------------------- !
     model  => Get_model(model_id)
     grid   => Get_grid(model%grid_id)
@@ -208,7 +208,7 @@ MODULE mo_q_dinsect_init
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER                     :: current_year
     INTEGER                     :: nproma, nblks!, i_doy
-    CHARACTER(len=*), PARAMETER :: routine = modname//':read_harvest_fraction'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':read_bb_dist_fraction'
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain :: dinsect_bb_dist_fraction_read ! out
     ! -------------------------------------------------------------------------------------------------- !
