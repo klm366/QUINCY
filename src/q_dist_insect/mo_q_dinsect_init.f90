@@ -175,8 +175,6 @@ MODULE mo_q_dinsect_init
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    ALLOCATE(dinsect_init_vars%df_dist_frac(nproma, nblks, 1:366)) ! number of days in a year
-
     current_year  = get_year(current_datetime)
 
     !>
@@ -247,9 +245,6 @@ MODULE mo_q_dinsect_init
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
-    ALLOCATE(dinsect_init_vars%bb_dist_frac(nproma, nblks, 366))
-    dinsect_init_vars%bb_dist_frac = missval
-
     current_year  = get_year(current_datetime)
 
     !>
@@ -276,7 +271,7 @@ MODULE mo_q_dinsect_init
     CALL input_file%Close()
 
     ! Mark process as successfully initialized
-    CALL model%processes(Q_DINSECT_)%p%Set_init_status_true
+    !CALL model%processes(Q_DINSECT_)%p%Set_init_status_true
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
 

@@ -267,7 +267,6 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
   USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_
   USE mo_q_dinsect_constants
-  USE mo_q_dinsect_init,          ONLY: dinsect_init_vars
 #ifdef __QUINCY_STANDALONE__
   USE mo_qs_forcing,              ONLY: forcing_options
 #else
@@ -408,6 +407,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   ELSE
     dinsect_bb_mort_dt(:) = dinsect_bb_dist_fraction_read(:,doy) / (one_day / dtime)
   ENDIF
+  !WRITE(*,*) "update_bb:: dist_fract(netcdf)=", dinsect_bb_mort_dt
 
   ! ======================================================================================================= !
   !> Go science
@@ -452,7 +452,10 @@ SUBROUTINE update_dinsect_pools(tile, options)
   USE mo_jsb_task_class,          ONLY: t_jsb_task_options
   USE mo_jsb_model_class,         ONLY: t_jsb_model
   USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-  USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_, SB_
+  USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+  USE mo_jsb_grid,                ONLY: Get_vgrid
+  USE mo_jsb_process_class,       ONLY: VEG_, Q_DINSECT_, SB_, HYDRO_
+  USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID
   USE mo_q_dinsect_constants
   USE mo_q_sb_litter_processes,   ONLY: calc_litter_partitioning
 #ifdef __QUINCY_STANDALONE__
@@ -471,6 +474,7 @@ SUBROUTINE update_dinsect_pools(tile, options)
   dsl4jsb_Use_config(SB_)
   dsl4jsb_Use_memory(Q_DINSECT_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(HYDRO_)
   ! ----------------------------------------------------------------------------------------------------- !
   CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile       !< one tile with data structure for one lct
   TYPE(t_jsb_task_options),   INTENT(in)        :: options    !< model options
@@ -509,6 +513,7 @@ SUBROUTINE update_dinsect_pools(tile, options)
   dsl4jsb_Def_config(SB_)
   dsl4jsb_Def_memory(Q_DINSECT_)
   dsl4jsb_Def_memory(VEG_)
+  dsl4jsb_Def_memory(HYDRO_)
   ! ----------------------------------------------------------------------------------------------------- !
   ! dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   ! dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
@@ -555,6 +560,7 @@ SUBROUTINE update_dinsect_pools(tile, options)
   dsl4jsb_Get_config(SB_)
   dsl4jsb_Get_memory(Q_DINSECT_)
   dsl4jsb_Get_memory(VEG_)
+  dsl4jsb_Get_memory(HYDRO_)
   ! ----------------------------------------------------------------------------------------------------- !
   bgcm_store => tile%bgcm_store
   dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
@@ -597,7 +603,7 @@ SUBROUTINE update_dinsect_pools(tile, options)
   ! ======================================================================================================= !
   !> Go science
   !>
-  WRITE(*,*) "update_dinsect_pools: PFT = ", lctlib%LctNumber, " , updating pools... "
+  !WRITE(*,*) "update_dinsect_pools: PFT = ", lctlib%LctNumber, " , updating pools... "
 
   !>  1.8 Update plant biogeochemical pools with growth, litterfall due to natural processes and establishment
   !>
@@ -635,12 +641,11 @@ SUBROUTINE update_dinsect_pools(tile, options)
     & sb_formation_mt(:,:,:,:) )                    ! inout
 
   !< When defoliation is considered, the C litter from defoliation is added to the the formation of soluable C litter
-  WHERE (dinsect_dropping_mt > 0.0_wp)
+  WHERE (dinsect_dropping_mt(ixC,:) > 0.0_wp)
     sb_formation_mt(ix_soluable_litter, ixC, :, 1) = & ! defoliator
                                     sb_formation_mt(ix_soluable_litter, ixC, :, 1) &
                                     + dinsect_dropping_mt(ixC,:) / soil_depth_sl(:,1)
   END WHERE
-
 
 END SUBROUTINE update_dinsect_pools
 

@@ -190,7 +190,6 @@ CONTAINS
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     vgrid_doy     => Get_vgrid('days_of_year')
     vgrid_canopy_q_assimi  => Get_vgrid('q_canopy_layer')
-    vgrid_days_in_year  => Get_vgrid('q_days_in_year')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DINSECT_)
 

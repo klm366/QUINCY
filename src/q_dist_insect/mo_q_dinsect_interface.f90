@@ -143,7 +143,7 @@ CONTAINS
     CALL this%Register_task(tsk_reset_dinsect_fluxes(model_id))
     CALL this%Register_task(tsk_update_dinsect_barkbeetle(model_id))
     CALL this%Register_task(tsk_update_dinsect_defoliator(model_id))
-
+    CALL this%Register_task(tsk_update_dinsect_pools(model_id))
   END SUBROUTINE Register_dinsect_tasks
 
  !-----------------------------------------------------------------------------------------------------
