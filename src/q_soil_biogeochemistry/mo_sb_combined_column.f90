@@ -4,6 +4,7 @@
 !>
 !> ---------------------------------------
 !> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+!>
 !> Contact: icon-model.org
 !> Authors: AUTHORS.md
 !> See LICENSES/ for license information
@@ -24,6 +25,8 @@ CONTAINS
   !! Equal layer thickness makes this concentration average exactly an inventory
   !! average. Different geometries are rejected rather than silently interpolated.
   !! This routine neither calibrates structure nor changes live tile memory.
+  !! The arithmetic is element-wise in native units: mol for ordinary stocks,
+  !! pmol for C14. Only isotope-to-parent validation needs a unit conversion.
   PURE SUBROUTINE combine_sb_columns(fraction, thickness, pools, weights, combined, accepted)
     REAL(lp), INTENT(in) :: fraction(:) !< Absolute participating tile areas [-]
     REAL(lp), INTENT(in) :: thickness(:,:) !< Active layer thickness: layer,tile [m]

@@ -11,11 +11,11 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> Structural entry point for replaying bookkept soil forcing during spin-up.
+!> Event driver for replaying bookkept soil forcing during spin-up.
 !> The forward relaxation is shared by JSM and simple_1d and starts from the
 !> current soil state. An optional conditional carbon seed precedes later replays.
 !>
-!> Memory contract for the implementation stage:
+!> Memory contract:
 !> - forcing-bin weighted sums and elapsed-time weights are restart-safe SB memory;
 !> - execution count and convergence history are restart-safe SB memory;
 !> - live-forcing backups and replay work arrays are temporary local scratch state.
@@ -82,6 +82,9 @@ MODULE mo_sb_spinup_accelerator
   END TYPE t_sb_spinup_forcing_climatology
 
   !> Coupled-model forcing values preserved while the soil-only replay is active.
+  !! This is the normal per-year forcing restore, NOT an atomic rollback.
+  !! The separate replay checkpoint retains process state and both BGCM
+  !! representations for all owners before any shared-state reconstruction.
   TYPE :: t_sb_spinup_live_forcing
     REAL(lp), ALLOCATABLE :: litterfall(:,:,:) !< vegetation litterfall by source, element, and cell [mol m-2 timestep-1]
     REAL(lp), ALLOCATABLE :: seed_litterfall(:,:) !< seed-bed litterfall by element and cell [mol m-2 timestep-1]
@@ -940,13 +943,12 @@ CONTAINS
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_sb_replay_state, ONLY: t_sb_replay_checkpoint, capture_sb_replay_state, &
       & restore_sb_replay_state, release_sb_replay_state
-    USE mo_jsb_control, ONLY: debug_on
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_
     USE mo_hydro_interface, ONLY: update_soil_properties
     USE mo_q_sb_rate_modifier, ONLY: update_sb_rate_modifier
     USE mo_sb_config_class, ONLY: t_sb_config
     USE mo_sb_util, ONLY: reset_sb_fluxes
-    USE mo_sb_convergence_kernel, ONLY: stock_relative_change, soc_window_pass
+    USE mo_sb_convergence_kernel, ONLY: update_replay_convergence
     USE mo_jsb_time, ONLY: executed_sb_model_spinup_accelerator_this_timestep, get_year
     TYPE(t_jsb_model), POINTER, INTENT(in) :: model
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -959,7 +961,7 @@ CONTAINS
     REAL(lp), ALLOCATABLE :: history(:,:), after(:,:,:,:)
     REAL(lp) :: stocks(5), initial(5), previous(5), relative(5), fraction, tolerance
     REAL(lp) :: clock_start, clock_end
-    INTEGER :: it, event, index, n, y, slot, old_slot, consecutive
+    INTEGER :: it, event, index, n, y, consecutive
     LOGICAL :: pending, converged, balanced, any_pending
     LOGICAL :: shared_ready, combined_done !< Shared preparation and validated execution
     CHARACTER(len=512) :: shared_reason !< One diagnostic per event, including field values and bounds
@@ -1024,7 +1026,7 @@ CONTAINS
       tile => model%tiles(it)%p
       ! Report once per pending event, before zero-area tiles are skipped.
       ! Fractions are absolute grid-cell fractions, not renormalized PFT weights.
-      IF (debug_on() .OR. model%config%flag_spinup_debug) THEN
+      IF (model%config%flag_spinup_debug) THEN
         tile_action='participating in event'
         IF (tile%fract(options%ics,options%iblk) <= 0._lp) tile_action='skipped: nonpositive area'
         WRITE(text,*) 'Replay tile decision: model/year/event/ic/iblk=',model%id, &
@@ -1076,72 +1078,58 @@ CONTAINS
       END IF
     END IF
     IF (.NOT. combined_done) THEN
-    DO it=1,SIZE(model%tiles)
-      IF (.NOT. context(it)%active) CYCLE
-      tile => model%tiles(it)%p
-      CALL seed_sb_replay_analytically(tile,options,context(it)%forcing,event)
-      ALLOCATE(context(it)%balance%litter_n(1),context(it)%balance%litter_p(1), &
-        & context(it)%balance%uptake_n(1),context(it)%balance%uptake_p(1), &
-        & context(it)%balance%scale_n(1),context(it)%balance%scale_p(1))
-      context(it)%balance%scale_n=1._lp
-      context(it)%balance%scale_p=1._lp
-      CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
-      IF (model%config%flag_spinup_debug) THEN
-        CALL write_sb_spinup_forcing_debug(tile,options,event,context(it)%forcing)
-        CALL write_sb_spinup_snapshot_debug(tile,options,event,0)
-      END IF
-    END DO
-    ! The optional analytical seed is outside the replay convergence window.
-    CALL grid_replay_stocks(model,options,stocks,fraction)
-    history=0._lp
-    history(:,0)=stocks
-    consecutive=0; converged=.FALSE.; y=0
-    DO index=1,conf%sb_model_spinup_accelerator_max_relaxation_years
-      IF (fraction <= 0._lp) EXIT
-      y=index
       DO it=1,SIZE(model%tiles)
         IF (.NOT. context(it)%active) CYCLE
         tile => model%tiles(it)%p
-        SELECT CASE(TRIM(conf%sb_model_scheme))
-        CASE('jsm')
-          CALL run_jsm_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
-          CALL calibrate_sb_pore_volume(tile,options,y)
-        CASE('simple_1d')
-          CALL run_simple_1d_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
-        CASE DEFAULT
-          CALL finish(modname, 'Unsupported grid replay soil model.')
-        END SELECT
-        CALL update_replay_plant_np_demand_balance(tile,options,context(it)%forcing, &
-          & context(it)%balance,event,y,balanced)
-        ! Nutrient balance still controls next-year demand, but does not veto SOC.
+        CALL seed_sb_replay_analytically(tile,options,context(it)%forcing,event)
+        ALLOCATE(context(it)%balance%litter_n(1),context(it)%balance%litter_p(1), &
+          & context(it)%balance%uptake_n(1),context(it)%balance%uptake_p(1), &
+          & context(it)%balance%scale_n(1),context(it)%balance%scale_p(1))
+        context(it)%balance%scale_n=1._lp
+        context(it)%balance%scale_p=1._lp
         CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
-      END DO
-      CALL grid_replay_stocks(model,options,stocks,fraction)
-      slot=MODULO(y,n+1)
-      IF (conf%sb_model_spinup_accelerator_convergence_mode == 'cycle_window') THEN
-        old_slot=MODULO(y-n,n+1)
-        IF (y >= n) converged=soc_window_pass(history(1,old_slot),stocks(1),tolerance)
-      ELSE
-        old_slot=MODULO(y-1,n+1)
-        IF (soc_window_pass(history(1,old_slot),stocks(1),tolerance)) THEN
-          consecutive=consecutive+1
-        ELSE
-          consecutive=0
+        IF (model%config%flag_spinup_debug) THEN
+          CALL write_sb_spinup_forcing_debug(tile,options,event,context(it)%forcing)
+          CALL write_sb_spinup_snapshot_debug(tile,options,event,0)
         END IF
-        converged=consecutive >= n
-      END IF
-      previous=history(:,old_slot)
-      relative=stock_relative_change(previous,stocks)
-      history(:,slot)=stocks
-      IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(y)) THEN
+      END DO
+      ! The optional analytical seed is outside the replay convergence window.
+      CALL grid_replay_stocks(model,options,stocks,fraction)
+      history=0._lp
+      history(:,0)=stocks
+      consecutive=0; converged=.FALSE.; y=0
+      DO index=1,conf%sb_model_spinup_accelerator_max_relaxation_years
+        IF (fraction <= 0._lp) EXIT
+        y=index
         DO it=1,SIZE(model%tiles)
           IF (.NOT. context(it)%active) CYCLE
           tile => model%tiles(it)%p
-          CALL write_sb_spinup_snapshot_debug(tile,options,event,y)
+          SELECT CASE(TRIM(conf%sb_model_scheme))
+          CASE('jsm')
+            CALL run_jsm_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
+            CALL calibrate_sb_pore_volume(tile,options,y)
+          CASE('simple_1d')
+            CALL run_simple_1d_forward_relaxation(tile,options,context(it)%forcing,context(it)%balance)
+          CASE DEFAULT
+            CALL finish(modname, 'Unsupported grid replay soil model.')
+          END SELECT
+          CALL update_replay_plant_np_demand_balance(tile,options,context(it)%forcing, &
+            & context(it)%balance,event,y,balanced)
+          ! Nutrient balance still controls next-year demand, but does not veto SOC.
+          CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
         END DO
-      END IF
-      IF (converged) EXIT
-    END DO
+        CALL grid_replay_stocks(model,options,stocks,fraction)
+        CALL update_replay_convergence(conf%sb_model_spinup_accelerator_convergence_mode, &
+          & n,y,tolerance,stocks,history,consecutive,converged,previous,relative)
+        IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(y)) THEN
+          DO it=1,SIZE(model%tiles)
+            IF (.NOT. context(it)%active) CYCLE
+            tile => model%tiles(it)%p
+            CALL write_sb_spinup_snapshot_debug(tile,options,event,y)
+          END DO
+        END IF
+        IF (converged) EXIT
+      END DO
     END IF
     ! Do not mark a corrupt candidate completed or discard its forcing history.
     ! This restores state before a controlled fatal exit, not after a kernel abort.
@@ -1189,9 +1177,11 @@ CONTAINS
   !> A normal rejection restores the checkpoint; the caller can replay per PFT.
   SUBROUTINE try_combined_sb_replay(model,options,context,forcing,checkpoint,event, &
       & stocks,previous,relative,years,converged,accepted,reason)
-    USE mo_sb_combined_state
+    USE mo_sb_combined_state, ONLY: t_sb_combined_state, read_sb_combined_state, &
+      & write_sb_combined_state, reconstruct_sb_combined_state, &
+      & redistribute_sb_combined_state, valid_sb_combined_inventory
     USE mo_sb_replay_state, ONLY: t_sb_replay_checkpoint, restore_sb_replay_state
-    USE mo_sb_convergence_kernel, ONLY: stock_relative_change, soc_window_pass
+    USE mo_sb_convergence_kernel, ONLY: update_replay_convergence
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_, SSE_
     USE mo_sb_config_class, ONLY: t_sb_config
     USE mo_sb_memory_class, ONLY: t_sb_memory
@@ -1224,13 +1214,17 @@ CONTAINS
     REAL(lp), ALLOCATABLE :: depth(:,:),fraction(:),lower(:,:),upper(:,:),history(:,:),bulk(:,:)
     REAL(lp) :: area,tolerance,maoc,poc,lo,hi,solved,density,residual,weighted(5),target_stocks(5)
     INTEGER, ALLOCATABLE :: members(:)
-    INTEGER :: j,it,rep,ns,nt,c,b,n,slot,old_slot,consecutive,s,status
+    INTEGER :: j,it,rep,ns,nt,c,b,n,consecutive,s,status
     INTEGER :: failed_member !< Input PFT index for reconstruction rejection; zero means shared state
     LOGICAL :: valid,balanced
     CHARACTER(len=256) :: report !< Sparse execution-owner diagnostic
 
-    accepted=.FALSE.; converged=.FALSE.; years=0
-    stocks=0._lp; previous=0._lp; relative=0._lp
+    accepted = .FALSE.
+    converged = .FALSE.
+    years = 0
+    stocks = 0._lp
+    previous = 0._lp
+    relative = 0._lp
     SELECT TYPE(cfg => model%processes(SB_)%p%config)
     TYPE IS(t_sb_config)
       conf => cfg
@@ -1243,7 +1237,9 @@ CONTAINS
     members=PACK([(it,it=1,SIZE(context))],context%active)
     nt=SIZE(members)
     IF (nt == 0) RETURN
-    rep=members(1); c=options%ics; b=options%iblk
+    rep = members(1)
+    c = options%ics
+    b = options%iblk
     ALLOCATE(before(nt))
     DO j=1,nt
       CALL read_sb_combined_state(model%tiles(members(j))%p,options,before(j))
@@ -1289,14 +1285,17 @@ CONTAINS
       RETURN
     END IF
     tile => model%tiles(rep)%p
-    WRITE(report,*) 'Combined replay execution: event/cell/block=',event,c,b, &
-      & '; temporary owner=',TRIM(tile%name),'; represented PFTs=',nt, &
-      & '; area=',SUM(fraction),'; snapshots refer to the combined column until redistribution.'
-    CALL message(modname,TRIM(report),all_print=.TRUE.)
+    IF (model%config%flag_spinup_debug) THEN
+      WRITE(report,*) 'Combined replay execution: event/cell/block=',event,c,b, &
+        & '; temporary owner=',TRIM(tile%name),'; represented PFTs=',nt, &
+        & '; area=',SUM(fraction),'; snapshots refer to the combined column until redistribution.'
+      CALL message(modname,TRIM(report),all_print=.TRUE.)
+    END IF
     CALL write_sb_combined_state(tile,options,shared)
     ALLOCATE(balance%litter_n(1),balance%litter_p(1),balance%uptake_n(1),balance%uptake_p(1), &
       & balance%scale_n(1),balance%scale_p(1))
-    balance%scale_n=1._lp; balance%scale_p=1._lp
+    balance%scale_n = 1._lp
+    balance%scale_p = 1._lp
     ! Load shared physics BEFORE refreshing capacities and seeding. Each normal
     ! replay substep subsequently loads its own climatology bin as usual.
     CALL load_sb_spinup_forcing_bin(tile,options,forcing,1,1,balance)
@@ -1314,22 +1313,8 @@ CONTAINS
       CALL calibrate_sb_pore_volume(tile,options,years)
       CALL update_replay_plant_np_demand_balance(tile,options,forcing,balance,event,years,balanced)
       CALL grid_replay_stocks(model,options,stocks,area,only_tile=rep)
-      slot=MODULO(years,n+1)
-      IF (conf%sb_model_spinup_accelerator_convergence_mode == 'cycle_window') THEN
-        old_slot=MODULO(years-n,n+1)
-        IF (years >= n) converged=soc_window_pass(history(1,old_slot),stocks(1),tolerance)
-      ELSE
-        old_slot=MODULO(years-1,n+1)
-        IF (soc_window_pass(history(1,old_slot),stocks(1),tolerance)) THEN
-          consecutive=consecutive+1
-        ELSE
-          consecutive=0
-        END IF
-        converged=consecutive >= n
-      END IF
-      previous=history(:,old_slot)
-      relative=stock_relative_change(previous,stocks)
-      history(:,slot)=stocks
+      CALL update_replay_convergence(conf%sb_model_spinup_accelerator_convergence_mode, &
+        & n,years,tolerance,stocks,history,consecutive,converged,previous,relative)
       IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(years)) &
         & CALL write_sb_spinup_snapshot_debug(tile,options,event,years)
       IF (converged) EXIT
@@ -1659,7 +1644,7 @@ CONTAINS
     END IF
     WRITE(report,*) 'Analytical seed event/tile/block=',execution_index,TRIM(tile%name),iblk, &
       & '; accepted/rejected columns=',accepted_count,rejected_count, &
-      & '; chunk-summed artificial C,N,P,C13,C14,N15 increments [native mol or micro-mol m-2]=',increment_total
+      & '; chunk-summed artificial C,N,P,C13,C14,N15 increments [mol m-2; C14: pmol m-2]=',increment_total
     CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
     IF (rejected_count > 0) CALL message(modname//':analytical_seed',TRIM(first_rejection),all_print=.TRUE.)
     ! This is an artificial carbon seed, not organic N/P or C14 equilibrium. Replay ages C14 normally.
@@ -2300,7 +2285,7 @@ CONTAINS
   END SUBROUTINE run_simple_1d_forward_relaxation
 
   ! ===================================================================================================== !
-  !> Advance the selected soil model through one 365-day climatological replay year.
+  !> Advance one climatological replay year using the configured host-calendar bins.
   SUBROUTINE run_sb_climatological_year(tile, options, forcing, sb_model_scheme, balance)
 
     USE mo_jsb_math_constants,   ONLY: one_day
@@ -3299,7 +3284,7 @@ CONTAINS
     USE mo_jsb_process_class,       ONLY: SB_, HYDRO_, SSE_, VEG_, A2L_
 
     USE mo_lnd_bgcm_idx
-    USE mo_jsb_time,                ONLY: t_datetime, get_date_components, get_year_day
+    USE mo_jsb_time,                ONLY: get_date_components, get_year_day
 
     dsl4jsb_Use_processes SB_
     dsl4jsb_Use_memory(A2L_)
@@ -3616,7 +3601,7 @@ CONTAINS
       skip_isotope_reload = skip_forcing_isotopes_after_init .AND. &
         & soil_forcing_cache%isotope_forcing_initialized
 
-      CALL load_soilphysics_cache(bgcm_store, preload_nsteps, cache_start_timestep, skip_isotope_reload, caller)
+      CALL load_soilphysics_cache(preload_nsteps, cache_start_timestep, skip_isotope_reload, caller)
       IF (debug_on()) THEN
         CALL cpu_time(t_stage_end)
         CALL log_soil_forcing_timing(caller, 'load_soilphysics_cache', t_stage_end - t_stage_start)
@@ -3850,9 +3835,8 @@ CONTAINS
   ! ======================================================================================================= !
   !> Read and cache the forcing fields from bc_qsoil_physics.
   !>
-  SUBROUTINE load_soilphysics_cache(bgcm_store, nsteps, start_timestep, skip_isotope_reload, caller)
+  SUBROUTINE load_soilphysics_cache(nsteps, start_timestep, skip_isotope_reload, caller)
 
-    TYPE(t_lnd_bgcm_store), POINTER, INTENT(in) :: bgcm_store
     INTEGER,                       INTENT(in) :: nsteps
     INTEGER,                       INTENT(in) :: start_timestep
     LOGICAL,                       INTENT(in) :: skip_isotope_reload
@@ -3965,16 +3949,14 @@ CONTAINS
 
     INTEGER :: ipft, i_part, i_elem, itimestep, source_timestep
     INTEGER :: veg_litter_idx, seed_bed_idx
-    INTEGER :: veg_litter_store_idx, seed_bed_store_idx
     CHARACTER(len=5) :: tile_name
     REAL(lp) :: t_total_start, t_total_end
 
     tile_name = get_pft_tile_name(1)
+    ! Retain store validation even though cached dimensions were checked earlier.
+    ! get_bgcm_idx can report a missing material; these calls are not dead code.
     veg_litter_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_LITTERFALL_ID, tile_name, caller)
     seed_bed_idx   = get_bgcm_idx(bgcm_store, VEG_BGCM_SEED_BED_LITTERFALL_ID, tile_name, caller)
-    veg_litter_store_idx = bgcm_store%idx_in_store(veg_litter_idx)
-    seed_bed_store_idx   = bgcm_store%idx_in_store(seed_bed_idx)
-
     IF (debug_on()) CALL cpu_time(t_total_start)
     DO itimestep = 1, nsteps
       source_timestep = start_timestep + itimestep - 1

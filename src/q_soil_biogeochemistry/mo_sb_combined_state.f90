@@ -30,6 +30,14 @@ MODULE mo_sb_combined_state
   PUBLIC :: reconstruct_sb_combined_state, redistribute_sb_combined_state
   PUBLIC :: valid_sb_combined_inventory
 
+  ! Registry layout (not restart variable IDs):
+  !  1:11 parent inorganic pools; 12:17 their six N15 pools;
+  ! 18:38 biology; 39:41 analytical sampled integrals; 42 pore fraction;
+  ! 43:45 mineral-specific capacities; 46:48 chemistry.
+  ! Biology order: CUE/NUE/PUE each instantaneous and mavg, N/P status,
+  ! AP/poly/residue allocation, poly C/N/P instantaneous then mavg,
+  ! DOM C:N/C:P instantaneous then mavg. Never reorder read and write separately.
+  INTEGER, PARAMETER :: n_state_references = 48 !< Number of native layer-field references [-]
   ! Inorganic groups 1:6 are NH4(solute,associated), NO3, NOy, N2O, N2.
   ! Groups 7:11 are PO4(fast,slow,occluded,primary,solute).
   ! Component 1 is parent N/P, component 2 is N15 (zero for P).
@@ -41,19 +49,20 @@ MODULE mo_sb_combined_state
     REAL(lp), ALLOCATABLE :: pore(:) !< Independent total pore fraction,layer [m3 m-3]
     REAL(lp), ALLOCATABLE :: capacity(:,:) !< OM/NH4/PO4 specific mineral capacities [mol kg-1 mineral]
     REAL(lp), ALLOCATABLE :: chemistry(:,:) !< Organic PO4 capacity, pH, weathering [native units],layer
-  END TYPE
+  END TYPE t_sb_combined_state
   TYPE :: t_layer_reference
     REAL(lp), POINTER :: p(:) => NULL() !< Non-owning one-cell process field
-  END TYPE
+  END TYPE t_layer_reference
 CONTAINS
   !> One explicit registry for both directions prevents mismatched read/write lists.
   SUBROUTINE state_references(tile, options, refs)
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
-    TYPE(t_layer_reference), INTENT(out) :: refs(48)
+    TYPE(t_layer_reference), INTENT(out) :: refs(n_state_references)
     TYPE(t_sb_memory), POINTER :: soil
     INTEGER :: c,b
-    c=options%ics; b=options%iblk
+    c = options%ics
+    b = options%iblk
     SELECT TYPE(m => tile%mem(SB_)%p)
     TYPE IS(t_sb_memory)
       soil => m
@@ -106,14 +115,14 @@ CONTAINS
     refs(46)%p => soil%qmax_po4_om_sl%ptr(c,:,b)
     refs(47)%p => soil%ph_sl%ptr(c,:,b)
     refs(48)%p => soil%vmax_weath_mineral_sl%ptr(c,:,b)
-  END SUBROUTINE
+  END SUBROUTINE state_references
 
   !> Read actual BGCM matrices, not potentially stale output variables.
   SUBROUTINE read_sb_combined_state(tile,options,state)
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
     TYPE(t_sb_combined_state), INTENT(out) :: state
-    TYPE(t_layer_reference) :: refs(48)
+    TYPE(t_layer_reference) :: refs(n_state_references)
     REAL(lp), POINTER :: pool(:,:,:,:)
     TYPE(t_hydro_memory), POINTER :: hydro
     INTEGER :: k,ns
@@ -146,7 +155,7 @@ CONTAINS
     state%chemistry(1,:)=refs(46)%p(1:ns)
     state%chemistry(2,:)=refs(47)%p(1:ns)
     state%chemistry(3,:)=refs(48)%p(1:ns)
-  END SUBROUTINE
+  END SUBROUTINE read_sb_combined_state
 
   !> Write only an explicitly staged state; caller owns checkpoint and validation.
   !> No synchronization of unrelated matrices, no tile fraction or clock changes.
@@ -154,7 +163,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
     TYPE(t_sb_combined_state), INTENT(in) :: state
-    TYPE(t_layer_reference) :: refs(48)
+    TYPE(t_layer_reference) :: refs(n_state_references)
     REAL(lp), POINTER :: pool(:,:,:,:)
     INTEGER :: k,ns
     pool => tile%bgcm_store%Get_matrix_from_store_2l_3d( &
@@ -179,7 +188,7 @@ CONTAINS
     refs(46)%p(1:ns)=state%chemistry(1,:)
     refs(47)%p(1:ns)=state%chemistry(2,:)
     refs(48)%p(1:ns)=state%chemistry(3,:)
-  END SUBROUTINE
+  END SUBROUTINE write_sb_combined_state
 
   !> Aggregate inventories by area, biology by microbial biomass, and capacities
   !> by mineral mass. Derived physics is deliberately absent from this inventory.
@@ -200,7 +209,9 @@ CONTAINS
     nt=SIZE(before)
     IF (nt == 0 .OR. SIZE(fraction) /= nt) RETURN
     shared=before(1)
-    np=SIZE(shared%organic,1); ne=SIZE(shared%organic,2); ns=SIZE(shared%organic,3)
+    np = SIZE(shared%organic,1)
+    ne = SIZE(shared%organic,2)
+    ns = SIZE(shared%organic,3)
     ALLOCATE(organic(np,ne,ns,nt),inorg(11,2,ns,nt),pore(ns,nt),capacity(3,ns,nt), &
       & biology(21,ns,nt),microbial(ns,nt),weights(nt))
     DO j=1,nt
@@ -236,7 +247,7 @@ CONTAINS
     END DO
     accepted=valid_sb_combined_inventory(shared,detail)
     IF (PRESENT(reason)) reason=detail
-  END SUBROUTINE
+  END SUBROUTINE reconstruct_sb_combined_state
 
   !> Propose all PFT states without mutation. Caller must recompute forward
   !> physics and check capacity/volume admissibility before accepting ANY PFT.
@@ -247,31 +258,37 @@ CONTAINS
     TYPE(t_sb_combined_state), ALLOCATABLE, INTENT(out) :: after(:)
     LOGICAL, INTENT(out) :: accepted
     REAL(lp), ALLOCATABLE :: old(:,:,:,:), new(:,:,:,:), pore(:,:), result(:,:)
-    REAL(lp), ALLOCATABLE :: old_n(:,:,:,:),new_n(:,:,:,:)
-    REAL(lp), ALLOCATABLE :: mean(:,:,:),mean_n(:,:,:),weights(:)
+    REAL(lp), ALLOCATABLE :: inorganic_before(:,:,:,:),inorganic_candidate(:,:,:,:)
+      !< All inorganic N/P groups and N15, layer, tile [mol m-3 total soil]
+    REAL(lp), ALLOCATABLE :: mean(:,:,:),inorganic_mean(:,:,:),weights(:)
+      !< Reaggregated native-unit inventories and normalized area weights [-]
     INTEGER :: nt,ns,np,ne,j
     accepted=.FALSE.
     IF (.NOT. valid_sb_combined_inventory(target)) RETURN
-    nt=SIZE(before); ns=SIZE(target%organic,3)
-    np=SIZE(target%organic,1); ne=SIZE(target%organic,2)
-    ALLOCATE(old(np,ne,ns,nt),new(np,ne,ns,nt),old_n(11,2,ns,nt),new_n(11,2,ns,nt))
+    nt = SIZE(before)
+    ns = SIZE(target%organic,3)
+    np = SIZE(target%organic,1)
+    ne = SIZE(target%organic,2)
+    ALLOCATE(old(np,ne,ns,nt),new(np,ne,ns,nt), &
+      & inorganic_before(11,2,ns,nt),inorganic_candidate(11,2,ns,nt))
     ALLOCATE(pore(ns,nt),result(ns,nt))
-    ALLOCATE(mean(np,ne,ns),mean_n(11,2,ns),weights(nt))
+    ALLOCATE(mean(np,ne,ns),inorganic_mean(11,2,ns),weights(nt))
     DO j=1,nt
       old(:,:,:,j)=before(j)%organic
-      old_n(:,:,:,j)=before(j)%inorganic
+      inorganic_before(:,:,:,j)=before(j)%inorganic
       pore(:,j)=before(j)%pore
     END DO
     CALL redistribute_sb_columns(fraction,depth,old,target%organic,ixC,new,accepted)
     IF (.NOT. accepted) RETURN
-    CALL redistribute_sb_columns(fraction,depth,old_n,target%inorganic,1,new_n,accepted)
+    CALL redistribute_sb_columns(fraction,depth,inorganic_before,target%inorganic,1, &
+      & inorganic_candidate,accepted)
     IF (.NOT. accepted) RETURN
     CALL redistribute_sb_structure(fraction/SUM(fraction),pore,target%pore,lower,upper,result,accepted)
     IF (.NOT. accepted) RETURN
     after=before
     DO j=1,nt
       after(j)%organic=new(:,:,:,j)
-      after(j)%inorganic=new_n(:,:,:,j)
+      after(j)%inorganic=inorganic_candidate(:,:,:,j)
       after(j)%pore=result(:,j)
       ! Shared physiological condition, not biomass-scaled efficiencies/ratios.
       after(j)%biology=target%biology
@@ -290,11 +307,11 @@ CONTAINS
       accepted=.FALSE.
       RETURN
     END IF
-    CALL combine_sb_columns(fraction,depth,new_n,weights,mean_n,accepted)
+    CALL combine_sb_columns(fraction,depth,inorganic_candidate,weights,inorganic_mean,accepted)
     IF (.NOT. accepted) RETURN
-    IF (ANY(ABS(mean_n-target%inorganic) > 1.e-12_lp*MAX(ABS(target%inorganic),TINY(1._lp)))) &
+    IF (ANY(ABS(inorganic_mean-target%inorganic) > 1.e-12_lp*MAX(ABS(target%inorganic),TINY(1._lp)))) &
       & accepted=.FALSE.
-  END SUBROUTINE
+  END SUBROUTINE redistribute_sb_combined_state
 
   !> Inventory-only checks. Capacity and occupancy require forward refresh.
   LOGICAL FUNCTION valid_sb_combined_inventory(state,reason) RESULT(valid)
@@ -380,6 +397,6 @@ CONTAINS
       IF (PRESENT(reason)) WRITE(reason,'(A,A,3(I0,1X),A,2(ES24.16E3,1X))') &
         & TRIM(label),'; layer/field/component=',layer,field,component,'; value/bound=',value,bound
     END SUBROUTINE reject
-  END FUNCTION
+  END FUNCTION valid_sb_combined_inventory
 #endif
 END MODULE mo_sb_combined_state

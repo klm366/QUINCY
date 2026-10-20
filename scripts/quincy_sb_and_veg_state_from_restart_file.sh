@@ -20,7 +20,11 @@
 #
 # Notes: 
 # - The collected variables should represent the "long term" state of the vegetation and soil biogeochemistry.
-# - They should be in sync with the variables read in mo_veg_init and mo_veg_sb (for each pft), respectively.
+# - They should be in sync with the variables read in mo_veg_init and mo_sb_init (for each PFT), respectively.
+# - This is a pool-state initialization product, not a complete restart: it does
+#   not preserve replay histories, event counters or all feature restart fields.
+# - Analytical jumps during SB replay use internal forcing climatologies, not
+#   this file or the retired external analytical-init workflow.
 #
 # Inspired by cpool_file_from_restart_files.sh
 
