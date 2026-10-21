@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LICE_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -288,6 +288,12 @@ CONTAINS
 
       ! ------------------------ tasks that do not change area
       !
+      IF (model%processes(LICE_)%p%config%active) THEN
+        ! Diagnostics of the fields received from the external land ice model (EBFM) on the lice
+        ! tile, first of all: the validity flag and the sanitised state are used by the processes
+        ! of this time step (radiation, energy balance, hydrology)
+        CALL model%Queue_task(LICE_, "lice_diag")
+      END IF
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology")
         ! JN moved phenology up - for allom it needs to happen before C_NPP_pot_allocation and

@@ -31,7 +31,7 @@ MODULE mo_seb_land
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, get_asselin_coef
 
-  dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_, VEG_
+  dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_, VEG_, LICE_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
@@ -42,6 +42,7 @@ MODULE mo_seb_land
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(LICE_)
 
   IMPLICIT NONE
   PRIVATE
@@ -74,6 +75,7 @@ CONTAINS
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(LICE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
@@ -114,6 +116,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
+    ! Firn state received from the external land ice model (lice tile only)
+    dsl4jsb_Real2D_onChunk :: lice_t_sub
+    dsl4jsb_Real2D_onChunk :: lice_ghf_cond
+    dsl4jsb_Real2D_onChunk :: lice_hcap_sub
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: fract_pond
@@ -158,6 +164,12 @@ CONTAINS
       & cpd_or_cvd
 
     LOGICAL  :: l_freeze_config, l_supercool_config, use_tmx, l_skin_temp
+    LOGICAL  :: l_lice_tile   ! tile is the land ice tile coupled to EBFM: ground heat flux and
+                              ! surface-layer heat capacity come from the received firn state
+    ! Heat capacity floor for the EBFM firn surface layer and default (constant ice, 6.5 cm)
+    ! where the external model provides no data [J m-2 K-1]
+    REAL(lp), PARAMETER :: hcap_min_lice    = 1.0e4_lp
+    REAL(lp), PARAMETER :: hcap_ice_default = 1.3e5_lp
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(lp) :: dtime, alpha
@@ -180,6 +192,7 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     use_tmx = model%config%use_tmx
+    l_lice_tile = tile%Is_process_calculated(LICE_)
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
@@ -204,13 +217,20 @@ CONTAINS
     rad__mem => NULL()
     turb__mem => NULL()
     sse__mem => NULL()
+    lice__mem => NULL()
     hydro__mem => NULL()
     a2l__mem => NULL()
 
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(TURB_)
-    dsl4jsb_Get_memory(SSE_)
+    IF (.NOT. l_lice_tile) THEN
+      ! On the lice tile SSE is switched off (SKIP_): the ground heat flux term comes from the
+      ! firn state received from the external land ice model (lice memory) instead
+      dsl4jsb_Get_memory(SSE_)
+    ELSE
+      dsl4jsb_Get_memory(LICE_)
+    END IF
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
     SELECT CASE (model%config%model_scheme)
@@ -287,8 +307,14 @@ CONTAINS
       ice_soil_sl => NULL()
     END IF
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
-    dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
+    IF (.NOT. l_lice_tile) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
+      dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
+    ELSE
+      lice_t_sub    => LICE__mem%t_sub%ptr(ics:ice,iblk)      ! IN
+      lice_ghf_cond => LICE__mem%ghf_cond%ptr(ics:ice,iblk)   ! IN
+      lice_hcap_sub => LICE__mem%hcap_sub%ptr(ics:ice,iblk)   ! IN
+    END IF
 
     IF (use_tmx) THEN
       drag_srf => NULL()
@@ -416,17 +442,31 @@ CONTAINS
         qsat_old = qsat_mixed(t_old(ic), press_srf(ic))
       END IF
 
-      ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
-      ! This is the heat capacity from the previous time step used in the surface energy balance; hcap_grnd will
-      ! be updated later in the SSE_ process.
-      heat_cap(ic) = hcap_grnd(ic)
+      IF (l_lice_tile) THEN
+        ! Land ice tile coupled to the external land ice model (EBFM): the ground heat flux and the
+        ! surface-layer heat capacity come from the received firn state (conductance and first firn
+        ! layer temperature of the coupling instant; explicit in t_srf as for grnd_hflx below).
+        IF (lice_ghf_cond(ic) >= 0._lp) THEN
+          heat_cap(ic)  = MAX(lice_hcap_sub(ic), hcap_min_lice)
+          forc_hflx(ic) = lice_ghf_cond(ic) * (lice_t_sub(ic) - t_srf_old(ic))
+        ELSE
+          ! No data from the external model (missing value): constant ice heat capacity, no flux
+          heat_cap(ic)  = hcap_ice_default
+          forc_hflx(ic) = 0._lp
+        END IF
+      ELSE
+        ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
+        ! This is the heat capacity from the previous time step used in the surface energy balance; hcap_grnd will
+        ! be updated later in the SSE_ process.
+        heat_cap(ic) = hcap_grnd(ic)
 
-      ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
-      ! This is the heat capacity from the previous time step used in the surface energy balance; grnd_hflx will
-      ! be updated later in the SSE_ process.
-      ! Furthermore, their might be residual latent energy from the phase change computation. This needs
-      ! to be added to the ground heat flux.
-      forc_hflx(ic) = grnd_hflx(ic) + le_pc_remain(ic) / dtime
+        ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
+        ! This is the heat capacity from the previous time step used in the surface energy balance; grnd_hflx will
+        ! be updated later in the SSE_ process.
+        ! Furthermore, their might be residual latent energy from the phase change computation. This needs
+        ! to be added to the ground heat flux.
+        forc_hflx(ic) = grnd_hflx(ic) + le_pc_remain(ic) / dtime
+      END IF
 
       ! Old dry static energy
       s_old(ic) = surface_dry_static_energy( &

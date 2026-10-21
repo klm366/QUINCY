@@ -42,7 +42,7 @@ MODULE mo_hydro_interface
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PHENO_
 #endif
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, VEG_, Q_ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, VEG_, Q_ASSIMI_, LICE_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -56,6 +56,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(LICE_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_memory(PHENO_)
@@ -369,8 +370,8 @@ CONTAINS
   SUBROUTINE update_surface_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: get_soilhyd_properties, calc_surface_hydrology_land, &
-      &                                  calc_surface_hydrology_glacier
-    USE mo_jsb_physical_constants, ONLY: dens_snow, grav
+      &                                  calc_surface_hydrology_glacier, calc_surface_hydrology_lice
+    USE mo_jsb_physical_constants, ONLY: dens_snow, grav, rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< Current tile
@@ -384,6 +385,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)       !< Memory of process surface energy balance
     dsl4jsb_Def_memory(A2L_)       !< Memory of the atmosphere to land interface
     dsl4jsb_Def_memory(VEG_)       !< Memory of the vegetation process
+    dsl4jsb_Def_memory(LICE_)      !< Memory of the external land ice (EBFM) process
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)     !< Memory of the phenology process
 #endif
@@ -434,6 +436,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac        !< Runoff from glaciers [kg m-2 s-1]
     dsl4jsb_Real2D_onChunk :: water_to_soil      !< Water available for infiltration into the soil [m]
     dsl4jsb_Real2D_onChunk :: weq_glac           !< Glacier depth [m water equivalent]
+    dsl4jsb_Real2D_onChunk :: weq_firn           !< Implied water storage of the external land ice model
+                                                 !< (lice tile) [m water equivalent]
+    dsl4jsb_Real2D_onChunk :: lice_runoff        !< Runoff received from the external land ice model (EBFM)
+    dsl4jsb_Real2D_onChunk :: lice_valid         !< 1 where data has been received from the external land ice model
+                                                 !< [kg m-2 s-1]
 
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl           !< Amount of soil water [m]
     dsl4jsb_Real3D_onChunk :: ice_soil_sl           !< Amount of soil ice [m water equivalent]
@@ -507,7 +514,9 @@ CONTAINS
                                    !< True: outflow of intermediary storage goes to runoff/drainage
                                    !< False: outflow of intermediary storage goes to downstream tile
       & ltpe_closed,             & !< Terraplanet setup with closed water balance
-      & use_tmx                    !< Use turbulent mixing scheme tmx
+      & use_tmx,                 & !< Use turbulent mixing scheme tmx
+      & l_lice_tile                !< True: tile is the land ice tile coupled to EBFM
+                                   !< (runoff comes from the EBFM firn model)
 
     TYPE(t_jsb_model), POINTER :: model   !< Current instance of the model
 
@@ -589,7 +598,11 @@ CONTAINS
     END IF
 
     ! Set pointers to variables needed on non-lake tiles
-    dsl4jsb_Get_memory(SSE_)
+    IF (tile%Has_process_memory(SSE_)) THEN
+      ! not present on the land ice tile coupled to EBFM (SSE is SKIP_ there; the SSE
+      ! variables below are only used on non-glacier tiles)
+      dsl4jsb_Get_memory(SSE_)
+    END IF
     IF (tile%contains_vegetation) THEN
       SELECT CASE (model%config%model_scheme)
 #ifndef __QUINCY_STANDALONE__
@@ -623,10 +636,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff_horton)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
+    l_lice_tile = .FALSE.
     IF (tile%is_glacier) THEN
       ! Variables only needed on glacier tile
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_glac)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   runoff_glac)      ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_firn)         ! inout (only used on the lice tile)
+      l_lice_tile = tile%Is_process_calculated(LICE_)
+      IF (l_lice_tile) THEN
+        ! On the EBFM-coupled land ice tile the runoff sent to the HD model is the firn runoff
+        ! received from EBFM (see below)
+        dsl4jsb_Get_memory(LICE_)
+        lice_runoff => dsl4jsb_memory(LICE_)%runoff%ptr(ics:ice,iblk)          ! in
+        lice_valid  => dsl4jsb_memory(LICE_)%icefract_valid%ptr(ics:ice,iblk)  ! in
+      END IF
     ELSE
       ! Variables only needed on tiles with soil
       dsl4jsb_Get_var3D_onChunk(SSE_,     t_soil_sl)        ! in
@@ -706,7 +729,42 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    IF (tile%is_glacier) THEN
+    IF (tile%is_glacier .AND. l_lice_tile) THEN
+      !> On the land ice tile coupled to EBFM the surface melt is computed as on the glacier tile,
+      !> but the runoff sent to the HD model is the firn runoff received from EBFM (percolation,
+      !> refreezing and retention included) instead of the instantaneous P-E; the difference is
+      !> accumulated in the firn storage weq_firn (see [[calc_surface_hydrology_lice]]). As on
+      !> the glacier tile, there is no infiltration or drainage.
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic=1,nc
+#ifdef NFORT_BROKEN_INLINES
+        !NEC$ noinline
+#endif
+        CALL calc_surface_hydrology_lice( &
+          & is_experiment_start,          & ! in
+          & dtime,                        & ! in
+          & lice_valid(ic) > 0.5_lp,      & ! in
+          & lice_runoff(ic),              & ! in
+          & evapotrans(ic),               & ! in
+          & rain(ic),                     & ! in
+          & snow(ic),                     & ! in
+          & le_pc_remain(ic),             & ! inout
+          & q_snocpymlt(ic),              & ! out
+          & snowmelt(ic),                 & ! out
+          & runoff_glac(ic),              & ! out
+          & runoff(ic),                   & ! out, EBFM firn runoff ... used as runoff for HD model
+          & weq_firn(ic)                  & ! inout
+          & )
+        infilt(ic)   = 0._lp
+        drainage(ic) = 0._lp
+        weq_snow_soil(ic) = 0._lp
+        evapo_snow(ic) = evapopot(ic)
+        snow_soil_dens(ic) = dens_snow
+      END DO
+      !$ACC END PARALLEL LOOP
+
+    ELSE IF (tile%is_glacier) THEN
       !> On the glacier tile runoff is calculated from rain and snow melt. As on the lake tile,
       !> there is no infiltration or drainage.
 
@@ -737,6 +795,7 @@ CONTAINS
         snow_soil_dens(ic) = dens_snow
       END DO
       !$ACC END PARALLEL LOOP
+
     ! NOT tile%is_glacier
     ELSE
       !> Things are getting more complicated on the land tile: after updating the soil and
@@ -1069,6 +1128,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_glac,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_firn,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_accum,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil,     weighted_by_fract)
@@ -3320,6 +3380,8 @@ CONTAINS
       & weq_pond, &                  !< Water/ice in pond reservoir [m water equivalent]
       & wtr_latflow_res_srf, &       !< Water content of intermediary reservoir representing lateral flow of
                                      !< surface runoff [m] (only with [[t_hydro_config:hydro_scale]]='Uniform')
+      & weq_firn, &                  !< Implied water storage of the external land ice model (EBFM) on the
+                                     !< lice tile [m water equivalent]
       & weq_fluxes, &                !< Sum of all water fluxes [m3 s-1]
       & weq_land, &                  !< All liquid and frozen land water [m3]
       & weq_balance_err, &           !< Water imbalance within the time step [m3/(time step)]
@@ -3343,7 +3405,9 @@ CONTAINS
 
     REAL(lp), DIMENSION(options%nc) :: &
       & weq_soil, &                  !< Amount of water or ice in the soil [m water equivalent]
-      & wtr_latflow_res              !< Amount of water in the reservoir representing lateral flow [m]
+      & wtr_latflow_res, &           !< Amount of water in the reservoir representing lateral flow [m]
+      & weq_firn_col                 !< Local copy of weq_firn, zero on tiles without that variable
+                                     !< [m water equivalent]
 
     INTEGER :: &
       & iblk, &                      !< Number of current nproma block
@@ -3361,7 +3425,9 @@ CONTAINS
       & ice2weq                      !< Factor to convert ice column height to m water equivalent []
     LOGICAL :: &
       & is_experiment_start, &       !< True: This is the first time step of an experiment
-      & tile_contains_soil           !< True: This tile or child tiles have soil
+      & tile_contains_soil, &        !< True: This tile or child tiles have soil
+      & l_has_firn                   !< True: this tile carries the weq_firn storage of the
+                                     !< EBFM-coupled land ice tile (glacier and land/box tiles)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
     CHARACTER(len=5000)         :: message_text_long   !< Extra long messages
@@ -3414,12 +3480,34 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_latflow_res_sl)  ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)            ! in
+    l_has_firn = ASSOCIATED(HYDRO__mem%weq_firn%ptr)
+    IF (l_has_firn) THEN
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  weq_firn)              ! in
+    END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)              ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_count) ! inout
 
     n_errors = 0   ! initialize error counter
+
+    !$ACC DATA CREATE(weq_firn_col) ASYNC(acc_stream)
+
+    ! Water stored in the firn of the external land ice model (EBFM): only present on glacier and
+    ! land/box tiles, and only non-zero on (and below) the EBFM-coupled lice tile
+    IF (l_has_firn) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        weq_firn_col(ic) = weq_firn(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        weq_firn_col(ic) = 0._lp
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     !$ACC PARALLEL DEFAULT(PRESENT) CREATE(weq_soil, wtr_latflow_res) ASYNC(acc_stream)
 
@@ -3457,6 +3545,8 @@ CONTAINS
       ELSE
         weq_land_new = 0._lp
       END IF
+      ! Water stored in the firn of the external land ice model (lice tile)
+      weq_land_new = weq_land_new + weq_firn_col(ic) * tile_area   ! m -> m^3
 
       !  Calculate the water balance error
       !> For each grid cell the current water budget should match the water budget of the previous time step
@@ -3485,6 +3575,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    !$ACC END DATA
+
     !> In case of significant water balance problems detailed error messages can be printed to help debugging
     !> the code. Depending on parameter [[t_hydro_config:enforce_water_budget]] (namelist 'jsb_hydro_nml')
     !> the simulation is stopped after the first error message, detailed or short messages are printed,
@@ -3504,6 +3596,10 @@ CONTAINS
           & 'Evapotranspiration: ', evapotrans(ic) * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
           & 'Runoff:             ', runoff(ic)     * tile_area / rhoh2o * dtime,       NEW_LINE('a'), &
           & 'Drainage:           ', drainage(ic)   * tile_area / rhoh2o * dtime
+        IF (l_has_firn) THEN
+          WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
+            & 'Firn reservoir:     ', weq_firn(ic)         * tile_area
+        END IF
         IF (tile%contains_soil) THEN
           WRITE (message_text_long,*) TRIM(message_text_long),                         NEW_LINE('a'), &
             & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area,              NEW_LINE('a'), &

@@ -26,8 +26,8 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               CLIMBUF_, FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, VEG_, SB_, &
-    &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
-  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
+    &                               Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LICE_
+  USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_, SKIP_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE !, BARE_TYPE   ! define the type of the tile
@@ -167,7 +167,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, lice_tile, veg_tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_tmx'
 
@@ -212,6 +212,20 @@ CONTAINS
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
 
+          ! Land ice tile coupled to an external land ice model (EBFM) via the lice process:
+          ! a second glacier tile (same lct, i.e. same physics/memory) for the cells covered by the
+          ! external model; its fraction fract_lice is read from the fraction file like the others.
+          ! Note: The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB)
+          ! so JSBACH's soil/snow energy computations (SSE_) are not needed on this tile
+          IF (model%processes(LICE_)%p%config%active) THEN
+            lice_tile => t_jsb_tile('lice', 'Land ice tile coupled to EBFM', &
+              & processes=(/LICE_/), process_actions=(/ON_TILE_/), &
+              & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+              & fract_varname='fract_lice')
+            CALL lice_tile%Set_process_action(SSE_, SKIP_)
+            !$ACC ENTER DATA COPYIN(lice_tile)
+          END IF
+
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
@@ -227,6 +241,7 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_glacier .AND. model%processes(LICE_)%p%config%active) NULLIFY(lice_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_lite_tmx
@@ -367,7 +382,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
-    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, lice_tile, veg_tile, pft_tile
 
     CHARACTER(len=5)  :: pft_shortnames(model%config%npft) !< Short names of the PFTs
     CHARACTER(len=30) :: pft_longnames(model%config%npft)  !< Long names of the PFTs
@@ -433,6 +448,21 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
+
+          ! Land ice tile coupled to an external land ice model (EBFM) via the lice process:
+          ! a second glacier tile (same lct, i.e. same physics/memory) for the cells covered by the
+          ! external model; its fraction fract_lice is read from the fraction file like the others.
+          ! Note: The firn energetics of the lice tile come from EBFM (ground heat flux in the SEB)
+          ! so JSBACH's soil/snow energy computations (SSE_) are not needed on this tile
+          IF (model%processes(LICE_)%p%config%active) THEN
+            lice_tile => t_jsb_tile('lice', 'Land ice tile coupled to EBFM', &
+              & processes       = (/SEB_,     LICE_,    TURB_,    HYDRO_/), &
+              & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
+              & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+              & fract_varname='fract_lice')
+            CALL lice_tile%Set_process_action(SSE_, SKIP_)
+            !$ACC ENTER DATA COPYIN(lice_tile)
+          END IF
         END IF
 
         veg_tile => t_jsb_tile('veg', 'Veg tile', &
@@ -481,6 +511,7 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_glacier .AND. model%processes(LICE_)%p%config%active) NULLIFY(lice_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
   END SUBROUTINE init_usecase_pfts_tmx

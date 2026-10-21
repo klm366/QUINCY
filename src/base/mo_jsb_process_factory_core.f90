@@ -50,6 +50,7 @@ MODULE mo_jsb_process_factory_core
   USE mo_q_pheno_memory_class, ONLY: t_q_pheno_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
   USE mo_sb_memory_class,      ONLY: t_sb_memory
+  USE mo_lice_memory_class,    ONLY: t_lice_memory
 
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
@@ -101,11 +102,13 @@ MODULE mo_jsb_process_factory_core
   USE mo_veg_config_class,      ONLY: t_veg_config
   USE mo_q_sb_interface,        ONLY: Register_sb_tasks_quincy
   USE mo_sb_config_class,       ONLY: t_sb_config
+  USE mo_lice_interface,        ONLY: Register_lice_tasks
+  USE mo_lice_config_class,     ONLY: t_lice_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
     & CLIMBUF_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, &
-    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    & Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, LICE_
 
   IMPLICIT NONE
   PRIVATE
@@ -239,6 +242,9 @@ CONTAINS
     CASE (SB_)
       CALL Register_sb_tasks_quincy(return_ptr, model_id)
       ALLOCATE(t_sb_config::return_ptr%config)
+    CASE (LICE_)
+      CALL Register_lice_tasks(return_ptr, model_id)
+      ALLOCATE(t_lice_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -289,6 +295,7 @@ CONTAINS
     USE mo_q_pheno_memory_class, ONLY: max_no_of_q_pheno_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
     USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
+    USE mo_lice_memory_class,    ONLY: max_no_of_lice_vars => max_no_of_vars
     INTEGER, INTENT(in) :: iproc                   !< Process ID
     CLASS(t_jsb_memory), POINTER   :: return_ptr   !< Pointer to the process memory
 
@@ -368,6 +375,9 @@ CONTAINS
     CASE (SB_)
       ALLOCATE(t_sb_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_sb_vars
+    CASE (LICE_)
+      ALLOCATE(t_lice_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_lice_vars
     END SELECT
 
     !> - Set pointers to the process variables' memories
