@@ -1051,7 +1051,15 @@ CONTAINS
     ! Construct combined inputs before any seed changes the snapshot. The
     ! transaction below leases matching shared state, never a PFT state with
     ! just its forcing replaced by a mean.
-    CALL prepare_combined_sb_forcing(model,options,context,shared_forcing,shared_ready,shared_reason)
+    ! Explicit per-PFT selection bypasses the shared transaction, not the common
+    ! snapshots, event schedule or convergence accounting. No restart state changes.
+    shared_ready=.FALSE.
+    shared_reason='Per-PFT replay explicitly selected.'
+    WRITE(text,*) 'SB replay requested mode: event/cell/block=',event,options%ics,options%iblk, &
+      & '; mode=',TRIM(conf%sb_model_spinup_accelerator_replay_mode)
+    CALL message(modname,TRIM(text),all_print=.TRUE.)
+    IF (conf%sb_model_spinup_accelerator_replay_mode == 'combined') &
+      & CALL prepare_combined_sb_forcing(model,options,context,shared_forcing,shared_ready,shared_reason)
     IF (model%config%flag_spinup_debug) THEN
       WRITE(text,*) 'Combined replay forcing: event/cell/block/ready=',event,options%ics,options%iblk, &
         & shared_ready,'; ',TRIM(shared_reason)
@@ -1078,6 +1086,9 @@ CONTAINS
       END IF
     END IF
     IF (.NOT. combined_done) THEN
+      WRITE(text,*) 'SB replay realized mode: per_pft; event/cell/block=',event,options%ics,options%iblk, &
+        & '; ',TRIM(shared_reason)
+      CALL message(modname,TRIM(text),all_print=.TRUE.)
       DO it=1,SIZE(model%tiles)
         IF (.NOT. context(it)%active) CYCLE
         tile => model%tiles(it)%p
@@ -1491,6 +1502,7 @@ CONTAINS
     REAL(lp), ALLOCATABLE :: partitioned_litter(:,:,:,:,:) !< One-cell shared litter rates [mol m-3 s-1]
     INTEGER, ALLOCATABLE :: pool_indices(:)
     INTEGER :: ics, ice, iblk, nc, ns, c, s, n, failed_layer, accepted_count, rejected_count
+    INTEGER :: failed_pool !< Local analytical pool index; zero if rejection is not pool-specific [-]
     INTEGER :: e, element_indices(6) !< Optional element indices for diagnostic increments [-]
     REAL(lp) :: dt, woody_fraction, woody_c, woody_n, rate(5), transfer(4)
     REAL(lp) :: increment_total(6) !< Chunk sum for log only, NOT area-weighted global inventory [mol m-2]
@@ -1604,20 +1616,27 @@ CONTAINS
       IF (ALLOCATED(candidate)) DEALLOCATE(candidate,increments)
       ALLOCATE(candidate(SIZE(sb_pool_mt,1),SIZE(sb_pool_mt,2),n),increments(SIZE(sb_pool_mt,2)))
       CALL reconstruct_analytical_column(sb_pool_mt(:,:,c,1:n),targets(1,1:n),soil_depth_sl(c,1:n), &
-        & pool_indices,ixC,candidate,increments,accepted,reason)
+        & pool_indices,ixC,candidate,increments,accepted,reason,failed_layer,failed_pool)
       IF (.NOT. accepted) THEN
         rejected_count = rejected_count+1
-        DO failed_layer = 1,n
-          IF (targets(1,failed_layer)%status /= 0) THEN
-            reason = targets(1,failed_layer)%reason
+        DO s = 1,n
+          IF (targets(1,s)%status /= 0) THEN
+            failed_layer = s
+            reason = targets(1,s)%reason
             EXIT
           END IF
         END DO
         IF (LEN_TRIM(first_rejection) == 0) first_rejection = reason
         IF (model%config%flag_spinup_debug) THEN
           WRITE(report,*) 'Rejected analytical column: tile/block/cell/layer=',TRIM(tile%name),iblk,ics+c-1, &
-            & MIN(failed_layer,n),'; ',TRIM(reason)
+            & failed_layer,'; ',TRIM(reason),'; layer=0 means not localized'
           CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+          IF (failed_layer > 0 .AND. failed_pool > 0) THEN
+            WRITE(report,*) 'Rejected reconstruction: local pool/BGCM pool=',failed_pool,pool_indices(failed_pool), &
+              & '; C_before/C_target [mol C m-3]=',sb_pool_mt(pool_indices(failed_pool),ixC,c,failed_layer), &
+              & targets(1,failed_layer)%carbon(failed_pool)
+            CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+          END IF
         END IF
         CYCLE
       END IF

@@ -834,7 +834,7 @@ CONTAINS
   !> Undefined positive-target composition rejects the column without changing live state.
   !> Element increments [mol m-2] are artificial jump bookkeeping, never physical fluxes.
   PURE SUBROUTINE reconstruct_analytical_column(pool_before, targets, depth, pool_index, carbon_index, &
-      & pool_candidate, element_increment, l_column_accepted, reason)
+      & pool_candidate, element_increment, l_column_accepted, reason, failed_layer, failed_pool)
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     REAL(lp), INTENT(in) :: pool_before(:,:,:), depth(:) !< pool/element/layer [mol m-3], thickness [m]
     TYPE(t_sb_local_target), INTENT(in) :: targets(:) !< Active-layer carbon targets
@@ -842,12 +842,15 @@ CONTAINS
     REAL(lp), INTENT(out) :: pool_candidate(:,:,:), element_increment(:) !< Candidate [mol m-3], artificial jump [mol m-2]
     LOGICAL, INTENT(out) :: l_column_accepted !< All layers and elements validated [-]
     CHARACTER(len=*), INTENT(out) :: reason !< Column acceptance reason
+    INTEGER, OPTIONAL, INTENT(out) :: failed_layer, failed_pool !< Layer/local pool index; 0 if not localized [-]
     INTEGER :: is, ipool_local, ipool, ielem !< Layer, local pool, matrix pool and element indices [-]
     REAL(lp) :: carbon_scaling_factor, carbon_before, carbon_target !< Scaling [-], pre/post carbon concentrations [mol C m-3]
 
     pool_candidate = pool_before
     element_increment = 0.0_lp
     l_column_accepted = .FALSE.
+    IF (PRESENT(failed_layer)) failed_layer = 0
+    IF (PRESENT(failed_pool)) failed_pool = 0
     reason = 'Rejected: at least one layer lacks an admissible transport-coupled carbon target'
     IF (ANY(targets%status /= 0)) RETURN
     reason = 'Rejected: invalid pre-jump composition or geometry'
@@ -862,6 +865,8 @@ CONTAINS
           IF (carbon_target > 0.0_lp .OR. ANY(pool_before(ipool,:,is) /= 0.0_lp)) THEN
             pool_candidate = pool_before
             reason = 'Rejected: zero pool_before carbon leaves target pool stoichiometry undefined'
+            IF (PRESENT(failed_layer)) failed_layer = is
+            IF (PRESENT(failed_pool)) failed_pool = ipool_local
             RETURN
           END IF
           CYCLE
@@ -871,6 +876,8 @@ CONTAINS
           IF (carbon_target > HUGE(1.0_lp)*carbon_before) THEN
             pool_candidate = pool_before
             reason = 'Rejected: unrepresentable pool scaling'
+            IF (PRESENT(failed_layer)) failed_layer = is
+            IF (PRESENT(failed_pool)) failed_pool = ipool_local
             RETURN
           END IF
         END IF
@@ -878,6 +885,9 @@ CONTAINS
         IF (carbon_scaling_factor > 1.0_lp) THEN
           IF (ANY(pool_before(ipool,:,is) > HUGE(1.0_lp)/carbon_scaling_factor)) THEN
             pool_candidate = pool_before
+            reason = 'Rejected: element scaling would overflow'
+            IF (PRESENT(failed_layer)) failed_layer = is
+            IF (PRESENT(failed_pool)) failed_pool = ipool_local
             RETURN
           END IF
         END IF
@@ -887,6 +897,7 @@ CONTAINS
     END DO
     IF (.NOT. ALL(ieee_is_finite(pool_candidate)) .OR. ANY(pool_candidate < 0.0_lp)) THEN
       pool_candidate = pool_before
+      reason = 'Rejected: reconstructed inventory is nonfinite or negative'
       RETURN
     END IF
     DO ielem = 1,SIZE(pool_before,2)

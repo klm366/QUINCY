@@ -83,6 +83,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_model_spinup_accelerator
     INTEGER :: sb_convergence_cycle_years = 0 !< Derived climate cycle for convergence [years], not a control
     CHARACTER(len=24) :: sb_model_spinup_accelerator_convergence_mode !< cycle_window or consecutive_years [-]
+    CHARACTER(len=24) :: sb_model_spinup_accelerator_replay_mode !< combined or per_pft execution [-]
     INTEGER :: sb_spinup_accelerator_n_daily_bins !< calendar-derived daily climatology size, not a control [-]
     INTEGER               :: sb_model_spinup_accelerator_frequency
     INTEGER               :: sb_model_spinup_accelerator_start_year
@@ -210,6 +211,7 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_OM_sorption
     LOGICAL                     :: flag_sb_model_spinup_accelerator
     CHARACTER(len=24) :: sb_model_spinup_accelerator_convergence_mode
+    CHARACTER(len=24) :: sb_model_spinup_accelerator_replay_mode
     INTEGER                     :: sb_model_spinup_accelerator_frequency
     INTEGER                     :: sb_model_spinup_accelerator_start_year
     INTEGER                     :: sb_model_spinup_accelerator_max_executions
@@ -286,6 +288,7 @@ CONTAINS
                       sb_model_spinup_accelerator_timestep_days, &
                       sb_model_spinup_accelerator_convergence_rel_tol, &
                       sb_model_spinup_accelerator_convergence_mode, &
+                      sb_model_spinup_accelerator_replay_mode, &
                       sb_model_spinup_accelerator_convergence_years, &
                       flag_sb_double_langmuir   , &
                       usda_taxonomy_class       , &
@@ -360,6 +363,7 @@ CONTAINS
     sb_model_spinup_accelerator_timestep_days = 1.0_lp
     sb_model_spinup_accelerator_convergence_rel_tol = 0.001_lp
     sb_model_spinup_accelerator_convergence_mode = 'cycle_window'
+    sb_model_spinup_accelerator_replay_mode = 'combined'
     sb_model_spinup_accelerator_convergence_years = 10
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
@@ -460,6 +464,10 @@ CONTAINS
     config%sb_model_spinup_accelerator_timestep_days = sb_model_spinup_accelerator_timestep_days
     config%sb_model_spinup_accelerator_convergence_rel_tol = sb_model_spinup_accelerator_convergence_rel_tol
     config%sb_model_spinup_accelerator_convergence_mode = sb_model_spinup_accelerator_convergence_mode
+    config%sb_model_spinup_accelerator_replay_mode = sb_model_spinup_accelerator_replay_mode
+    IF (sb_model_spinup_accelerator_replay_mode /= 'combined' .AND. &
+      & sb_model_spinup_accelerator_replay_mode /= 'per_pft') &
+      & CALL finish(TRIM(routine), 'Unknown SB replay mode: use combined or per_pft.')
     IF (sb_model_spinup_accelerator_convergence_mode /= 'cycle_window' .AND. &
       & sb_model_spinup_accelerator_convergence_mode /= 'consecutive_years') &
       & CALL finish(TRIM(routine), 'Unknown SB replay convergence mode: use cycle_window or consecutive_years.')
