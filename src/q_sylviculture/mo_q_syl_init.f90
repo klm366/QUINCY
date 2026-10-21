@@ -168,6 +168,10 @@ CONTAINS
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
 
+    ! A globally enabled process need not occur in the selected tile tree (e.g. a single grass PFT).
+    ! Without forest descendants the top tile has neither harvest aggregation nor Q_SYL memory.
+    IF (.NOT. tile%Is_process_active(Q_SYL_)) RETURN
+
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_memory(Q_SYL_)
     dsl4jsb_Get_var2D_onDomain(Q_SYL_, fract_forest_harvest_y_read)

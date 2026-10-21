@@ -438,6 +438,7 @@ CONTAINS
   !>
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions, is_sitelevel)
 
+    USE mo_jsb_control,         ONLY: jsbach_is_restarted
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_varlist,         ONLY: jsb_add_var, VARNAME_LEN
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
@@ -522,6 +523,20 @@ CONTAINS
       & initval_r=0.0_lp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
+
+    IF (this%model%config%usecase == 'quincy_single_pft' .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
+      ! Box naming is independent of the winning PFT. Do not allow a missing
+      ! marker to default to the current selection during restart: zero is an
+      ! invalid sentinel and lrestart_cont is explicitly false. No output/I/O
+      ! stream is added, and other usecases register no extra restart variable.
+      CALL jsb_add_var(varlist_name_loc, 'single_pft_id', this%model%single_pft_restart_id, &
+        & hgrid, surface, t_cf('single_pft_id', '1', 'Original selected QUINCY PFT library index'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, loutput=.FALSE., lrestart=.TRUE., lrestart_cont=.FALSE., &
+        & initval_r=0._lp, isteptype=TSTEP_INSTANT)
+      IF (.NOT. jsbach_is_restarted()) &
+        & this%model%single_pft_restart_id(:,:) = REAL(this%model%single_pft_index,lp)
+    END IF
 
 
     ! -------------------------------------------------------------------------------------------------- !

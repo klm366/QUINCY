@@ -36,6 +36,7 @@ MODULE mo_jsb_model_usecases
   PRIVATE
 
   PUBLIC :: init_usecase
+  PUBLIC :: validate_single_pft_restart
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_usecases'
 
@@ -82,6 +83,9 @@ CONTAINS
     ! QUINCY 13 PFTs
     CASE ('quincy_13_pfts')
       CALL init_usecase_quincy_13_pfts(model)
+
+    CASE ('quincy_single_pft')
+      CALL init_usecase_quincy_single_pft(model)
 
     ! catch wrong usecase setting
     CASE DEFAULT
@@ -738,14 +742,16 @@ CONTAINS
   !>
   !>  the data/lctlib_quincy_nlct14.def is used for this usecase (hardcoded in: mo_jsb_base:jsbach_setup_tiles)
   !>
-  SUBROUTINE init_usecase_quincy_13_pfts(model)
+  SUBROUTINE init_usecase_quincy_13_pfts(model, selected_pft)
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model                    !< model instance
+    INTEGER, OPTIONAL, INTENT(in) :: selected_pft !< Original PFT index for one-child construction [-]
 
     CLASS(t_jsb_tile), POINTER    :: box_tile, land_tile, &
       &                              veg_tile, pft_tile, &
       &                              lake_tile, glacier_tile              !< tiles used with this usecase
     INTEGER                       :: i                                    !< for looping
+    CHARACTER(len=5) :: fraction_name !< Empty: original PFT field; equal: full parent area
     ! number of pft
     INTEGER, PARAMETER            :: npft = 13
     ! pft short names
@@ -878,11 +884,17 @@ CONTAINS
 
     ! create PFT tiles 1:npft
     DO i = 1,npft
+      fraction_name = ''
+      IF (PRESENT(selected_pft)) THEN
+        IF (i /= selected_pft) CYCLE
+        ! The sole child covers vegetation, not the whole grid cell.
+        fraction_name = 'equal'
+      END IF
       ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
         &                    TRIM(pft_longnames(i)), &
         &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
-        &                    parent = veg_tile)
+        &                    parent = veg_tile, fract_varname = fraction_name)
 
       IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
         IF (model%processes(Q_SYL_)%p%config%active) THEN
@@ -906,6 +918,121 @@ CONTAINS
     IF (model%config%use_lakes)   NULLIFY(lake_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
   END SUBROUTINE init_usecase_quincy_13_pfts
+
+  !> Construct one dominant vegetated PFT before trait-dependent initialization.
+  !! Read_1d broadcasts the tiny global field through host I/O, so selection is
+  !! independent of local cell ownership. The input ranks candidates only; the
+  !! winner inherits all parent vegetation area via the existing equal rule.
+  SUBROUTINE init_usecase_quincy_single_pft(model)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_kind, ONLY: lp
+    USE mo_jsb_grid, ONLY: Get_grid
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_io_netcdf, ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_quincy_model_config, ONLY: QSOIL
+    USE mo_sb_config_class, ONLY: t_sb_config
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model !< Model with configured grid and QUINCY library
+    TYPE(t_jsb_grid), POINTER :: grid !< Global cell count, independent of local ownership
+    TYPE(t_input_file) :: input_file !< Existing initial fractions
+    REAL(lp), POINTER :: fraction(:) !< One-cell input fraction [-]
+    REAL(lp) :: largest_fraction !< Largest positive vegetated share in the input [-]
+    INTEGER :: i, winner !< Original PFT indices; zero means no candidate [-]
+    CHARACTER(len=11) :: field_name !< Original fraction field, fract_pftNN
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_quincy_single_pft'
+
+    IF (model%config%model_scheme /= MODEL_QUINCY) &
+      & CALL finish(routine, 'quincy_single_pft requires the QUINCY model scheme.')
+    grid => Get_grid(model%grid_id)
+    IF (.NOT. model%config%is_single_site .OR. grid%ntotal_g /= 1) &
+      & CALL finish(routine, 'quincy_single_pft requires a single-cell site-level grid.')
+    IF (model%Do_fractions_change()) &
+      & CALL finish(routine, 'quincy_single_pft requires fixed land cover; disable land-cover change.')
+    ! External QSOIL forcing still assumes a complete, contiguous PFT inventory
+    ! (including pft01) in its cache. Internal SB replay does not use that cache.
+    IF (model%config%qmodel_id == QSOIL) &
+      & CALL finish(routine, 'quincy_single_pft does not yet support file-driven QSOIL; use coupled SB replay.')
+    IF (model%Is_process_enabled(SB_)) THEN
+      SELECT TYPE (config => model%processes(SB_)%p%config)
+      TYPE IS (t_sb_config)
+        ! Reject rather than silently override the existing execution selector.
+        ! All common forcing, scheduling and restart bookkeeping stays in use.
+        IF (config%flag_sb_model_spinup_accelerator .AND. &
+          & config%sb_model_spinup_accelerator_replay_mode /= 'per_pft') &
+          & CALL finish(routine, &
+          & 'quincy_single_pft requires sb_model_spinup_accelerator_replay_mode="per_pft" for SB replay.')
+      CLASS DEFAULT
+        CALL finish(routine, 'Invalid SB configuration for quincy_single_pft.')
+      END SELECT
+    END IF
+
+    winner = 0
+    largest_fraction = 0._lp
+    input_file = jsb_netcdf_open_input(TRIM(model%config%fract_filename))
+    DO i = 1,13
+      WRITE(field_name,'(A,I2.2)') 'fract_pft',i
+      IF (.NOT. input_file%Has_var(field_name)) &
+        & CALL finish(routine, 'Missing initial fraction: '//field_name)
+      fraction => input_file%Read_1d(field_name)
+      IF (SIZE(fraction) /= 1) CALL finish(routine, 'Expected one cell in '//field_name)
+      IF (.NOT. ieee_is_finite(fraction(1))) CALL finish(routine, 'Nonfinite fraction in '//field_name)
+      IF (fraction(1) < 0._lp .OR. fraction(1) > 1._lp) &
+        & CALL finish(routine, 'Fraction outside [0,1] in '//field_name)
+      ! Original library identity is retained. Strict > resolves exact ties
+      ! to the lowest index; bare soil is not a vegetated candidate.
+      IF (.NOT. model%lctlib(i)%BareSoilFlag .AND. fraction(1) > largest_fraction) THEN
+        winner = i
+        largest_fraction = fraction(1)
+      END IF
+      DEALLOCATE(fraction)
+    END DO
+    CALL input_file%Close()
+    IF (winner == 0) CALL finish(routine, 'No positive vegetated PFT fraction in initial input.')
+    ! This expected identity is recomputed from immutable initial input, not
+    ! overwritten by restart loading. The independently stored marker must match.
+    model%single_pft_index = winner
+
+    WRITE(message_text,'(A,I2.2,A,ES16.8,A)') 'Selected pft',winner, &
+      & '; original fraction=',largest_fraction,'; assigned fraction=full parent vegetation area.'
+    CALL message(routine, TRIM(message_text))
+    CALL message(routine, 'Selection source: '//TRIM(model%config%fract_filename))
+    CALL init_usecase_quincy_13_pfts(model, selected_pft=winner)
+  END SUBROUTINE init_usecase_quincy_single_pft
+
+  !> Check loaded identity before process-state overrides, BGCM synchronization or replay.
+  !! Fixed fractions are not restart fields. A mandatory box-level marker stops
+  !! both accidental 13-PFT imports and changed dominant-PFT input on continuation.
+  !! Only owned cells are tested; rank padding is not physical state.
+  SUBROUTINE validate_single_pft_restart(model)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_kind, ONLY: lp
+    USE mo_jsb_grid, ONLY: Get_grid
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    TYPE(t_jsb_model), INTENT(in) :: model !< Model after restart file loading
+    TYPE(t_jsb_grid), POINTER :: grid !< Local owned-cell bounds
+    INTEGER :: iblk, ic !< Block and cell indices [-]
+    REAL(lp) :: stored_id !< Restart marker in original lctlib indexing [-]
+    CHARACTER(len=*), PARAMETER :: routine = modname//':validate_single_pft_restart'
+
+    IF (model%config%usecase /= 'quincy_single_pft') RETURN
+    IF (.NOT. ASSOCIATED(model%single_pft_restart_id)) &
+      & CALL finish(routine, 'Missing single-PFT identity registration.')
+    grid => Get_grid(model%grid_id)
+    DO iblk = grid%Get_blk_start(), grid%Get_blk_end()
+      DO ic = grid%Get_col_start(iblk), grid%Get_col_end(iblk)
+        stored_id = model%single_pft_restart_id(ic,iblk)
+        IF (.NOT. ieee_is_finite(stored_id)) CALL finish(routine, 'Nonfinite single-PFT restart identity.')
+        ! Indices 1:13 are exactly representable; fractional or zero markers
+        ! must not be rounded into a valid identity. No tolerance is appropriate.
+        IF (stored_id /= REAL(model%single_pft_index,lp)) THEN
+          WRITE(message_text,*) 'Single-PFT restart identity mismatch: stored/expected=', &
+            & stored_id,model%single_pft_index,'; do not reuse 13-PFT restarts or change selected vegetation.'
+          CALL finish(routine, TRIM(message_text))
+        END IF
+      END DO
+    END DO
+    CALL message(routine, 'Single-PFT restart identity matches initial selection.')
+  END SUBROUTINE validate_single_pft_restart
 
 #endif
 END MODULE mo_jsb_model_usecases

@@ -53,6 +53,9 @@ MODULE mo_jsb_model_class
     TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
     TYPE(t_jsb_task_options),  ALLOCATABLE :: options(:)    !< Options needed by tasks
     INTEGER                            :: grid_id
+    INTEGER :: single_pft_index = 0 !< Initial-file selected QUINCY library index; zero outside single-PFT usecase [-]
+    REAL(lp), POINTER :: single_pft_restart_id(:,:) => NULL()
+      !< Restart-only identity on box [index]; registry owns storage, not a prognostic pool
     TYPE(t_jsb_process_p),     POINTER :: processes(:)
     TYPE(t_Task_queue),        POINTER :: queue        => NULL()
       !< Task queue: the tasks of the processes in the order in which they are executed in a time step, as

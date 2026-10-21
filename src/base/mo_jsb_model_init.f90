@@ -880,6 +880,7 @@ CONTAINS
   !
   SUBROUTINE jsbach_init_after_restart(model_id)
 
+    USE mo_jsb_model_usecases,  ONLY: validate_single_pft_restart
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,     ONLY: MODEL_JSBACH, MODEL_QUINCY
@@ -909,6 +910,7 @@ CONTAINS
     END IF
 
     model => Get_model(model_id)
+    CALL validate_single_pft_restart(model)
     grid  => Get_grid(model%grid_id)
     blks = grid%get_blk_start()
     blke = grid%get_blk_end()

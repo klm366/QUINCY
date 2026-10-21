@@ -1709,7 +1709,7 @@ CONTAINS
     !>
     SELECT CASE (usecase)
     ! quincy model with 13 PFT tiles (of the 14 PFT that would be available with 'lctlib_quincy_nlct14.def')
-    CASE ('quincy_13_pfts')
+    CASE ('quincy_13_pfts', 'quincy_single_pft')
       ALLOCATE(return_value(nlct))
       return_value(1:nlct) = lctlib(1:nlct)
     ! jsbach_lite & jsbach_pfts

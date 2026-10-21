@@ -473,7 +473,7 @@ CONTAINS
     !>
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model with 13 PFT tiles incl. bare soil
-    CASE ('quincy_13_pfts')
+    CASE ('quincy_13_pfts', 'quincy_single_pft')
       lctlib_filename = 'lctlib_quincy_nlct14.def'
     ! jsbach_lite & jsbach_pfts
     CASE DEFAULT

@@ -193,6 +193,10 @@ CONTAINS
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
 
+    ! A single non-crop PFT has no agriculture aggregation or memory, even if Q_AGR is enabled.
+    ! Skip the annual input before accessing process memory; crop-containing trees are unchanged.
+    IF (.NOT. tile%Is_process_active(Q_AGR_)) RETURN
+
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
     dsl4jsb_Get_config(Q_AGR_)
