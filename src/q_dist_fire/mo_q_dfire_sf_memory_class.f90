@@ -123,7 +123,7 @@ CONTAINS
   !> initialize memory (variables) for the process: dist_fire
   !>
   SUBROUTINE Init_q_dfire_sf_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -164,7 +164,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -177,7 +177,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
@@ -186,9 +186,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('t_air_min', mem%t_air_min, &
@@ -197,9 +197,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 9999.0_wp)
 
     CALL mem%Add_var('t_air_max_old', mem%t_air_max_old, &
@@ -208,9 +208,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('t_air_min_old', mem%t_air_min_old, &
@@ -219,9 +219,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 9999.0_wp)
 
     CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
@@ -230,9 +230,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     !< Precipitation related variables
@@ -242,9 +242,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('precip_mavg', mem%precip_mavg, &
@@ -253,9 +253,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('precip_qc_mavg', mem%precip_qc_mavg, &
@@ -264,9 +264,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('precip_daily_mmd', mem%precip_daily_mmd, &
@@ -275,9 +275,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('precip_daytime', mem%precip_daytime, &
@@ -286,9 +286,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('precip_daytime_old', mem%precip_daytime_old, &
@@ -297,9 +297,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
@@ -308,9 +308,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('dead_fuel_consumption_1hr', mem%dead_fuel_consumption_1hr, &
@@ -319,9 +319,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('dead_fuel_consumption_10hr', mem%dead_fuel_consumption_10hr, &
@@ -330,9 +330,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('dead_fuel_consumption_100hr', mem%dead_fuel_consumption_100hr, &
@@ -341,9 +341,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('dead_fuel_consumption_1000hr', mem%dead_fuel_consumption_1000hr, &
@@ -352,9 +352,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ab_moisture', mem%ab_moisture, &
@@ -363,9 +363,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('area_burned_fract', mem%area_burned_fract, &
@@ -374,9 +374,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('area_burned', mem%area_burned, &
@@ -385,7 +385,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
+        & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -398,7 +398,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('area_burned_output', mem%area_burned_output, &
@@ -409,7 +409,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('i_surface', mem%i_surface, &
@@ -418,9 +418,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ros_f', mem%ros_f, &
@@ -429,9 +429,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ros_b', mem%ros_b, &
@@ -440,9 +440,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('mean_fire_area', mem%mean_fire_area, &
@@ -451,9 +451,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('fire_duration', mem%fire_duration, &
@@ -462,9 +462,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('e_n_ignitions', mem%e_n_ignitions, &
@@ -473,9 +473,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('e_n_humans', mem%e_n_humans, &
@@ -484,9 +484,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('e_n_lightning', mem%e_n_lightning, &
@@ -495,9 +495,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('frac_consump_fcl', mem%frac_consump_fcl, &
@@ -506,9 +506,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('distance_travelled', mem%distance_travelled, &
@@ -517,9 +517,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('l2b_ratio', mem%l2b_ratio, &
@@ -528,9 +528,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('reaction_intensity', mem%reaction_intensity, &
@@ -539,9 +539,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('prop_flux_ratio', mem%prop_flux_ratio, &
@@ -551,9 +551,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('wind_factor', mem%wind_factor, &
@@ -563,8 +563,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('eff_heating_number', mem%eff_heating_number, &
@@ -574,9 +575,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('preig_heat', mem%preig_heat, &
@@ -585,9 +586,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('optimum_reaction_velocity', mem%opt_react_velo, &
@@ -596,9 +597,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('net_fuel_load', mem%net_fuel_load, &
@@ -607,9 +608,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('Moisture_dampening_coefficient', mem%moist_damp_coeff, &
@@ -618,9 +619,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('Mineral_dampening_coefficient', mem%mineral_damp_coeff, &
@@ -629,9 +630,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, & ! DIAGNOSTICS
+        & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('fuel_moisture', mem%fuel_moisture, &
@@ -643,7 +644,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ic_pop_dens', mem%ic_pop_dens, &
@@ -655,7 +656,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ic_lightning_events_monthly', mem%ic_lightning_events_monthly, &
@@ -666,8 +667,8 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
     CALL mem%Add_var('ic_lightning_events', mem%ic_lightning_events, &
@@ -678,7 +679,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -691,7 +692,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
   END SUBROUTINE Init_q_dfire_sf_memory
