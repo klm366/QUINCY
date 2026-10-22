@@ -91,23 +91,23 @@ CONTAINS
 
     dsl4jsb_Get_config(ALCC_)
 
-    CALL mem%Add_var('cf_target_year', mem%cf_target_year,                                &
-      & hgrid, pft_vgrid,                                                                 &
-      & t_cf('cf_target_year', '', 'Target cover fractions read from forcing.'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & lrestart=.FALSE., initval_r=-0.1_wp)
-
-    CALL mem%Add_var('cf_delta', mem%cf_delta,                                            &
-      & hgrid, pft_vgrid,                                                                 &
-      & t_cf('cf_delta', '', 'Change in cover fractions (daily or annually).'),           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=FULL,                                                                &
-      & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
-
-
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
+    CASE ('maps')
+      CALL mem%Add_var('cf_target_year', mem%cf_target_year,                                &
+        & hgrid, pft_vgrid,                                                                 &
+        & t_cf('cf_target_year', '', 'Target cover fractions read from forcing.'),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.FALSE., initval_r=-0.1_wp)
+
+      CALL mem%Add_var('cf_delta', mem%cf_delta,                                            &
+        & hgrid, pft_vgrid,                                                                 &
+        & t_cf('cf_delta', '', 'Change in cover fractions (daily or annually).'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=FULL,                                                                &
+        & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
+
     CASE ('transition')
       trans_vgrid  => Get_vgrid('transitions')
 
@@ -124,7 +124,7 @@ CONTAINS
         & t_cf('cf_potential', '', 'Potential cover fractions.'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
-        & lrestart=.FALSE., initval_r=0.0_wp)
+        & lrestart=.TRUE., lrestart_cont=.TRUE., initval_r=0.0_wp)
     END SELECT
 
   END SUBROUTINE Init_alcc_memory

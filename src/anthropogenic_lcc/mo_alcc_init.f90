@@ -167,10 +167,10 @@ CONTAINS
 
     ! Read land use data
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_target_year)
 
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
     CASE ('maps')
+      dsl4jsb_Get_var3D_onDomain(ALCC_, cf_target_year)
 
       ! The target year to read the annual land cover maps from depends on the application scheme
       IF (dsl4jsb_Config(ALCC_)%l_daily_alcc) THEN

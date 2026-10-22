@@ -190,8 +190,6 @@ CONTAINS
 
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(ALCC_)) RETURN
@@ -275,6 +273,8 @@ CONTAINS
     !start case here
     SELECT CASE (TRIM(dsl4jsb_Config(ALCC_)%scheme))
     CASE ('maps')
+      dsl4jsb_Get_var3D_onChunk(ALCC_, cf_target_year)
+      dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
 
       DO WHILE (ASSOCIATED(current_tile))
         i_cf_tile = i_cf_tile + 1
@@ -444,7 +444,9 @@ CONTAINS
 
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_memory(ALCC_)
-    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
+    IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'maps') THEN
+      dsl4jsb_Get_var3D_onChunk(ALCC_, cf_delta)
+    END IF
     IF (model%Is_process_enabled(NLCC_)) THEN
       dsl4jsb_Get_memory(NLCC_)
     END IF
