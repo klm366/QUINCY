@@ -25,7 +25,7 @@ MODULE mo_q_dfire_sf_init
 #ifndef __QUINCY_STANDALONE__
   USE mo_jsb_time,                ONLY: timestep_in_days
 #endif
-  USE mo_jsb_process_class,       ONLY: Q_DFIRE_SF_, SB_, A2L_, Q_DFIRE_FUEL_SF_
+  USE mo_jsb_process_class,       ONLY: Q_DFIRE_SF_, SB_, Q_DFIRE_FUEL_SF_
 
   IMPLICIT NONE
   PRIVATE
@@ -62,7 +62,6 @@ CONTAINS
 
     dsl4jsb_Use_config(Q_DFIRE_SF_)
     dsl4jsb_Use_memory(Q_DFIRE_SF_)
-    dsl4jsb_Use_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
@@ -75,7 +74,6 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(Q_DFIRE_SF_)
-    dsl4jsb_Def_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: dfire_pm_id                                  !< Selected precipitation method
     ! ----------------------------------------------------------------------------------------------------- !
@@ -148,11 +146,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! CALL model%processes(Q_DFIRE_FUEL_SF_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
     ! CALL model%processes(SB_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
-    ! CALL model%processes(A2L_)%p%Test_init_status_asked_by(Q_DFIRE_SF_)    !< Test if process dependency is already initialized
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
-    dsl4jsb_Get_memory(A2L_)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, nesterov_index)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, fdi)
@@ -434,7 +430,6 @@ CONTAINS
     USE mo_jsb_parallel,           ONLY: Get_omp_thread
 
     dsl4jsb_Use_memory(Q_DFIRE_SF_)
-    dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_config(Q_DFIRE_SF_)
     dsl4jsb_Use_config(SB_)
     ! -------------------------------------------------------------------------------------------------- !
@@ -451,7 +446,6 @@ CONTAINS
     dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(Q_DFIRE_SF_)
-    dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory_tile(Q_DFIRE_SF_, box_tile)
     ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly ! out
@@ -478,7 +472,6 @@ CONTAINS
     dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
-    dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_SF_, ic_lightning_events_monthly) ! yearly lightning events
     dsl4jsb_Get_memory_tile(Q_DFIRE_SF_, box_tile)
     dsl4jsb_Get_var2D_onDomain_tile(Q_DFIRE_SF_, ic_lightning_events, box_tile) ! yearly lightning events
