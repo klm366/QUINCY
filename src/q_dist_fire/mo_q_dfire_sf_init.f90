@@ -133,7 +133,6 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: frac_consump_fcl
     dsl4jsb_Real2D_onDomain      :: ic_pop_dens
     dsl4jsb_Real3D_onDomain      :: ic_lightning_events_monthly
-    dsl4jsb_Real2D_onDomain      :: a2l_lightning_events
     dsl4jsb_Real2D_onDomain      :: a_nd
     ! ----------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
@@ -209,7 +208,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_SF_, frac_consump_fcl)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, ic_pop_dens)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_SF_, ic_lightning_events_monthly)
-    dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, a_nd)
     ! ----------------------------------------------------------------------------------------------------- !
     nesterov_index = 0._wp
@@ -288,7 +286,6 @@ CONTAINS
     CALL q_dfire_read_init_vars(tile)
 
     ic_pop_dens = dfire_init_vars%pop_dens
-    a2l_lightning_events = dfire_init_vars%lightning_events(:,:,1)
     a_nd = dfire_init_vars%a_nd
 #else
     !> IQ only
@@ -448,16 +445,18 @@ CONTAINS
     TYPE(t_jsb_model),           POINTER :: model
     TYPE(t_jsb_grid),            POINTER :: hgrid
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    CLASS(t_jsb_tile_abstract),  POINTER :: box_tile
     LOGICAL, SAVE                        :: is_read = .FALSE. !< TRUE if forcing file has beed read
-
+    ! -------------------------------------------------------------------------------------------------- !! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(A2L_)
-
+    dsl4jsb_Def_memory_tile(Q_DFIRE_SF_, box_tile)
+    ! -------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly ! out
-    dsl4jsb_Real2D_onDomain :: a2l_lightning_events            ! out
-
+    dsl4jsb_Real2D_onDomain :: ic_lightning_events         ! out
+    ! -------------------------------------------------------------------------------------------------- !
     REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
     LOGICAL :: is_experiment_start, read_deposition_data
 
@@ -472,6 +471,7 @@ CONTAINS
 
     nproma = hgrid%nproma
     nblks  = hgrid%nblks
+    CALL model%Get_top_tile(box_tile)
 
     is_experiment_start = is_time_experiment_start(current_datetime)
     ! -------------------------------------------------------------------------------------------------- !
@@ -480,7 +480,8 @@ CONTAINS
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_SF_, ic_lightning_events_monthly) ! yearly lightning events
-    dsl4jsb_Get_var2D_onDomain(A2L_, a2l_lightning_events) ! lightning events for the current month
+    dsl4jsb_Get_memory_tile(Q_DFIRE_SF_, box_tile)
+    dsl4jsb_Get_var2D_onDomain_tile(Q_DFIRE_SF_, ic_lightning_events, box_tile) ! yearly lightning events
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
@@ -510,10 +511,7 @@ CONTAINS
     ! Assign the deposition values of this month to the A2L variables
     current_month = get_month(current_datetime)
 
-    a2l_lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
-
-!    WRITE(*,*) "mo_dfire_init.f90:: provide_lightning_events:: current_month, a2l_lightning_events=", &
-!                        current_month, ", ", a2l_lightning_events
+    ic_lightning_events(:,:) = ic_lightning_events_monthly(:,current_month,:)
 
     IF (debug_on()) CALL message(TRIM(routine), 'Finishing routine')
   END SUBROUTINE provide_lightning_events

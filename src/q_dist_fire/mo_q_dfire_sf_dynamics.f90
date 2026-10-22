@@ -121,6 +121,7 @@ CONTAINS
     REAL(wp)                              :: dtime      !< timestep
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_dfire_sf_dynamics'
 
+    CLASS(t_jsb_tile_abstract), POINTER   :: box_tile      !< pointer to the box tile to get the fertiliser data
     REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2]
     REAL(wp), POINTER                     :: tile_fract(:) ! [%]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
@@ -149,6 +150,7 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory_tile(Q_DFIRE_SF_, box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Local vars here
     ! ----------------------------------------------------------------------------------------------------- !
@@ -231,7 +233,7 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk                :: frac_consump_fcl          ! out [-]
     dsl4jsb_Real2D_onChunk                :: ic_pop_dens               ! in [#humans km-2]
-    dsl4jsb_Real2D_onChunk                :: a2l_lightning_events      ! in [#events ha-1 d-1]
+    dsl4jsb_Real2D_onChunk                :: ic_lightning_events       ! in [#events ha-1 d-1]
     dsl4jsb_Real2D_onChunk                :: a_nd                      ! in [#ignitions_indiv-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -245,14 +247,16 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
+    CALL model%Get_top_tile(box_tile)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_memory(Q_DFIRE_SF_)
+    dsl4jsb_Get_memory_tile(Q_DFIRE_SF_, box_tile)
     dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
-    ! ----------------------------------------------------------------------------------------------------- !
+
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)            ! in
@@ -327,7 +331,8 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(Q_DFIRE_SF_, frac_consump_fcl)          ! out [-]
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, ic_pop_dens)               ! in [#humans km-2]
-    dsl4jsb_Get_var2D_onChunk(A2L_, a2l_lightning_events)          ! in [#events ha-1 d-1]
+    dsl4jsb_Get_var2D_onChunk_tile(Q_DFIRE_SF_, ic_lightning_events, box_tile) ! in [#events ha-1 d-1]
+
     dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, a_nd)                      ! in [#events ha-1 d-1]
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
@@ -379,7 +384,7 @@ CONTAINS
                             moist_damp_coeff, mineral_damp_coeff)
 
     sf_atm = t_sf_atm(t_air_min, t_air_max, wind_10m, precip_daily, precip_daily_mmd)
-    sf_ignitions = t_sf_ignitions(nc, ic_pop_dens, a_nd, a2l_lightning_events, &
+    sf_ignitions = t_sf_ignitions(nc, ic_pop_dens, a_nd, ic_lightning_events, &
                             e_n_humans, e_n_lightning, e_n_ignitions)
 
     !< Pack vegetation cover fraction

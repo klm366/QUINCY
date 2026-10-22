@@ -84,11 +84,6 @@ MODULE mo_a2l_memory_class
       & noy_n15_deposition    , &  !< surface downward oxidised nitrogen-15 deposition velocity [mumol m-2 sec-1]
       & p_deposition               !< surface downward reduced phosphorus deposition velocity [mumol m-2 sec-1]
 
-    ! FIRE
-    TYPE(t_jsb_var_real2d) ::   &
-      & a2l_lightning_events       !< Spitfire related process. Note: when moved to dfire process data is not read on time.
-                                                                  !<
-
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) ::     &
       & daytime_counter         , &  !< number of timesteps of current day with light available [#]
@@ -551,17 +546,6 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('a2l_lightning_events', mem%a2l_lightning_events, &
-        & hgrid, surface, &
-        & t_cf('a2l_lightning_events', '#lightnings ha-1 d-1', 'Rate of lightning events'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & output_level=BASIC, &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('daytime_counter', mem%daytime_counter, &

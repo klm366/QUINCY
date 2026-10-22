@@ -320,7 +320,7 @@ CONTAINS
     END IF
 
     ! Note: done at mo_q_dfire_fuel_sf_init
-    !moisture_extinction = dsl4jsb_Config(Q_DFIRE_SF_)%moisture_extinction_ROSMODEL
+    !moisture_extinction = lctlib%moisture_extinction_ROSMODEL
 
     NULLIFY(live_fuel_frac)
   END SUBROUTINE update_q_dfire_sf_fuel
