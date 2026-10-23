@@ -500,6 +500,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, fertiliser_nh4               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, fertiliser_no3               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, fertiliser_po4               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, emission_nh3                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, emission_noy                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, emission_n2o                 , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, emission_n2                  , weighted_by_fract)
