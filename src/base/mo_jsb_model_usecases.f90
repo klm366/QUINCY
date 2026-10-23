@@ -681,7 +681,32 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':set_jsbach_pfts'
 
     ! Define PFT names and indices based on the number of PFTs
-    IF (npft == 11) THEN
+    ! npft = 8 and 9 added: natural vegetation only (no pastures, no crops), as in Verheijen et al. (2013);
+    ! 9 adds the mangrove (lctlib column 22, id 21) with short name pft13, so that the land-cover
+    ! variable fract_pft13 of the 13-PFT files keeps its name.
+    ! Author: Dr. Sri Nandini-Weiß
+    ! Date: 2026-10-23
+    IF (npft == 8 .OR. npft == 9) THEN
+      pft_shortnames(1:8) = [character(len=5) ::               &
+        & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+        & 'pft07', 'pft08' ]
+      pft_longnames(1:8) = [character(len=30) :: &
+        & 'Tropical broadleaf evergreen', &
+        & 'Tropical broadleaf deciduous', &
+        & 'Extra-tropical evergreen',     &
+        & 'Extra-tropical deciduous',     &
+        & 'Raingreen shrubs',             &
+        & 'Deciduous shrubs',             &
+        & 'C3 grass',                     &
+        & 'C4 grass'                     ]
+      pft_ids(1:8) = (/ 1,2,3,4,9,10,11,12 /)
+      IF (npft == 9) THEN
+        pft_shortnames(9) = 'pft13'
+        pft_longnames(9)  = 'Prescribed mangrove cover'
+        pft_ids(9)        = 21
+      END IF
+
+    ELSE IF (npft == 11) THEN
       pft_shortnames(:) = [character(len=5) ::               &
         & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
         & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11' ]
