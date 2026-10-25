@@ -122,6 +122,7 @@ MODULE mo_jsb_config_class
   !> Abstract type for process configurations
   TYPE, ABSTRACT :: t_jsb_config
     LOGICAL :: active                                          !< The process is active in the current setup.
+    INTEGER :: run_case
     LOGICAL :: lrestart_cont                                   !< Continue although process variables are
                                                                !< missing in the restart file.
     CHARACTER(len=filename_max) :: ic_filename                 !< Name of the initial file

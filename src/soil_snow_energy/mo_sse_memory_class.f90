@@ -129,9 +129,9 @@ CONTAINS
 
     dsl4jsb_Get_Config(SSE_)
 
-    table = tables(1)
+    table   =  tables(1)
 
-    hgrid => Get_grid(mem%grid_id)
+    hgrid   => Get_grid(mem%grid_id)
 
     surface => Get_vgrid('surface')
     soil_e  => Get_vgrid('soil_depth_energy')

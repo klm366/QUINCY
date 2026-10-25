@@ -89,7 +89,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
+    dsl4jsb_Def_config(NLCC_)
+
     model => Get_model(model_id)
+
+    dsl4jsb_Get_config(NLCC_)
 
     table = tables(1)
 

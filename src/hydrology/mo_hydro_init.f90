@@ -2051,12 +2051,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_sanitize_state'
 
-    REAL(lp), PARAMETER :: warn_level_wpi_soil_excess = 1.05_lp
+    REAL(lp), PARAMETER :: warn_level_lpi_soil_excess = 1.05_lp
                            !< If water content exceeds saturation by more than this factor prior
                            !< to sanitization, a warning is issued.
     REAL(lp), PARAMETER :: zfcmin = 1.e-10_lp   !TODO: Remove
 
-    INTEGER :: maxloc_wpi_soil_excess(3)  !< Location of the maximum excess soil water
+    INTEGER :: maxloc_lpi_soil_excess(3)  !< Location of the maximum excess soil water
     TYPE(t_jsb_vgrid), POINTER :: soil_w  !< Vertical grid of the hydrology
 
     dsl4jsb_Def_memory(HYDRO_)            !< Memory of the HYDRO process
@@ -2092,13 +2092,13 @@ CONTAINS
 
       !> A warning is issued in case the current soil water anywhere exceeds saturation capacity by more than
       !> a certain factor.
-      IF (ANY(wtr_soil_sl(:,:,:) > warn_level_wpi_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
-        maxloc_wpi_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
-        WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_wpi_soil_excess(:), &
+      IF (ANY(wtr_soil_sl(:,:,:) > warn_level_lpi_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
+        maxloc_lpi_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
+        WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_lpi_soil_excess(:), &
           & ': wtr_soil_sl = ',                                                                                 &
-          & wtr_soil_sl    (maxloc_wpi_soil_excess(1), maxloc_wpi_soil_excess(2), maxloc_wpi_soil_excess(3)),   &
+          & wtr_soil_sl    (maxloc_lpi_soil_excess(1), maxloc_lpi_soil_excess(2), maxloc_lpi_soil_excess(3)),   &
           & ', wtr_soil_sat_sl = ',                                                                             &
-          & wtr_soil_sat_sl(maxloc_wpi_soil_excess(1), maxloc_wpi_soil_excess(2), maxloc_wpi_soil_excess(3))
+          & wtr_soil_sat_sl(maxloc_lpi_soil_excess(1), maxloc_lpi_soil_excess(2), maxloc_lpi_soil_excess(3))
         CALL warning(routine, message_text)
       END IF
 

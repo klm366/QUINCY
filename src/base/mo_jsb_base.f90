@@ -65,7 +65,8 @@ CONTAINS
     !>
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, &
+      &                   ALCC_, TOP_, CH4_, MEGAN_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -79,6 +80,7 @@ CONTAINS
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(CH4_)
     dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(VEG_)
@@ -97,6 +99,7 @@ CONTAINS
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(VEG_)
@@ -284,6 +287,7 @@ CONTAINS
         dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
+        dsl4jsb_Get_config(CH4_)
 
       END SELECT
 
@@ -361,6 +365,10 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(CH4_)  .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since methane process is active')
+        END IF
         IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
           dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')

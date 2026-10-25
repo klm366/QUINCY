@@ -22,33 +22,46 @@ MODULE mo_carbon_constants
   PUBLIC
 
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
-  INTEGER, PARAMETER  :: i_lctlib_acid           = 1 !< Index of constants for acid yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_water          = 2 !< Index of constants for water yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_ethanol        = 3 !< Index of constants for ethanol yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_nonsoluble     = 4 !< Index of constants for nonsoluble yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
+  ENUM, BIND(C)
+    ENUMERATOR :: i_lctlib_acid=1, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus
+  END ENUM
+
+  ! Indices of the yasso(_out) transfer array
+  ENUM, BIND(C)
+    ENUMERATOR :: i_pool_acid_ag=1, i_pool_water_ag, i_pool_ethanol_ag, i_pool_nonsoluble_ag,             &
+                & i_pool_acid_bg, i_pool_water_bg, i_pool_ethanol_bg, i_pool_nonsoluble_bg, i_pool_humus, &
+                & i_flux_resp_total, i_flux_2_humus_ag, i_flux_2_humus_bg, i_flux_from_humus_diag,        &
+                & i_flux_resp_litter_ag, i_flux_resp_litter_bg, i_rel_flux_AWEN, i_flux_from_humus,       &
+                & i_flux_litter_2_humus
+  END ENUM
 
   ! Further constants
   REAL(lp), PARAMETER :: molarMassC_kg           = 12.01_lp * 1.e-3_lp  !< 12.01e-3_lp   -  Mass of 1 mol C   in kg
   !$ACC DECLARE COPYIN(molarMassC_kg)
   REAL(lp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_lp     !< 44.0095e-3_lp -  Mass of 1 mol CO2 in kg
   !$ACC DECLARE COPYIN(molarMassCO2_kg)
-
-  REAL(lp), PARAMETER :: FireFracWood2Atmos      =  0.2_lp              !< Fraction of wood carbon emitted to the atm by fire.
+  REAL(lp), PARAMETER :: FireFracWood2Atmos      =     0.2_lp           !< Fraction of wood carbon emitted to the atm by fire.
                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
   !$ACC DECLARE COPYIN(FireFracWood2Atmos)
-  REAL(lp), PARAMETER :: fract_wood_aboveGround  = 0.7_lp               !< Fraction of C above ground in wood pool (for separation
-                                                                        !  of woody litter into above and below ground litter pools)
+  REAL(lp), PARAMETER :: fract_wood_aboveGround  =     0.7_lp           !< Fraction of C above ground in wood pool
   !$ACC DECLARE COPYIN(fract_wood_aboveGround)
-  REAL(lp), PARAMETER :: fract_green_aboveGround = 0.5_lp               !< Fraction of C above ground in green pool (for separation
-                                                                        !  of green litter into above and below ground litter pools)
+  REAL(lp), PARAMETER :: fract_green_aboveGround =     0.5_lp           !< Fraction of C above ground in green pool
   !$ACC DECLARE COPYIN(fract_green_aboveGround)
   REAL(lp), PARAMETER :: sec_per_day             = 86400._lp            !< seconds per day
   !$ACC DECLARE COPYIN(sec_per_day)
-  REAL(lp), PARAMETER :: days_per_year           = 365.25_lp
+  REAL(lp), PARAMETER :: days_per_year           =   365.25_lp
   !$ACC DECLARE COPYIN(days_per_year)
   REAL(lp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
+
+  !   parameters for Yasso peat
+  REAL(lp), parameter :: rho_YCpool_acro          = 3.5e4_lp           ! Bulk density of acrotelm peat: 0.035 g/cm3, based on
+                                                                       ! Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
+                                                                       !  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
+  REAL(lp), parameter :: rho_YCpool_cato          = 9.1e4_lp           ! Bulk density of catotelm peat: 0.091 g/cm3, based on
+                                                                       ! Clymo (1983); Turunen (2002)
+  REAL(lp), parameter :: Cfrac_YCpool_acro        = 0.50_lp           ! C fraction in acrotelm peat Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_cato        = 0.52_lp           ! Malmer and Wallen (2004)
 
   ! Definitions for lcc
 

@@ -29,9 +29,10 @@ MODULE mo_pheno_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_,VEG_, CH4_
 
   dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(CH4_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
@@ -180,7 +181,7 @@ CONTAINS
     USE mo_carbon_interface,       ONLY: rescale_carbon_upon_reference_area_change, &
       &                                  calculate_current_c_ta_state_sum, check_carbon_conservation, &
       &                                  recalc_carbon_per_tile_vars
-    USE mo_pheno_process,          ONLY: calc_summergreen_phenology, calc_evergreen_phenology, &
+    USE mo_pheno_process,          ONLY: calc_summergreen_phenology, calc_evergreen_phenology, calc_gdd, &
       &                                  calc_crop_phenology, calc_raingreen_phenology, calc_grass_phenology,         &
       &                                  track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,         ONLY: get_year_day
@@ -210,6 +211,7 @@ CONTAINS
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -249,6 +251,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    dsl4jsb_Real2D_onChunk :: GDD_prev_year
+    dsl4jsb_Real2D_onChunk :: GDD_sum
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -265,7 +269,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
     ! Local variables
-    LOGICAL :: l_newday
+    LOGICAL :: l_newday, l_newyear
     REAL(lp) :: timestep  ! Timestep in days
     INTEGER :: i
     REAL(lp) :: MaxLAI
@@ -317,6 +321,7 @@ CONTAINS
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(PHENO_)
@@ -385,6 +390,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_prev_year)          ! inout
+      dsl4jsb_Get_var2D_onChunk(PHENO_,    GDD_sum)                ! inout
+    ENDIF
     ! ---------------------------
     ! Go
 
@@ -663,6 +672,13 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    ! Calculate GDD for methane process
+    IF (dsl4jsb_Config(CH4_)%active) THEN
+      CALL calc_GDD(l_newyear,l_newday,5._lp,      & ! in
+                  & previous_day_temp_mean(:),     & ! in
+                  & GDD_prev_year(:),              & ! inout
+                  & GDD_sum(:))                      ! inout
+    ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -740,6 +756,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
@@ -758,6 +775,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CH4_)
     dsl4jsb_Get_memory(PHENO_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -841,7 +859,7 @@ CONTAINS
 
     ! Update foliage projected cover
     !
-    IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       fract_fpc_mon(1:,0:) => dsl4jsb_memory(PHENO_)%fract_fpc_mon (ics:ice, iblk, :) ! in
       !$ACC DATA CREATE(wgt1, wgt2, nmw1, nmw2) ASYNC(acc_stream)

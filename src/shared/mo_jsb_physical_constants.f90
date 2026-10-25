@@ -34,8 +34,10 @@ MODULE mo_jsb_physical_constants
 
   REAL(lp), PARAMETER :: &
     molarMassDryAir = amd   * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of dry air (28.970e-3_lp)
-    molarMassCO2    = amco2 * 1.e-3_lp    !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_lp)
-  !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2)
+    molarMassCO2    = amco2 * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of CO2 (44.0095e-3_lp)
+    molarMassCH4    = amch4 * 1.e-3_lp, & !< Mass [kg] per amount of substance [mol] of CH4 (16.043e-3_lp)
+    molarMassO2     = amo2  * 1.e-3_lp    !< Mass [kg] per amount of substance [mol] of O2 (31.9988e-3_lp)
+  !$ACC DECLARE COPYIN(molarMassDryAir, molarMassCO2, molarMassCH4, molarMassO2)
 
   REAL(lp), PARAMETER :: von_karman = 0.4_lp    !< von Karmann constant for evaporation
 

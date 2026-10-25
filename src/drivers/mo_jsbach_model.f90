@@ -794,7 +794,7 @@ CONTAINS
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
     USE mo_jsb4_forcing,              ONLY: forcing_options, get_standalone_driver
     USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
-    USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
+    USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2, molarMassCH4, molarMassO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
@@ -830,7 +830,11 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: evapotrans
     dsl4jsb_Real2D_onDomain :: evapopot
     dsl4jsb_Real2D_onDomain :: co2_air
+    dsl4jsb_Real2D_onDomain :: ch4_air
+    dsl4jsb_Real2D_onDomain :: o2_air
     dsl4jsb_Real2D_onDomain :: co2_air_mol
+    dsl4jsb_Real2D_onDomain :: ch4_air_mol
+    dsl4jsb_Real2D_onDomain :: o2_air_mol
     ! quincy
     dsl4jsb_Real2D_onDomain :: co2_mixing_ratio
     dsl4jsb_Real2D_onDomain :: CO2_mixing_ratio_c13
@@ -931,7 +935,11 @@ CONTAINS
       sinlat => grid%sinlat
 
       dsl4jsb_Get_var2d_onDomain(A2L_, co2_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_, ch4_air_mol)
+      dsl4jsb_Get_var2d_onDomain(A2L_, o2_air_mol)
       dsl4jsb_Get_var2d_onDomain(A2L_, co2_air)
+      dsl4jsb_Get_var2d_onDomain(A2L_, ch4_air)
+      dsl4jsb_Get_var2d_onDomain(A2L_, o2_air)
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
       !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(A2L_, cos_zenith_angle)) ASYNC(1)
@@ -998,6 +1006,8 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
           & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, CH4_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, O2_air),                                      &
           & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
           & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
           & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
@@ -1023,6 +1033,8 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
           ! out
           & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, CH4_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, O2_air),                                      &
           & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
           & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
           & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
@@ -1042,11 +1054,13 @@ CONTAINS
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
-      ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+      ! Convert CO2, CH4 and O2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
       DO iblk = 1, nblks
         DO ic = 1, nproma
           co2_air_mol(ic, iblk) = co2_air(ic, iblk) * molarMassDryAir / molarMassCO2
+          ch4_air_mol(ic, iblk) = ch4_air(ic, iblk) * molarMassDryAir / molarMassCH4
+          o2_air_mol(ic, iblk)  = o2_air(ic, iblk)  * molarMassDryAir / molarMassO2
         ENDDO
       ENDDO
       !$ACC END PARALLEL LOOP
