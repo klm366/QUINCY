@@ -61,6 +61,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_tmx             !< Use turbulent mixing scheme
     LOGICAL                        :: use_lakes           !< Lakes are represented
     LOGICAL                        :: use_glacier         !< Glaciers are represented
+    LOGICAL                        :: l_read_quincy_soil_3d !< Read QUINCY soil input variables with a soil-layer dimension
     LOGICAL                        :: check_child_cf      !< Assert that cover fractions of children tiles sum up to the tile cf
     INTEGER                        :: enforce_water_budget!< How to deal with water balance errors?</br>
                                                           !< 'ignore' (0):  short, one-line warning,</br>
@@ -195,6 +196,7 @@ CONTAINS
     LOGICAL                       :: use_tmx                      !< Use turbulent mixing scheme
     LOGICAL                       :: use_lakes                    !< Represent lakes
     LOGICAL                       :: use_glacier                  !< Represent glaciers
+    LOGICAL                       :: l_read_quincy_soil_3d        !<
     LOGICAL                       :: check_child_cf               !< Assert that cover fractions of children tiles sum up to the tile cf
     CHARACTER(len=10)             :: enforce_water_budget         !< Consequence of water balance errors
     CHARACTER(len=10)             :: quincy_model                 !< Quincy model version: 'canopy', 'plant'
@@ -234,6 +236,7 @@ CONTAINS
       use_tmx, &
       use_lakes, &
       use_glacier, &
+      l_read_quincy_soil_3d, &
       check_child_cf, &
       enforce_water_budget, &
       quincy_model, &
@@ -288,6 +291,7 @@ CONTAINS
     use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    l_read_quincy_soil_3d      = .FALSE.
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
@@ -358,12 +362,16 @@ CONTAINS
     IF (model_config%model_scheme /= MODEL_JSBACH .AND. use_tmx) THEN
       CALL finish(routine, 'tmx currently only implemented for JSBACH.')
     END IF
+    IF (model_config%model_scheme /= MODEL_QUINCY .AND. l_read_quincy_soil_3d) THEN
+      CALL finish(routine, 'l_read_quincy_soil_3d currently only implemented for QUINCY.')
+    END IF
 
     model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
     model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%l_read_quincy_soil_3d      = l_read_quincy_soil_3d
     model_config%check_child_cf             = check_child_cf
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%qmodel_id                  = qmodel_id

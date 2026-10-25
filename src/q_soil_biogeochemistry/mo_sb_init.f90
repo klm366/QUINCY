@@ -52,13 +52,14 @@ MODULE mo_sb_init
   TYPE t_sb_init_vars
     REAL(lp), POINTER :: &
       & usda_taxonomy_class     (:,:) => NULL(), &
-      & nwrb_taxonomy_class     (:,:) => NULL(), &
-      & qmax_org_fine_particle  (:,:) => NULL(), &
-      & soil_ph                 (:,:) => NULL(), &
-      & soil_p_labile           (:,:) => NULL(), &
-      & soil_p_slow             (:,:) => NULL(), &
-      & soil_p_occluded         (:,:) => NULL(), &
-      & soil_p_primary          (:,:) => NULL()
+      & nwrb_taxonomy_class     (:,:) => NULL()
+    REAL(lp), POINTER :: &
+      & qmax_org_fine_particle  (:,:,:) => NULL(), &
+      & soil_ph                 (:,:,:) => NULL(), &
+      & soil_p_labile           (:,:,:) => NULL(), &
+      & soil_p_slow             (:,:,:) => NULL(), &
+      & soil_p_occluded         (:,:,:) => NULL(), &
+      & soil_p_primary          (:,:,:) => NULL()
     INTEGER, POINTER :: &
       & usda_taxonomy_class_int (:,:) => NULL(), &
       & nwrb_taxonomy_class_int (:,:) => NULL()
@@ -410,7 +411,7 @@ CONTAINS
 
     !>  1.2 init site-specific soil properties
     !>
-    ph_sl(:,:,:)              = SPREAD(sb_init_vars%soil_ph(:,:), DIM = 2, ncopies = nsoil_w)
+    ph_sl(:,:,:)              = sb_init_vars%soil_ph(:,:,:)
     Qmax_AlFe_cor(:,:,:)      = 1._lp                           !< ... docu ...
 
     !>  1.3 init SB_ variables from constants
@@ -438,11 +439,12 @@ CONTAINS
         & lctlib%k_som_slow_init, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
+        & model%config%l_read_quincy_soil_3d, &
+        & sb_init_vars%qmax_org_fine_particle(:,:,:), &
+        & sb_init_vars%soil_p_labile(:,:,:), &
+        & sb_init_vars%soil_p_slow(:,:,:), &
+        & sb_init_vars%soil_p_occluded(:,:,:), &
+        & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -498,11 +500,12 @@ CONTAINS
         & lctlib%growthform, &
         & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
-        & SPREAD(sb_init_vars%qmax_org_fine_particle(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_labile(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_slow(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_occluded(:,:), DIM = 2, ncopies = nsoil_w), &
-        & SPREAD(sb_init_vars%soil_p_primary(:,:), DIM = 2, ncopies = nsoil_w), &
+        & model%config%l_read_quincy_soil_3d, &
+        & sb_init_vars%qmax_org_fine_particle(:,:,:), &
+        & sb_init_vars%soil_p_labile(:,:,:), &
+        & sb_init_vars%soil_p_slow(:,:,:), &
+        & sb_init_vars%soil_p_occluded(:,:,:), &
+        & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
@@ -638,24 +641,24 @@ CONTAINS
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
-      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
-      & sb_init_vars%soil_ph                 (nproma, nblks),       &
-      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
-      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
-      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
-      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_ph                 (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_labile           (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_slow             (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_occluded         (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_primary          (nproma, nsoil_w, nblks), &
       & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
       & )
 
     sb_init_vars%usda_taxonomy_class     (:,:) = missval
     sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
-    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
-    sb_init_vars%soil_ph                 (:,:) = missval
-    sb_init_vars%soil_p_labile           (:,:) = missval
-    sb_init_vars%soil_p_slow             (:,:) = missval
-    sb_init_vars%soil_p_occluded         (:,:) = missval
-    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:,:) = missval
+    sb_init_vars%soil_ph                 (:,:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:,:) = missval
     sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
     sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
 
@@ -672,27 +675,27 @@ CONTAINS
 
     !> qmax organic fine particle
     !>
-    sb_init_vars%qmax_org_fine_particle(:,:) = dsl4jsb_Config(SB_)%qmax_org_fine_particle
+    sb_init_vars%qmax_org_fine_particle(:,:,:) = dsl4jsb_Config(SB_)%qmax_org_fine_particle
 
     !> soil ph
     !>
-    sb_init_vars%soil_ph(:,:) = dsl4jsb_Config(SB_)%soil_ph
+    sb_init_vars%soil_ph(:,:,:) = dsl4jsb_Config(SB_)%soil_ph
 
     !> P labile
     !>
-    sb_init_vars%soil_p_labile(:,:) = dsl4jsb_Config(SB_)%soil_p_labile
+    sb_init_vars%soil_p_labile(:,:,:) = dsl4jsb_Config(SB_)%soil_p_labile
 
     !> P slow
     !>
-    sb_init_vars%soil_p_slow(:,:) = dsl4jsb_Config(SB_)%soil_p_slow
+    sb_init_vars%soil_p_slow(:,:,:) = dsl4jsb_Config(SB_)%soil_p_slow
 
     !> P occluded
     !>
-    sb_init_vars%soil_p_occluded(:,:) = dsl4jsb_Config(SB_)%soil_p_occluded
+    sb_init_vars%soil_p_occluded(:,:,:) = dsl4jsb_Config(SB_)%soil_p_occluded
 
     !> P primary (apatite)
     !>
-    sb_init_vars%soil_p_primary(:,:) = dsl4jsb_Config(SB_)%soil_p_primary
+    sb_init_vars%soil_p_primary(:,:,:) = dsl4jsb_Config(SB_)%soil_p_primary
   END SUBROUTINE sb_qs_read_init_vars
 #else
   ! ======================================================================================================= !
@@ -730,32 +733,34 @@ CONTAINS
     ALLOCATE( &
       & sb_init_vars%usda_taxonomy_class     (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class     (nproma, nblks),       &
-      & sb_init_vars%qmax_org_fine_particle  (nproma, nblks),       &
-      & sb_init_vars%soil_ph                 (nproma, nblks),       &
-      & sb_init_vars%soil_p_labile           (nproma, nblks),       &
-      & sb_init_vars%soil_p_slow             (nproma, nblks),       &
-      & sb_init_vars%soil_p_occluded         (nproma, nblks),       &
-      & sb_init_vars%soil_p_primary          (nproma, nblks),       &
+      & sb_init_vars%qmax_org_fine_particle  (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_ph                 (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_labile           (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_slow             (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_occluded         (nproma, nsoil_w, nblks), &
+      & sb_init_vars%soil_p_primary          (nproma, nsoil_w, nblks), &
       & sb_init_vars%usda_taxonomy_class_int (nproma, nblks),       &
       & sb_init_vars%nwrb_taxonomy_class_int (nproma, nblks)        &
       & )
 
     sb_init_vars%usda_taxonomy_class     (:,:) = missval
     sb_init_vars%nwrb_taxonomy_class     (:,:) = missval
-    sb_init_vars%qmax_org_fine_particle  (:,:) = missval
-    sb_init_vars%soil_ph                 (:,:) = missval
-    sb_init_vars%soil_p_labile           (:,:) = missval
-    sb_init_vars%soil_p_slow             (:,:) = missval
-    sb_init_vars%soil_p_occluded         (:,:) = missval
-    sb_init_vars%soil_p_primary          (:,:) = missval
+    sb_init_vars%qmax_org_fine_particle  (:,:,:) = missval
+    sb_init_vars%soil_ph                 (:,:,:) = missval
+    sb_init_vars%soil_p_labile           (:,:,:) = missval
+    sb_init_vars%soil_p_slow             (:,:,:) = missval
+    sb_init_vars%soil_p_occluded         (:,:,:) = missval
+    sb_init_vars%soil_p_primary          (:,:,:) = missval
     sb_init_vars%usda_taxonomy_class_int (:,:) = -9999
     sb_init_vars%nwrb_taxonomy_class_int (:,:) = -9999
 
     dsl4jsb_Get_config(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
 
+    !> Soil taxonomy classes and qmax_org
+    !>  Read from the regular QUINCY soil boundary condition file. They are still 2D input fields.
+    !>
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
-
 
     !> USDA taxonomy soil class
     !>
@@ -775,50 +780,84 @@ CONTAINS
 
     !> qmax organic fine particle
     !>
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='qmax_org',  &
-      & fill_array = sb_init_vars%qmax_org_fine_particle)
-    sb_init_vars%qmax_org_fine_particle(:,:) = MERGE(ptr_2D, 6.5537_lp, ptr_2D > 0.0_lp)
-
-    !> soil ph
-    !>
-    ptr_2D => input_file%Read_2d(   &
-      & variable_name='PHIHOX',     &
-      & fill_array = sb_init_vars%soil_ph)
-    sb_init_vars%soil_ph(:,:) = MERGE(ptr_2D, 65.0_lp, ptr_2D > 0.0_lp)
-    ! divide by 10 to get the actual values within the correct range
-    sb_init_vars%soil_ph(:,:) = sb_init_vars%soil_ph(:,:) / 10.0_lp
-
-    !> P labile
-    !>
-    ptr_2D => input_file%Read_2d(           &
-      & variable_name='Labile_Inorganic_P', &
-      & fill_array = sb_init_vars%soil_p_labile)
-    sb_init_vars%soil_p_labile(:,:) = MERGE(ptr_2D, 50._lp, ptr_2D > 0.0_lp)
-
-    !> P slow
-    !>
-    ptr_2D => input_file%Read_2d(             &
-      & variable_name='Seconday_Mineral__P',  &
-      & fill_array = sb_init_vars%soil_p_slow)
-    sb_init_vars%soil_p_slow(:,:) = MERGE(ptr_2D, 70._lp, ptr_2D > 0.0_lp)
-
-    !> P occluded
-    !>
-    ptr_2D => input_file%Read_2d(     &
-      & variable_name='Occluded_P',   &
-      & fill_array = sb_init_vars%soil_p_occluded)
-    sb_init_vars%soil_p_occluded(:,:) = MERGE(ptr_2D, 150._lp, ptr_2D > 0.0_lp)
-
-    !> P primary (apatite)
-    !>
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='Apatite_P',  &
-      & fill_array = sb_init_vars%soil_p_primary)
-    sb_init_vars%soil_p_primary(:,:) = MERGE(ptr_2D, 100._lp, ptr_2D > 0.0_lp)
+    CALL read_quincy_soil_input_2d(input_file, 'qmax_org', sb_init_vars%qmax_org_fine_particle, 6.5537_lp)
 
     CALL input_file%Close()
+
+    !> QUINCY soil biogeochemistry inputs
+    !>  In the default workflow, soil pH and inorganic P maps are read as 2D fields and expanded to all soil layers.
+    !>  If l_read_quincy_soil_3d is enabled, soil pH and inorganic P pools are read layer-wise from the optional 3D file.
+    !>
+    IF (model%config%l_read_quincy_soil_3d) THEN
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
+
+      CALL read_quincy_soil_input_3d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_lp, scale=0.1_lp)
+      CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._lp)
+      CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._lp)
+      CALL read_quincy_soil_input_3d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._lp)
+      CALL read_quincy_soil_input_3d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._lp)
+
+      CALL input_file%Close()
+    ELSE
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
+
+      CALL read_quincy_soil_input_2d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_lp, scale=0.1_lp)
+      CALL read_quincy_soil_input_2d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._lp)
+      CALL read_quincy_soil_input_2d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._lp)
+      CALL read_quincy_soil_input_2d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._lp)
+      CALL read_quincy_soil_input_2d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._lp)
+
+      CALL input_file%Close()
+    END IF
   END SUBROUTINE sb_read_init_vars
+
+  ! ======================================================================================================= !
+  !> Read a QUINCY soil input variable from a 2D map and expand it to all soil layers
+  !>
+  SUBROUTINE read_quincy_soil_input_2d(input_file, variable_name, field, default, scale)
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(lp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(lp),           INTENT(in)    :: default
+    REAL(lp), OPTIONAL, INTENT(in)    :: scale
+
+    REAL(lp), ALLOCATABLE, TARGET :: field_2d(:,:)
+    REAL(lp), POINTER            :: ptr_2D(:,:)
+    INTEGER                      :: is
+
+    ALLOCATE(field_2d(SIZE(field,1), SIZE(field,3)))
+
+    ptr_2D => input_file%Read_2d(variable_name=variable_name, fill_array=field_2d)
+    field_2d(:,:) = MERGE(ptr_2D, default, ptr_2D > 0.0_lp)
+    IF (PRESENT(scale)) field_2d(:,:) = field_2d(:,:) * scale
+
+    DO is = 1, SIZE(field, 2)
+      field(:,is,:) = field_2d(:,:)
+    END DO
+
+    DEALLOCATE(field_2d)
+  END SUBROUTINE read_quincy_soil_input_2d
+
+  ! ======================================================================================================= !
+  !> Read a QUINCY soil input variable with a soil-layer dimension
+  !>
+  SUBROUTINE read_quincy_soil_input_3d(input_file, variable_name, field, default, scale)
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file
+
+    TYPE(t_input_file), INTENT(inout) :: input_file
+    CHARACTER(len=*),   INTENT(in)    :: variable_name
+    REAL(lp), TARGET,   INTENT(inout) :: field(:,:,:)
+    REAL(lp),           INTENT(in)    :: default
+    REAL(lp), OPTIONAL, INTENT(in)    :: scale
+
+    REAL(lp), POINTER :: ptr_3D(:,:,:)
+
+    ptr_3D => input_file%Read_3d(variable_name=variable_name, fill_array=field)
+    field(:,:,:) = MERGE(ptr_3D, default, ptr_3D > 0.0_lp)
+    IF (PRESENT(scale)) field(:,:,:) = field(:,:,:) * scale
+  END SUBROUTINE read_quincy_soil_input_3d
 #endif
 
   ! ======================================================================================================= !
@@ -834,6 +873,7 @@ CONTAINS
     & lctlib_k_som_slow_init, &
     & sb_model_scheme, &
     & flag_sb_double_langmuir, &
+    & l_read_quincy_soil_3d, &
     & qmax_org_fine_particle, &
     & soil_p_labile, &
     & soil_p_slow, &
@@ -910,6 +950,7 @@ CONTAINS
     REAL(lp),                   INTENT(in)    :: lctlib_k_som_slow_init
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
+    LOGICAL,                    INTENT(in)    :: l_read_quincy_soil_3d            !< model config
     REAL(lp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
@@ -1231,32 +1272,59 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      CALL init_soil_p_pools( &
-        & nproma, &                         ! in
-        & nsoil_w, &
-        & num_sl_above_bedrock(:, iblk), &
-        & soil_lay_depth_center_sl(:,:,iblk), &
-        & flag_sb_double_langmuir, &
-        & soil_depth_sl(:,:,iblk), &
-        & bulk_dens_corr_sl(:,:,iblk), &
-        & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile(:,:,iblk), &
-        & soil_p_slow(:,:,iblk), &
-        & soil_p_occluded(:,:,iblk), &
-        & soil_p_primary(:,:,iblk), &
-        & soil_p_depth, &
-        & p_labile_slow_site(:,:,iblk), &   ! in
-        & po4_solute(:,:,iblk), &           ! inout
-        & po4_assoc_fast(:,:,iblk), &
-        & po4_assoc_slow(:,:,iblk), &
-        & po4_occluded(:,:,iblk), &
-        & po4_primary(:,:,iblk), &
-        & qmax_po4(:,:,iblk), &
-        & km_adsorpt_po4_sl(:,:,iblk), &
-        & qmax_fast_po4(:,:,iblk), &
-        & qmax_slow_po4(:,:,iblk), &
-        & km_fast_po4(:,:,iblk), &
-        & km_slow_po4(:,:,iblk) )           ! inout
+      IF (l_read_quincy_soil_3d) THEN
+        !> Use the layer-wise inorganic P pools directly
+        !>  These maps are expected to already contain the desired vertical distribution.
+        !>  No extrapolation from the shallow soil P data is applied.
+        CALL init_soil_p_pools_from_3d_input( &
+          & nproma, &                         ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & po4_solute(:,:,iblk), &           ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk) )           ! inout
+      ELSE
+        !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
+        !>
+        CALL init_soil_p_pools( &
+          & nproma, &                         ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & soil_lay_depth_center_sl(:,:,iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & bulk_dens_corr_sl(:,:,iblk), &
+          & root_fraction_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & soil_p_depth, &
+          & p_labile_slow_site(:,:,iblk), &   ! in
+          & po4_solute(:,:,iblk), &           ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & qmax_slow_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk), &
+          & km_slow_po4(:,:,iblk) )           ! inout
+      END IF
     END DO
 
     ! de-allocate local allocatable var
@@ -1274,6 +1342,7 @@ CONTAINS
     & lctlib_growthform, &
     & sb_model_scheme, &
     & flag_sb_double_langmuir, &
+    & l_read_quincy_soil_3d, &
     & qmax_org_fine_particle, &
     & soil_p_labile, &
     & soil_p_slow, &
@@ -1347,6 +1416,7 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: lctlib_growthform
     CHARACTER(len=*),           INTENT(in)    :: sb_model_scheme                  !< SB_ config
     LOGICAL,                    INTENT(in)    :: flag_sb_double_langmuir          !< SB_ config
+    LOGICAL,                    INTENT(in)    :: l_read_quincy_soil_3d            !< model config
     REAL(lp),                   INTENT(in)    :: qmax_org_fine_particle(:,:,:)    !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_labile(:,:,:)             !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_slow(:,:,:)               !< bc_quincy_soil input file
@@ -1744,32 +1814,59 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      CALL init_soil_p_pools( &
-        & nproma, &                               ! in
-        & nsoil_w, &
-        & num_sl_above_bedrock(:, iblk), &
-        & soil_lay_depth_center_sl(:,:,iblk), &
-        & flag_sb_double_langmuir, &
-        & soil_depth_sl(:,:,iblk), &
-        & bulk_dens_corr_sl(:,:,iblk), &
-        & root_fraction_sl(:,:,iblk), &
-        & soil_p_labile(:,:,iblk), &
-        & soil_p_slow(:,:,iblk), &
-        & soil_p_occluded(:,:,iblk), &
-        & soil_p_primary(:,:,iblk), &
-        & soil_p_depth, &
-        & p_labile_slow_site(:,:,iblk), &         ! in
-        & po4_solute(:,:,iblk), &                 ! inout
-        & po4_assoc_fast(:,:,iblk), &
-        & po4_assoc_slow(:,:,iblk), &
-        & po4_occluded(:,:,iblk), &
-        & po4_primary(:,:,iblk), &
-        & qmax_po4(:,:,iblk), &
-        & km_adsorpt_po4_sl(:,:,iblk), &
-        & qmax_fast_po4(:,:,iblk), &
-        & qmax_slow_po4(:,:,iblk), &
-        & km_fast_po4(:,:,iblk), &
-        & km_slow_po4(:,:,iblk) )                 ! inout
+      IF (l_read_quincy_soil_3d) THEN
+        !> Use the layer-wise inorganic P pools directly
+        !>  These maps are expected to already contain the desired vertical distribution.
+        !>  No extrapolation from the shallow soil P data is applied.
+        CALL init_soil_p_pools_from_3d_input( &
+          & nproma, &                               ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & po4_solute(:,:,iblk), &                 ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk) )                 ! inout
+      ELSE
+        !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
+        !>
+        CALL init_soil_p_pools( &
+          & nproma, &                               ! in
+          & nsoil_w, &
+          & num_sl_above_bedrock(:, iblk), &
+          & soil_lay_depth_center_sl(:,:,iblk), &
+          & flag_sb_double_langmuir, &
+          & soil_depth_sl(:,:,iblk), &
+          & bulk_dens_corr_sl(:,:,iblk), &
+          & root_fraction_sl(:,:,iblk), &
+          & soil_p_labile(:,:,iblk), &
+          & soil_p_slow(:,:,iblk), &
+          & soil_p_occluded(:,:,iblk), &
+          & soil_p_primary(:,:,iblk), &
+          & soil_p_depth, &
+          & p_labile_slow_site(:,:,iblk), &         ! in
+          & po4_solute(:,:,iblk), &                 ! inout
+          & po4_assoc_fast(:,:,iblk), &
+          & po4_assoc_slow(:,:,iblk), &
+          & po4_occluded(:,:,iblk), &
+          & po4_primary(:,:,iblk), &
+          & qmax_po4(:,:,iblk), &
+          & km_adsorpt_po4_sl(:,:,iblk), &
+          & qmax_fast_po4(:,:,iblk), &
+          & qmax_slow_po4(:,:,iblk), &
+          & km_fast_po4(:,:,iblk), &
+          & km_slow_po4(:,:,iblk) )                 ! inout
+      END IF
     END DO
 
     ! initialise diffusion by bioturbation
@@ -1858,6 +1955,75 @@ CONTAINS
     DEALLOCATE(arr_hlp8)
     DEALLOCATE(arr_hlp9)
   END SUBROUTINE sb_init_jsm
+
+  ! ======================================================================================================= !
+  !>Intialize soil P pools directly from layer-wise soil P maps
+  !>  In contrast to init_soil_p_pools, this routine does not extrapolate shallow soil P maps over depth.
+  !>  The input file is expected to provide the full vertical distribution for each inorganic P pool.
+  !>
+  SUBROUTINE init_soil_p_pools_from_3d_input(nc, &
+                                             nsoil_w, &
+                                             num_sl_above_bedrock, &
+                                             flag_sb_double_langmuir, &
+                                             soil_depth_sl, &
+                                             soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, &
+                                             po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary, &
+                                             qmax_po4, km_po4, qmax_fast_po4, km_fast_po4)
+
+    USE mo_jsb_physical_constants, ONLY: molar_mass_P
+    USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
+
+    INTEGER,                          INTENT(in)     :: nc                        !< dimensions
+    INTEGER                         , INTENT(in)     :: nsoil_w                   !< number of soil layers (water)
+    REAL(lp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
+    LOGICAL                         , INTENT(in)     :: flag_sb_double_langmuir   !< T: double Langmuir; F: traditional Langmuir
+    REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl             !< soil depth per soil layer, [m]
+    REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &          !< labile P per soil layer, [g m-2]
+                                                        soil_p_slow, &            !< slow P per soil layer, [g m-2]
+                                                        soil_p_occluded, &        !< occluded P per soil layer, [g m-2]
+                                                        soil_p_primary            !< primary P per soil layer, [g m-2]
+    REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &             !< soluble Pi pool per soil layer, [mol m-3]
+                                                        po4_assoc_fast, &         !< fast associated PO4 pool, [mol m-3]
+                                                        po4_assoc_slow, &         !< slow associated PO4 pool, [mol m-3]
+                                                        po4_occluded, &           !< occluded PO4 pool, [mol m-3]
+                                                        po4_primary, &            !< primary PO4 pool, [mol m-3]
+                                                        qmax_po4, &               !< maximum PO4 sorption capacity, [mol m-3]
+                                                        km_po4, &                 !< half-saturation PO4 concentration, [mol m-3]
+                                                        qmax_fast_po4, &          !< fast pool maximum PO4 sorption capacity, [mol m-3]
+                                                        km_fast_po4               !< fast pool half-saturation, [mol m-3]
+    INTEGER                                          :: ic, is
+    REAL(lp)                                         :: labile_p_sl
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools_from_3d_input'
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting ...')
+
+    po4_solute(:,:)     = 0._lp
+    po4_assoc_fast(:,:) = 0._lp
+    po4_assoc_slow(:,:) = 0._lp
+    po4_occluded(:,:)   = 0._lp
+    po4_primary(:,:)    = 0._lp
+
+    !> Convert areal P pools of each soil layer to volumetric molar pools
+    !>
+    DO ic = 1,nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        IF (soil_depth_sl(ic,is) > eps8) THEN
+          labile_p_sl        = soil_p_labile(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_assoc_slow(ic,is) = soil_p_slow(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_occluded(ic,is)   = soil_p_occluded(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          po4_primary(ic,is)    = soil_p_primary(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+
+          IF (flag_sb_double_langmuir) THEN
+            po4_assoc_fast(ic,is) = calc_fast_po4(labile_p_sl, qmax_fast_po4(ic,is), km_fast_po4(ic,is))
+          ELSE
+            po4_assoc_fast(ic,is) = calc_fast_po4(labile_p_sl, qmax_po4(ic,is), km_po4(ic,is))
+          END IF
+          po4_solute(ic,is) = labile_p_sl - po4_assoc_fast(ic,is)
+        END IF
+      END DO
+    END DO
+
+  END SUBROUTINE init_soil_p_pools_from_3d_input
 
   ! ======================================================================================================= !
   !>Intialize soil P pools for all layers from the soil P maps (Yang et al. 2013)

@@ -31,6 +31,9 @@ MODULE mo_sse_interface
   USE mo_jsb_time,        ONLY: is_time_experiment_start
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+#ifndef __NO_QUINCY__
+  USE mo_jsb_model_class,    ONLY: MODEL_QUINCY
+#endif
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_vgrid
@@ -749,13 +752,15 @@ CONTAINS
       & wtr_pond,             & !< Liquid water stored in ponds [m]
       & ice_pond                !< Ice stored in ponds [m]
     dsl4jsb_Real3D_onChunk :: &
-      & soil_depth_sl,        & !< Depth of soil layers [m]
-      & fract_org_sl,         & !< Organic matter fraction of soil layers []
-      & vol_heat_cap_sl,      & !< Volumetric heat capacity of soil layers [J m-3 K-1]
-      & heat_cond_sl,         & !< Thermal conductivity of soil layers [J m-1 s-1 K-1]
-      & wtr_soil_sl,          & !< Liquid water content of soil layers [m]
-      & ice_soil_sl,          & !< Ice content of soil layers [m]
-      & vol_porosity_sl         !< Volumetric porosity of soil layers []
+      & soil_depth_sl,        &
+      & fract_org_sl,         &
+      & vol_heat_cap_mineral_sl, &
+      & heat_cond_mineral_sl, &
+      & vol_heat_cap_sl,      &
+      & heat_cond_sl,         &
+      & wtr_soil_sl,          &
+      & ice_soil_sl,          &
+      & vol_porosity_sl
 
     ! Locally allocated vectors
     !
@@ -774,8 +779,9 @@ CONTAINS
       & hcond_org_tmp,                       & !< Temporary organic thermal conductivity [J m-1 s-1 K-1]
       & hcond_dry_org_tmp                      !< Temporary dry organic thermal conductivity [J m-1 s-1 K-1]
 
-    INTEGER  :: iblk, ics, ice, nc, nsoil, ic, is !< Block bounds and horizontal and vertical loop indices
-    REAL(lp), POINTER :: soil_e_dz(:)             !< Thicknesses of soil energy layers [m]
+    INTEGER  :: iblk, ics, ice, nc, nsoil, ic, is
+    LOGICAL  :: l_read_quincy_soil_3d
+    REAL(lp), POINTER :: soil_e_dz(:)
 
     REAL(lp) :: hlp1                              !< Temporary scalar helper variable
 
@@ -789,6 +795,10 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    l_read_quincy_soil_3d = .FALSE.
+#ifndef __NO_QUINCY__
+    l_read_quincy_soil_3d = model%config%model_scheme == MODEL_QUINCY .AND. model%config%l_read_quincy_soil_3d
+#endif
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -833,6 +843,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap)
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond)
+    IF (l_read_quincy_soil_3d) THEN
+      dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_mineral_sl)
+      dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_mineral_sl)
+    END IF
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
@@ -876,14 +890,22 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        vol_heat_cap_tmp    (ic,1) = vol_heat_cap(ic)
+        IF (l_read_quincy_soil_3d) THEN
+          vol_heat_cap_tmp(ic,1) = vol_heat_cap_mineral_sl(ic,1)
+        ELSE
+          vol_heat_cap_tmp(ic,1) = vol_heat_cap(ic)
+        END IF
         vol_heat_cap_org_tmp(ic,1) = vol_hcap_org_top
       END DO
       !$ACC END PARALLEL LOOP
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 2, nsoil
         DO ic = 1, nc
-          vol_heat_cap_tmp    (ic,is) = vol_heat_cap(ic)
+          IF (l_read_quincy_soil_3d) THEN
+            vol_heat_cap_tmp(ic,is) = vol_heat_cap_mineral_sl(ic,is)
+          ELSE
+            vol_heat_cap_tmp(ic,is) = vol_heat_cap(ic)
+          END IF
           vol_heat_cap_org_tmp(ic,is) = vol_hcap_org_below
         END DO
       END DO
@@ -912,7 +934,11 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          vol_heat_cap_sl(ic,is) = vol_heat_cap(ic)
+          IF (l_read_quincy_soil_3d) THEN
+            vol_heat_cap_sl(ic,is) = vol_heat_cap_mineral_sl(ic,is)
+          ELSE
+            vol_heat_cap_sl(ic,is) = vol_heat_cap(ic)
+          END IF
         END DO
       END DO
       !$ACC END PARALLEL LOOP
@@ -941,7 +967,11 @@ CONTAINS
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        heat_cond_tmp(ic,1)         = heat_cond(ic)
+        IF (l_read_quincy_soil_3d) THEN
+          heat_cond_tmp(ic,1) = heat_cond_mineral_sl(ic,1)
+        ELSE
+          heat_cond_tmp(ic,1) = heat_cond(ic)
+        END IF
         vol_porosity_org_tmp(ic,1)  = vol_porosity_org_top
         hcond_org_tmp(ic,1)         = hcond_org_top
         hcond_dry_org_tmp(ic,1)     = hcond_dry_org_top
@@ -951,7 +981,11 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 2, nsoil
         DO ic = 1, nc
-          heat_cond_tmp(ic,is)        = heat_cond(ic)
+          IF (l_read_quincy_soil_3d) THEN
+            heat_cond_tmp(ic,is) = heat_cond_mineral_sl(ic,is)
+          ELSE
+            heat_cond_tmp(ic,is) = heat_cond(ic)
+          END IF
           vol_porosity_org_tmp(ic,is) = vol_porosity_org_below
           hcond_org_tmp(ic,is)        = hcond_org_below
           hcond_dry_org_tmp(ic,is)    = hcond_dry_org_below
@@ -983,7 +1017,11 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
       DO is = 1, nsoil
         DO ic = 1, nc
-          heat_cond_sl(ic,is) = heat_cond(ic)
+          IF (l_read_quincy_soil_3d) THEN
+            heat_cond_sl(ic,is) = heat_cond_mineral_sl(ic,is)
+          ELSE
+            heat_cond_sl(ic,is) = heat_cond(ic)
+          END IF
         END DO
       END DO
       !$ACC END PARALLEL LOOP

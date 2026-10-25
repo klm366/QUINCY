@@ -49,20 +49,19 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_heat_cond_dyn !< Switch for dynamic soil heat conductivity; .TRUE. uses dynamic calculation,
                                 !< .FALSE. uses a static map or FAO-based estimate depending on l_heat_cond_map
     !
-    LOGICAL  :: l_heat_cap_map  !< Use soil heat capacity from an input map instead of deriving it from other soil properties
-    LOGICAL  :: l_heat_cond_map !< Use soil heat conductivity from an input map instead of
-                                !< deriving it from heat capacity and FAO data
-    LOGICAL  :: l_heat_cap_pond !< Account for the heat capacity of pond water in the top soil layer heat capacity
-    LOGICAL  :: l_soil_texture  !< Derive mineral soil thermal parameters from soil texture information
-    LOGICAL  :: l_freeze        !< Consider freezing and thawing of soil water
-    LOGICAL  :: l_supercool     !< Allow for supercooled soil water
-    LOGICAL  :: l_uniform_snow  !< Temporary workaround to use a uniform snow fraction for soil temperature computations
-    REAL(lp) :: w_soil_critical !< Critical water/ice content in the upper soil layer used to correct
-                                !< the surface temperature during freezing and melting [m water equivalent]
-    ! QUINCY-specific configuration
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< Name of the input file containing QUINCY soil data
-    INTEGER                     :: quincy_nsoil_e           !< Number of soil layers for soil energy calculations
-                                !< (equivalent to quincy_nsoil_w in HYDRO_)
+    LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
+    LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_heat_cap_pond !< T: Account for the heat capacity of ponds in the top soil layer heat capacity.
+    LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
+    LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
+    LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
+    LOGICAL  :: l_uniform_snow  !< T: Temporary bugfix to use zero or one snow fraction for soil temperature computation
+    REAL(lp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
+                                !! temperature for freezing/melting [m water equivalent]
+    ! quincy
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename  !< IQ (QUINCY) soil input data
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename_3d !< IQ (QUINCY) soil input data with soil-layer dimension
+    INTEGER                     :: quincy_nsoil_e           !< number of soil layers for soil energy calculations (equivalent 'quincy_nsoil_w' in HYDRO_)
 #ifdef __QUINCY_STANDALONE__
     ! QUINCY standalone options
     REAL(lp) :: qs_soil_sand         !< Site-specific sand fraction for the standalone setup
@@ -128,14 +127,13 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename !< Name of the input file containing the initial-condition data.
     CHARACTER(len=filename_max) :: bc_filename !< Name of the input file containing the boundary-condition data.
 
-    ! QUINCY-specific configuration
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename !< Name of the input file containing QUINCY soil data.
-    REAL(lp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< Initial estimate of the
-                                 !< soil-layer upper bounds used to build the default profile [m].
-    REAL(lp) :: k_soil_profile   !< Exponential growth factor for the default QUINCY soil-layer profile.
-    REAL(lp) :: min_layer_depth  !< Minimum thickness enforced for each soil layer.
-    INTEGER  :: isoil            !< Loop index over soil layers.
-    INTEGER  :: quincy_nsoil_e   !< Number of soil layers for soil energy calculations, equivalent to quincy_nsoil_w in HYDRO_.
+    ! quincy
+    CHARACTER(len=filename_max) :: bc_quincy_soil_filename, bc_quincy_soil_filename_3d
+    REAL(lp) :: soil_layer_profile_ubound_estimate(max_soil_layers) !< intial estimate of soil profile using the upper bound of each soil layer [m]
+    REAL(lp) :: k_soil_profile  !< for soil layer calculations
+    REAL(lp) :: min_layer_depth !< for soil layer calculations
+    INTEGER  :: isoil           !< loop over soil layers
+    INTEGER  :: quincy_nsoil_e  !< quincy specific number of soil layers
 #ifdef __QUINCY_STANDALONE__
     ! QUINCY standalone options
     REAL(lp) :: qs_soil_sand     !< Site-specific sand fraction for the standalone setup.
@@ -156,6 +154,7 @@ CONTAINS
       & ic_filename,                            &
       & bc_filename,                            &
       & bc_quincy_soil_filename,                &
+      & bc_quincy_soil_filename_3d,                &
 #ifdef __QUINCY_STANDALONE__
       & qs_soil_sand, &
       & qs_soil_silt, &
@@ -203,6 +202,7 @@ CONTAINS
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
     bc_quincy_soil_filename = 'bc_quincy_soil.nc'
+    bc_quincy_soil_filename_3d = 'bc_land_soil_quincy_3d.nc'
     quincy_nsoil_e          = 0           ! by default the values is not set via namelist, but used from 'ic_filename'
 #ifdef __QUINCY_STANDALONE__
     quincy_nsoil_e          = 5           ! but use 5 soil layers as default for quincy standalone
@@ -224,6 +224,7 @@ CONTAINS
     config%ic_filename             = ic_filename
     config%bc_filename             = bc_filename
     config%bc_quincy_soil_filename = bc_quincy_soil_filename
+    config%bc_quincy_soil_filename_3d = bc_quincy_soil_filename_3d
 
     config%nsnow         = nsnow
     IF (nsnow > max_snow_layers) THEN

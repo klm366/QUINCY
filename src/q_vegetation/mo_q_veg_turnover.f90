@@ -154,7 +154,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
     ! ----------------------------------------------------------------------------------------------------- !
-
     !>1.0 Calculate nutrient flux from enzyme, RNA and other turnover in leaves and roots
     !>
     CALL calc_nutrient_recycling( &
