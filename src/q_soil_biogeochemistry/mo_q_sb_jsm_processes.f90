@@ -1464,7 +1464,7 @@ CONTAINS
         !>
         !> following the algorithm described in Wutzler et al. 2025 (DOI:10.5194/gmd-15-8377-2022)
         !>
-        IF (poly_depolymerisation_rate(ic,is) > eps4 .AND. residue_depolymerisation_rate(ic,is) > eps4) THEN
+        IF (poly_depolymerisation_rate(ic,is) > 0._wp .AND. residue_depolymerisation_rate(ic,is) > 0._wp) THEN
           !! alpha_C, poly enzyme allocation coefficient based on carbon
           hlp1(ic,is)               = poly_depolymerisation_rate(ic,is) * sb_pool_mt(ix_polymeric_litter, ixC, ic, is)
           hlp2(ic,is)               = residue_depolymerisation_rate(ic,is) * sb_pool_mt(ix_residue, ixC, ic, is)
