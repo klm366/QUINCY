@@ -1,0 +1,66 @@
+meta:
+  name: ICON-Land Documentation
+  link: https://www.icon-land.org
+
+logo:
+  medium: media/ICON-Land.png
+  # alt: ICON-Land
+
+# Colors extracted from bgc-jena.mpg.de
+# :root { --primary-color: #006c66; --secondary-color: #006c66 }
+# h1,h2,h3,h4 { color: #006c66; font-family: "Merriweather", serif }
+# body { background-color: #fff; color: #000; font-weight: 300; line-height: 1.7 }
+color:
+  palette:
+    mpg-teal:        "#006c66"   # primary brand color (all headings, navbar, links)
+    mpg-teal-dark:   "#00534e"   # darker teal (button borders, hover states)
+    mpg-teal-light:  "#bfdad9"   # light mint teal (section backgrounds)
+    mpg-navy:        "#00445f"   # dark navy-teal (blue section backgrounds)
+    near-black:      "#2d2d2d"   # near-black for strong text
+    muted:           "#49494b"   # muted secondary text
+    light-grey:      "#f5f5f5"   # subtle card/section backgrounds
+    white:           "#ffffff"
+    black:           "#000000"
+
+  background: white
+  foreground: black
+  primary:    mpg-teal
+  secondary:  mpg-teal-light
+  tertiary:   mpg-navy
+  light:      light-grey
+  dark:       near-black
+
+# typography:
+#   fonts:
+#     - family: Merriweather  # heading serif, matches site h1-h4
+#       source: google
+#       weight: [300, 400, 700]
+#     - family: Roboto        # body sans-serif, preloaded on site at weight 300
+#       source: google
+#       weight: [300, 400, 700]
+#     - family: Josefin Sans  # navigation / uppercase labels on site
+#       source: google
+#       weight: [700]
+#     - family: Roboto Mono
+#       source: google
+#       weight: [400]
+
+#   base:
+#     family: Roboto
+#     weight: 300
+#     size: 1rem
+#     line-height: 1.7
+
+#   headings:
+#     family: Merriweather
+#     weight: 400
+#     color: primary
+#     line-height: 1.4
+
+#   monospace:
+#     family: Roboto Mono
+#     size: 0.875em
+
+#   link:
+#     color: primary
+#     decoration: none

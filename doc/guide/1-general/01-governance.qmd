@@ -1,0 +1,52 @@
+---
+title: Governance
+order: 1 
+image: /media/people-fill.svg
+tbl-cap-location: bottom
+---
+
+ICON-Land is jointly developed by the Max-Planck Institutes for Meteorology [(MPI-M)](https://www.mpimet.mpg.de) and Biogeochemistry [(MPI-B)](https://www.bgc-jena.mpg.de), 
+in collaboration with a growing user community. 
+
+The **ICON-Land Management committee** ensures oversight over ongoing activities, coordination of future developments, and communication with the [ICON board](https://www.icon-model.org/about-us/icon-governance).
+
+On a technical level, **gate-keepers** at MPI Meteorology and Biogeochemistry ensure the technical quality and consistency of the code, adherence to coding style guidelines, appropriate testing and documentation of code changes, and integration into the ICON main branch.
+
+A diverse group of **ICON-Land users** exists across several academic insitutions in Germany and beyond and meets approximately once a year to inform about ongoing activities and coordinate future development ideas. 
+
+The **QUINCY steering group** coordinates the development of the QUINCY configuration in ICON-Land and its usecases. It is composed of representatives of the main QUINCY developers and users at MPI for Biogeochemistry, the Universities of Leipzig and Hamburg, Trinity College Dublin and the Finnish Meteorological Institute.    
+
+### ICON-Land management committee
+
+| Member | Institution | E-mail contact | 
+|:---|:---|:---|:---| 
+|  [Sönke Zaehle](https://www.bgc-jena.mpg.de/en/bsi/soenke-zaehle)<sup>1</sup> | MPI-BGC | firstname.lastname(at)bgc-jena.mpg.de | 
+| Reiner Schnur<sup>2</sup> | MPI-M | firstname.lastnam(at)mpimet.mpg.de |  
+| Julia Nabel | MPI-BGC | firstname.lastnam(at)bgc-jena.mpg.de | 
+| Victor Brovkin | MPI-M | firstname.lastnam(at)mpimet.mpg.de | 
+| Cathy Hohenegger| MPI-M | firstname.lastnam(at)mpimet.mpg.de | 
+| Julia Pongratz | LMU | firstname.lastnam(at)lmu.de  |
+| Linda Schlemmer | DWD | firstname.lastnam(at)dwd.de |  
+ :<span style="font-size:0.5;"><sup>1</sup>Committee Chair, <sup>2</sup>Technical Lead</span> 
+
+---
+
+### ICON-Land gate keepers 
+
+| Member | Institution | E-mail contact | 
+|:---|:---|:---|:---| 
+| Reiner Schnur | MPI-M | firstname.lastnam(at)mpimet.mpg.de |  
+| Veronika Gayler | MPI-M | firstname.lastnam(at)mpimet.mpg.de |  
+| Julia Nabel | MPI-BGC | firstname.lastnam(at)bgc-jena.mpg.de | 
+| Jan Engel | MPI-BGC | firstname.lastnam(at)bgc-jena.mpg.de |  
+
+### ICON-Land user community 
+
+| ICON-Land Research Groups |
+|---|
+| [Terrestrial Biosphere Modelling, MPI-BGC, S. Zaehle](https://www.bgc-jena.mpg.de/en/bsi/researchgroups/tbm) 
+| [Climate Biosphere Interaction, MPI-MET, V. Brovkin](https://mpimet.mpg.de/en/research/department-climate-variability/climate-biosphere-interaction)|
+| [Climate Surface Interaction, MPI-MET, C. Hohenegger](https://mpimet.mpg.de/en/research/department-climate-physics/climate-surface-interaction) |
+| [German Weather Service, L. Schlemmer](https://www.dwd.de/EN/Home/home_node.html) |
+| [Chair for Physical Geography and Land-use Systems, LMU, J. Pongratz](https://www.geo.lmu.de/geographie/en/research/physical-geography-and-earth-system-interactions/wg-julia-pongratz/)|
+| [Land Atmosphere Interactions, U. Leipzig, A. Bastos](https://www.physes.uni-leipzig.de/en/ief/forschung/land-atmosphere-interactions)|_ 

@@ -1,0 +1,14 @@
+---
+title: FORD inline code documentation
+abstract: Overview of the inline code documentation
+image: /media/coding-style-guide.svg
+order: 4
+---
+
+::: {.callout-warning}
+Work in progress!
+:::
+
+::: {.callout-note title="Modules"}
+Work in progress!
+:::

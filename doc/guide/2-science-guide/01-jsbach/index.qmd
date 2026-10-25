@@ -1,0 +1,27 @@
+---
+title: JSBACH
+order: 1
+---
+
+**JSBACH (Jena Scheme for Biosphere-Atmosphere Coupling in Hamburg)** has been developed out of ECHAM5 by collecting all land processes into a separate land component accessed from ECHAM each time step via a single subroutine call. Accordingly, JSBACH inherits all the land processes originally present in ECHAM5, in particular the way the surface energy balance is solved, and how the land processes are coupled to the atmosphere.
+
+:::{.callout-warning}
+These pages are under construction!
+:::
+
+JSBACHv4 is the land component of ICON-A and thus also integral part of the first version of ICON-ESM. Technically, JSBACHv4 is a subroutine of ICON-A and part of its scheme for the implicit solution of vertical diffusion. JSBACHv4 is the successor of JSBACHv3 (Reick et al., 2013, 2021), but with a completely renewed structure inside the ICON-Land infrastructure. In particular, JSBACHv4 has a hierarchical, flexible tile structure to represent sub-grid variability (Nabel et a. 2020). It is possible to choose different configurations of varying complexity for the description of the land-surface characteristics and the processes that run on the respective tiles.
+
+Considered processes are
+
+- energy balance
+- water cycle
+- biogeochemical processes (carbon cycle)
+- biogeographical processes (dynamic vegetation)
+- land use change
+
+The detailed description of JSBACH v4 can be found under [here](./jsbach-documentation.html).
+
+In these pages you also find: 
+
+- an [overview of the main configurations and settings of JSBACH](jsbach-configurations.qmd)
+- a [list of publications that rely on JSBACH](jsbach-literature.qmd)

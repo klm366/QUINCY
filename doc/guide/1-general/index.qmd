@@ -1,0 +1,28 @@
+---
+title: General Information
+abstract: This page provides a general overview of the ICON-Land organisation
+order: 1
+listing:
+  id: general-info-listings
+  type: default 
+  grid-columns: 2
+  contents: 
+    -  "./01-governance.qmd"
+    -  "./02-literature.qmd"
+    -  "05-projects/index.qmd"
+---
+
+::: {.callout-tip title="Contact" collapse="true"}
+Get in touch: [Email](mailto:icon-land@bgc-jena.mpg.de)
+:::
+
+::: {#general-info-listings}
+:::
+
+:::{.callout-tip title="Authors" collapse="true"}
+{{< include ../../../AUTHORS.md >}}
+:::
+
+:::{.callout-tip title="License" collapse="true"}
+{{< include ../../../LICENSE.md >}}
+:::

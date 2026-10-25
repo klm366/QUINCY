@@ -1,0 +1,28 @@
+---
+title: Key References
+image: /media/journal-text.svg
+order: 2
+---
+
+Overview over key references describing ICON-Land and its configurations [JSBACH](../2-science-guide/01-jsbach/index.htlm) and [QUINCY](../2-science-guide/02-quincy/index.html). For a more complete list of publications using ICON-Land or its predecessors, refer to the reference section of the scientific documentation of [JSBACH](../2-science-guide/01-jsbach/jsbach-literature.html) and [QUINCY](../2-science-guide/02-quincy/quincy-literature.html).
+
+#### ICON-Land tiling structure (and JSBACH forest management)
+
+Nabel, J. E. M. S., Naudts, K., & Pongratz, J. (2020). Accounting for forest age in the tile-based dynamic global vegetation model JSBACH4 (4.20p7; git feature/forests) – a land surface model for the ICON-ESM. Geoscientific Model Development, 13(1), 185–200. <https://doi.org/10.5194/gmd-13-185-2020>
+
+#### JSBACH documentation
+
+Reick, C. H., Gayler, V., Goll, D., Hagemann, S., Heidkamp, M., Nabel, J. E. M. S., Raddatz, T., Roeckner, E., Schnur, R., & Wilkenskjeld, S. (2021). JSBACH 3 - The land component of the MPI Earth System Model: Documentation of version 3.2 [Application/pdf]. 4990986. <https://doi.org/10.17617/2.3279802>
+
+#### JSBACH evaluation (use this as citation for studies using JSBACH v4)
+
+Schneck, R., Gayler, V., Nabel, J. E. M. S., Raddatz, T., Reick, C. H., & Schnur, R. (2022). Assessment of JSBACHv4.30 as a land component of ICON-ESM-V1 in comparison to its predecessor JSBACHv3.2 of MPI-ESM1.2. Geoscientific Model Development, 15(22), 8581–8611. <https://doi.org/10.5194/gmd-15-8581-2022>
+
+#### QUINCY documentation (use this as citation for studies using QUINCY v1)
+
+Thum, T., Caldararu, S., Engel, J., Kern, M., Pallandt, M., Schnur, R., Yu, L., & Zaehle, S. (2019). A new model of the coupled carbon, nitrogen, and phosphorus cycles in the terrestrial biosphere (QUINCY v1.0; revision 1996). *Geoscientific Model Development*, 12(11), 4781–4802. <https://doi.org/10.5194/gmd-12-4781-2019>
+
+#### QUINCY + JSM documentation (use this as citation for studies using QUINCY-JSM)
+
+Yu, L., Ahrens, B., Wutzler, T., Schrumpf, M., & Zaehle, S. (2020). Jena Soil Model (JSM v1.0; revision 1934): A microbial soil organic carbon model integrated with nitrogen and phosphorus processes. *Geoscientific Model Development*, 13(2), 783–803. <https://doi.org/10.5194/gmd-13-783-2020>
+

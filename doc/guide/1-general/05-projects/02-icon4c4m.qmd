@@ -1,0 +1,9 @@
+---
+title: ICON for Coupled Carbon Cycle Simulations (ICON4C4M)
+author:
+- Sönke Zaehle 
+image: /media/logo_dwd_cut.png
+---
+
+Project funded by the Extra-Mural Funding Programme of the German Weather Service (DWD) to develop the interactive carbon cycle within ICON-XPP for the application in idealised simulations such as [C4MIP](https:www.c4mip.net).
+

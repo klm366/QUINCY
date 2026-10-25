@@ -1,0 +1,7 @@
+---
+title: License
+image: /media/file-earmark-text.svg
+order: 3
+---
+
+{{< include ../../../LICENSE.md >}}

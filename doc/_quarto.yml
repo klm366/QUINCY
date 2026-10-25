@@ -1,0 +1,79 @@
+project:
+  type: website
+  render:
+    - "*.qmd"
+  resources:
+    # Anchored to the project root on purpose. Written as "media/" this matches every
+    # media directory in the tree, including the ones inside _site and html/page, so a
+    # build made while a preview is running copies them into the output and each cycle
+    # nests one level deeper.
+    - /media/
+website:
+  title: ICON-Land Guide
+  description: Guide to ICON-Land and it's JSBACH and QUINCY configuration
+  cookie-consent:
+    type: express
+    # Quarto emits this verbatim as the consent banner's link target: it is not
+    # resolved against site-url and not rewritten per page depth, and the banner
+    # shows on every page, so a bare relative path would break on nested pages.
+    # This default suits `quarto preview`, which serves the site at the host root.
+    # build-doc.sh renders with `--profile pages`, which overrides it with the
+    # published /jsbach/page/ base path. See _quarto-pages.yml.
+    policy-url: /privacy.html
+  navbar:
+    pinned: true
+    left:
+      - href: index.qmd
+        text: Home
+      - href: about.qmd
+        text: About Us
+      - href: guide/1-general/02-literature.qmd
+        text: References
+      - href: guide/4-developer-guide/index.qmd
+        text: Documentation  
+      - href: mailto:icon-land@bgc-jena.mpg.de
+        text: Contact
+  sidebar:
+    contents: auto
+
+filters:
+  - auto-subeqn.lua
+  - crossref-pages.lua
+
+number-sections: true
+number-depth: 2
+
+#crossref:
+#  sec-labels: alpha A
+#  subref-labels: roman i
+
+format:
+  html:
+    theme:
+      light:
+        - cosmo
+        - brand
+      dark:
+        - slate
+        # - brand
+    css: resources/styles.css
+    toc: true
+    # Pin MathJax. Quarto otherwise loads mathjax@4, which floats to the newest
+    # 4.x on every visit, and the markup it emits for \ref differs between
+    # builds - enough to change whether equation references are styled and
+    # navigable. 4.1.3 is what mathjax@4 resolved to when this was pinned.
+    html-math-method:
+      method: mathjax
+      url: "https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-chtml.js"
+    include-in-header: mathjax-config.html
+    # Typesets the maths in a cross-reference hover preview, whose content is
+    # fetched after MathJax has already run over the page.
+    include-after-body: resources/typeset-popups.html
+    #include-in-header: mathjax_chapnum2.html
+    #include-in-header: mathjax0.html
+    #include-in-header: mathjax.html
+    #  pdf:
+    #include-in-header:
+    #  - text: |
+    #      \usepackage{mathtools}
+

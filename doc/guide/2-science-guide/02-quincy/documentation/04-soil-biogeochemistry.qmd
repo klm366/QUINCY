@@ -1,0 +1,486 @@
+---
+title: Soil biogeochemistry
+order: 15
+number-offset: [3]
+---
+
+# Soil biogeochemistry {#sec-soil-biogeochemistry}
+
+Here we describe the "simple" soil biogeochemical model following broadly the
+CENTURY approach (Parton et al. 1993). In this section, all variables are defined for each soil layer (i.e. \mathrm{m^-3}). In particular, vegetation root biomass and litter production (defined per unit area) are distributed across soil layers according to the fractional root distributiion and converted to \mathrm{m^-3} using the layer-specific soil layer width. 
+
+The dynamics of the soil organic pools (metabolic, structural and woody litter, fast and slow soil organic pool) ($X$) are described in general as:
+
+$$
+\label{eq-sb-dynamics}
+\begin{align}
+\frac{\partial}{\partial t} X_{met} &= \sum(f_{vp \rightarrow met} F_{L_{vp}}) + f_{wl \rightarrow met} \eta_{wl \rightarrow met} \frac{X_{wl}}{\tau_{wl}} - \frac{X_{met}}{\tau_{met}}\\
+\frac{\partial}{\partial t} X_{str} &= \sum(f_{vp \rightarrow str} F_{L_{vp}}) + f_{wl \rightarrow str} \eta_{wl \rightarrow str} \frac{X_{wl}}{\tau_{wl}}- \frac{X_{str}}{\tau_{str}}\\
+\frac{\partial}{\partial t} X_{wl} &= \sum(f_{vp \rightarrow wl} F_{L_{vp}}) - \frac{X_{wl}}{\tau_{wl}}\\
+\frac{\partial}{\partial t} X_{fast} &= F_{aBNF} + \eta_{l \rightarrow {fast}} (\frac{X_{met}}{\tau_{met}} + \frac{X_{str}}{\tau_{str}}) + \eta_{{slow} \rightarrow {fast}} \frac{X_{slow}}{\tau_{slow}} - \frac{X_{fast}}{\tau_{fast}} + \Phi_{l \rightarrow {fast}} + \Phi_{{slow} \rightarrow {fast}} + \frac{\partial}{\partial z} (D_b \frac{\partial X_{fast}}{\partial z}) \\
+\frac{\partial}{\partial t} X_{slow} &= \eta_{{fast} \rightarrow {slow}} \frac{X_{fast}}{\tau_{fast}} - \frac{X_{slow}}{\tau_{slow}}  + \Phi_{{fast} \rightarrow {slow}} + \frac{\partial}{\partial z} (D_b \frac{\partial X_{slow}}{\partial z})
+\end{align}
+$$
+
+where $F_{L_{vp}}$ is the litterfall of the various plant tissue types, $f_{vp \rightarrow i}$ are
+the coefficients determining the partitioning of this litterfall to the litter pools (see @sec-sb-litter-partitioning),
+$\tau_i$ are temperature and moisture adjusted, nitrogen-limited turnover times of the respective
+pools (X; i = met, str, wl, fast, slow), $\eta_{i \rightarrow j }$ are the mass
+transfer from pool $i$ to $j$ (see @sec-sb-litter-partitioning), the $\Phi_x$ are the net mineralisation terms for N
+and P, respectively, required to balance the carbon inflow to the fast and slow SOM pools and their
+respective C:N:P stoichiometry (see @sec-sb-formation) and $F_{aBNF} is - only in the case of nitrogen - the asymbiotic rate of N fixation (See @sec-sb-asymb-bnf). The transfer of soil organic matter through
+bioturbation is represented with a prescribed diffusion constant (see @sec-sb-bioturbation).
+
+The dynamics of the inorganic nitrogen pools are described as:
+
+$$
+\label{eq-sb-simple-im-dynamics}
+\begin{align}
+\frac{\partial}{\partial t} NH_4^{solute} &= F_{dep,NH_4} - U_{plant,NH_4} - \sum(\Phi_{i,NH_4}) - U_{nit} - F_{adsorp,NH_4} - \frac{\partial v_{NH_4} NH_4}{\partial z} \\
+\frac{\partial}{\partial t} NH_4^{assoc} &= F_{adsorp,NH_4} \\
+\frac{\partial}{\partial t} NO_3 &= F_{dep,NO_3} + F_{nit,NO3} - U_{plant,NO_3} - \sum(\Phi_{i,NO_3}) - U_{denit} - \frac{\partial v_{NO_3} NO_3}{\partial z} \\
+    \frac{\partial}{\partial t} NO_y &= F_{nit,NO_y} + F_{denit,NO_y} - E_{NO_y} \\
+    \frac{\partial}{\partial t} N_2O &= F_{nit,N_2O} + F_{denit,N_2O} - E_{N_2O} \\
+\frac{\partial}{\partial t} N_2 &=  F_{nit,N_2} + F_{denit,N_2} - E_{N_2}
+\end{align}
+$$
+
+where $U$ are the uptake rates of plants, or (de-)nitrifying bacteria, respectively (see Section and
+, respectively); the $F_{dep}$ are the atmospheric deposition fluxes; the $F_{nit,i}$, and
+$F_{denit,i}$ are the production of $\mathrm{NO_y}$, $\mathrm{N_2O}$ and $\mathrm{N_2}$ by
+nitrification and denitrification, respectively, and $\frac{\partial v_{x} X}{\partial z}$ the
+vertical transport loss term given by the product of ion concentration and water mass flow between
+soil layers (see @sec-sse-surface-hydrology). Sorption of $\mathrm{NH_4}$ is modelled according to an Langmuir Isotherm, similar to the sorption of $\mathrm{PO_4}$ (see @sec-phosphorus-adsorption-and-absorption).
+
+The dynamics of the inorganic phosphorus pools are described as:
+
+$$
+\label{eq-sb-pi-dynamics}
+\begin{align}
+    \frac{\partial}{\partial t} PO_4 &= F_{dep,PO_4} + F_{weath,PO_4} + F_{biomin,PO_4} + F_{netmin,PO_4} - U_{plant,PO_4} - F_{adsorp,PO_4} - \sum(\Phi_{i,PO_4}) -  \frac{\partial v_{PO_4} PO_4}{\partial z} \\
+    \frac{\partial}{\partial t} P_{lab} &= F_{adsorp,PO_4} - F_{desorp,PO_4} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{lab}}{\partial z}) \\
+    \frac{\partial}{\partial t} P_{sorb} &= F_{desorp,PO_4} - F_{occlusion,PO_4} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{sorb}}{\partial z}) \\
+    \frac{\partial}{\partial t} P_{ocl} &= k_{ocl} P_{sorb} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{ocl}}{\partial z}) \\
+    \frac{\partial}{\partial t} P_{primary} &= - F_{weath,PO_4}
+\end{align}
+$$
+
+where $PO_4$, $P_{lab}$, $P_{sorb}$, $P_{ocl}$, and $P_{primary}$ are $PO_4$ in solution, as well as the labile, sorbed, occluded, and
+primary P pools, respectively. $F_{dep,PO_4}$, $F_{weath,PO_4}$, $F_{biomin,PO_4}$, {netmin,PO_4}$, $F_{adsorp,PO_4}$,
+and $F_{desorp,PO_4}$ are the atmospheric deposition, weathering, biomineralisation, net mineralisation, adsorption, and desorption phosphorus
+fluxes, respectively (see @sec-sb-p_flux and @sec-phosphorus-adsorption-and-absorption). All pools except the primary phosphorus pool are assumed to be
+affected by bioturbation (see @sec-sb-bioturbation).
+
+## Partitioning of litterfall to litter pools {#sec-sb-litter-partitioning}
+
+Non-woody litterfall is partitioned to the metabolic and structural litter according to the CENTURY
+approach [@Parton:1993ud]. Litter from labile and reserve pools is assumed to enter the metabolic
+pools, litter from sap- and heartwood enters the woody pool. The metabolic fraction of litterfall
+from each vegetation pool ($_{vp}$, i.e. leaves, fine and coarse roots, fruits and seed-bed) is
+determined as:
+
+$$
+\label{eq-sb-simple-litterpartitioning-c}
+f_{vp \rightarrow met,C} = f_{met,max,C} - k_{met,C} \times LC_{vp} \frac{C_{vp}}{N_{vp}}
+$$
+
+where $f_{vp \rightarrow met,C}$ is constrained to positive solutions, $f_{met,max,C}$ is the
+maximum fraction allocated to the metabolic pool, $k_{met,C}$ a factor relating the metabolic litter
+fraction to the lignin to nitrogen ratio, $LC_{vp}$ the tissue-specific fraction of the lignin
+content of that tissue type, and $\frac{C_{vp}}{N_{vp}}$ the C:N ratio of litterfall from that
+tissue. The lignin content is assumed constant for all but the leaf tissues. For the latter, an
+empirical dependency between lignin content and specific leaf-area ($sla$) is used [@White:2000vl].
+
+$$
+\label{eq-sb-simple-leaf-lc}
+LC_{leaf} = LC_{leaf,max} + k_{leaf2sla} \times sla
+$$
+
+The remainder of litterfall is allocated to the structural pool. For N and P, the partitioning
+assumes that the relative proportions of C:N and N:P are preserved in the partitioning according to:
+
+$$
+\label{eq-sb-simple-litterpartitioning-np}
+f_{vp \rightarrow met,X} = \frac{1}{1+\frac{1-f_{vp \rightarrow met,C}}{k_{met,vp,X} \times f_{vp \rightarrow met,C}}}
+$$
+
+Woody decomposition is assumed to be a two-stage process. The first step implies physical
+destabilisation and a first level of biochemical processing, which releases a constant fraction of
+carbon (1 - $\eta_{C,wl \rightarrow met,str}$) to heterotrophic respiration. During this step, a
+fraction of the nutrients (1 - $\eta_{N}|\eta_{P}$) is leached to the mineral phase to account for
+inefficiencies of the microbiota in mineral processing decomposing wood. The remainder is assumed to
+enter the metabolic and structural litter ($\Eqref{eq-sb-simple-litterpartitioning-c}$ and $\Eqref{eq-sb-simple-litterpartitioning-np}$).
+
+## SOM and litter turnover rates {#sec-sb-turnover}
+
+The turnover times ($\tau^{base}_i$) of the litter and SOM pools respond to soil temperature
+($T_{soil}$) and soil matrix potential ($\Psi_{soil}$) as follows:
+
+$$
+\label{eq-sb-simple-som-turnover}
+\begin{align}
+\tau^{*}_i &= \tau^{base}_i \times f(T_{soil}) \times g(\Psi_{soil}),\ where\\
+f(T_{soil}) &= \frac{E_{d,decomp} \times e^{E_{a,decomp} \times T}}{E_{d,decomp} - E_{a,decomp} \times ( 1 - e^{E_{d,decomp} \times T})},\ with\\
+T &= \frac{T_{soil} - T_{opt,decomp}}{T_{soil} \times T_{opt,decomp} \times R},\ and \\ 
+g(\Psi_{soil}) &= 1 - \Psi_{soil} / \Psi_{dec,min}
+\end{align}
+$$
+
+## SOM formation {#sec-sb-formation}
+
+Matter entering the fast and slow SOM pool ($\Eqref{eq-sb-dynamics}$) is required to
+fulfill the prescribed stoichiometry of the SOM pools ($\chi_{SOM}$). These are assumed constant
+with the exception of the fast SOM C:N ratio, which varies with available $\mathrm{NH_4}$ following
+CENTURY [@Parton:1993ud]:
+
+$$
+\label{eq-sb-SOMCNfast}
+\chi_{SOM_{fast}^{C:N}} = MAX(\chi_{SOM_{fast,max}^{C:N}} - f_{\chi} \times NH_4,\chi_{SOM_{fast,min}^{C:N}})
+$$
+
+where $\chi_{SOM_{fast,min}^{C:N}}$, $\chi_{SOM_{fast,max}^{C:N}}$ and $f_{\chi}$ are parameters.
+
+The difference in stoichiometry of the matter entering the pool and the required stoichiometry of
+the pool leads to the estimate of the potential immobilisation flux:
+
+$$
+\label{eq-sb-simple-pot-n-immobilisation}
+\Phi^{*}_{l \rightarrow {fast}, NH_4} = \frac{\eta_{C,litter \rightarrow fast}}{\chi_{SOM_{fast}^{C:N}}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})
+$$
+
+where $\tau^{*}_i$ are the temperature and moisture constrained turnover times ($\Eqref{eq-sb-simple-som-turnover}$).
+
+The actual immobilisation rate ($\Phi_{l \rightarrow {fast}, NH_4}$) is limited to the amount of
+ammonium ($\mathrm{NH_4}$ available, subject to co-occurring potential N uptake from plants
+($U^{*}_{NH_4,plant}$, $\Eqref{eq-sb-simple-potential-uptake}$), and nitrifiers ($U^{*}_{nit}$;
+$\Eqref{eq-sb-simple-dynamic-nitrification}$). Note that, similar as for the plant uptake, the
+uptake of ammonium is limited with a Michaelis-Menten kinetic to account for reduced accessibility
+of N at very low values.
+
+$$
+\label{eq-sb-simple-act-n-immobilisation}
+\Phi_{l \rightarrow {fast}, NH_4} = \frac{NH_4}{max(NH_4, \ U^{*}_{NH_4,plant} + U^{*}_{nit} + \Phi^{*}_{l \rightarrow {fast}, NH_4})} \times {\Phi^{*}_{l \rightarrow {fast}, NH_4}}
+$$
+
+In the case that $\Phi_{l \rightarrow {fast}, NH_4}$ and asymbiotic N fixation (\mathrm{F_{aBNF}}, see @sec-sb-asymb-bnf) is insufficient to ensure that the newly formed
+fast SOM has a C:N ratio of $\chi_{SOM_{fast}^{C:N}}$, the turnover times of the metabolic and
+structural litter pool is increased to match the N available for immobilisation [@Parton:1993ud]:
+
+$$
+\tau_{met|str} = \tau^{*}_{met|str} \frac{\frac{\eta_{l \rightarrow {fast},C}}{\chi_{SOM_{fast}^{C:N}}} (\frac{C_{met}}{\tau^{*}_{met}} + \frac{C_{str}}{\tau^{*}_{str}}) - \eta_N (\frac{N_{met}}{\tau^{*}_{met}} + \frac{N_{str}}{\tau^{*}_{str}})}{\Phi_{l \rightarrow {fast},NH_4}}
+$$
+
+Should the available $\mathrm{NH_4}$ be insufficient to maintain the uptake rates of plants ($\Eqref{eq-sb-simple-potential-uptake}$) and nitrifiers ($\Eqref{eq-sb-simple-dynamic-nitrification}$), these fluxes are downregulated in proportion. Note that in the C-only mode of the model, \mathrm{F_{aBNF}} is assumed for each to be sufficiently large to avoid downregulation of litter decay, plant nitrogen uptake or nitrification.
+
+The potential immobilisation flux of phosphorus ($\Phi^{*}_{P,l \rightarrow {fast}}$) is defined in
+a similar manner as potential $NH_4$ immobilisation, but now considering the actual turnover time of
+the litter pools:
+
+$$
+\label{eq-sb-simple-pot-p-immobilisation}
+\begin{align}
+\Phi^{*}_{P,l \rightarrow {fast}} &= \frac{\eta_{C,litter \rightarrow {fast}}}{\chi_{{SOM}_{fast}^{C:N}}\chi_{{SOM}_{fast}^{N:P}}} (\frac{C_{met}}{\tau_{met}} + \frac{C_{str}}{\tau_{str}}) -
+\eta_P (\frac{P_{met}}{\tau_{met}} + \frac{P_{str}}{\tau_{str}})\\
+\Phi_{P,l \rightarrow {fast}} &= \frac{PO_4}{max(PO_4, \ U^{*}_{PO_4,plant} + \Phi^{*}_{P,l \rightarrow {fast}})} \times {\Phi^{*}_{P,l \rightarrow {fast}}}
+\end{align}
+$$
+
+Because the C:N:P stoichiometry and uptake use-efficiencies are organised such that decomposition of
+these pools is always leading to net mineralisation of nutrients, the
+$\Phi_{{slow} \rightarrow {fast}}$ values are negative and do not require special treatment to
+affect the carbon-use efficiency or turnover rates (i.e. $\tau_{fast}=\tau_{fast}^{*}$, and
+$\tau_{slow}=\tau_{slow}^{*}$). The processing of fast and slow SOM is assumed to also include
+higher-order trophic levels of heterotrophic respiration [@Parton:1993ud], therefore only a fraction
+of the respired material ($\eta_{C, {fast} \rightarrow {slow}}$ and
+$\eta_{C, {slow} \rightarrow {fast}}$) is assumed to enter the subsequent pool:
+
+$$
+\label{eq-sb-mineralization}
+\begin{align}
+\Phi_{{fast} \rightarrow {slow},NH_4} &= \frac{\frac{\eta_{C, {fast} \rightarrow {slow}}}{\chi_{{SOM}_{slow}^{C:N}}} C_{fast} - N_{fast}}{\tau_{fast}} \\
+\Phi_{{slow} \rightarrow {fast},NH_4} &= \frac{\frac{\eta_{C, {slow} \rightarrow {fast}}}{\chi_{{SOM}_{fast}^{C:N}}} C_{slow} - N_{slow}}{\tau_{slow}} \\
+\Phi_{{fast} \rightarrow {slow},PO_4} &= \frac{\frac{\eta_{C, {fast} \rightarrow {slow}}}{\chi_{{SOM}_{slow}^{C:N}}\chi_{{SOM}_{slow}^{N:P}}} C_{fast} - P_{fast}}{\tau_{fast}} \\
+\Phi_{{slow}\rightarrow {fast},PO_4} &= \frac{\frac{\eta_{C, slow \rightarrow fast}}{\chi_{{SOM}_{fast}^{C:N}}\chi_{{SOM}_{fast}^{N:P}}} C_{slow} - P_{slow}}{\tau_{slow}} - F_{biomin,PO_4}
+\end{align}
+$$
+
+## Bioturbation {#sec-sb-bioturbation}
+
+Bioturbation is treated as simple diffusive flux with a rate constant $D_b$, as in [@Ahrens:2015ie],
+but declining with soil depth in proportion to the fraction of roots in the layer to account for
+reduced biological activity with increasing soil depth:
+
+$$
+\label{eq-sb-bioturbation}
+\begin{align}
+D_b &= \frac{root_{frac}}{dz} \times \frac{k_{org}^{diff}}{\rho_{soil}^{cor}}, \ and\\
+\rho_{soil}^{cor} &= MAX(\rho_{org}^{bulk}, \rho_{OM} + \rho_{soil} - \rho_{OM}\frac{\rho_{soil}}{\rho_{org}^{bulk}})
+\end{align}
+$$
+
+where $root_{frac}$ and $dz$ are the root fraction and depth of the soil layer, $\rho_{soil}^{cor}$
+is the soil bulk density corrected with soil organic matter, $\rho_{org}^{bulk}$ is the bulk density
+of organic material, $\rho_{OM}$ is the organic matter density of the soil layer which depends on
+the organic matter content in the soil layer, $\rho_{soil}$ is the bulk density of fine mineral
+soil, and $k_{org}^{diff}$ is the diffusion coefficient for organic material due to bioturbation.
+
+## Plant uptake rates {#sec-sb-simple-uptake}
+
+The potential uptake rates of plants for X= $\mathrm{NH_4}$, $\mathrm{NO_3}$, and $\mathrm{PO_4}$
+follow an extended Michaelis-Menten kinetics:
+
+$$
+\label{eq-sb-simple-potential-uptake}
+\begin{align}
+U^{*}_X &= \sum_{i=1}^{n} (\frac{v_{max,i,X}(T_{soil},\Psi) \times X}{K_{m,i,X}(T_{soil},\Theta) + X})  \times C_{fine\_root},\ where\\
+&v_{max,i,X}(T_{soil},\Psi) = v_{max,i,X} \frac{E_{d,uptake} \times e^{E_{a,uptake} \times T}}{E_{d,uptake} - E_{a,uptake} \times ( 1 - e^{E_{d,uptake} \times T})} \times \frac{\Psi_{fine\_root}}{\Psi_{leaf,min}},\ with\\
+&T = \frac{T_{soil} - T_{opt,uptake}}{T_{soil} \times T_{opt,uptake} \times R},\ and \\ 
+&K_{m,i,X}(T_{soil},\Theta) = K_{m,i,X} \times e^{-\frac{Ea,hsc}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})} \times (\frac{\Theta}{\Theta_{fc}})^{k_{hsc}}
+\end{align}
+$$
+
+where $v_{max,i,X}$ is the PFT-specific temperature-sensitive maximum uptake rate per unit biomass,
+adjusted by the current root zone moisture potential ($\Psi_{fine_root}$) to account for limited
+transport of nutrients towards the roots in dry soils, $C_{fine\_root}$ is the biomass density of
+fine roots ($\mathrm{mol \ C \ m^{-3}}$, see $\Eqref{eq:veg-root-distribution}$), $T_{soil}$ is
+the soil temperature and the $K_{m,i}$ parameters are nutrient sensitivities of the low and high
+affinity transporters. These affinities are assumed to be temperature sensitive and are adjusted to
+soil moisture to account for the difference between mass-based and soil solution concentrations
+[@Ahrens:2015ie]. 
+
+The potential uptake of nutrients can be down-regulated by plants given their
+internal demand $f^X_{demand}$, 
+
+$$
+f^X_{demand} = 1 - e^{-(\frac{\chi^{X:Y}_{max}-\chi^{X:Y}_{labile}}{\chi^{X:Y}_{max} \times (1 - K_{demand}^{half,X})})^{k_{demand}}}  
+$$
+
+where $X$ refers to either N or P and $X:Y$ refers to either N:C or
+P:N ratios. $\chi^{X:Y}_{max}$ corresponds to the X:Y ratio of growing a unit of leaves and fine
+roots at the current leaf-to-root ratio (see , $K_{demand}^{half, X}$ is a parameter denoting the
+fraction of $\chi^{X:Y}_{max}$ at which uptake is reduced to 50% and $k_{demand}$ is shape
+parameter. Note that for the calculation of nutrient competition between immobilisation, (de-)nitrification and uptake, the potential plant uptake rates (\mathrm{U_X^*} are used, whereas for the final nutrient flux calculations the actual uptake flux is applied:
+
+$$
+U_X = f^X_{demand} * U_X^*
+$$
+
+## Asymbiotic biological nitrogen fixation {#sec-sb-asymb-bnf}
+
+Asymbiotic N fixation, is a function of the potential immobilisation flux of litter decomposition ($\phi^*_{l\rightarrow fast,NH_4}$, eq. 67 in \citet{thum:2019gmd}) occurring during decomposition of typically N-pool litter to soil organic matter. For the QUINCY configurations without activated N cycle, asymbiotic N fixation is assumed to  instantaneously satisfy the N-demand during litter decomposition. For configurations with activated N cycle, the potential immobilisation flux $\phi^*_{l\rightarrow fast,NH_4}$ is modulated by scalars representing the effects of soil temperature, soil moisture and soil N availability, such that
+
+$$
+\label{eq-sb-asymb-bnf}
+\begin{align}
+F_{aBNF} &= v_{max,aBNF}(T_{soil},\Psi_{soil}) \times h(NH_4+NO_3) \times \phi^*_{l\rightarrow fast,NH_4}, where\\
+& h(NH_4+NO_3) = 1.0 - \frac{NH_4 + NO_3}{km_{anbf} + NH_4 + NO_3}
+\end{align}  
+$$
+
+where $v_{max,aBNF}$ is the maximum rate of asymbiotic N fixation per unit immobilisation flux, with a temperature sensitivity similar to symbotic N fixation (see @sec-veg-nfixation) and a moisture sensitivity $g(\Psi_{soil}) = 1- \frac{\Psi_{soil}}{{\Psi}_{pwp}}$, with $k^{\psi}_{abnf}$ corresponding to the permanent wilting point, and $h(NH_4+NO_3)$ is a function that limits asymbiotic N fixation in the presence of ammonium and nitrate with a half-saturation constant $km_{abnf}$. The emergent asymbiotic N fixation rate has been calibrated with a globally constant $v_{max,aBNF}$ to match the data presented by @Davies-Barnard:2020gb.
+
+## Nitrification and denitrification {#sec-sb-nitrification-denitrification}
+
+Calculation of nitrification and denitrification follows [@XURI:2008jq; @Zaehle:2011gy], which
+relies on the separation of the soil into aerobic and anaerobic volume fractions ($anvf$):
+
+$$
+\label{eq-sb-simple-anaerobic-vf}
+\begin{align}
+anvf &= e^{-(\lambda_{anvf} \times (1-afps))^{k_{anvf}}}, where\\
+&afps = \frac{W_{fc}-W_{soil}}{W_{fc}} 
+\end{align}
+$$
+
+where $\lambda_{anvf}$ and $k_{anvf}$ are parameters, $afps$ is the air filled pore space, and the
+$W_x$ are the soil moisture contents as defined in @sec-sse-surface-hydrology.
+
+The potential rate of nitrification ($U^{*}_{nit}$) in the aerobic fraction of the soil is modified
+by temperature and soil moisture according to:
+
+$$
+\label{eq-sb-simple-dynamic-nitrification}
+\begin{align}
+U^{*}_{nit} &= v_{max,nit} \times f(T_{soil}) \times g(\Theta) \times NH_4, where\\
+&f(T_{soil}) = E_{d,nit} \frac{e^{\frac{E_{a,nit}\times kt}{R_{gas}}}}{E_{d,nit}-E_{a,nit}\times (1 - e^{\frac{E_{d,nit} \times kt}{R_{gas}}})} \\
+&kt = \frac{T_{soil}-T_{opt,nit}}{T_{soil} \times T_{opt,nit}}\\
+&g(\Theta) = 1-afps
+\end{align}
+$$
+
+The actual rate of nitrification ($U_{nit}$), given the potential rate and competing demands from
+plant and microbial uptake (@sec-sb-formation and @sec-sb-simple-uptake), is partitioned into its products ($\mathrm{NO_3}$,
+$\mathrm{NO_y}$, and $\mathrm{N_2O}$) according to
+
+$$
+\label{eq-sb-simple-dynamic-nitrification-prod}
+\begin{align}
+F_{nit,NO_3} &= (1 - f_{nit}^{NO_y} - f_{nit}^{N_2O}) \times U_{nit}\\
+F_{nit,NO_y} &= f_{nit}^{NO_y}  \times U_{nit}\\
+F_{nit,N_2O} &= f_{nit}^{N_2O}  \times U_{nit}
+\end{align}
+$$
+
+where the $F_{nit,X}$ are the nitrification fluxes for $\mathrm{NO_3}$, $\mathrm{NO_y}$, and
+$\mathrm{N_2O}$, respectively ($\Eqref{eq-sb-simple-im-dynamics_b}$, $\Eqref{eq-sb-simple-im-dynamics_c}$ and $\Eqref{eq-sb-simple-im-dynamics_d}$).
+
+The potential rate of denitrification ($U^{*}_{denit}$) in the anaerobic fraction of the soil is
+modified by temperature:
+
+$$
+\label{eq-sb-simple-dynamic-denitrification}
+\begin{align}
+U^{*}_{denit} &= anvf \times v_{max,denit}(T_{soil}) \times \frac{C_{fast}}{K_{m,denit}^{fast} + C_{fast}} \frac{NO_3}{K_{m,denit}^{NO_3} + NO_3}, where\\
+&v_{max,denit}(T_{soil}) = v_{max,denit} \times e^{-\frac{E_{a,denit}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}
+\end{align}
+$$
+
+The actual rate of denitrification ($U_{denit}$), given the potential rate and competing demands
+from plant uptake (@sec-sb-simple-uptake), is partitioned into its products ($\mathrm{NO_y}$, $\mathrm{N_2O}$, and
+$\mathrm{N_2}$) according to
+
+$$
+\label{eq-sb-simple-dynamic-denitrification-prod}
+\begin{align}
+F_{denit,NO_y} &= f_{denit}^{NO_y}  \times U_{denit}\\
+F_{denit,N_2O} &= f_{denit}^{N_2O}  \times U_{denit}\\
+F_{denit,N_2} &= (1 - f_{denit}^{NO_y} - f_{denit}^{NO_y}) \times U_{denit}
+\end{align}
+$$
+
+where the $F_{denit,X}$ are the denitrification fluxes for $\mathrm{NO_y}$, $\mathrm{N_2O}$, and
+$\mathrm{N_2}$, respectively ($\Eqref{eq-sb-simple-im-dynamics_b}$, $\Eqref{eq-sb-simple-im-dynamics_c}$ and $\Eqref{eq-sb-simple-im-dynamics_d}$). 
+
+The model currently
+ignores the effect of ammonia volatilisation, which will be added in the future.
+
+## Phosphorus weathering and biomineralisation {#sec-sb-p_flux}
+
+Weathering is modelled following @Wang:2010ba as:
+
+$$
+\label{eq-sb-weathering}
+\begin{align}
+F_{weath,PO_4} &=f(T_{soil}) \times g(\Theta) \times f(C_{fine\_root}) \times k_{weath} \times \rho_{soil}^{cor},\ where\\
+&f(T_{soil}) = e^{-\frac{Ea,hsc}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})},\\
+&g(\Theta) =(\frac{\Theta}{\Theta_{fc}})^3, and \\
+&f(C_{fine\_root}) =\frac{C_{fine\_root}}{K_{m,weath}^{root}+C_{fine\_root}}
+\end{align}
+$$
+
+where $k_{weath}$ is the rate constant for weathering, and $\rho_{soil}^{cor}$ is the soil bulk
+density corrected by SOM content. The weathering rate decreases with soil depth as the fine root C
+decreases and is modified by soil temperature and moisture.
+
+The potential biomineralisation rate of $\mathrm{PO_4}$ is determined as an additional turnover of
+the P contained in the slow SOM pool, modified by temperature and moisture modifiers, and affected
+by the concentration of $PO_4$ and the root biomass:
+
+$$
+\label{eq-sb-p-biomin}
+\begin{align}
+F^{*}_{biomin,PO_4} &= \frac{C_{slow}}{\chi_{{SOM}_{slow}^{C:N}} \times \chi_{{SOM}_{slow}^{N:P}} \times \tau_{biomin}} \times f(C_{fine\_root})  \times f(PO_4) \times  f(T_{soil}) \times  g(\Theta),\ where\\
+&f(C_{fine\_root}) = \frac{C_{fine\_root}}{K_{m,biomin}^{root} + C_{fine\_root}},\ and\\
+&f(PO_4) = \frac{K_{m,biomin}^{PO_4}}{K_{m,biomin}^{PO_4}+PO_4}
+\end{align}
+$$
+
+where $K_{m,biomin}^{root}$ and $K_{m,biomin}^{PO_4}$ are constants constraining the
+biomineralisation rate under low root biomass and high $PO_4$ concentration, respectively; the
+temperature and moisture responses are calculated as those in $\Eqref{eq-sb-simple-som-turnover}$. The biomineralisation rate is further constrained so that it does
+not alter the stoichiometry of the fast pool.
+
+$$
+F_{biomin,PO_4} = MIN(F^{*}_{biomin,PO_4}, \frac{\frac{\eta_{C, {slow} \rightarrow {fast}}}{\chi_{{SOM}_{slow}^{C:N}}\chi_{{SOM}_{slow}^{N:P}}} C_{slow} - P_{slow}}{\tau_{slow}})
+$$
+
+## Phosphorus adsorption and (ab)sorption {#sec-phosphorus-adsorption-and-absorption}
+
+$\mathrm{PO_4}$ desorption is modelled as:
+
+$$
+\label{eq-sb-pi-desorp}
+\begin{align}
+F_{desorp,PO_4} &=f(T_{soil},E_{a,abs}) \times  k_{abs}   \times P_{lab} - f(T_{soil},E_{a,des})   \times k_{des}   \times P_{sorb},\ where\\
+&f(T_{soil,E_a}) = e^{-\frac{E_{a}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}
+\end{align}
+$$
+
+where $k_{abs}$ and $k_{des}$ are the rate constants of (ab)sorption and desorption, and $E_{a,abs}$
+and $E_{a,des}$ the respective activation energies.
+
+The adsorption ($F_{adsorp,PO_4}$) flux from soil solution to the soil adsorption sites is
+calculated assuming constant Langmuir equilibrium [@Barrow:1978] between soluble and adsorbed P:
+
+$$
+\label{eq-sb-langmuir-a}
+\begin{align}
+PO_4 &= \frac{S_{max} \times PO_4}{K_S + PO_4}, \\
+    &\textrm{thus} \nonumber \\
+&\frac{\partial P_{lab}}{\partial t} = \frac{S_{max}\times PO_4}{(K_S + PO_4)^2} \frac{\partial PO_4}{\partial t}, \\
+\end{align}
+$$
+
+[and by rearranging]{.roman}
+
+$$
+\label{eq-sb-langmuir-b}
+\begin{align}
+    \frac{\partial P_{lab}}{\partial t} &= k_{p}\frac{\partial {(P_{lab}+PO_4)}}{\partial t} &\\
+    \frac{\partial PO_4}{\partial t} &= (1-k_{p})\frac{\partial {(P_{lab}+PO_4)}}{\partial t},\ where &\\
+    &k_p = \frac{S_{max}\times PO_4}{(K_S + PO_4)^2+S_{max}PO_4}, &
+\end{align}
+$$
+
+where $S_{max}$ and $K_S$ are the maximum sorption capacity, and the half-saturation concentration
+coefficient of the soil, and are modified by soil moisture and SOM content as follows:
+
+$$
+\label{eq-sb-Psorbpar}
+\begin{align}
+S_{max} &= \Theta_{soil} \times (S^{max}_{om} V^{frac}_{om} \rho_{org}^{bulk} + S^{max}_{mineral} V^{frac}_{mineral} \rho_{soil}), \ and\\
+K_S &=  K^{sorb}_{m,om} V^{frac}_{om} \rho_{org}^{bulk} + K^{sorb}_{m,mineral} V^{frac}_{mineral} \rho_{soil}
+\end{align}
+$$
+
+where $V^{frac}_{om}$ and $V^{frac}_{mineral}$ are volumetric fractiosn of organic matter and fine
+soil minerals, respectively. $S^{max}_{om}$ and $S^{max}_{mineral}$ are the maximum $\mathrm{PO_4}$
+sorption capacity of pure organic matter and pure fine soil, respectively. $K^{sorb}_{m,om}$ and
+$K^{sorb}_{m,mineral}$ are the half-saturation concentration coefficient of pure organic matter and
+pure fine soil, respectively.
+
+Based on $\Eqref{eq-sb-simple-im-dynamics_e}$ and $\Eqref{eq-sb-pi-dynamics_a}$, the equilibrium
+in $\Eqref{eq-sb-langmuir-b}$ could be solved.
+
+$$
+\begin{split}
+\frac{\partial {(P_{lab}+PO_4)}}{\partial t} &= F_{dep,PO_4} + F_{weath,PO_4} + F_{biomin,PO_4} - U_{plant,PO_4} - F_{desorp,PO_4}\\
+&- \sum(\Phi_{i,PO_4}) -  \frac{\partial v_{PO_4} PO_4}{\partial z} + \frac{\partial}{\partial z} (D_b \frac{\partial P_{lab}}{\partial z})\\
+\end{split}
+$$
+
+## Soil in- and outfluxes {#sec-sb-simple-netbalance}
+
+Currently, gas diffusion is not modelled explicitly. Instead, $\mathrm{CO_2}$ is assumed to be
+directly released to the atmosphere. The carbon efflux per soil layer is described as:
+
+$$
+F^{\uparrow}_{CO_2} = ( (1-\eta_{C,litter \rightarrow fast}) (\frac{C_{met}}{\tau_{met}} + \frac{C_{str}}{\tau_{str}}) + (1 - \eta_{C,wl \rightarrow met|str}) \frac{C_{wl}}{\tau_{wl}} + (1 - \eta_{C,fast \rightarrow slow}) \frac{C_{fast}}{\tau_{fast}} + (1 - \eta_{C,slow \rightarrow fast}) \frac{C_{slow}}{\tau_{slow}} ) \Delta t,
+$$
+
+and similar for $\mathrm{^{13}C}$ and $\mathrm{^{14}C}$ fluxes. 
+
+Slightly differently from that, the
+emission of gaseous N species is assumed to follow @XURI:2008jq, which considers the effect of
+temperature and moisture on gas loss. However, transfer between soil layers is equally not treated
+explicitly.
+
+$$
+\label{eq-sb-simple-ngasloss}
+\begin{align}
+F^{\uparrow}_{X} &= f(T_{soil}) \times afps \times X, where \\
+f(T_{soil}) &= e^{-\frac{E_{a,diff}}{R} \times (\frac{1}{T_{soil}} - \frac{1}{T^{\tau}_{ref}})}
+\end{align}
+$$
+
+and $afps$ is the air-filled pore fraction of the soil (see $\Eqref{eq-sb-simple-anaerobic-vf}$.)

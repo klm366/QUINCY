@@ -1,0 +1,305 @@
+---
+title: QUINCY
+order: 10
+---
+
+**QUINCY (QUantifying Interactions between terrestrial Nutrient CYcles and the climate system)** has been developed
+to represent a consistent treatment of the element cycling, in terms of carbon (C), nitrogen (N), and phosphorus (P),
+in terrestrial ecosystems that is tightly coupled to the terrestrial water and energy balance, and suitable for the
+modelling of land-atmosphere interactions (@fig-quincy-schematic). QUINCY was originally described by Thum et al. (2019) as a
+stand-alone ecosystem model, but has now been fully integrated into the ICON-Land infrastructure (Zaehle et al. in review). It follows a modular structure
+to facilitate the consistent testing of multiple hypothesis for one particular process. QUINCY shares the representation of
+physical process of the land surface and the land-atmosphere coupling with JSBACH.
+
+![Schematic representation of biogeochemical, water and energy flows in QUINCY; as published in Thum et al. 2019](/media/QUINCY-high-res.png){.lightbox #fig-quincy-schematic width="70%" fig-alt="QUINCY schematic"}
+
+This pages provides a brief overview over the main features of QUINCY in ICON-Land. The detailed documentation of the scientific code of QUINCY can accessed in the [comprehensive model documentation page](./documentation/index.html), with following subsections:
+@sec-structure summarises the general structure and vertical discretisation of vegetation and soil;
+@sec-assimi describes the canopy processes, such as photosynthesis and stomatal coupling; 
+@sec-veg introduces vegetation growth, turnover and dynamics;
+@sec-soil-biogeochemistry provides an overview of the simple soil biogeochemistry implementation;
+@sec-isotopic-composition-and-fractionation introduces the isotope processes of QUINCY;
+@sec-rad describes the simplified QUINCY radiation scheme, surface energy
+balance and soil hydrology.
+
+In these pages you also find: 
+
+- an [overview of the main configurations and settings of QUINCY](quincy-configurations.qmd)
+- a [list of publications that rely on QUINCY](quincy-literature.qmd)
+
+---
+
+- [Vegetation Processes](./index.html#vegetation-processes)
+- [Soil Biogeochemistry](./index.html#soil-biogeochemistry)
+- [Surface Physics](./index.html#surface-physics)
+- [Land Management](./index.html#land-management)
+
+---
+ 
+### Vegetation processes
+
+Vegetation is characterised by an average individual representative of a
+plant functional type (PFT). The model considers
+twelve broadly defined PFTs (see Section
+[Plant and crop functional types](./documentation/03-vegetation.html#sec-pfts-cfts)), representing
+different leaf types (herbaceous, broadleaved, coniferous),
+phenology (evergreen, rain green, and summer green), as well as growth
+form (grasses and trees), with a set of traits describing time-invariant
+functional differences across types (see the table of
+[PFT-specific parameters](./documentation/07-appendix.html#tbl-lctlib:param)).
+Different to other TBMs, certain "soft" plant functional type
+characteristics, such as the photosynthetic capacity of leaves or the
+temperature sensitivity of photosynthesis and respiration acclimate to
+local conditions, and therefore lead to a smoother transition of
+ecosystem functioning across eco-climatic gradients. 
+
+Each vegetation type is described by three fast-lived structural tissue types (pools:
+leaves, fine roots, fruits, and for herbaceous PFTs a straw pool), a respiring non-structural pool
+(labile), as well as a seasonal, non-respiring, and non-structural
+storage pool (reserve). In the case of tree vegetation types, three
+longer-lived structural tissue types (sapwood, heartwood, and coarse
+roots) are represented in addition, as are stand characteristics
+(height, diameter, individual density).
+
+Plant growth is modelled as the balance of source processes
+(photosynthesis, nutrient uptake) and the capacity of the plant to
+create sinks (production of new biomass tissue, respiration, and
+storage; see Section [Plant Growth](./documentation/03-vegetation.html#sec-growth)). 
+The capacity of the plant
+to generate sinks is dependent on *(i)* the activity of the plant’s
+meristem controlling the usage of the labile pool for growth, which
+becomes reduced at low air temperature and/or soil moisture; *(ii)* the
+partitioning of its labile resource to new tissue growth and the
+availability of nutrients to create these tissues; *(iii)* the need for
+longer-term storage production; and *(iv)* respiration for maintenance,
+which is given priority over growth of new tissue.
+
+Photosynthesis is calculated for sunlit and shaded leaves separately,
+explicitly taking account of the vertical canopy gradient of light,
+foliar chlorophyll and photosynthetic N according to (Kull and Kruijt
+1998), with extensions for C4 photosynthesis (Friend et al. 2009), and
+the temperature response as in (Bernacchi et al. 2001) (see Section
+[Assimilation](./documentation/02-canopy-processes.html#sec-assimi-leaf-ps)). 
+The stomatal conductance is coupled to the calculation of photosynthesis 
+according to the USO formulation (Medlyn et al. 2011; Knauer, Werner, and Zaehle
+2015). Maintenance respiration is calculated for each tissue type as a
+function of its N content and tissue temperature(Lloyd and Taylor, 1994, see Section
+[Maintenance Respiration](./documentation/03-vegdocumentationhtml#sec-veg-MaintResp)). 
+Photosynthesis and respiration optima acclimate to growth temperature according to 
+(Friend 2010) and (Atkin, Meir, and Turnbull 2014), respectively.
+
+Plant nutrient uptake is dependent on fine root biomass density, soil
+soluble nutrient concentrations, temperature and moisture as well as 
+plant internal nutrient demand (Zaehle and Friend, 2010; see Section 
+[Plant Nutrient Uptake](./documentation/04-soil-biogeochemistry.html#sec-sb-simple-uptake)). 
+Symbiotic nitrogen fixation occurs in most PFTs as function of nitrogen update
+costs, root mass and temperature. Tissue growth follows a set of allometric equations describing
+size-dependent relationships of foliar, fine root, coarse root, sapwood and 
+fruit biomass (see Section [Allocation](./documentation/03-vegetation.html#sec-veg-allocation)). 
+The allometric relationship between leaves and fine root responds to N, P
+and water limitation and therefore increases uptake capacity under
+nutrient limitation.
+
+The allometric equations and the N and P content of each tissue give the
+stoichiometric constraint of plant growth. The C:N and N:P ratios of the
+leaves and fine roots are flexible within empirical bounds and respond
+dynamically to an imbalance between C and N, or N and P availability,
+respectively (see Section [Stoichiometry](./documentation/03-vegetation.html#sec-veg-stoichem)). 
+Photosynthesis can be down-regulated through sink-limitation (see Section
+[Sink Limitation](./documentation/03-vegetation.html#sec-veg-sinklim)), if nutrient
+shortage leads to the accumulation of carbon in the labile pool.
+
+Short-term fluctuations in the balance between carbon acquisition
+through photosynthesis and nutrient acquisition by roots are balanced by
+the time-scale of the labile pool turnover. Seasonal and longer-term
+fluctuations are balanced to some extend by the build-up and use of the
+reserve pool. The flow of compounds between the labile and reserve pools
+(see Section [Reserve Pool Dynamics](./documentation/03-vegetation.html#sec-veg-reserve)) 
+is described by a set of pull 
+(from the reserve pool) and push (to the reserve pool) mechanisms attempting 
+to simulate the signaling related to the beginning
+of the growing season (phenological pull), the need for maintenance and
+growth (maintenance pull), as well as to provide resources for the next
+growing season or resilience against interannual variability (reserve
+push).
+
+Turnover is considered at two time-scales: *(i)* the rapid breakdown of
+enzymes (N) and associated RNA (P) from tissue, and their ensuing
+replacement from the labile N and P pools (recycling; at the time scale
+of days; Zaehle and Friend, 2010); and *(ii)* the senescence of entire
+tissues and their conversion to litter, including the resorption of
+nutrients from foliage (see Section [Vegetation Turnover](./documentation/03-vegetation.html#sec-veg-turnover)). 
+Tissue senescence is calculated given a fixed  turnover time for each tissue, 
+with the exception of the leaves and fine roots, where 
+turnover is determined by the PFT-specific phenological timing
+(see Section [Phenology](./documentation/03-vegetation.html#sec-veg-phen)). 
+
+Stand-level vegetation dynamics (see Section 
+[Vegetation Dynamics](./documentation/03-vegetation.html#sec-veg-dynamics)) 
+are represented through density-dependent mortality, as well as a dynamic
+background mortality related to the overall growth efficiency of the
+plant (Sitch et al. 2003; Zaehle and Friend 2010). Re-establishment of
+vegetation depends directly on the past vegetation ability to produce
+fruits, as the re-establishment is explicitly taking account of the
+available seed pool at the forest / grassland floor.
+
+### Soil Biogeochemistry
+
+The vertical soil profile of physical and biogeochemical processes is
+explicitly represented, with exponentially increasing layer thickness
+with increasing soil depth. For each soil layer, temperature and moisture are calculated based on
+soil physical characteristics, and the transport and atmospheric
+exchange of energy and water (see scientific Documentation of JSBACH). For each soil layer, the model
+represents different organic pools (metabolic, structural, and woody
+litter, as well as fast and slow overturning soil organic matter (SOM)),
+as well as inorganic pools of N and P (soluble and minerally-absorbed 
+NH<sub>4</sub>, soluble NO<sub>3</sub> as well as soluble minerally-adsorbed, 
+occluded and primary PO<sub>4</sub>). 
+
+The turnover and formation of SOM follows, with some modifications, the
+CENTURY approach (Parton et al. 1993) (see Section 
+[Soil Biogeochemistry](./documentation/04-soil-biogeochemistry.html#sec-soil-biogeochemistry)): The turnover
+of litter and SOM pools are all calculated using first-order kinetics
+with temperature and moisture dependence. The litter stoichiometry is
+determined by the stoichiometry of senescent plant tissue and
+tissue-specific allocation fractions. The stoichiometry of the fast SOM
+pool adjusts to available inorganic nutrients, whereas the slow SOM pool
+is assumed to have fixed C:N:P stoichiometry.
+
+The soluble inorganic pools (NH<sub>4</sub>, NO<sub>3</sub> and PO<sub>4</sub>) and are assumed to be available for plant and
+microbial uptake, as concluded by White (2006) and many others. Plants
+and soil microbes compete for these nutrients based on their respective
+demand and uptake capacity, which varies in time and with soil depth. In
+the aerobic part of soil, NH<sub>4</sub> is oxidised to through nitrification and in
+anaerobic part of soil, NO<sub>3</sub>is reduced to through denitrification (Zaehle et
+al. 2011). Both processes produce NO<sub>x</sub>, N<sub>2</sub>O and N<sub>2</sub> as by-products 
+(see Section [Nitrification and Denitrification Processes](./documentation/04-soil-biogeochemistry.html#sec-sb-nitrification-denitrification)). 
+
+The representation of soil inorganic P dynamics (see Section 
+[Soil P Processes](./documentation/04-soil-biogeochemistry.html#sec-phosphorus-adsorption-and-absorption)) follow the concept
+from (Yang et al. 2014) and (Wang, Law, and Pak 2010). The available
+soluable is exchanged via ad-/desorption with the mineral surface,
+leached with soil water, and replenished by atmospheric deposition,
+weathering, and biomineralisation of P that is bound in the slow SOM
+pool. The adsorbed P is further absorbed into the soil matrix and
+gradually becomes an inactive form of P, occluded P, as proposed by
+(Walker and Syers 1976).
+
+### Surface Physics
+
+Surface physics in QUINCY follow JSBACH. Briefly, incoming radiation is partitioned into reflected
+and absorbed energy depending on the albedo of the surface, which varies with soil moisture, snow and vegetation cover.
+The absorbed energy is further partitioned into a sensible, latent, and ground heat flux, depending on the
+skin temperature, the aerodynamic coupling of the surface to the lower atmosphere, soil moisture, snow cover as well as the
+canopy conductance of vegetation. The aerodynamic coupling is affected by the height and phenology of the vegetation,
+canopy conductance is linked to photosynthesis (see [Vegetation Processes](index.html#vegetation-processes)).
+
+Precipitation as snow and rain is partially intercepted by the canopy, as a function of leaf area, from where it either
+evaporates or falls to the ground. Throughfall is partitioned into surface runoff, evaporation from the surface or snow
+layer or infiltration. Water movement through the soil is modelled according to the Richards equation, assuming
+pedo-transfer functions to describe the dependence of soil hydraulic properties to soil texture and soil moisture.
+JSBACH includes the calculation of freeze-thaw dynamics on soil moisture and temperature, the formation of ice and supercooled
+water in the soil column, which is not plant-accessible or movable. Liquid water through the rooting zone
+above the minimum leaf water potential of a PFT is accessible for plant water uptake and transpiration. Excess water
+drains through the soil column, transporting solved biogeochemical tracers as leaching.
+
+### Land management
+
+Anthropgenic land management in QUINCY is represented as
+
+- **pasture**, with two specific herbaceous pasture PFTs (C3 and C4 herbaceous), in which increased lifestock density enhances herbivory-related carbon and nutrient flows;
+- **wood harvest** on the six natural tree PFTs, given externally forced wood extraction rates;
+- **agriculture**, with two specific crop PFTs (C3 or C4 crops), which are parameterised given eight distinct Crop Functional Types (spring wheat, temperate and tropical soybean, temperate and tropical maize, rice, cotton, and sugarcane). CFTs follow their destinct phenology and seasonal growth. Crop management includes planting, fertilisation, harvesting and grain/slash removal.
+
+Transitions between land cover classes given externally forced land cover maps affect cause the removal of biogeochemical matter into
+product pools, which decay according to pool specific turnover times. Vegetation removal and re-distribution of litter and soil organic
+matter as a consequence of changing land cover fractions give rise to legacy effects from land-use change.
+
+### Driving data
+
+QUINCY requires hourly short- and longwave downward radiation, 2m air temperature, precipitation and snowfall, wind
+velocity, atmospheric humidity and CO<sub>2</sub> mole fractions, as well as rates of NH<sub>4</sub>, NO<sub>3</sub>, and PO<sub>4</sub> deposition as time-dependent driving data. These can be either site-specific observations, or regional to global reanalyses. Alternatively,
+QUINCY can be run coupled to the ICON Atmosphere.
+
+In addition, the model requires input describing the geographical coordinates, vegetation type,
+and soil physical and chemical parameters (texture, bulk density,
+rooting and soil depth, as well as inorganic soil P content).
+
+### References
+
+Atkin, Owen K., Patrick Meir, and Matthew H. Turnbull. 2014. “Improving
+Representation of Leaf Respiration in Large-Scale Predictive
+Climate–Vegetation Models.” *New Phytologist* 202 (3): 743–48.
+<https://doi.org/10.1111/nph.12686>.
+
+Bernacchi, C J, E L Singsaas, C Pimentel, A R Protis JR, and S P Long.
+2001. “<span class="nocase">Improved temperature response functions for
+models of Rubisco-limited photosynthesis</span>.” *Plant, Cell &
+Environment* 24 (January): 253–59.
+
+Friend, Andrew D. 2010. “<span class="nocase">Terrestrial plant
+production and climate change</span>.” *Journal of Experimental Botany*
+61 (5): 1293–1309.
+
+Friend, Andrew D, R J Geider, M J Behrenfeld, and C J Still. 2009.
+“<span class="nocase">Photosynthesis in Global-Scale Models</span>.” In
+*Photosynthesis in Silico: Understanding Complexity from Molecules to
+Ecosystems*, edited by A Laisk, L Nedbal, and Govindjee, 465–97.
+Springer.
+
+Knauer, Jürgen, Christiane Werner, and Sönke Zaehle. 2015.
+“<span class="nocase">Evaluating stomatal models and their atmospheric
+drought response in a land surface scheme: A multibiome
+analysis</span>.” *Journal of Geophysical Research: Biogeosciences* 120
+(10): 1894–1911.
+
+Kull, O, and B Kruijt. 1998. “<span class="nocase">Leaf photosynthetic
+light response: a mechanistic model for scaling photosynthesis to leaves
+and canopies</span>.” *Functional Ecology* 12 (5): 767–77.
+
+Lloyd, John, and J A Taylor. 1994. “On the Temperature Dependence of
+Soil Respiration.” *Functional Ecology*, 315–23.
+<https://www.jstor.org/stable/2389824>.
+
+Medlyn, B.E., Duursma, R.A., Eamus, D., Ellsworth, D.S., Prentice, I.C., Barton, C.V.M., Crous, K.Y., De Angelis, P., Freeman, M., and Wingate, L., 2011. “<span class="nocase">Reconciling the optimal and empirical approaches to modelling stomatal conductance</span>.”. *Global Change Biology*, 17: 2134–2144. doi:10.1111/j.1365-2486.2010.02375.x
+
+Parton, W J, J M O Scurlock, D S Ojima, T G Gilmanov, R J Scholes, D S
+Schimmel, T Kirchner, et al. 1993. “<span class="nocase">Observations
+and modelling of biomass and soil organic matter dynamics for the
+grassland biome worldwide</span>.” *Global Biogeochemical Cycles* 7 (4):
+785–809.
+
+Sitch, Stephen A, Benjamin Smith, I C Prentice, Almut Arneth, Alberte
+Bondeau, W Cramer, J O Kaplan, et al. 2003.
+“<span class="nocase">Evaluation of ecosystem dynamics, plant geography
+and terrestrial carbon cycling in the LPJ Dynamic Global Vegetation
+Model</span>.” *Global Change Biology* 9: 161–85.
+
+Thum, T., Caldararu, S., Engel, J., Kern, M., Pallandt, M., Schnur, R., Yu, L., & Zaehle, S. (2019). A new model of the coupled carbon, nitrogen, and phosphorus cycles in the terrestrial biosphere (QUINCY v1.0; revision 1996). *Geoscientific Model Development*, 12(11), 4781–4802. <https://doi.org/10.5194/gmd-12-4781-2019>
+
+Walker, T. W., and J. K. Syers. 1976. “The Fate of Phosphorus During
+Pedogenesis.” Journal Article. *Geoderma* 15 (1): 1–19.
+<https://doi.org/10.1016/0016-7061(76)90066-5>.
+
+Wang, Y P, R M Law, and B Pak. 2010. “<span class="nocase">A global
+model of carbon, nitrogen and phosphorus cycles for the terrestrial
+biosphere</span>.” *Biogeosciences* 7 (7): 2261–82.
+
+White, Robert E. 2006. *Principles and Practice of Soil Science the Soil
+as a Natural Resource*. Book. 4th ed. Vol. 32. Malden: Blackwell
+Publishing. <https://doi.org/10.1177/0340035206070163>.
+
+Yang, X., P. E. Thornton, D. M. Ricciuto, and W. M. Post. 2014. “The
+Role of Phosphorus Dynamics in Tropical Forests – a Modeling Study Using
+CLM-CNP.” *Biogeosciences* 11 (6): 1667–81.
+<https://doi.org/10.5194/bg-11-1667-2014>.
+
+Zaehle, S, Philippe Ciais, Andrew D Friend, and Vincent Prieur. 2011.
+“<span class="nocase">Carbon benefits of anthropogenic reactive nitrogen
+offset by nitrous oxide emissions</span>.” *Nature Geoscience* 4 (8):
+601–5.
+
+Zaehle, S, and Andrew D Friend. 2010. “<span class="nocase">Carbon and
+nitrogen cycle dynamics in the O-CN land surface model: 1. Model
+description, site-scale evaluation, and sensitivity to parameter
+estimates</span>.” *Global Biogeochemical Cycles* 24 (1): GB 1005.

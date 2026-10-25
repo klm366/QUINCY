@@ -1,0 +1,53 @@
+---
+title: Documenting the Code with FORD
+image: /media/documentation-guide.svg
+order: 2
+---
+
+The reference documentation of the ICON-Land source code is generated with
+[FORD](https://github.com/Fortran-FOSS-Programmers/ford/wiki){.external target="_blank"} from
+
+- comments in the Fortran source code, and
+- the markdown files in `doc/guide`.
+
+This page covers the code documentation. For the guide you are reading right now, see
+[Authoring the ICON-Land Guide](03_quarto_authoring.qmd).
+
+## Building it
+
+FORD and Quarto are both driven by one script in the repository root:
+
+```bash
+./build-doc.sh [-q] [-f] [-p] [-c]
+```
+
+| Flag | Effect |
+| ---- | ------ |
+| `-q` | quiet: do not print progress |
+| `-f` | fast: skip the search index to save time |
+| `-p` | pages only: skip FORD and render just the Quarto guide |
+| `-c` | clean: remove `3rdparty` and the generated html |
+
+The script installs FORD into `3rdparty/` on first use, preprocesses the sources through
+`scripts/dsl4jsb/dsl4jsb.py`, runs FORD, and finally renders the Quarto guide into
+`doc/html/page`. Open `doc/html/index.html` in a browser to view the result.
+
+::: {.callout-note}
+`doc/html` is listed in `.gitignore`, so nothing generated is ever committed.
+:::
+
+::: {.callout-tip}
+While working on the guide alone, `./build-doc.sh -p` skips the FORD run and is far quicker.
+For an even shorter turnaround use `quarto preview`, described in
+[Authoring the ICON-Land Guide](03_quarto_authoring.qmd).
+:::
+
+## Published output
+
+The documentation is also built by GitLab CI and published at
+[gitlab-pages](https://jsbach.gitlab-pages.dkrz.de/jsbach){.external target="_blank"}.
+
+::: {.callout-note}
+The CI job runs on a nightly schedule on the default branch rather than on every commit.
+A change therefore does not appear on the published pages immediately.
+:::

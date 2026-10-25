@@ -1,0 +1,49 @@
+<script>
+// Typeset the maths in a cross-reference hover preview.
+//
+// A preview of something on another page is fetched as HTML and inserted into the
+// document after MathJax has run, so its maths arrives as unprocessed \(...\) markup
+// and shows as blank space - most visibly in the symbol column of the parameter
+// tables. MathJax typesets what is in the page when it runs and nothing afterwards, so
+// nothing picks this content up on its own.
+//
+// Watching for the preview to appear and typesetting it explicitly is the standard
+// remedy for maths added to a page after load.
+(function () {
+  if (!window.MutationObserver) return;
+
+  function typeset(node) {
+    if (!(window.MathJax && MathJax.typesetPromise)) return;
+    // A failure here must not break the preview itself.
+    MathJax.typesetPromise([node]).catch(function () {});
+  }
+
+  function previewIn(node) {
+    if (node.nodeType !== 1) return null;
+    if (node.classList && node.classList.contains("tippy-content")) return node;
+    if (node.closest) {
+      var enclosing = node.closest(".tippy-content");
+      if (enclosing) return enclosing;
+    }
+    return node.querySelector ? node.querySelector(".tippy-content") : null;
+  }
+
+  new MutationObserver(function (records) {
+    var previews = [];
+    records.forEach(function (record) {
+      Array.prototype.forEach.call(record.addedNodes, function (node) {
+        var preview = previewIn(node);
+        if (preview && previews.indexOf(preview) === -1) previews.push(preview);
+      });
+    });
+    previews.forEach(function (preview) {
+      // Only content that carries maths and has not been typeset yet. Typesetting
+      // adds mjx-container elements, so this also stops the observer's own changes
+      // from starting it again.
+      if (preview.querySelector(".math") && !preview.querySelector("mjx-container")) {
+        typeset(preview);
+      }
+    });
+  }).observe(document.body, {childList: true, subtree: true});
+})();
+</script>

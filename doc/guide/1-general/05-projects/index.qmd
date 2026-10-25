@@ -1,0 +1,24 @@
+---
+title: ICON-Land Projects
+listing:
+  id: general-projects-listings
+  type: grid
+  grid-columns: 3
+order: 4
+image: /media/universal-access-circle.svg
+number-sections: false
+---
+
+# Current ICON-Land Projects
+
+::: {#general-projects-listings}
+:::
+---
+
+# Completed ICON-Land Projects 
+
+| Acronym | Project Name | Funding Agency | Lifetime | ICON-Land PIs |
+|:---|:---|:---|:---|:---| 
+| ESM-2025 | Earth System Models for the Future | EC-H2020 | 2020-2025 | Victor Brovkin (MPI-M), Julia Pongratz (LMU), Sönke Zaehle (MPI-BGC) |  
+
+

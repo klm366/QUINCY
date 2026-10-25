@@ -1,0 +1,22 @@
+<script>
+  window.MathJax = {
+    // Everything on a page is typeset when the page opens. Lazy typesetting was
+    // tried here and removed: it leaves the preview shown when hovering a
+    // cross-reference blank, because content inserted into a page after load never
+    // satisfies its visibility test. Splitting a long document is the way to keep a
+    // page quick to open, see doc/guide/4-developer-guide/03_quarto_authoring.qmd.
+    tex: {
+      tags: 'ams',
+      packages: {'[+]': ['ams', 'noerrors']},
+      tagSide: 'right',
+      tagIndent: '0.8em',
+      macros: {
+        Eqref: ['\\text{Eq.}\\,\\ref{#1}', 1],
+        // \textperthousand is a LaTeX text-mode symbol that MathJax does not know.
+        // The isotope parameters are given per mille, so it is defined here rather
+        // than putting the character itself into the sources.
+        textperthousand: '\\unicode{x2030}'
+      }
+    }
+  };
+</script>

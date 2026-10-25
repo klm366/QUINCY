@@ -1,0 +1,9 @@
+---
+title: FUTURA - Future of climate change scenarios of the Earth system, impacts and socio-economic outcomes for assessment and society
+author:
+- Sönke Zaehle
+image: /media/logo_he.jpg
+---
+
+ICON-Land contributes to the Earth system modelling stream of the  HE funded project FUTURA and contributes to the extension of projections made under the CAP7 project in terms of new scenarios and new model configurations.
+

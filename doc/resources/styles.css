@@ -1,0 +1,116 @@
+/* css styles */
+
+/* Pin the footer to the bottom of the viewport */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1020;
+}
+
+/* Prevent page content from being hidden behind the fixed footer */
+body {
+  padding-bottom: 60px;
+}
+
+/* Make mjx-container block-level for proper equation number alignment */
+mjx-container[display="true"] {
+  display: block !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+/* Add scrolling to all paragraphs/divs in content area */
+#quarto-document-content p,
+#quarto-document-content div,
+article p,
+article div,
+main p,
+main div {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+/* Exception for citation popups - allow normal overflow.
+   The preview container itself is excluded: it is a div inside .tippy-box, so it
+   was caught by this rule and forced to overflow: visible, which is what stopped
+   it from scrolling. */
+.tippy-content p,
+.tippy-content div,
+.tippy-box p,
+.tippy-box div:not(.tippy-content) {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* Hover previews of a cross-reference have no height limit of their own, so a
+   preview of one of the parameter tables grows past the window and is simply cut
+   off, with nothing to scroll. Bound the preview and let it scroll instead.
+   The scrolling belongs on the preview itself: everything inside it is held at
+   overflow: visible by the rule above, so a table scrolls the whole preview
+   rather than producing a second scrollbar within it.
+
+   The !important is needed rather than decorative: the preview is rendered inside
+   #quarto-document-content, and the id selector in the scrolling rule near the top
+   of this file outranks any selector made only of classes. */
+.tippy-box .tippy-content {
+  max-height: 70vh;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+/* Style the scrollbars */
+#quarto-document-content p::-webkit-scrollbar,
+#quarto-document-content div::-webkit-scrollbar,
+article p::-webkit-scrollbar,
+article div::-webkit-scrollbar {
+  height: 8px;
+}
+
+#quarto-document-content p::-webkit-scrollbar-thumb,
+#quarto-document-content div::-webkit-scrollbar-thumb,
+article p::-webkit-scrollbar-thumb,
+article div::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 4px;
+}
+
+#quarto-document-content p::-webkit-scrollbar-track,
+#quarto-document-content div::-webkit-scrollbar-track,
+article p::-webkit-scrollbar-track,
+article div::-webkit-scrollbar-track {
+  background: #e0e0e0;
+}
+
+/* Fix references section to prevent text cutoff */
+#refs,
+#refs p,
+#refs div,
+.references,
+.references p,
+.references div,
+div[role="doc-bibliography"],
+div[role="doc-bibliography"] p,
+div[role="doc-bibliography"] div {
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+}
+
+/* Equation cross-references.
+   doc/auto-subeqn.lua resolves these at build time, so they arrive as ordinary
+   links in the body text and inherit Bootstrap's link colour by themselves. The
+   underline is the only addition, to match how Quarto renders its own section
+   and table cross-references. */
+.quarto-eq-ref {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* The anchors the filter emits carry no content and must not affect layout. */
+.eq-anchor {
+  display: inline;
+}

@@ -1,6 +1,3 @@
----
-title: Authors
----
 ## ICON-Land Authors
 
 - Albert Jornet Puig

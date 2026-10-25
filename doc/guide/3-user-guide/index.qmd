@@ -1,0 +1,16 @@
+---
+title: User Guide
+abstract: This page provides a user guide for ICON-Land
+image: /media/coding-style-guide.svg
+listing:
+  id: user-guide-listings
+  type: grid
+order: 3
+---
+
+::: {#user-guide-listings}
+:::
+::: {style="font-size: 0.8em; font-style: italic; text-align: left; margin-top: -10px;"}
+Images designed by [Freepik](https://www.freepik.com)
+:::
+
