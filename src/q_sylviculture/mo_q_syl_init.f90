@@ -91,6 +91,9 @@ CONTAINS
 #endif
     END IF
 
+    ! Mark process as successfully initialized
+    CALL model%processes(Q_SYL_)%p%Set_init_status_true
+
   END SUBROUTINE q_syl_init
 
 #ifndef __QUINCY_STANDALONE__

@@ -77,6 +77,10 @@ CONTAINS
       CALL rad_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(RAD_)%p%Set_init_status_true
+
   END SUBROUTINE rad_init
 
 #ifdef __QUINCY_STANDALONE__

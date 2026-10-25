@@ -63,7 +63,10 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init'
+
+    model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL pheno_read_init_vars(tile)
@@ -73,6 +76,9 @@ CONTAINS
     IF (tile%Is_last_process_tile(PHENO_)) THEN
       CALL pheno_finalize_init_vars()
     END IF
+
+    ! Mark process as successfully initialized
+    CALL model%processes(PHENO_)%p%Set_init_status_true
 
   END SUBROUTINE pheno_init
 

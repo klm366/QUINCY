@@ -106,7 +106,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
+
+    model => get_model(tile%owner_model_id)
 
 #ifdef __QUINCY_STANDALONE__
     CALL qs_sse_init_bc(tile)
@@ -123,6 +126,10 @@ CONTAINS
       CALL sse_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(SSE_)%p%Set_init_status_true
+
   END SUBROUTINE sse_init
 
   ! ====================================================================================================== !
@@ -561,6 +568,8 @@ CONTAINS
     model => get_model(tile%owner_model_id)
     soil_e => Get_vgrid('soil_depth_energy')
 
+    CALL model%processes(SEB_)%p%Test_init_status_asked_by(SSE_)    !< Test if process dependency is already initialized
+
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
@@ -691,8 +700,10 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
 
+    CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(SSE_)  !< Test if process dependency is already initialized
+    CALL model%processes(SEB_)%p%Test_init_status_asked_by(SSE_)    !< Test if process dependency is already initialized
+
     ! Get reference to variables for domain
-    !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)

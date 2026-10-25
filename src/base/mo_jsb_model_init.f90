@@ -537,6 +537,8 @@ CONTAINS
     DO itile=1,SIZE(model%tiles)
       tile => model%tiles(itile)%p
 
+      IF (debug_on()) CALL message(routine, 'Running process init for tile: '//TRIM(tile%name))
+
       ! ---------------------------------------------------------------------------------------------- !
       !>
       !>     2.1 Initialize each tile
@@ -583,7 +585,6 @@ CONTAINS
         CALL turb_init(tile)
       END IF
 
-      ! Initialize PHENO_ / Q_PHENO_ before HYDRO_ and VEG_
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(PHENO_)) THEN
@@ -595,20 +596,16 @@ CONTAINS
         END IF
       END SELECT
 
-      ! SSE_ and HYDRO_
-      ! VEG_ and SB_
-      !
-      ! Initialize SSE_ before HYDRO_
       IF (tile%Is_process_active(SSE_)) THEN
         CALL sse_init(tile)
       END IF
-      ! Initialize HYDRO_ before VEG_
+
       IF (tile%Is_process_active(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
+
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-      ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
@@ -666,6 +663,8 @@ CONTAINS
 
       ! ---------------------------------------------------------------------------------------------- !
     END DO
+
+    CALL message(routine, 'Completed process init across all tiles')
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 

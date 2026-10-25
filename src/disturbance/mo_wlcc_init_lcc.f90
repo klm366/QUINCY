@@ -17,6 +17,8 @@ MODULE mo_wlcc_init_lcc
   USE mo_exception,           ONLY: message
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
   USE mo_jsb_lcc,             ONLY: init_lcc, count_descendants_for_up_to_2layers, &
     &                               collect_names_of_descendant_leaves_up_to_2layers
@@ -46,6 +48,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: involved_tiles(:)
     INTEGER :: nr_of_descendants
 
@@ -59,6 +62,7 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => get_model(tile%owner_model_id)
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
     passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
 
@@ -75,6 +79,9 @@ CONTAINS
     CALL init_lcc('wlcc', tile, active_cqts, passive_cqts, involved_tiles)
 
     DEALLOCATE(involved_tiles)
+
+    ! Mark process as successfully initialized
+    CALL model%processes(WLCC_)%p%Set_init_status_true
 
   END SUBROUTINE wlcc_init_lcc
 

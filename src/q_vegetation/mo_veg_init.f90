@@ -201,6 +201,8 @@ CONTAINS
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     nsoil_w       = vgrid_soil_w%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
+    CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(VEG_)    !< Test if process dependency is already initialized
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -682,6 +684,9 @@ CONTAINS
     !$ACC   DEVICE(t_jmax_opt_mavg(:,:), veg_pool_mt_domain(:,:,:,:)) &
     !$ACC   DEVICE(rfr_ratio_boc(:,:), rfr_ratio_boc_tvegdyn_mavg(:,:)) ASYNC(1)
     !$ACC WAIT(1)
+
+    ! Mark process as successfully initialized
+    CALL model%processes(VEG_)%p%Set_init_status_true
 
   END SUBROUTINE veg_init
 

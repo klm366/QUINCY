@@ -49,16 +49,14 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
-    !TYPE(t_jsb_model),       POINTER :: model
     !dsl4jsb_Def_memory(CARBON_)
-
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_init'
 
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    !model => get_model(tile%owner_model_id)
+    model => get_model(tile%owner_model_id)
 
     ! Get carbon memory of the tile
     !dsl4jsb_Get_memory(CARBON_)
@@ -69,6 +67,9 @@ CONTAINS
 
     CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
+
+    ! Mark process as successfully initialized
+    CALL model%processes(CARBON_)%p%Set_init_status_true
 
   END SUBROUTINE carbon_init
 

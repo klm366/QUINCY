@@ -48,10 +48,15 @@ CONTAINS
     !-----------------------------------------------------------------------
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     !-----------------------------------------------------------------------
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init'
     !-----------------------------------------------------------------------
+    model => get_model(tile%owner_model_id)
 
     CALL fage_init_ic(tile)
+
+    ! Mark process as successfully initialized
+    CALL model%processes(FAGE_)%p%Set_init_status_true
 
   END SUBROUTINE fage_init
 

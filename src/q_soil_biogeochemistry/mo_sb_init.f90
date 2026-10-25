@@ -78,9 +78,8 @@ CONTAINS
     USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-
+    TYPE(t_jsb_model), POINTER  :: model
     INTEGER :: no_omp_thread
-    TYPE(t_jsb_model),  POINTER :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_init'
 
 #ifdef __QUINCY_STANDALONE__
@@ -102,6 +101,9 @@ CONTAINS
       CALL sb_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(SB_)%p%Set_init_status_true
 
   END SUBROUTINE sb_init
 
@@ -223,6 +225,10 @@ CONTAINS
     nsoil_w       =  vgrid_soil_w%n_levels
     nblks         =  hgrid%nblks
     nproma        =  hgrid%nproma
+    ! ----------------------------------------------------------------------------------------------------- !
+    CALL model%processes(HYDRO_)%p%Test_init_status_asked_by(SB_)  !< Test if process dependency is already initialized
+    CALL model%processes(SSE_)%p%Test_init_status_asked_by(SB_)    !< Test if process dependency is already initialized
+    CALL model%processes(VEG_)%p%Test_init_status_asked_by(SB_)    !< Test if process dependency is already initialized
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)

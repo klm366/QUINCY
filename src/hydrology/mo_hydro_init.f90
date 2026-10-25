@@ -171,7 +171,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< current tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init' !< name of this routine
+
+    model => get_model(tile%owner_model_id)
 
 #ifdef __QUINCY_STANDALONE__
     CALL qs_hydro_read_init_vars(tile)
@@ -196,6 +199,10 @@ CONTAINS
       CALL hydro_finalize_init_vars()
     END IF
 #endif
+
+    ! Mark process as successfully initialized
+    CALL model%processes(HYDRO_)%p%Set_init_status_true
+
   END SUBROUTINE hydro_init
 
   ! ====================================================================================================== !
@@ -1606,6 +1613,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH) THEN
+      CALL model%processes(PHENO_)%p%Test_init_status_asked_by(HYDRO_)    !< Test if process dependency is already initialized
       dsl4jsb_Get_memory(PHENO_)
     END IF
 

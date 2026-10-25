@@ -100,6 +100,10 @@ CONTAINS
 
       !$ACC UPDATE DEVICE(F_pseudo_soil_temp, N_pseudo_soil_temp) ASYNC(1)
     END IF
+
+    ! Mark process as successfully initialized
+    CALL model%processes(SEB_)%p%Set_init_status_true
+
   END SUBROUTINE seb_init
 
 #ifdef __QUINCY_STANDALONE__
