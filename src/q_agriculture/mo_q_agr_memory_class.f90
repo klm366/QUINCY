@@ -18,7 +18,7 @@
 MODULE mo_q_agr_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -116,7 +116,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('no3_fertiliser_c3crops', mem%no3_fertiliser_c3crops, &
         & hgrid, surface, &
@@ -126,7 +126,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('nh4_fertiliser_c4crops', mem%nh4_fertiliser_c4crops, &
         & hgrid, surface, &
@@ -136,7 +136,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('no3_fertiliser_c4crops', mem%no3_fertiliser_c4crops, &
         & hgrid, surface, &
@@ -146,7 +146,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('nh4_fertiliser_pasture', mem%nh4_fertiliser_pasture, &
         & hgrid, surface, &
@@ -156,7 +156,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('no3_fertiliser_pasture', mem%no3_fertiliser_pasture, &
         & hgrid, surface, &
@@ -166,7 +166,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('n_manure_crop', mem%n_manure_crop, &
         & hgrid, surface, &
@@ -176,7 +176,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('n_manure_pasture', mem%n_manure_pasture, &
         & hgrid, surface, &
@@ -186,7 +186,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     END IF
 
@@ -200,7 +200,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 5.0_wp)
+        & initval_r = 5.0_lp)
 
       CALL mem%Add_var('gdd_mavg', mem%gdd_mavg, &
         & hgrid, surface, &
@@ -210,7 +210,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 1700.0_wp)
+        & initval_r = 1700.0_lp)
 
       CALL mem%Add_var('nd_crop_season', mem%nd_crop_season, &
         & hgrid, surface, &
@@ -220,7 +220,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('nd_crop_season_mavg', mem%nd_crop_season_mavg, &
         & hgrid, surface, &
@@ -230,7 +230,11 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
+<<<<<<< HEAD
         & initval_r = 30.0_wp)
+=======
+        & initval_r = 150.0_lp)
+>>>>>>> land4icon-mpim
 
       CALL mem%Add_var('crop_season_per_year', mem%crop_season_per_year, &
         & hgrid, surface, &
@@ -240,7 +244,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('crop_season_per_year_mavg', mem%crop_season_per_year_mavg, &
         & hgrid, surface, &
@@ -250,7 +254,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 1.0_wp)
+        & initval_r = 1.0_lp)
 
       CALL mem%Add_var('crop_type_index', mem%crop_type_index, &
         & hgrid, surface, &
@@ -260,7 +264,7 @@ CONTAINS
         & prefix, suffix, &
         & lrestart = .TRUE., &
         & output_level = NONE, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     END IF
 

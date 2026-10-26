@@ -21,19 +21,23 @@
 !> methods, as well as the method `Do_it` to execute a task on a tile and adding the task to a task
 !> queue (`Append`).
 !>
+!> The module also defines the task schedule [[t_jsb_task_schedule]]: for each task of the queue the
+!> sequence of steps (tile and action `TASK_INTEGRATE` or `TASK_AGGREGATE`) in which the task is executed
+!> on the tile tree. The schedule is computed once during initialization (see
+!> [[mo_jsb_model_class:Build_task_schedule]]).
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_exception,   ONLY: message, finish
   USE mo_timer,       ONLY: new_timer, timer_start, timer_stop    ! Functions from timer infrastructure
 
   USE mo_jsb_control, ONLY: timer_aggregate, timer_integrate, timer_on, debug_on ! Objects used for timing
 
-  USE mo_hsm_class,       ONLY: t_Message                         ! Type for message object containing task actions
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract               ! Tile abstract class
   USE mo_jsb_time,        ONLY: t_datetime                        ! DateTime class from mtime
 
@@ -41,11 +45,17 @@ MODULE mo_jsb_task_class
   PRIVATE
 
   PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
+  PUBLIC :: t_jsb_task_step, t_jsb_task_schedule, TASK_INTEGRATE, TASK_AGGREGATE, Get_task_action_name
+
+  !> Actions of a task on a tile
+  ENUM, BIND(C)
+    ENUMERATOR :: TASK_INTEGRATE = 1, TASK_AGGREGATE
+  END ENUM
 
   TYPE t_jsb_task_options
     ! Set of parameters that are needed by tasks during their execution
-    REAL(wp)                  :: dtime   = -1._wp !< Time step length [s]
-    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
+    REAL(lp)                  :: dtime   = -1._lp !< Time step length [s]
+    REAL(lp)                  :: alpha   = -1._lp !< Implicitness factor
     TYPE(t_datetime), POINTER :: current_datetime !< Date and time of current time step
     INTEGER                   :: iblk    = -1     !< Number of current block (chunk)
     INTEGER                   :: ics     = -1     !< Index of chunk start
@@ -88,12 +98,28 @@ MODULE mo_jsb_task_class
   END TYPE t_jsb_process_task_p
 
   TYPE t_Task_queue
-    ! Type for a sequential line of task entries
+    ! Type for a sequential line of task entries: only the tasks in the order of their execution, without
+    ! any information on which tiles they are executed (see t_jsb_task_schedule for that)
     CLASS(t_jsb_process_task), POINTER :: task    => NULL() !< Element of the task queue
     TYPE(t_Task_queue),        POINTER :: next    => NULL() !< Pointer to next element in the queue
   CONTAINS
     PROCEDURE :: Append => Append_task                      !< Method to append a task to the queue
   END TYPE t_Task_queue
+
+  !> One step of a task schedule: execute the `action` of the task on `tile`
+  TYPE t_jsb_task_step
+    CLASS(t_jsb_tile_abstract), POINTER :: tile   => NULL() !< Tile on which the task is executed
+    INTEGER                             :: action = 0       !< TASK_INTEGRATE or TASK_AGGREGATE
+  END TYPE t_jsb_task_step
+
+  !> Schedule of a task: the steps in which the task is executed on the tile tree, in order
+  !>
+  !> While the task queue ([[t_Task_queue]]) only defines the order of the tasks, the schedule also
+  !> contains, for each task, on which tiles it is to be integrated or aggregated and in which order.
+  TYPE t_jsb_task_schedule
+    CLASS(t_jsb_process_task), POINTER  :: task => NULL()  !< Task
+    TYPE(t_jsb_task_step),  ALLOCATABLE :: steps(:)        !< Steps of the task in order of execution
+  END TYPE t_jsb_task_schedule
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_task_class'
 
@@ -129,30 +155,27 @@ CONTAINS
   !>
   !>#### Executor for a process task
   !>
-  !> This subroutine calls the appropriate function depending on the action provided in the message object for
-  !> a specific task. It also starts and stops timers if timing is enabled.
+  !> This subroutine calls the appropriate function depending on the action (`TASK_INTEGRATE` or
+  !> `TASK_AGGREGATE`) for a specific task. It also starts and stops timers if timing is enabled.
   !>
-  SUBROUTINE Do_it(this, msg, tile, options)
+  SUBROUTINE Do_it(this, action, tile, options)
 
     CLASS(t_jsb_process_task),  INTENT(in)    :: this    !< Process instance
-    CLASS(t_Message),           INTENT(in)    :: msg     !< Message containing action to be performed
+    INTEGER,                    INTENT(in)    :: action  !< Action to be performed
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile on which the task is processed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Container for infos typically needed for the task
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
-    ! If the process the task belongs to is not to be calculated or aggregated on this tile, do nothing.
-    IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
+    ! Note: The task schedule only contains steps on tiles where the process of the task is active, so
+    !       this is not checked here.
 
     ! Provide the compiler with information about the particular instance of the task
     SELECT TYPE (this)
     CLASS IS (t_jsb_process_task)
 
-      IF (msg%action%name == '') &
-        & CALL finish(TRIM(routine), 'Action not set for task '//TRIM(this%name)) ! If no integrate or aggregate process
-
-      SELECT CASE(TRIM(msg%action%name))
-      CASE ('INTEGRATE')
+      SELECT CASE (action)
+      CASE (TASK_INTEGRATE)
         IF (timer_on('detail')) THEN
           CALL timer_start(timer_integrate(this%owner_model_id))                ! Start the general integrate timer
           IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)  ! Start the timer for this task
@@ -163,7 +186,7 @@ CONTAINS
           IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
           CALL timer_stop(timer_integrate(this%owner_model_id))
         END IF
-      CASE ('AGGREGATE')
+      CASE (TASK_AGGREGATE)
         IF (timer_on('detail')) THEN
           CALL timer_start(timer_aggregate(this%owner_model_id)) ! Start the general aggregate timer
           IF (this%timer_aggregate > 0) CALL timer_start(this%timer_aggregate) ! Start the timer for this task
@@ -180,6 +203,23 @@ CONTAINS
     END SELECT
 
   END SUBROUTINE Do_it
+
+  !> Returns name of task action
+  FUNCTION Get_task_action_name(action) RESULT(return_value)
+
+    INTEGER, INTENT(in) :: action           !< TASK_INTEGRATE or TASK_AGGREGATE
+    CHARACTER(len=9)    :: return_value
+
+    SELECT CASE (action)
+    CASE (TASK_INTEGRATE)
+      return_value = 'INTEGRATE'
+    CASE (TASK_AGGREGATE)
+      return_value = 'AGGREGATE'
+    CASE DEFAULT
+      return_value = 'UNKNOWN'
+    END SELECT
+
+  END FUNCTION Get_task_action_name
 
   ! ======================================================================================================= !
   !>

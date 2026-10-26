@@ -18,7 +18,7 @@
 MODULE mo_q_agr_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
@@ -41,7 +41,7 @@ MODULE mo_q_agr_init
   !
   !> Type to hold variables read from input files
   TYPE t_q_agr_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(lp), POINTER ::  &
       & c3_crop_type(:,:), &    !< major c3 crop
       & c4_crop_type(:,:)       !< major c4 crop
   END TYPE t_q_agr_init_vars
@@ -108,7 +108,7 @@ CONTAINS
     IF (lctlib_ps_pathway == ic3phot) THEN ! C3 Crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_lp .AND. grid%lat(ic,iblk) > -30.0_lp ) THEN
             crop_type_index(ic,iblk) = ix_trsoy ! tropical C3 crop = soybean
           ELSE
             crop_type_index(ic,iblk) = ix_wheat ! temperate C3 crop = wheat
@@ -118,7 +118,7 @@ CONTAINS
     ELSE ! C4 crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_lp .AND. grid%lat(ic,iblk) > -30.0_lp ) THEN
             crop_type_index(ic,iblk) = ix_trcorn ! tropical C4 crop = corn
           ELSE
             crop_type_index(ic,iblk) = ix_tecorn ! temperate C4 crop = corn
@@ -129,9 +129,9 @@ CONTAINS
 
     ! default fertiliser used in QS (overwritten in IQ with constant or transient data in read_fertiliser_input)
     nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
-    no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * qs_def_n_fertiliser
+    no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * qs_def_n_fertiliser
     nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
-    no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * qs_def_n_fertiliser
+    no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * qs_def_n_fertiliser
     ! ----------------------------------------------------------------------------------------------------- !
 #else
     !---- For IQ: Read crop type from bc file (fertiliser is also read but in the time-loop not in the init)
@@ -200,8 +200,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: n_manure_pasture
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
-    REAL(wp), ALLOCATABLE       :: hlp1(:,:)
+    REAL(lp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(lp), ALLOCATABLE       :: hlp1(:,:)
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_fertiliser_data
@@ -229,12 +229,12 @@ CONTAINS
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
       nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-      no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+      no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
       nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-      no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+      no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
       ! no backround rate fertiliser on pasture
-      nh4_fertiliser_pasture(:,:) = 0.0_wp
-      no3_fertiliser_pasture(:,:) = 0.0_wp
+      nh4_fertiliser_pasture(:,:) = 0.0_lp
+      no3_fertiliser_pasture(:,:) = 0.0_lp
     ELSE
       ! search a file ending on the current year
       current_year  = get_year(current_datetime)
@@ -257,19 +257,19 @@ CONTAINS
 
         ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
         nh4_fertiliser_c3crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
-                                          nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N)
+                                          nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N)
         nh4_fertiliser_c4crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
-                                          nh4_fertiliser_c4crops(:,:) / 10._wp / molar_mass_N)
+                                          nh4_fertiliser_c4crops(:,:) / 10._lp / molar_mass_N)
 
         ! split LUH fertiliser into NH4 and NO3, since it's not known from the data source
-        no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * nh4_fertiliser_c3crops(:,:)
-        no3_fertiliser_c4crops(:,:) = (1._wp - frac_fertil_nh4) * nh4_fertiliser_c4crops(:,:)
+        no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * nh4_fertiliser_c3crops(:,:)
+        no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * nh4_fertiliser_c4crops(:,:)
         nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * nh4_fertiliser_c3crops(:,:)
         no3_fertiliser_c4crops(:,:) = frac_fertil_nh4 * nh4_fertiliser_c4crops(:,:)
 
         ! no fertiliser on pasture in this data set
-        nh4_fertiliser_pasture(:,:) = 0.0_wp
-        no3_fertiliser_pasture(:,:) = 0.0_wp
+        nh4_fertiliser_pasture(:,:) = 0.0_lp
+        no3_fertiliser_pasture(:,:) = 0.0_lp
 
       ELSE IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source) == 'NMIP') THEN
 
@@ -287,17 +287,17 @@ CONTAINS
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
         WHERE (hlp1(:,:) <= eps8)
           nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-          no3_fertiliser_c3crops(:,:) = (1._wp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+          no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
         ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
-        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._wp * molar_mass_N)
+        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._lp * molar_mass_N)
           nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / hlp1(:,:) &
             &                           * iq_background_n_fertiliser_rate
           no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / hlp1(:,:) &
             &                           * iq_background_n_fertiliser_rate
         ELSEWHERE
           ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
-          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
-          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._wp / molar_mass_N
+          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N
+          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N
         ENDWHERE
         ! NMIP does not provide information for C3 vs. C4 crops, assert rates are the same
         ! Clean the temporary nh4_fertiliser_c4crops and use it to represent C4 crop nh4 fertiliser again
@@ -305,8 +305,8 @@ CONTAINS
         no3_fertiliser_c4crops(:,:) = no3_fertiliser_c3crops(:,:)
 
         ! The actually applied fertiliser is the (converted) read fertiliser, no background fertilisation assumed on pasture
-        nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
-        no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._wp / molar_mass_N
+        nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._lp / molar_mass_N
+        no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._lp / molar_mass_N
 
         DEALLOCATE(hlp1)
       ELSE
@@ -340,12 +340,12 @@ CONTAINS
       CALL input_file%Close()
 
       ! Convert unit of manure to model unit (kg / ha to mol/m2)
-      n_manure_crop(:,:)    = n_manure_crop(:,:) / 10._wp / molar_mass_N
-      n_manure_pasture(:,:) = n_manure_pasture(:,:) / 10._wp / molar_mass_N
+      n_manure_crop(:,:)    = n_manure_crop(:,:) / 10._lp / molar_mass_N
+      n_manure_pasture(:,:) = n_manure_pasture(:,:) / 10._lp / molar_mass_N
     ELSE
       ! no manure is applied if not provided as forcing
-      n_manure_crop(:,:)    = 0.0_wp
-      n_manure_pasture(:,:) = 0.0_wp
+      n_manure_crop(:,:)    = 0.0_lp
+      n_manure_pasture(:,:) = 0.0_lp
 
     END IF
 
@@ -385,7 +385,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER  :: ptr_2D(:,:)
+    REAL(lp), POINTER  :: ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
     INTEGER            :: nproma, nblks
 

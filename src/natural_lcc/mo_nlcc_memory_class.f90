@@ -14,7 +14,7 @@
 MODULE mo_nlcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -103,7 +103,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('bare_fpc', mem%bare_fpc,                                &
       & hgrid, surface,                                                       &
@@ -111,7 +111,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('pot_fpc', mem%pot_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
@@ -119,7 +119,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,                  &
       & hgrid, pft_vgrid,                                                     &
@@ -127,7 +127,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('bio_exist', mem%bio_exist,                              &
       & hgrid, pft_vgrid,                                                     &
@@ -135,7 +135,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('sum_green_bio_memory', mem%sum_green_bio_memory,        &
       & hgrid, surface,                                                       &
@@ -143,7 +143,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('desert_fpc', mem%desert_fpc,                            &
       & hgrid, surface,                                                       &
@@ -151,7 +151,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     ! diagnostic output variables
     CALL mem%Add_var('cover_fract', mem%cover_fract,                          &
@@ -160,7 +160,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
   END SUBROUTINE Init_nlcc_memory
 

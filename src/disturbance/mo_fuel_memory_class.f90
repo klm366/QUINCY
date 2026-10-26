@@ -14,7 +14,7 @@
 MODULE mo_fuel_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
@@ -75,7 +75,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & loutput=.TRUE., output_level=BASIC,                                                                       &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_lp ) ! initval taken from JSBACH3
 
   END SUBROUTINE Init_fuel_memory
 
