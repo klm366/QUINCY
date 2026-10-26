@@ -31,6 +31,6 @@
     * [ ] exp.land_quincy_standalone_test_2y (NAG)
 
 #### associated merge requests
-* ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
+* icon MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository

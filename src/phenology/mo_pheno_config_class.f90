@@ -14,7 +14,7 @@
 MODULE mo_pheno_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config

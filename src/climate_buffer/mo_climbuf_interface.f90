@@ -22,7 +22,7 @@ MODULE mo_climbuf_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
   USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, &
     &                              is_newyear, is_newmonth, is_newday, &
@@ -135,12 +135,12 @@ CONTAINS
       & ic,                  & !< Looping index for grid cells
       & nc                     !< Number of grid cells in block
 
-    REAL(wp) :: &
+    REAL(lp) :: &
       & seconds_day,         & !< Number of seconds per day
       & seconds_month,       & !< Number of seconds in previous month
       & dtime                  !< Time step length [s]
 
-    REAL(wp), ALLOCATABLE :: &
+    REAL(lp), ALLOCATABLE :: &
       & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
     ! Local fields of the four added annual predictors.

@@ -14,7 +14,7 @@
 MODULE mo_carbon_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -136,7 +136,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     !INTEGER :: icarbon
-    REAL(wp), POINTER ::          &
+    REAL(lp), POINTER ::          &
       & return_pointer  (:,  :) , &  !< temporary pointer just used to "call" the reading
       ! & return_pointer3d(:,:,:)
       & memory_pointer  (:,  :)      !< pointer the memory of the current variable of the current tile
@@ -226,7 +226,7 @@ CONTAINS
         & variable_name = invar_name,              &
         & fill_array = memory_pointer )
 
-      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
 
       !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
 

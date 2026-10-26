@@ -15,7 +15,7 @@ It is a **framework plus interchangeable processes**, not a monolithic land mode
 
 ICON-Land **cannot be compiled or run on its own**. It always needs a *host model* that provides I/O, domain decomposition, parallelization and time control — currently ICON, the only supported host, via the adapter file `src/shared/mo_util_jsbach.f90` on the ICON side. See "Adapters" below.
 
-Development happens in the standalone repo `gitlab.dkrz.de:jsbach/jsbach`, but building and testing happens inside a host-model clone (normally `gitlab.dkrz.de:icon/icon-mpim`).
+Development happens in the standalone repo `gitlab.dkrz.de:jsbach/jsbach`, but building and testing happens inside a host-model clone (`gitlab.dkrz.de:icon/icon`).
 
 ## Core concepts
 
@@ -23,7 +23,7 @@ You cannot usefully edit this code without these. They are all wiki-documented; 
 
 ### Model → tiles → process memory
 
-A **model** (`t_jsb_model`, `src/base/mo_jsb_model_class.f90`) owns a **hierarchical tile tree**, a list of **processes**, and a **task queue**. It extends a hierarchical state machine (`t_Hsm`, `src/base/mo_hsm_class.f90`).
+A **model** (`t_jsb_model`, `src/base/mo_jsb_model_class.f90`) owns a **hierarchical tile tree**, a list of **processes**, a **task queue**, and the **task schedule** derived from them. Tiles are nodes of the tile tree (`t_jsb_tile_tree_node`, `src/base/mo_jsb_tile_tree_class.f90`: `parent`, `first_child`, `next_sibling`, `Has_children`, ...). The model keeps all tiles in precomputed lists, `model%tiles(:)` (pre-order, parents first) and `model%tiles_postorder(:)` (children first), built once by `Build_tile_lists` in `jsbach_setup_tiles`; to loop over tiles, iterate over one of these (`DO itile=1,SIZE(model%tiles); tile => model%tiles(itile)%p`).
 
 **Tiles** (`t_jsb_tile_abstract`, `src/base/mo_jsb_tile_class.f90`, `src/base/mo_jsb_tile.f90`) subdivide each grid cell by surface type, e.g. `box → {land, lake}`, `land → {veg, glacier}`, `veg → {pft01 … pftNN}`. Each tile carries a fraction `tile%fract`; children sum to their parent, and the `box` fraction is the land(+lake) fraction of the ICON grid cell. Each tile holds **its own memory per process**: `tile%mem(PROC_)%p`.
 
@@ -72,9 +72,9 @@ Where a process runs on the tile tree (see associations in `src/base/mo_jsb_mode
 
 Query helpers (see FAQ): `model%Is_process_enabled` (configured at all), `tile%Is_process_active` (integrated *or* aggregated here), `tile%Is_process_calculated` (integrated here), `tile%Has_process_memory`. In addition, the config of a process `PROC` is often directly used to test if a process is active — using `dsl4jsb_Config(PROC_)%active` or (mostly in the infrastructure) `model%processes(PROC_)%p%config%active`.
 
-### Task queue
+### Task queue and schedule
 
-The task queue (`src/base/mo_jsb_task_class.f90`, built in `jsbach_init` in `src/base/mo_jsb_model_init.f90`) fixes the order of `update_*` calls within a timestep. Tiles are walked **leaves → top** so that `aggregate_*` works. `update_`/`aggregate_` are ultimately dispatched from `task%Do_it` inside `Process_task_on_tile` (`src/base/mo_jsb_tile.f90`) — deep inside the state machine, which is why call sites are hard to grep for.
+The task queue (`src/base/mo_jsb_task_class.f90`, built in `jsbach_init` in `src/base/mo_jsb_model_init.f90`) fixes the order of `update_*` calls within a timestep. At the end of `jsbach_init`, `model%Build_task_schedule` turns it into the **task schedule** `model%schedule(:)`: per task, the ordered steps (tile, `TASK_INTEGRATE`/`TASK_AGGREGATE`) obtained by a depth-first walk of the tile tree — a tile with `SKIP_`/`INHERIT_` is skipped with its sub-tree, `ON_TILE_`/`ON_SUBTREE_` or a leaf is integrated, any other tile has its children processed first and is then aggregated (**leaves → top**). Each timestep, `model%Run_tasks` just iterates over these steps and calls `task%Do_it` (with OpenACC, consecutive integrate steps of a task run on separate async queues that are joined before the next aggregate step). Set `debug_level` ≥ 1 to print the schedule at initialization, ≥ 3 to trace every step.
 
 Ordering rules:
 
@@ -84,7 +84,7 @@ Ordering rules:
 
 Currently two different task queues are defined depending on the model scheme (`model%config%model_scheme` — `MODEL_JSBACH` or `MODEL_QUINCY`). For the model scheme `MODEL_QUINCY` additional modularity on task queueing is added by the selected mode (`model%config%qmodel_id`) with `QCANOPY` only adding tasks required for bio-geophysical land-surface processes, `QPLANT` additionally to `QCANOPY` adding tasks required for plant bio-geochemistry, `QSOIL` additionally to `QCANOPY` adding tasks required for soil bio-geochemistry (whereby the implementation of `QSOIL` is not completed yet), and `QLAND` enabling all tasks.
 
-Tasks are queued regardless of the process's `active` namelist flag, so **every `update_`/`aggregate_` routine should start with `IF (.NOT. tile%Is_process_active(XYZ_)) RETURN`**.
+Tasks are queued regardless of the process's `active` namelist flag; the schedule drops tasks of inactive processes and tiles where `tile%Is_process_active` is false. Still, **every `update_`/`aggregate_` routine should start with `IF (.NOT. tile%Is_process_active(XYZ_)) RETURN`**.
 
 ### Aggregation
 
@@ -131,7 +131,7 @@ PFT parameters come from the land-cover-type library in `data/` (`lctlib_nlct21.
 
 Horizontal: the global cell vector is split across MPI domains, each domain into blocks of `nproma` cells. 2D variables are `var(nproma, nblks)`, 3D are `var(nproma, nlev, nblks)`. Inside a task you work on one chunk, addressed by `options%iblk`, `options%ics`, `options%ice` — i.e. `var(options%ics:options%ice, options%iblk)`.
 
-Vertical: `t_jsb_vgrid` (`src/base/mo_jsb_grid_class.f90`), created with `new_vgrid(...)` in a process config class, published with `Register_vgrid`, retrieved anywhere with `Get_vgrid('name')`. Convention: **`ubounds > lbounds` always**, and layer 1 is always the one at the ground with `lbounds(1) = 0.0_wp`, independent of whether the axis points down (soil) or up (canopy).
+Vertical: `t_jsb_vgrid` (`src/base/mo_jsb_grid_class.f90`), created with `new_vgrid(...)` in a process config class, published with `Register_vgrid`, retrieved anywhere with `Get_vgrid('name')`. Convention: **`ubounds > lbounds` always**, and layer 1 is always the one at the ground with `lbounds(1) = 0.0_lp`, independent of whether the axis points down (soil) or up (canopy).
 
 ### Adapters (host-model abstraction)
 
@@ -173,7 +173,7 @@ Full macro inventory: grep `dsl4jsb_` in `scripts/dsl4jsb/dsl4jsb.py`. Families 
 
 Infrastructure:
 
-- `base/` — the framework: model/tile/process/task/memory/variable classes, HSM, usecases, task-queue construction, lcc infrastructure, grids, time, I/O, parallel, lctlib, CQT classes, BGCM store, `mo_jsb_version.f90`
+- `base/` — the framework: model/tile/process/task/memory/variable classes, tile tree, usecases, task-queue and schedule construction, lcc infrastructure, grids, time, I/O, parallel, lctlib, CQT classes, BGCM store, `mo_jsb_version.f90`
 - `interfaces/` — `mo_jsb_interface.f90`, the entry points the host calls: `jsbach_interface`, `jsbach_start_timestep`, `jsbach_finish_timestep`, `jsbach_get_var`, `invalidate_cuda_graphs`
 - `drivers/` — `mo_jsbach_model.f90` (standalone driver, invoked from ICON's `src/drivers/icon.f90`) and `mo_jsb4_forcing.f90` (offline forcing)
 - `shared/` — cross-process helpers: physical/math constants, `mo_phy_schemes.f90`, `mo_orbit_solar.f90`, isotope and time-averaging utilities, OpenACC helpers
@@ -189,11 +189,11 @@ Other top-level directories: `data/` (lctlib files), `doc/` (FORD guide pages, m
 - Per-process namelists: **`jsb_<proc>_nml`** historically for JSBACH processes (`jsb_hydro_nml`, `jsb_carbon_nml`, `jsb_sse_nml`, ...) and **`lnd_<proc>_nml`** for the QUINCY ones (`lnd_veg_nml`, `lnd_sb_nml`, `lnd_q_assimi_nml`, `lnd_q_pheno_nml`, `lnd_q_syl_nml`, `lnd_q_agr_nml`). Each carries at least `active`, plus `bc_filename`/`ic_filename`.
 - In coupled runs ICON-Land output namelists belong to `NAMELIST_atm`, not `NAMELIST_lnd` as in standalone runs.
 
-`__NO_JSBACH__` and `__NO_JSBACH_HD__` guard the whole component and the HD process respectively; other cpp keys in use are `_OPENACC`, `_OPENMP`, `HAVE_CDI_PIO`, `HAVE_F2003`, `HAVE_FC_ATTRIBUTE_CONTIGUOUS`. Keep preprocessor use to technical concerns only, and mind capitalization.
+`__NO_JSBACH__` and `__NO_JSBACH_HD__` guard the whole component and the HD process respectively; other cpp keys in use are `_OPENACC`, `_OPENMP`, `HAVE_F2003`, `HAVE_FC_ATTRIBUTE_CONTIGUOUS`. Keep preprocessor use to technical concerns only, and mind capitalization.
 
 ## Build and run (via the host model; here for levante)
 
-From an ICON(-MPIM) clone — ICON-Land is built as part of ICON, there is no build system in ICON-Land. The `config/dkrz/levante.*` wrappers pin their whole toolchain by absolute path, so **no module needs to be loaded to build**:
+From an ICON clone — ICON-Land is built as part of ICON, there is no build system in ICON-Land. The `config/dkrz/levante.*` wrappers pin their whole toolchain by absolute path, so **no module needs to be loaded to build**:
 
 ```bash
 mkdir build && cd build
@@ -235,7 +235,8 @@ Nothing verifies the rendered result automatically: the `Test build doc` CI job 
 - **License header**: every source file starts with a one-line module summary, then the ICON-Land block using `!>` comment markers — `ICON-Land`, `Copyright (C) 2013-2026, MPI-M, MPI-BGC`, `Contact: icon-model.org`, `Authors: AUTHORS.md`, `See LICENSES/ for license information`, `SPDX-License-Identifier: BSD-3-Clause`. **This differs from ICON's own header** (different years, institutions and comment marker) — copy from a neighbouring file in this repository, not from ICON. See `templates/module_header_with_BSD-3-license.template`; enforced by `scripts/ci_scripts/check_license.sh`.
 - **Model name in prose**: always write "ICON-Land" — never "ICON-L" or "ICON-LAND" — in documentation, wiki pages, commit messages and merge-request text. (Code identifiers, paths and namelist names keep their historical "jsbach" spelling.)
 - **File hygiene**: ASCII only, no non-UTF-8 bytes, no trailing blanks (`scripts/ci_scripts/check_file_format.sh`). Fortran line limit 132 chars, but keep to ≤110 for readable FORD pages. Two-space indentation, no tabs.
-- **Style**: spaces around operators; real literals as `_wp` (`2._wp`); cast integers explicitly (`REAL(iexp, wp)`) rather than mixing types; `==`/`<`/`<=` rather than `.EQ.`/`.LT.`/`.LE.`.
+- **Style**: spaces around operators; real literals as `_lp` (`2._lp`); cast integers explicitly (`REAL(iexp, lp)`) rather than mixing types; `==`/`<`/`<=` rather than `.EQ.`/`.LT.`/`.LE.`.
+- **Real kinds**: `lp` (from ICON's `mo_kind`) is the working precision of ICON-Land; use it for all reals inside ICON-Land. `wp` is the working precision of the host model ICON and may differ from `lp` (currently `lp = wp`, so the compiler does not catch a mix-up). `wp` appears only at the public entry points called by ICON in `src/interfaces/mo_jsb_interface.f90` (`jsbach_interface`, `jsbach_start_timestep`, `jsbach_finish_timestep`, the `arr*` arguments of `jsbach_get_var`), in `update_atm2land`/`update_land2atm` (`src/atmland/mo_atmland_interface.f90`) and where the standalone driver calls these routines. Convert values that cross this boundary explicitly with `REAL(x, KIND=lp)` or `REAL(x, KIND=wp)`. Pointers into ICON-Land memory (`ptr*` of `jsbach_get_var`) are `lp`.
 - **Naming**: variables `small_caps`; 3D variables carry a suffix naming their third dimension (`_cl` canopy layer, `_sl` soil layer, `_snl` snow layer); enumerators `ALL_CAPS` (`ASSIMI_`, `MODEL_QUINCY`); type-bound procedures `Capitalised_small_caps`, usually verb-first (`Init_vars`, `Configure_model_processes`).
 - **Argument order** for scientific routines: dimensions → lctlib parameters → config variables → `in` → `inout` → `out`, with bgc_material structures after the plain 2D/3D variables in each group.
 - **Inline documentation is part of the deliverable.** FORD uses `!>` before a code line and `!<` after it. Every memory variable and every constant needs a long name and `[unit]` at declaration; every constant needs a literature reference (or an explicit "tuned against X") at its definition. See "Documentation" for checking how it renders.
@@ -254,7 +255,7 @@ This repository's own GitLab CI (`.gitlab-ci.yml`) is deliberately thin: a `Chec
 ./scripts/ci_scripts/check_license.sh
 ```
 
-Nothing here builds or runs on its own, so **all functional and regression testing happens in the paired host-model merge request** (normally in `icon-mpim`). There it is covered by *two independent systems* — do not treat either as a substitute for the other:
+Nothing here builds or runs on its own, so **all functional and regression testing happens in the paired host-model merge request** in `icon`. There it is covered by *two independent systems* — do not treat either as a substitute for the other:
 
 - **ICON's GitLab CI**, which runs automatically on the merge-request pipeline (stage/job inventory: ICON's own `AGENTS.md`). Its `unit` stage compiles ICON including ICON-Land with every supported toolchain, so a build break in this repository surfaces there without you doing anything. The `system` stage runs experiments and compares checksums, but all of its builds are `manual` — a green pipeline therefore does **not** mean your change was run. Start the system jobs your change can affect.
 - **Buildbot**, which is pull-based and independent of GitLab CI; there is no Buildbot for this repository. Trigger it by commenting `runBB(<builder>)` on the host-model MR — e.g. `runBB(levante;atm)` or `runBB(merge2rc)`. New tests must be `exp.*` runscripts (not mkexp configs) placed under ICON's `run/` and registered with an `$addexp` line in `scripts/buildbot_scripts/` (usually `create_list_icon_dev`). If results change, reference data must be regenerated via `create_list_update` in agreement with the gatekeeper; GPU/CPU tolerance testing uses `create_list_tolerance-update`.
@@ -265,21 +266,23 @@ Minimum manual testing before proposing a merge: levante with **both NAG (debugg
 
 ## Repository layout and merge workflow
 
-Three repositories are involved:
+Repositories involved:
 
-- **jsbach** (this one) — ICON-Land development. `land4icon-mpim` is the default and main development branch; `master` is what ICON release candidates point at. Branches: `feature/...`, `bugfix/...` (older commits use `hotfix/`), `project/...` (formerly `application/...`), lowercase, hyphen-separated.
-- **icon-mpim** — MPI-M/MPI-BGC ICON development; carries this repo as `externals/jsbach`. Land branches there are named `feature-land-...` (hyphens, no slash).
-- **icon** — the shared/official repository with the release candidates and releases.
+- **jsbach** (this one) — ICON-Land development. All development happens on `land4icon-mpim`, the default branch (to be renamed `main`); `master` is no longer used. Releases are tags `icon-land-YYYY.MM` on `land4icon-mpim`; patch releases are tags `icon-land-YYYY.MM-N` on side branches `icon-land-release-YYYY.MM`. Branches: `feature/...`, `bugfix/...` (older commits use `hotfix/`), `project/...` (formerly `application/...`), lowercase, hyphen-separated.
+- **icon** — the shared/official repository; carries this repo as `externals/jsbach`. Its `main` branch is the development branch (release candidate) and points `externals/jsbach` at a commit on `land4icon-mpim`; ICON releases are tags on `main`, patch releases tags on `release-YYYY.MM` branches. Land branches there are named `feature-land-...` (hyphens, no slash).
+- **icon-mpim** — must not be used for development anymore (since autumn 2026); treat it as a read-only source: no new branches, commits or merge requests there. Older commits and merge requests refer to it.
 
 Work cycle: issue → branch from `land4icon-mpim` → develop → merge `land4icon-mpim` in frequently → test → merge request into `land4icon-mpim` with a verbose description (it becomes the squashed commit message) → review by a gatekeeper.
 
-Backmerging a feature needs **two coordinated merge requests** — one here into `land4icon-mpim`, one in `icon-mpim` into `master` — merged in that order by a gatekeeper. While the pair is under test, the `icon-mpim` MR has `externals/jsbach` pointing at your feature branch; once the jsbach MR is merged, **update the pointer to the resulting commit on `land4icon-mpim`** before the `icon-mpim` MR goes in. Merges here are squashed and the source branch is deleted afterwards, so your feature-branch commit never becomes part of `land4icon-mpim` — leaving it in place would point `icon-mpim` `master` at a commit no branch contains. When updating an ICON release candidate, `externals/jsbach` must point at a commit on jsbach **`master`**, never `land4icon-mpim`; `master` is updated from `land4icon-mpim` first, then the version string `icon_land_version` in `src/base/mo_jsb_version.f90` is bumped (`YYYY.MM` / `YYYY.MM-N`) and tagged `icon-land-YYYY.MM`.
+Merging a feature needs **two coordinated merge requests** — one here into `land4icon-mpim`, one in `icon` into `main` — merged in that order by a gatekeeper. While the pair is under test, the `icon` MR has `externals/jsbach` pointing at your feature branch; once the ICON-Land MR is merged, **update the pointer to the resulting commit on `land4icon-mpim`** before the `icon` MR goes in. Merges here are squashed and the source branch is deleted afterwards, so your feature-branch commit never becomes part of `land4icon-mpim` — leaving it in place would point `icon` `main` at a commit no branch contains.
 
-If you change infrastructure, remember the host adapter: a matching change to `src/shared/mo_util_jsbach.f90` on the ICON side must go into the paired `icon-mpim` merge request, and the dependency order between the two MRs must be stated so the dependent one is not merged first.
+ICON-Land releases (version string `icon_land_version` in `src/base/mo_jsb_version.f90`, `YYYY.MM` / `YYYY.MM-N`) are made independently of, and usually shortly before, the ICON releases: a version-bump merge request into `land4icon-mpim`, tagged `icon-land-YYYY.MM`, then an `icon` MR that points `externals/jsbach` at the tag. Patch releases cherry-pick fixes onto `icon-land-release-YYYY.MM`, which starts at the ICON-Land commit of the ICON release `icon-YYYY.MM`. The step-by-step procedure is in the wiki page [Branches and repository structure](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/Developing-ICON-Land/Branches-and-repository-structure).
 
-**Always open merge requests as Draft**, in this repository and in `icon-mpim` alike. Never merge one yourself — a gatekeeper does that, and undrafting is their signal that the MR is ready.
+If you change infrastructure, remember the host adapter: a matching change to `src/shared/mo_util_jsbach.f90` on the ICON side must go into the paired `icon` merge request, and the dependency order between the two MRs must be stated so the dependent one is not merged first.
 
-**Cross-link the pair in both directions.** The `icon-mpim` MR names the jsbach one from the start (it is created second, so the number is known). As soon as both exist, go back and append a reference to the `icon-mpim` MR — full cross-project form, `icon/icon-mpim!<number>` — to the end of the jsbach MR description, so a reviewer landing on either one finds the other.
+**Always open merge requests as Draft**, in this repository and in `icon` alike. Never merge one yourself — a gatekeeper does that, and undrafting is their signal that the MR is ready.
+
+**Cross-link the pair in both directions.** The `icon` MR names the jsbach one from the start (it is created second, so the number is known). As soon as both exist, go back and append a reference to the `icon` MR — full cross-project form, `icon/icon!<number>` — to the end of the ICON-Land MR description, so a reviewer landing on either one finds the other.
 
 ## Known pitfalls
 
@@ -296,4 +299,4 @@ Do not add a `Co-Authored-By: Claude` (or other AI) trailer to commits. This rep
 
 When a commit message references a merge request or an issue, write the **full URL** — `https://gitlab.dkrz.de/jsbach/jsbach/-/merge_requests/450` — not GitLab's `project!number` shorthand. Commit messages are read with `git log` and in mail, outside GitLab, where the shorthand resolves to nothing. In merge request descriptions the shorthand is the better choice and should be used instead.
 
-In the `icon-mpim` repository, **never prepend `[mpim]` to commit messages on a feature branch.** That prefix marks commits that have landed on `icon-mpim`'s `master`, and it is added automatically when the merge request is merged. Writing it yourself on a feature branch produces a doubled or misleading prefix.
+In the `icon` repository, do not prefix commit messages or merge request titles with a repository tag such as `[mpim]` (used in the former `icon-mpim` workflow): merge requests are squashed, and the squash commit takes the merge request title as is.

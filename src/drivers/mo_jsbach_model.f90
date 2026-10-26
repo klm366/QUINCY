@@ -23,7 +23,7 @@ MODULE mo_jsbach_model
 #ifndef __NO_JSBACH__
 
   USE mo_exception,   ONLY: message, message_text, finish
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp, wp
   USE mo_util_string, ONLY: int2string, real2string
 
   USE mtime,        ONLY: datetime, newDatetime, datetimeToString, timedelta, newTimedelta, getPTStringFromSeconds, &
@@ -41,10 +41,6 @@ MODULE mo_jsbach_model
   IMPLICIT NONE
 
   PRIVATE
-
-#ifdef HAVE_CDI_PIO
-    INCLUDE 'cdipio.inc'
-#endif
 
   PUBLIC :: jsbach_model
 
@@ -90,7 +86,7 @@ CONTAINS
     USE mo_mpi,                     ONLY: stop_mpi, my_process_is_io, my_process_is_stdio, &
       &                                   set_mpi_work_communicators, process_mpi_io_size
     USE mo_parallel_config,         ONLY: p_test_run, num_test_pe, l_test_openmp,                              &
-      &                                   num_io_procs, pio_type, proc0_shift,                                 &
+      &                                   num_io_procs, proc0_shift,                                           &
       &                                   num_prefetch_proc, nproma, proc0_offloading, check_parallel_configuration
 
     USE mo_zaxis_type,              ONLY: zaxisTypeList, t_zaxisTypeList
@@ -110,20 +106,9 @@ CONTAINS
       &                                   istime4name_list_output
     USE mo_output_event_handler,    ONLY: get_current_jfile
     USE mo_icon_output_tools,       ONLY: init_io_processes
-#ifdef HAVE_CDI_PIO
-    USE mo_mpi,                     ONLY: mpi_comm_null, p_comm_work_io
-    USE mo_name_list_output_init,   ONLY: init_cdipio_cb
-    USE mo_name_list_output,        ONLY: write_ready_files_cdipio
-    USE yaxt,                       ONLY: xt_initialize, xt_initialized
-    USE mo_cdi,                     ONLY: namespacegetactive, namespaceSetActive
-    USE mo_cdi_pio_interface,       ONLY: nml_io_cdi_pio_namespace, &
-      &                                   cdi_base_namespace, &
-      &                                   nml_io_cdi_pio_client_comm, &
-      &                                   nml_io_cdi_pio_conf_handle
-#endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
+    USE mo_impl_constants,          ONLY: SUCCESS
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -149,6 +134,9 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_derived_variable_handling, ONLY: update_statistics
+#ifndef __NO_RAGNAROK__
+    USE mo_ragnarok_setup,          ONLY: init_ragnarok_model, finalize_ragnarok_model
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
@@ -163,14 +151,10 @@ CONTAINS
     CHARACTER(len=MAX_MTIME_ERROR_STR_LEN) :: errstring
     INTEGER                                :: error_status
 
-#ifdef HAVE_CDI_PIO
-    INTEGER :: prev_cdi_namespace
-#endif
-
     ! Time and event management
     TYPE(datetime), POINTER       :: mtime_current
     TYPE(datetime), POINTER       :: mtime_old
-    REAL(wp) :: sim_time          ! elapsed simulation time
+    REAL(lp) :: sim_time          ! elapsed simulation time
     TYPE(datetime),  POINTER :: eventStartDate    => NULL(), &
       &                         eventEndDate      => NULL()
     TYPE(datetime),  POINTER :: checkpointRefDate => NULL(), &
@@ -276,7 +260,11 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=proc0_shift)
+         &                          num_dio_procs=proc0_shift)
+
+#ifndef __NO_RAGNAROK__
+    CALL init_ragnarok_model()
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -403,7 +391,7 @@ CONTAINS
       CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
       CALL jsbach_setup_tiles(jg)
       CALL jsbach_init(jg)
-      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, REAL(dtime,KIND=lp))
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -625,7 +613,7 @@ CONTAINS
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
-        lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
+        lprint_timestep = MOD(jstep,timesteps_per_day(REAL(dtime,KIND=lp),1)) == 0
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
@@ -650,7 +638,7 @@ CONTAINS
         CALL run_one_timestep( &
           & jg, &                   ! model
           & p_patch(jg)%nblks_c, &  ! ..
-          & dtime, &                ! length of timestep in seconds
+          & REAL(dtime,KIND=lp), &  ! length of timestep in seconds
           & mtime_current)          ! ..
       END DO
 
@@ -767,6 +755,9 @@ CONTAINS
     CALL destruct_icon_communication()
     CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
+#ifndef __NO_RAGNAROK__
+    CALL finalize_ragnarok_model()
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 21.0 Delete variable lists
@@ -774,14 +765,6 @@ CONTAINS
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
     ENDIF
-#ifdef HAVE_CDI_PIO
-    IF (pio_type == pio_type_cdipio) THEN
-      prev_cdi_namespace = namespaceGetActive()
-      CALL namespaceSetActive(nml_io_cdi_pio_namespace)
-      CALL pioFinalize
-      CALL namespaceSetActive(prev_cdi_namespace)
-    END IF
-#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 22.0 finish message and print performance timers
@@ -824,7 +807,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)            :: model_id
     INTEGER,                INTENT(in)            :: nblks
-    REAL(wp)              , INTENT(in)            :: dtime          !< time step
+    REAL(lp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=max_timedelta_str_len) :: dtime_string     !< time delta as string
@@ -857,10 +840,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daylength_prev_day
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 
-    REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
+    REAL(lp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
+    REAL(lp), ALLOCATABLE :: evapo_act2pot(:,:), co2_air_dc13(:,:), co2_air_Dc14(:,:)
 
-    REAL(wp) :: hlp1   ! Temporary scalar for mixing ratio calculations
+    REAL(lp) :: hlp1   ! Temporary scalar for mixing ratio calculations
     LOGICAL :: use_external_forcing               ! use forcing from external forcing (e.g., observation based data)
     LOGICAL :: l_first_forcing_file    = .TRUE.
     LOGICAL :: l_shift_one_timestep    = .TRUE.
@@ -922,7 +905,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> start timestep
     !>
-    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_start_timestep(model_id, datetime_old, REAL(dtime,KIND=wp))
 
     model => get_model(model_id)
     grid  => get_grid(model%grid_id)
@@ -968,7 +951,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) = 1._wp
+            evapo_act2pot(ic, iblk) = 1._lp
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -978,8 +961,8 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._wp)) &
-              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._wp))
+            evapo_act2pot(ic, iblk) =   MIN(evapotrans(ic, iblk), -EPSILON(1._lp)) &
+              &                       / MIN(evapopot  (ic, iblk), -EPSILON(1._lp))
           END DO
         END DO
         !$ACC END PARALLEL LOOP
@@ -1084,7 +1067,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
         DO iblk = 1, nblks
           DO ic = 1, nproma
-            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._wp
+            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._lp
           ENDDO
         ENDDO
         !$ACC END PARALLEL LOOP
@@ -1094,7 +1077,7 @@ CONTAINS
         DO iblk = 1, nblks
           DO ic = 1, nproma
             hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
-            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._wp + 1._wp / hlp1)
+            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._lp + 1._lp / hlp1)
             hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
             CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
           END DO
@@ -1152,11 +1135,11 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
-        &                    dtime=dtime, alpha=1._wp)
+        &                    dtime=dtime, alpha=1._lp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
       ! Run tasks in queue
-      CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+      CALL model%Run_tasks(debug_on('tasks') .AND. iblk == 1)
 
       ! @TODO cleanup / remove ?
       !!$    IF (iblk == 1)                                                              &
@@ -1175,7 +1158,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> finish timestep
     !>
-    CALL jsbach_finish_timestep(model_id, datetime_old, dtime)
+    CALL jsbach_finish_timestep(model_id, datetime_old, REAL(dtime,KIND=wp))
 
     CALL deallocateDatetime(datetime_old)
     CALL deallocateDatetime(datetime_old_old)

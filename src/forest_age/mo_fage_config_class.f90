@@ -18,7 +18,7 @@ MODULE mo_fage_config_class
   USE mo_exception,          ONLY: message_text, message, finish
   USE mo_util,               ONLY: int2string
   USE mo_io_units,           ONLY: filename_max
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN, MEDIUM_NAME_LEN
 
@@ -85,8 +85,8 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
     INTEGER :: i
-    REAL(wp), ALLOCATABLE :: fage_grid_levels(:)
-    REAL(wp), ALLOCATABLE :: age_class_max_age(:), age_class_mean_age(:)
+    REAL(lp), ALLOCATABLE :: fage_grid_levels(:)
+    REAL(lp), ALLOCATABLE :: age_class_max_age(:), age_class_mean_age(:)
     TYPE(t_jsb_vgrid), POINTER :: forest_age, age_classes_grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fage_config'
@@ -145,10 +145,10 @@ CONTAINS
     CALL register_vgrid(age_classes_grid)
 
     !> specifies vertical grid with tracked age dimension
-    fage_grid_levels(1:max_age) = (/ (REAL(i,kind=wp),i=1,max_age) /)
+    fage_grid_levels(1:max_age) = (/ (REAL(i,kind=lp),i=1,max_age) /)
     forest_age  => new_vgrid('forest_age', ZAXIS_GENERIC, max_age, &
-      & levels  = fage_grid_levels (1:max_age) - 0.5_wp, &
-      & lbounds = fage_grid_levels (1:max_age) - 1._wp,  &
+      & levels  = fage_grid_levels (1:max_age) - 0.5_lp, &
+      & lbounds = fage_grid_levels (1:max_age) - 1._lp,  &
       & ubounds = fage_grid_levels (1:max_age),          &
       & units='y')
     CALL register_vgrid(forest_age)
@@ -172,11 +172,11 @@ CONTAINS
       !< the age class scheme to determine age class boundaries: currently either 'equal' or 'shorterYoung'
     INTEGER, INTENT(IN)          ::  max_age               !<
     INTEGER, INTENT(IN)          ::  nacs                  !<
-    REAL(wp), INTENT(INOUT)      ::  age_class_max_age(:)  !<
-    REAL(wp), INTENT(INOUT)      ::  age_class_mean_age(:) !<
+    REAL(lp), INTENT(INOUT)      ::  age_class_max_age(:)  !<
+    REAL(lp), INTENT(INOUT)      ::  age_class_mean_age(:) !<
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: i
-    REAL(wp):: age_interval
+    REAL(lp):: age_interval
     CHARACTER(len=*), PARAMETER :: routine = modname//':derive_age_class_boundaries'
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -189,8 +189,8 @@ CONTAINS
     END IF
 
     ! First class always contains the first year only
-    age_class_max_age(1) = 0._wp
-    age_class_max_age(2) = 1._wp
+    age_class_max_age(1) = 0._lp
+    age_class_max_age(2) = 1._lp
 
     IF (age_class_scheme == 'equal' ) THEN
       ! Equal intervals distributed equally over all but the first age class
@@ -217,7 +217,7 @@ CONTAINS
     age_class_max_age(nacs+1) = max_age
 
     ! Assertion (currently this is of course the case - just in case that others want to define distributions themselves)
-    IF (age_class_max_age(2) .NE. 1._wp) THEN
+    IF (age_class_max_age(2) .NE. 1._lp) THEN
       CALL finish(TRIM(routine), 'Assertion: upper boundary of lowest age class always needs to have max_age of 1!')
     END IF
     IF (ANY(age_class_max_age(:) .GT. max_age)) THEN
@@ -225,7 +225,7 @@ CONTAINS
     END IF
 
     DO i = 1,nacs
-      age_class_mean_age(i) = (age_class_max_age(i) + age_class_max_age(i+1)) * 0.5_wp
+      age_class_mean_age(i) = (age_class_max_age(i) + age_class_max_age(i+1)) * 0.5_lp
     END DO
 
   END SUBROUTINE derive_age_class_boundaries

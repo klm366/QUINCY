@@ -14,35 +14,35 @@
 MODULE mo_atmland_constants
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
 
   IMPLICIT NONE
 
   ! solar constant
-  REAL(wp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
-  REAL(wp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
+  REAL(lp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
+  REAL(lp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
 
   ! wind speed
-  REAL(wp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
-  REAL(wp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
-  REAL(wp),SAVE :: def_wind                    !< wind (m/s)
+  REAL(lp),SAVE :: min_wind                    !< minimum wind speed allowed to prevent total decoupling of the surface (m/s)
+  REAL(lp),SAVE :: max_wind                    !< maximum wind speed allowed to prevent excess cooling of the surface (m/s)
+  REAL(lp),SAVE :: def_wind                    !< wind (m/s)
 
   ! conversion factors
-  REAL(wp),SAVE :: standard_press_srf          !< standard pressure in Pa
-  REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
+  REAL(lp),SAVE :: standard_press_srf          !< standard pressure in Pa
+  REAL(lp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
   ! default values of model forcing for model testing:
   !  @TODO some of the 'default values of model forcing' might not be used (and can be removed ?)
-  REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
-  REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
-  REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
-  REAL(wp),SAVE :: def_fdiffuse                !< diffuse fraction
-  REAL(wp),SAVE :: def_cos_angle               !< cosine of zenith angle
-  REAL(wp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
-  REAL(wp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
-  REAL(wp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in 10^-12 ppm
-  REAL(wp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
-  REAL(wp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
+  REAL(lp),SAVE :: def_t_air                   !< temperature in deg K
+  REAL(lp),SAVE :: def_vpd                     !< vpd in Pa
+  REAL(lp),SAVE :: def_swdown                  !< PAR in W m-2
+  REAL(lp),SAVE :: def_fdiffuse                !< diffuse fraction
+  REAL(lp),SAVE :: def_cos_angle               !< cosine of zenith angle
+  REAL(lp),SAVE :: def_co2_mixing_ratio        !< atmospheric CO2 in ppm
+  REAL(lp),SAVE :: def_co2_mixing_ratio_C13    !< atmospheric 13CO2 in ppm
+  REAL(lp),SAVE :: def_co2_mixing_ratio_C14    !< atmospheric 14CO2 in 10^-12 ppm
+  REAL(lp),SAVE :: def_co2_deltaC13            !< molar mixing ratio of 13C / 12C of atmospheric CO2
+  REAL(lp),SAVE :: def_co2_deltaC14            !< molar mixing ratio of 14C / 12C of atmospheric CO2
 
   PUBLIC
 
@@ -77,32 +77,32 @@ CONTAINS
 
     !> initialise solar constant
     !!
-    frac_vis_swtot_srf        = 0.54_wp    ! UV-A+PAR / UV-A+PAR+NIR; Monteith & Unsworth 1995
-    frac_par_swvis_srf        = 0.9_wp     ! PAR/PAR+UV-A
+    frac_vis_swtot_srf        = 0.54_lp    ! UV-A+PAR / UV-A+PAR+NIR; Monteith & Unsworth 1995
+    frac_par_swvis_srf        = 0.9_lp     ! PAR/PAR+UV-A
 
     !> wind speed
     !!
-    min_wind                  = 0.3_wp
-    max_wind                  = 5.0_wp
-    def_wind                  = 1.0_wp
+    min_wind                  = 0.3_lp
+    max_wind                  = 5.0_lp
+    def_wind                  = 1.0_lp
 
     !> conversion factors
     !!
-    standard_press_srf        = 101300.0_wp
-    eps_vpd                   = 0.622_wp
+    standard_press_srf        = 101300.0_lp
+    eps_vpd                   = 0.622_lp
 
     !> default values
     !!
-    def_t_air                 = 298.15_wp
-    def_vpd                   = 1000._wp
-    def_swdown                = 652.173913_wp
-    def_fdiffuse              = 0.2_wp
-    def_cos_angle             = 1.0_wp
-    def_co2_mixing_ratio      = 380.0_wp
-    def_co2_deltaC13          = -6.6_wp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025)
+    def_t_air                 = 298.15_lp
+    def_vpd                   = 1000._lp
+    def_swdown                = 652.173913_lp
+    def_fdiffuse              = 0.2_lp
+    def_cos_angle             = 1.0_lp
+    def_co2_mixing_ratio      = 380.0_lp
+    def_co2_deltaC13          = -6.6_lp     ! CMIP7 PI control 1850 reference value, cf. Graven, H. (2025)
                                             ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
-    def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._wp + 1._wp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
-    def_co2_deltaC14          = -3.2_wp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
+    def_co2_mixing_ratio_C13  = def_co2_mixing_ratio / (1._lp + 1._lp/calc_mixing_ratio_C13C12(def_co2_deltaC13))
+    def_co2_deltaC14          = -3.2_lp     ! CMIP7 PI control 1850 reference value for NH, cf. Graven, H. (2025)
                                             ! doi: 10.25981/ESGF.input4MIPs.CMIP7/2583902.
     def_co2_mixing_ratio_C14  = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14) * def_co2_mixing_ratio
 
