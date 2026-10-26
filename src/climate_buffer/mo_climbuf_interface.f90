@@ -146,16 +146,16 @@ CONTAINS
     ! Local fields of the four added annual predictors.
     ! Author: Dr. Sri Nandini-Weiß
     ! Date: 2026-10-01
-    REAL(wp), ALLOCATABLE :: &
+    REAL(lp), ALLOCATABLE :: &
       & q_rel_air_t(:),      & !< Relative humidity of the air with respect to t_air [%]
       & soil_moist(:),       & !< Volumetric soil water (liquid + ice) of the upper 1 m [m3 m-3]
       & sw_net(:)              !< Net surface shortwave radiation [W m-2]
-    REAL(wp) :: &
+    REAL(lp) :: &
       & z_top,               & !< Upper boundary of a soil layer [m]
       & z_soil,              & !< Thickness of the soil (above bedrock) of that layer inside 0-1 m [m]
       & w_sum,               & !< Depth-weighted sum of volumetric soil water [m]
       & d_sum                  !< Summed soil thickness inside 0-1 m [m]
-    REAL(wp), PARAMETER :: soil_moist_depth = 1._wp   !< Depth of the ERA5-Land predictor layer [m]
+    REAL(lp), PARAMETER :: soil_moist_depth = 1._lp   !< Depth of the ERA5-Land predictor layer [m]
     INTEGER :: is, nsoil
     TYPE(t_jsb_vgrid), POINTER :: soil_w   !< Vertical grid of the soil water layers
 
@@ -326,8 +326,8 @@ CONTAINS
     DO ic = 1, nc
       q_rel_air_t(ic) = get_relative_humidity_air(q_air(ic), t_air(ic), press_srf(ic), use_tmx)
     END DO
-    soil_moist(:) = 0._wp
-    sw_net(:)     = 0._wp
+    soil_moist(:) = 0._lp
+    sw_net(:)     = 0._lp
     IF (tile%Has_process_memory(RAD_)) THEN
       dsl4jsb_Get_memory(RAD_)
       dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! in
@@ -341,17 +341,17 @@ CONTAINS
       soil_w => Get_vgrid('soil_depth_water')
       nsoil  = soil_w%n_levels
       DO ic = 1, nc
-        w_sum = 0._wp
-        d_sum = 0._wp
+        w_sum = 0._lp
+        d_sum = 0._lp
         DO is = 1, nsoil
           z_top  = soil_w%lbounds(is)
-          z_soil = MAX(0._wp, MIN(z_top + soil_depth_sl(ic,is), soil_moist_depth) - z_top)
-          IF (z_soil > 0._wp .AND. soil_depth_sl(ic,is) > 0._wp) THEN
+          z_soil = MAX(0._lp, MIN(z_top + soil_depth_sl(ic,is), soil_moist_depth) - z_top)
+          IF (z_soil > 0._lp .AND. soil_depth_sl(ic,is) > 0._lp) THEN
             w_sum = w_sum + (wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)) / soil_depth_sl(ic,is) * z_soil
             d_sum = d_sum + z_soil
           END IF
         END DO
-        IF (d_sum > 0._wp) soil_moist(ic) = w_sum / d_sum
+        IF (d_sum > 0._lp) soil_moist(ic) = w_sum / d_sum
       END DO
     END IF
 
