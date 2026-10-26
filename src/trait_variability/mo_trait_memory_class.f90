@@ -85,14 +85,14 @@ CONTAINS
         & t_cf('vcmax25_raw', 'umol m-2 s-1', 'Vcmax25 of the PFT before the bounds'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('vcmax25_pred', mem%vcmax25_pred,                                     &
         & hgrid, surface,                                                                  &
         & t_cf('vcmax25_pred', 'umol m-2 s-1', 'Vcmax25 of the PFT after bounds and Jmax25-Vcmax25 constraint'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('jmax25_raw', mem%jmax25_raw,                                         &
         & hgrid, surface,                                                                  &
@@ -100,7 +100,7 @@ CONTAINS
         &      'Jmax25 of the PFT before the bounds (C4: PEPcase CO2 specificity)'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('jmax25_pred', mem%jmax25_pred,                                       &
         & hgrid, surface,                                                                  &
@@ -108,28 +108,28 @@ CONTAINS
         &      'Jmax25 of the PFT after bounds and constraint (C4: PEPcase CO2 specificity)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('sla_raw', mem%sla_raw,                                               &
         & hgrid, surface,                                                                  &
         & t_cf('sla_raw', 'm2 kg-1', 'SLA of the PFT before the bounds, per kg leaf carbon'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('sla_pred', mem%sla_pred,                                             &
         & hgrid, surface,                                                                  &
         & t_cf('sla_pred', 'm2 kg-1', 'SLA of the PFT after the bounds, per kg leaf carbon'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var('jmax_vcmax_ratio', mem%jmax_vcmax_ratio,                             &
         & hgrid, surface,                                                                  &
         & t_cf('jmax_vcmax_ratio', '1', 'Ratio jmax25_raw / vcmax25_raw of the PFT'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
         & TRIM(pre), '', output_level=MEDIUM,                                              &
-        & lrestart=.TRUE., initval_r=0.0_wp)
+        & lrestart=.TRUE., initval_r=0.0_lp)
 
     END IF
 

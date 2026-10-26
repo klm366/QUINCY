@@ -36,7 +36,11 @@ The key decisions are:
 - C4 Jmax25 is never applied, because ETransport of a C4 tile is the PEPcase CO2 specificity.
 - C4 S2 changes only SLA.
 - Pastures copy the grasses.
-- PFT13 Vcmax25 and Jmax25 stay static: their MAT and MAP terms are not significant (p = 0.18–0.78).
+- PFT13 (mangrove, lctlib id 21): decision of 26 October 2026, all three traits vary. This replaces the decision of 1 October 2026 (PFT13 static because the MAT and MAP
+  terms are not significant, p = 0.18–0.78). Method: the Zhao-data regressions of July 2026 (weighted ridge, MAT + MAP, for Vcmax25 and Jmax25; MAP, Tmax and MAP·Tmax for SLA;
+  four, four and seven site means; bounds = 2.5 and 97.5 % quantiles of the individual observations; no Jmax25-Vcmax25 constraint). The numbers are inserted by
+  `Manuscript1/scripts/trait_variability_12PFT/add_pft13_to_trait_table_20261026.py`; PFT01-PFT12 are untouched. With four sites the equations are predictive, not inferential.
+  The offline test `fortran_test/test_trait_fortran_20261026.py` compares id 21 with the equations read from `preprocessing/TRY7/pft13_trait_regressions/output` (max difference 1.4e-13).
 - `lctlib_nlct22_mangrove_control.def` is not used, because its Fract_npp_2_woodPool is 0.3 instead of cmip7's 0.4.
 
 ## Offline test
