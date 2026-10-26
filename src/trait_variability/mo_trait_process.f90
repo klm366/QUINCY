@@ -43,7 +43,7 @@
 MODULE mo_trait_process
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp, wp
   USE mo_jsb_physical_constants, ONLY: tmelt, molar_mass_C
 
   IMPLICIT NONE
