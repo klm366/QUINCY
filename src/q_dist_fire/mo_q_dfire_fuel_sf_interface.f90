@@ -132,8 +132,20 @@ CONTAINS
     INTEGER                                   :: iblk, ics, ice, nc
     CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_q_dfire_fuel_sf'
     LOGICAL                                   :: is_mask_enabled
-    LOGICAL, PARAMETER                        :: mask_grass_pfts(14) = [.false., .false., .false., .false., .false., .false., .true., .true., .false., .false., .false., .false., .false., .false.]
-    LOGICAL, PARAMETER                        :: mask_tree_pfts(14) = [.true., .true., .true., .true., .true., .true., .false., .false., .false., .false., .false., .false., .false., .false.]
+    LOGICAL, PARAMETER                        :: mask_grass_pfts(14) = [.false., .false., &
+                                                                        .false., .false., &
+                                                                        .false., .false., &
+                                                                        .true., .true., &
+                                                                        .false., .false., &
+                                                                        .false., .false., &
+                                                                        .false., .false.]
+    LOGICAL, PARAMETER                        :: mask_tree_pfts(14) = [.true., .true., &
+                                                                        .true., .true., &
+                                                                        .true., .true., &
+                                                                        .false., .false., &
+                                                                        .false., .false., &
+                                                                        .false., .false., &
+                                                                        .false., .false.]
     LOGICAL, PARAMETER                        :: mask_burnable_pfts(14) = mask_grass_pfts .OR. mask_tree_pfts ! [.true., .true., .true., .true., .true., .true., .true., .true., .false., .false., .false., .false., .false., .false.]
     CHARACTER(len=*), PARAMETER               :: mask_on_tile = "veg"
     ! ----------------------------------------------------------------------------------------------------- !
