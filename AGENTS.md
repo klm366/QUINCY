@@ -15,7 +15,7 @@ It is a **framework plus interchangeable processes**, not a monolithic land mode
 
 ICON-Land **cannot be compiled or run on its own**. It always needs a *host model* that provides I/O, domain decomposition, parallelization and time control — currently ICON, the only supported host, via the adapter file `src/shared/mo_util_jsbach.f90` on the ICON side. See "Adapters" below.
 
-Development happens in the standalone repo `gitlab.dkrz.de:jsbach/jsbach`, but building and testing happens inside a host-model clone (normally `gitlab.dkrz.de:icon/icon-mpim`).
+Development happens in the standalone repo `gitlab.dkrz.de:jsbach/jsbach`, but building and testing happens inside a host-model clone (`gitlab.dkrz.de:icon/icon`).
 
 ## Core concepts
 
@@ -193,7 +193,7 @@ Other top-level directories: `data/` (lctlib files), `doc/` (FORD guide pages, m
 
 ## Build and run (via the host model; here for levante)
 
-From an ICON(-MPIM) clone — ICON-Land is built as part of ICON, there is no build system in ICON-Land. The `config/dkrz/levante.*` wrappers pin their whole toolchain by absolute path, so **no module needs to be loaded to build**:
+From an ICON clone — ICON-Land is built as part of ICON, there is no build system in ICON-Land. The `config/dkrz/levante.*` wrappers pin their whole toolchain by absolute path, so **no module needs to be loaded to build**:
 
 ```bash
 mkdir build && cd build
@@ -255,7 +255,7 @@ This repository's own GitLab CI (`.gitlab-ci.yml`) is deliberately thin: a `Chec
 ./scripts/ci_scripts/check_license.sh
 ```
 
-Nothing here builds or runs on its own, so **all functional and regression testing happens in the paired host-model merge request** (normally in `icon-mpim`). There it is covered by *two independent systems* — do not treat either as a substitute for the other:
+Nothing here builds or runs on its own, so **all functional and regression testing happens in the paired host-model merge request** in `icon`. There it is covered by *two independent systems* — do not treat either as a substitute for the other:
 
 - **ICON's GitLab CI**, which runs automatically on the merge-request pipeline (stage/job inventory: ICON's own `AGENTS.md`). Its `unit` stage compiles ICON including ICON-Land with every supported toolchain, so a build break in this repository surfaces there without you doing anything. The `system` stage runs experiments and compares checksums, but all of its builds are `manual` — a green pipeline therefore does **not** mean your change was run. Start the system jobs your change can affect.
 - **Buildbot**, which is pull-based and independent of GitLab CI; there is no Buildbot for this repository. Trigger it by commenting `runBB(<builder>)` on the host-model MR — e.g. `runBB(levante;atm)` or `runBB(merge2rc)`. New tests must be `exp.*` runscripts (not mkexp configs) placed under ICON's `run/` and registered with an `$addexp` line in `scripts/buildbot_scripts/` (usually `create_list_icon_dev`). If results change, reference data must be regenerated via `create_list_update` in agreement with the gatekeeper; GPU/CPU tolerance testing uses `create_list_tolerance-update`.
@@ -266,21 +266,23 @@ Minimum manual testing before proposing a merge: levante with **both NAG (debugg
 
 ## Repository layout and merge workflow
 
-Three repositories are involved:
+Repositories involved:
 
-- **jsbach** (this one) — ICON-Land development. `land4icon-mpim` is the default and main development branch; `master` is what ICON release candidates point at. Branches: `feature/...`, `bugfix/...` (older commits use `hotfix/`), `project/...` (formerly `application/...`), lowercase, hyphen-separated.
-- **icon-mpim** — MPI-M/MPI-BGC ICON development; carries this repo as `externals/jsbach`. Land branches there are named `feature-land-...` (hyphens, no slash).
-- **icon** — the shared/official repository with the release candidates and releases.
+- **jsbach** (this one) — ICON-Land development. All development happens on `land4icon-mpim`, the default branch (to be renamed `main`); `master` is no longer used. Releases are tags `icon-land-YYYY.MM` on `land4icon-mpim`; patch releases are tags `icon-land-YYYY.MM-N` on side branches `icon-land-release-YYYY.MM`. Branches: `feature/...`, `bugfix/...` (older commits use `hotfix/`), `project/...` (formerly `application/...`), lowercase, hyphen-separated.
+- **icon** — the shared/official repository; carries this repo as `externals/jsbach`. Its `main` branch is the development branch (release candidate) and points `externals/jsbach` at a commit on `land4icon-mpim`; ICON releases are tags on `main`, patch releases tags on `release-YYYY.MM` branches. Land branches there are named `feature-land-...` (hyphens, no slash).
+- **icon-mpim** — must not be used for development anymore (since autumn 2026); treat it as a read-only source: no new branches, commits or merge requests there. Older commits and merge requests refer to it.
 
 Work cycle: issue → branch from `land4icon-mpim` → develop → merge `land4icon-mpim` in frequently → test → merge request into `land4icon-mpim` with a verbose description (it becomes the squashed commit message) → review by a gatekeeper.
 
-Backmerging a feature needs **two coordinated merge requests** — one here into `land4icon-mpim`, one in `icon-mpim` into `master` — merged in that order by a gatekeeper. While the pair is under test, the `icon-mpim` MR has `externals/jsbach` pointing at your feature branch; once the jsbach MR is merged, **update the pointer to the resulting commit on `land4icon-mpim`** before the `icon-mpim` MR goes in. Merges here are squashed and the source branch is deleted afterwards, so your feature-branch commit never becomes part of `land4icon-mpim` — leaving it in place would point `icon-mpim` `master` at a commit no branch contains. When updating an ICON release candidate, `externals/jsbach` must point at a commit on jsbach **`master`**, never `land4icon-mpim`; `master` is updated from `land4icon-mpim` first, then the version string `icon_land_version` in `src/base/mo_jsb_version.f90` is bumped (`YYYY.MM` / `YYYY.MM-N`) and tagged `icon-land-YYYY.MM`.
+Merging a feature needs **two coordinated merge requests** — one here into `land4icon-mpim`, one in `icon` into `main` — merged in that order by a gatekeeper. While the pair is under test, the `icon` MR has `externals/jsbach` pointing at your feature branch; once the ICON-Land MR is merged, **update the pointer to the resulting commit on `land4icon-mpim`** before the `icon` MR goes in. Merges here are squashed and the source branch is deleted afterwards, so your feature-branch commit never becomes part of `land4icon-mpim` — leaving it in place would point `icon` `main` at a commit no branch contains.
 
-If you change infrastructure, remember the host adapter: a matching change to `src/shared/mo_util_jsbach.f90` on the ICON side must go into the paired `icon-mpim` merge request, and the dependency order between the two MRs must be stated so the dependent one is not merged first.
+ICON-Land releases (version string `icon_land_version` in `src/base/mo_jsb_version.f90`, `YYYY.MM` / `YYYY.MM-N`) are made independently of, and usually shortly before, the ICON releases: a version-bump merge request into `land4icon-mpim`, tagged `icon-land-YYYY.MM`, then an `icon` MR that points `externals/jsbach` at the tag. Patch releases cherry-pick fixes onto `icon-land-release-YYYY.MM`, which starts at the ICON-Land commit of the ICON release `icon-YYYY.MM`. The step-by-step procedure is in the wiki page [Branches and repository structure](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/Developing-ICON-Land/Branches-and-repository-structure).
 
-**Always open merge requests as Draft**, in this repository and in `icon-mpim` alike. Never merge one yourself — a gatekeeper does that, and undrafting is their signal that the MR is ready.
+If you change infrastructure, remember the host adapter: a matching change to `src/shared/mo_util_jsbach.f90` on the ICON side must go into the paired `icon` merge request, and the dependency order between the two MRs must be stated so the dependent one is not merged first.
 
-**Cross-link the pair in both directions.** The `icon-mpim` MR names the jsbach one from the start (it is created second, so the number is known). As soon as both exist, go back and append a reference to the `icon-mpim` MR — full cross-project form, `icon/icon-mpim!<number>` — to the end of the jsbach MR description, so a reviewer landing on either one finds the other.
+**Always open merge requests as Draft**, in this repository and in `icon` alike. Never merge one yourself — a gatekeeper does that, and undrafting is their signal that the MR is ready.
+
+**Cross-link the pair in both directions.** The `icon` MR names the jsbach one from the start (it is created second, so the number is known). As soon as both exist, go back and append a reference to the `icon` MR — full cross-project form, `icon/icon!<number>` — to the end of the ICON-Land MR description, so a reviewer landing on either one finds the other.
 
 ## Known pitfalls
 
@@ -297,4 +299,4 @@ Do not add a `Co-Authored-By: Claude` (or other AI) trailer to commits. This rep
 
 When a commit message references a merge request or an issue, write the **full URL** — `https://gitlab.dkrz.de/jsbach/jsbach/-/merge_requests/450` — not GitLab's `project!number` shorthand. Commit messages are read with `git log` and in mail, outside GitLab, where the shorthand resolves to nothing. In merge request descriptions the shorthand is the better choice and should be used instead.
 
-In the `icon-mpim` repository, **never prepend `[mpim]` to commit messages on a feature branch.** That prefix marks commits that have landed on `icon-mpim`'s `master`, and it is added automatically when the merge request is merged. Writing it yourself on a feature branch produces a doubled or misleading prefix.
+In the `icon` repository, do not prefix commit messages or merge request titles with a repository tag such as `[mpim]` (used in the former `icon-mpim` workflow): merge requests are squashed, and the squash commit takes the merge request title as is.
