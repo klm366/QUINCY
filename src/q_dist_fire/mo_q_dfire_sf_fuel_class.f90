@@ -14,7 +14,7 @@
 MODULE mo_q_dfire_sf_fuel_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: finish, message_text
 
@@ -60,14 +60,14 @@ MODULE mo_q_dfire_sf_fuel_class
     INTEGER :: nc
     INTEGER, ALLOCATABLE :: growth_form(:)    !< itree, igrass ! todo: remove, not necessary
     TYPE(t_sf_litter_ratios) :: litter_ratios !< Litter ratio [0 to 1]
-    REAL(wp), ALLOCATABLE :: cured_lvg_fract(:)!< Fraction of live grass considered dead fuel [0 to 1], Thonicke=1, Oberhagemann=0 to 1
+    REAL(lp), ALLOCATABLE :: cured_lvg_fract(:)!< Fraction of live grass considered dead fuel [0 to 1], Thonicke=1, Oberhagemann=0 to 1
     INTEGER :: ndeadpools                     !< Total number of dead pools
 
     !< Available pools
-    REAL(wp), ALLOCATABLE :: dead(:,:)        !< (#nc, #dead pools): dead pools = woody plus livegrass for 1h deadfuel as proposed in Thonicke et al. (2010) [gDM/m2]
-    REAL(wp), ALLOCATABLE :: live(:,:)        !< (#nc, #live pools): live pools= leaf, fruit, sap wood, heart wood(tree only), labile, reserve (grass and tree) [gDM/m2]
-    REAL(wp), ALLOCATABLE :: live_frac(:,:)   !< Precompute fuel fraction allocation from each veg_pool_mt (#fuel classes, #live pools) [0 to 1], sum(live_frac,pool) = 1
-    REAL(wp), ALLOCATABLE :: dead_frac(:,:)   !< Precompute fuel fraction allocation from each sb_pool_mt (#fuel classes, #dead pools) [0 to 1], sum(dead_frac,pool) = 1
+    REAL(lp), ALLOCATABLE :: dead(:,:)        !< (#nc, #dead pools): dead pools = woody plus livegrass for 1h deadfuel as proposed in Thonicke et al. (2010) [gDM/m2]
+    REAL(lp), ALLOCATABLE :: live(:,:)        !< (#nc, #live pools): live pools= leaf, fruit, sap wood, heart wood(tree only), labile, reserve (grass and tree) [gDM/m2]
+    REAL(lp), ALLOCATABLE :: live_frac(:,:)   !< Precompute fuel fraction allocation from each veg_pool_mt (#fuel classes, #live pools) [0 to 1], sum(live_frac,pool) = 1
+    REAL(lp), ALLOCATABLE :: dead_frac(:,:)   !< Precompute fuel fraction allocation from each sb_pool_mt (#fuel classes, #dead pools) [0 to 1], sum(dead_frac,pool) = 1
   CONTAINS
     PROCEDURE :: Calc_dead_fuel               !< (#nc, #dead pools, #fuel classes) [g DM m-2]
     PROCEDURE :: Calc_live_grass_fuel         !< (#nc, #live pools, #fuel classes) [g DM m-2]
@@ -102,12 +102,12 @@ CONTAINS
                                   RESULT (fuel)
     INTEGER, INTENT(in)           :: nc
     INTEGER, INTENT(in)           :: growth_form(:)                  !< itree, igrass (#nc)
-    REAL(wp), INTENT(in)          :: dead_fuel_frac(:,:)             !< Allocation of fuel from sb_pool_mt [0 to 1]
-    REAL(wp), INTENT(in)          :: live_fuel_frac(:,:)             !< Allocation of fuel from veg_pool_mt [0 to 1]
-    REAL(wp), INTENT(in)          :: live_fuel_mt(:,:)               !< bgcm live fuel (#pool, #nc) [g DM m-2]
-    REAL(wp), INTENT(in)          :: dead_fuel_mt(:,:)               !< bgcm dead fuel (#pool, #nc) [g DM m-2]
+    REAL(lp), INTENT(in)          :: dead_fuel_frac(:,:)             !< Allocation of fuel from sb_pool_mt [0 to 1]
+    REAL(lp), INTENT(in)          :: live_fuel_frac(:,:)             !< Allocation of fuel from veg_pool_mt [0 to 1]
+    REAL(lp), INTENT(in)          :: live_fuel_mt(:,:)               !< bgcm live fuel (#pool, #nc) [g DM m-2]
+    REAL(lp), INTENT(in)          :: dead_fuel_mt(:,:)               !< bgcm dead fuel (#pool, #nc) [g DM m-2]
     TYPE(t_sf_litter_ratios), INTENT(in) :: litter_ratios            !< Litter ratios for sb_pool [0 to 1]
-    REAL(wp), INTENT(in)          :: cured_lvg_fract(:)              !< Cured live grass ratio [0 to 1] (#nc)
+    REAL(lp), INTENT(in)          :: cured_lvg_fract(:)              !< Cured live grass ratio [0 to 1] (#nc)
     TYPE(t_sf_fuel_class)         :: fuel                            !< output [gDM m-2]
 
     fuel%nc = nc
@@ -121,8 +121,8 @@ CONTAINS
 
     ALLOCATE(fuel%live(nc, sf_fuel_live_fuel_nr))
     ALLOCATE(fuel%dead(nc, fuel%ndeadpools))
-    fuel%live = 0._wp
-    fuel%dead = 0._wp
+    fuel%live = 0._lp
+    fuel%dead = 0._lp
 
     ALLOCATE(fuel%dead_frac, source=dead_fuel_frac)
     ALLOCATE(fuel%live_frac, source=live_fuel_frac)
@@ -156,14 +156,14 @@ CONTAINS
   !>
   FUNCTION Calc_dead_fuel(this) RESULT (dead_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp), ALLOCATABLE :: dead_fuel(:,:,:) !< (this%nc, this%ndeadpools, df_sf_fc_full_nr) !< output [g DM m-2]
+    REAL(lp), ALLOCATABLE :: dead_fuel(:,:,:) !< (this%nc, this%ndeadpools, df_sf_fc_full_nr) !< output [g DM m-2]
 
-    REAL(wp) :: dead_lvg_fuel(this%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr)
+    REAL(lp) :: dead_lvg_fuel(this%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr)
     INTEGER :: ifuel
 
     IF (.NOT. ALLOCATED(dead_fuel)) ALLOCATE(dead_fuel(this%nc, this%ndeadpools, df_sf_fc_full_nr))
 
-    dead_fuel = 0._wp
+    dead_fuel = 0._lp
     dead_lvg_fuel = this % Calc_cured_live_grass_fuel()
 
     DO ifuel=1, df_sf_fc_full_nr !< iterate over fuel classes (1,10,100,1000 hours)
@@ -200,10 +200,10 @@ CONTAINS
   !>
   FUNCTION Calc_cured_live_grass_fuel(this) RESULT (dead_lvg_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: dead_lvg_fuel(this%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr)
+    REAL(lp) :: dead_lvg_fuel(this%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr)
     INTEGER :: ifuel, ic
 
-    dead_lvg_fuel = 0._wp
+    dead_lvg_fuel = 0._lp
 
     DO ifuel=1, df_sf_fc_full_nr !< iterate over fuel classes (1,10,100,1000 hours)
       !< livegrass: leaf, sap wood, labile, reserve, fruit
@@ -236,11 +236,11 @@ CONTAINS
   !>
   FUNCTION Calc_live_tree_fuel(this) RESULT (tree_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: tree_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(lp) :: tree_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
 
     INTEGER :: ifuel, ic
 
-    tree_fuel = 0._wp !< igrass = 0
+    tree_fuel = 0._lp !< igrass = 0
 
     DO ic=1, this%nc
       IF (this%growth_form(ic) == itree) THEN
@@ -270,25 +270,25 @@ CONTAINS
   !>
   FUNCTION Calc_live_grass_fuel(this) RESULT (grass_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: grass_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
+    REAL(lp) :: grass_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr)
 
     INTEGER :: ifuel, ic
 
-    grass_fuel = 0._wp !< for itree = 0
+    grass_fuel = 0._lp !< for itree = 0
 
     DO ic = 1, this % nc
       IF (this % growth_form(ic) == igrass) THEN
         DO ifuel = 1, df_sf_fc_full_nr
           grass_fuel(ic,t_sf_fuel_live_fuel_leaf_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_leaf_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix) * (1._wp - this%cured_lvg_fract(ic))
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_leaf_ix) * (1._lp - this%cured_lvg_fract(ic))
           grass_fuel(ic,t_sf_fuel_live_fuel_sap_wood_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_sap_wood_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix) * (1._wp - this%cured_lvg_fract(ic))
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_sap_wood_ix) * (1._lp - this%cured_lvg_fract(ic))
           grass_fuel(ic,t_sf_fuel_live_fuel_labile_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_labile_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix) * (1._wp - this%cured_lvg_fract(ic))
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_labile_ix) * (1._lp - this%cured_lvg_fract(ic))
           grass_fuel(ic,t_sf_fuel_live_fuel_reserve_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_reserve_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix) * (1._wp - this%cured_lvg_fract(ic))
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_reserve_ix) * (1._lp - this%cured_lvg_fract(ic))
           grass_fuel(ic,t_sf_fuel_live_fuel_fruit_ix, ifuel) = this%live(ic,t_sf_fuel_live_fuel_fruit_ix) * &
-              this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix) * (1._wp - this%cured_lvg_fract(ic))
+              this%live_frac(ifuel,t_sf_fuel_live_fuel_fruit_ix) * (1._lp - this%cured_lvg_fract(ic))
         END DO
       END IF
     END DO
@@ -303,8 +303,8 @@ CONTAINS
   !>
   FUNCTION Calc_total_live_tree_fuel(this) RESULT (total_live_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: total_live_fuel(this%nc)          !< output
-    REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
+    REAL(lp) :: total_live_fuel(this%nc)          !< output
+    REAL(lp), ALLOCATABLE :: live_fuel(:,:,:)       !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
     ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
     live_fuel = this%Calc_live_tree_fuel()
@@ -320,8 +320,8 @@ CONTAINS
   !>
   FUNCTION Calc_total_live_grass_fuel(this) RESULT (total_live_fuel)
     CLASS(t_sf_fuel_class), INTENT(in) :: this
-    REAL(wp) :: total_live_fuel(this%nc)      !< ouput [gDM m-2]
-    REAL(wp), ALLOCATABLE :: live_fuel(:,:,:)   !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
+    REAL(lp) :: total_live_fuel(this%nc)      !< ouput [gDM m-2]
+    REAL(lp), ALLOCATABLE :: live_fuel(:,:,:)   !< (#nc, #live fuel pools, #fuel class) [gDM m-2]
 
     ALLOCATE(live_fuel(this%nc, sf_fuel_live_fuel_nr, df_sf_fc_full_nr))
     live_fuel = this%Calc_live_grass_fuel()
@@ -340,9 +340,9 @@ CONTAINS
   FUNCTION sf_calc_has_any_fuel_r3(dead_fuel) RESULT (has_dead_fuel)
     USE mo_jsb_math_constants,   ONLY: eps8
 
-    REAL(wp), INTENT(in)  :: dead_fuel(:,:,:)      !< [g DM m-2]
+    REAL(lp), INTENT(in)  :: dead_fuel(:,:,:)      !< [g DM m-2]
     LOGICAL, ALLOCATABLE  :: has_dead_fuel(:)      !< True if gridcell has any fuel (> 0)
-    REAL(wp), ALLOCATABLE :: sum_of_dead_fuels(:)
+    REAL(lp), ALLOCATABLE :: sum_of_dead_fuels(:)
     INTEGER :: nc
 
     nc =SIZE(dead_fuel, dim=1) !< 1=nc index
@@ -362,7 +362,7 @@ CONTAINS
   FUNCTION sf_calc_has_any_fuel_r2(dead_fuel) RESULT (has_dead_fuel)
     USE mo_jsb_math_constants,   ONLY: eps8
 
-    REAL(wp), INTENT(in)  :: dead_fuel(:,:)        !< [g DM m-2]
+    REAL(lp), INTENT(in)  :: dead_fuel(:,:)        !< [g DM m-2]
     LOGICAL, ALLOCATABLE  :: has_dead_fuel(:)     !< True if gridcell has any fuel (> 0)
     INTEGER :: nc
 
@@ -379,9 +379,9 @@ CONTAINS
   !> fuel(nc, fuel pools, fuel classes) -> fuel(nc)
   !>
   IMPURE FUNCTION sf_calc_aggr_fuels(fuel, ncdim) RESULT (total_fuel)
-    REAL(wp), INTENT(in)          :: fuel(:,:,:)    !< Dead fuel (#nc, #fuel pools, #fuel classes)
+    REAL(lp), INTENT(in)          :: fuel(:,:,:)    !< Dead fuel (#nc, #fuel pools, #fuel classes)
     INTEGER, INTENT(in), OPTIONAL :: ncdim          !< NC dimension index
-    REAL(wp), ALLOCATABLE         :: total_fuel(:)  !< output (#nc)
+    REAL(lp), ALLOCATABLE         :: total_fuel(:)  !< output (#nc)
 
     INTEGER, PARAMETER :: nc_idx_def = 1 !< Default NC dimension index
     INTEGER :: inc, nc, nc_idx
@@ -391,7 +391,7 @@ CONTAINS
 
     nc = SIZE(fuel, dim=nc_idx)
     IF (.NOT. ALLOCATED(total_fuel)) ALLOCATE(total_fuel(nc))
-    total_fuel(:) = 0._wp
+    total_fuel(:) = 0._lp
 
     !< sum all dimensions from "fuel"
     SELECT CASE (nc_idx)

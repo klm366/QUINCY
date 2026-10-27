@@ -16,7 +16,7 @@ MODULE mo_assimi_config_class
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -31,7 +31,7 @@ MODULE mo_assimi_config_class
      LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
-     REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
+     REAL(lp), ALLOCATABLE :: canopy_bound_lai(:)
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -104,13 +104,13 @@ CONTAINS
     ! Create vertical axis for canopy layers
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers from ASSIMI_ JSBACH', &
-      & levels = (/ (REAL(icanopy, kind=wp), icanopy=1, config%ncanopy) /), units = '')
+      & levels = (/ (REAL(icanopy, kind=lp), icanopy=1, config%ncanopy) /), units = '')
     CALL register_vgrid(vgrid_canopy)
 
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:config%ncanopy))
     DO icanopy = 0,config%ncanopy
-      config%canopy_bound_lai(icanopy) = REAL(icanopy, wp) / REAL(config%ncanopy, wp)
+      config%canopy_bound_lai(icanopy) = REAL(icanopy, lp) / REAL(config%ncanopy, lp)
     END DO
 
   END SUBROUTINE Init_assimi_config

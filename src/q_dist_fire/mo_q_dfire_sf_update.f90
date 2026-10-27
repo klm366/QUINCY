@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_update
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
@@ -75,13 +75,13 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc, ic, ipool, iel, ip
     INTEGER                               :: no_children
-    REAL(wp)                              :: dtime      !< timestep
+    REAL(lp)                              :: dtime      !< timestep
 
     ! add here local variables
-    REAL(wp), POINTER                     :: area(:)
-    REAL(wp), DIMENSION(options%nc)       :: cover_fraction             !< current tile area
-    REAL(wp), DIMENSION(options%nc)       :: area_burned_fract_pft !< Fraction of the area burned for current PFT [-]
-    REAL(wp), DIMENSION(options%nc)       :: fract_area_burned_rel_to_tile  !< area burned fraction relative to the tile area
+    REAL(lp), POINTER                     :: area(:)
+    REAL(lp), DIMENSION(options%nc)       :: cover_fraction             !< current tile area
+    REAL(lp), DIMENSION(options%nc)       :: area_burned_fract_pft !< Fraction of the area burned for current PFT [-]
+    REAL(lp), DIMENSION(options%nc)       :: fract_area_burned_rel_to_tile  !< area burned fraction relative to the tile area
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_dfire_sf_fuel'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -152,14 +152,14 @@ CONTAINS
     ! init here
 #ifdef __QUINCY_STANDALONE__
         ALLOCATE(area(nc))
-        area = 1._wp
-        cover_fraction = 1._wp
+        area = 1._lp
+        cover_fraction = 1._lp
 #else
         area => grid %area (ics:ice, iblk)
         CALL tile%Get_fraction(ics, ice, iblk, fract=cover_fraction)
 #endif
     area_burned_fract_pft = area_burned_fract * cover_fraction
-    delta_dens_ind = 0._wp
+    delta_dens_ind = 0._lp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
@@ -191,12 +191,12 @@ CONTAINS
     !> - Adapt the change of individual density to account for the harvested fraction (only for tiles with forest type)
     !>
     IF (lctlib%growthform == itree) THEN
-      fract_area_burned_rel_to_tile = 0._wp
+      fract_area_burned_rel_to_tile = 0._lp
 
       !< Calculate area burned fraction relative to tile area
       DO ic = 1,nc
         IF (cover_fraction(ic) > eps8) THEN !< is cover fraction too small to consider?
-          fract_area_burned_rel_to_tile(ic) = MIN(1.0_wp, area_burned_fract_pft(ic) / cover_fraction(ic))
+          fract_area_burned_rel_to_tile(ic) = MIN(1.0_lp, area_burned_fract_pft(ic) / cover_fraction(ic))
         END IF
       END DO
 

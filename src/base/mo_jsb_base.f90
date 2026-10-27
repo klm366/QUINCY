@@ -30,7 +30,7 @@ CONTAINS
   !> Orchestrates setting up the ICON-Land model structure
 
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
-    USE mo_kind,                ONLY: wp
+    USE mo_kind,                ONLY: lp
     USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
@@ -205,9 +205,8 @@ CONTAINS
         CALL init_time()
       END IF
 
-      CALL model%Set_mode(model%config%hsm_mode)
       ! Disable multi-queue processing for QUINCY while it's not ready
-      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
+      model%use_multiple_queues = model_scheme /= MODEL_QUINCY
 
       !>
       !> 8. Create and register surface grid, other grids are created by the processes that needs them.
@@ -262,7 +261,7 @@ CONTAINS
       ! dimension is needed in setups with changing PFT fractions.
       IF (model%Do_fractions_change()) THEN
         pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
-          & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
+          & levels=(/ (REAL(i,kind=lp),i=1,model%config%npft) /), units='')
         CALL register_vgrid(pft_layer)
       END IF
       CALL model%Set_options(npft=model%config%npft)
@@ -500,6 +499,8 @@ CONTAINS
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
+      ! The tile tree is complete: collect its tiles once for all later loops over tiles
+      CALL model%Build_tile_lists()
     ELSE
       ! Explicit model configuration through namelist
       !>

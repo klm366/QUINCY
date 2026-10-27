@@ -112,11 +112,11 @@ macros = {
     ],
     "real2d_onchunk": [
         re.compile(r"dsl4jsb_Real2D_onChunk", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:)",
+        r"REAL(lp), POINTER, DIMENSION(:)",
     ],
     "real3d_onchunk": [
         re.compile(r"dsl4jsb_Real3D_onChunk", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "get_var2d_onchunk": [
         re.compile(r"dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
@@ -164,11 +164,11 @@ macros = {
     ],
     "real2d_ondomain": [
         re.compile(r"dsl4jsb_Real2D_onDomain", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "real3d_ondomain": [
         re.compile(r"dsl4jsb_Real3D_onDomain", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "get_var2d_ondomain": [
         re.compile(
@@ -210,19 +210,19 @@ macros = {
     ],
     "def_mt1l2d": [
         re.compile(r"dsl4jsb_Def_mt1L2D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "def_mt1l3d": [
         re.compile(r"dsl4jsb_Def_mt1L3D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "def_mt2l2d": [
         re.compile(r"dsl4jsb_Def_mt2L2D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "def_mt2l3d": [
         re.compile(r"dsl4jsb_Def_mt2L3D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:,:)",
     ],
     "get_mt1l2d": [
         re.compile(r"dsl4jsb_Get_mt1L2D *\((.*?) *, *(.*?) *\)", re.IGNORECASE),

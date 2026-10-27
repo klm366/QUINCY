@@ -17,7 +17,7 @@
 MODULE mo_q_dfire_sf_ros_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
@@ -58,8 +58,8 @@ CONTAINS
     USE mo_q_dfire_sf_constants,  ONLY: df_sf_units_g_to_kg
 
     TYPE(t_sf_config), INTENT(in)        :: sf_config
-    REAL(wp), INTENT(in)                 :: fdi(:)                     !< Fire dange index [0 to 1]
-    REAL(wp), INTENT(in)                 :: nesterov_index(:)          !< Dryness index [deg C2]
+    REAL(lp), INTENT(in)                 :: fdi(:)                     !< Fire dange index [0 to 1]
+    REAL(lp), INTENT(in)                 :: nesterov_index(:)          !< Dryness index [deg C2]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac           !< Vegetation cover fraction [0 to 1]
     TYPE(t_sf_mf), INTENT(in)            :: sf_fuel_moisture            !< Fuel moisture [-]
     TYPE(t_sf_fuel_load), INTENT(in)     :: sf_fuel_load                !< Fuel load [-]
@@ -75,7 +75,7 @@ CONTAINS
                         sf_ros % u_f_wind, sf_fuel_moisture % moisture_extinction, &
                         sf_fuel_load % dead_fuel_litter * df_sf_units_g_to_kg, &
                         sf_fuel_moisture % omegas_thon(:,df_sf_omega_o_idx), &
-                        (mask .AND. fdi > 1.e-6_wp) , &
+                        (mask .AND. fdi > 1.e-6_lp) , &
                         sf_ros) ! inout
     ELSE IF (sf_config%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
 
@@ -99,14 +99,14 @@ CONTAINS
       IF (.NOT. mask(inc)) CYCLE !< skip gridcell
 
       !< ( Eq. 10 from Thonicke et al. (2010))
-      sf_ros%ros_backwards(inc) = sf_ros%ros_forward(inc) * exp(-0.012_wp * sf_ros % u_f_wind(inc)) !< [m min-1]
+      sf_ros%ros_backwards(inc) = sf_ros%ros_forward(inc) * exp(-0.012_lp * sf_ros % u_f_wind(inc)) !< [m min-1]
 
       !< (Eqs. A38, A39, A40 from Pfeiffer et al. (2013))
       sf_ros%l2b_ratio(inc) = calc_length_to_breadth_ratio(sf_ros % u_f_wind(inc), &
           veg_cover_frac%tree(inc), &
           veg_cover_frac%grass(inc))
 
-      sf_ros%fire_duration(inc) = 241._wp / (1._wp + 240._wp * exp(-11.06_wp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
+      sf_ros%fire_duration(inc) = 241._lp / (1._lp + 240._lp * exp(-11.06_lp * fdi(inc))) !< Eq. 14 from Thonicke et al. (2010) [min]
       IF (sf_ros%fire_duration(inc) > df_sf_fire_duration_thd) THEN
         sf_ros%fire_duration(inc) = df_sf_fire_duration_thd
       END IF
@@ -125,8 +125,8 @@ CONTAINS
   !> Eq. A39 from Pfeiffer et al. (2013)
   !>
   PURE ELEMENTAL FUNCTION calc_l2b_grass_ratio(u_f_wind) RESULT (l2b_ratio)
-    REAL(wp), INTENT(in)        :: u_f_wind   !< [m min-1]
-    REAL(wp)                    :: l2b_ratio  !< output [-]
+    REAL(lp), INTENT(in)        :: u_f_wind   !< [m min-1]
+    REAL(lp)                    :: l2b_ratio  !< output [-]
     l2b_ratio = 1.1 + (u_f_wind ** 0.464)
   END FUNCTION calc_l2b_grass_ratio
 
@@ -140,25 +140,25 @@ CONTAINS
   ELEMENTAL PURE FUNCTION calc_length_to_breadth_ratio(u_f_wind, tree_cover, grass_cover) RESULT (l2b_ratio)
     USE mo_quincy_stats,          ONLY: stats_average_weight
 
-    REAL(wp), INTENT(in) :: u_f_wind    !< [m min-1]
-    REAL(wp), INTENT(in) :: tree_cover  !< [0 to 1]
-    REAL(wp), INTENT(in) :: grass_cover !< [0 to 1]
-    REAL(wp)             :: l2b_ratio   !< output [-]
+    REAL(lp), INTENT(in) :: u_f_wind    !< [m min-1]
+    REAL(lp), INTENT(in) :: tree_cover  !< [0 to 1]
+    REAL(lp), INTENT(in) :: grass_cover !< [0 to 1]
+    REAL(lp)             :: l2b_ratio   !< output [-]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)            :: lb_tree, lb_grass
+    REAL(lp)            :: lb_tree, lb_grass
     INTEGER, PARAMETER  :: nr_elems = 2
-    REAL(wp), PARAMETER :: wind_speed_thd = 16.67 !< Threshold for low wind speeds proposed by Pfeiffer et al. (2013) after Eq. A40 [m min-1] == 1 km / h
-    REAL(wp), PARAMETER :: max_l2b_ratio_thd = 8. !< Threshold for maximum ratio of a fire proposed by (After eq. A40, from Pfeiffer et al. (2013)) [-]
+    REAL(lp), PARAMETER :: wind_speed_thd = 16.67 !< Threshold for low wind speeds proposed by Pfeiffer et al. (2013) after Eq. A40 [m min-1] == 1 km / h
+    REAL(lp), PARAMETER :: max_l2b_ratio_thd = 8. !< Threshold for maximum ratio of a fire proposed by (After eq. A40, from Pfeiffer et al. (2013)) [-]
     LOGICAL             :: is_wind_poor, has_litter_only
     ! -----------------------------------------------------------------------------this%------------------------ !
     is_wind_poor = (u_f_wind < wind_speed_thd)
-    has_litter_only = (tree_cover + grass_cover < 1.e-6_wp) !< Close to 0
+    has_litter_only = (tree_cover + grass_cover < 1.e-6_lp) !< Close to 0
     IF (is_wind_poor) THEN
       l2b_ratio = 1.0
     ELSE IF (has_litter_only) THEN !< Litter behaves as Grass (Pfeiffer's et al. (2013) source code)
       l2b_ratio = calc_l2b_grass_ratio(u_f_wind)
     ELSE
-      lb_tree = 1.0_wp + 8.729_wp * ((1._wp - exp(-0.03_wp * u_f_wind))**2.155_wp) !< (Eq. A38)
+      lb_tree = 1.0_lp + 8.729_lp * ((1._lp - exp(-0.03_lp * u_f_wind))**2.155_lp) !< (Eq. A38)
       lb_grass =  calc_l2b_grass_ratio(u_f_wind)
       l2b_ratio = stats_average_weight(nr_elems, [lb_tree, lb_grass], [tree_cover, grass_cover])
     END IF
@@ -174,14 +174,14 @@ CONTAINS
   ELEMENTAL PURE FUNCTION calc_mean_fire_area(l2b_ratio, distance_travelled) RESULT (mean_fire_area)
     USE mo_jsb_math_constants,    ONLY: pi
 
-    REAL(wp), INTENT(in)        :: l2b_ratio          !< length to breadth ratio [-]
-    REAL(wp), INTENT(in)        :: distance_travelled !< Total distance travelled by fire [m]
-    REAL(wp)                    :: mean_fire_area     !< Output [ha]
+    REAL(lp), INTENT(in)        :: l2b_ratio          !< length to breadth ratio [-]
+    REAL(lp), INTENT(in)        :: distance_travelled !< Total distance travelled by fire [m]
+    REAL(lp)                    :: mean_fire_area     !< Output [ha]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: lb_term
+    REAL(lp) :: lb_term
     ! ----------------------------------------------------------------------------------------------------- !
-    lb_term = pi / (4.0_wp * l2b_ratio)
-    mean_fire_area = lb_term * (distance_travelled ** 2) / 10000._wp
+    lb_term = pi / (4.0_lp * l2b_ratio)
+    mean_fire_area = lb_term * (distance_travelled ** 2) / 10000._lp
   END FUNCTION calc_mean_fire_area
 
 

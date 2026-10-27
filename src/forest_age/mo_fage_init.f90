@@ -15,7 +15,7 @@
 MODULE mo_fage_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish, message_text
   USE mo_jsb_control,         ONLY: debug_on
 
@@ -69,7 +69,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER :: tile_fract(:,:)
+    REAL(lp), POINTER :: tile_fract(:,:)
 
     TYPE(t_input_file) :: input_file
     TYPE(t_jsb_vgrid), POINTER :: forest_age
@@ -105,7 +105,7 @@ CONTAINS
     ! Distribution of age fractions - needs to comply with the fractions in the age classes (mo_jsb_tile - Init_tile)
     IF (dsl4jsb_Config(FAGE_)%init_ac_fracts_scheme == 'allFirst') THEN
       ! all fracts to youngest age
-      dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._wp
+      dsl4jsb_var3D_onDomain(FAGE_, fract_per_age) = 0._lp
 
       ALLOCATE(tile_fract(grid%nproma, grid%nblks))
       CALL tile%Get_fraction(fract=tile_fract(:,:))
@@ -122,7 +122,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(FAGE_, mean_age) = get_mean_age(dsl4jsb_var3D_onDomain(FAGE_, fract_per_age))
     ELSE
       !Only one age -> for now initialise age with zero later e.g. from file
-      dsl4jsb_var2D_onDomain(FAGE_, mean_age) = 0._wp
+      dsl4jsb_var2D_onDomain(FAGE_, mean_age) = 0._lp
     END IF
 
   END SUBROUTINE fage_init_ic

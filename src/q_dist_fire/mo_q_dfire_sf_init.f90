@@ -13,7 +13,7 @@
 MODULE mo_q_dfire_sf_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_exception,               ONLY: message, finish
   USE mo_jsb_control,             ONLY: debug_on
 
@@ -38,7 +38,7 @@ MODULE mo_q_dfire_sf_init
   CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_init'
 
   TYPE :: t_q_dfire_init_vars
-    REAL(wp), POINTER ::      &
+    REAL(lp), POINTER ::      &
         pop_dens(:,:) => NULL(), &
         a_nd(:,:) => NULL(), &
         lightning_events(:,:,:) => NULL()
@@ -206,54 +206,54 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_SF_, ic_lightning_events_monthly)
     dsl4jsb_Get_var2D_onDomain(Q_DFIRE_SF_, a_nd)
     ! ----------------------------------------------------------------------------------------------------- !
-    nesterov_index = 0._wp
-    fdi = 0._wp
-    ros_f = 0._wp
-    ros_b = 0._wp
-    mean_fire_area = 0._wp
-    fire_duration = 0._wp
+    nesterov_index = 0._lp
+    fdi = 0._lp
+    ros_f = 0._lp
+    ros_b = 0._lp
+    mean_fire_area = 0._lp
+    fire_duration = 0._lp
 
-    e_n_ignitions = 0._wp
-    e_n_humans = 0._wp
-    e_n_lightning = 0._wp
-    ab_moisture = 0._wp
+    e_n_ignitions = 0._lp
+    e_n_humans = 0._lp
+    e_n_lightning = 0._lp
+    ab_moisture = 0._lp
 
-    mask_is_fire_intense_enough = 0._wp !< TRUE=1._wp, FALSE=0._wp
-    precip_daytime = 0._wp
-    precip_daytime_old = 0._wp
-    precip_qc_mavg = 0._wp
-    precip_daily_mmd = 0._wp
-    precip_mavg = 0._wp
+    mask_is_fire_intense_enough = 0._lp !< TRUE=1._lp, FALSE=0._lp
+    precip_daytime = 0._lp
+    precip_daytime_old = 0._lp
+    precip_qc_mavg = 0._lp
+    precip_daily_mmd = 0._lp
+    precip_mavg = 0._lp
 
-    t_air_min = 0._wp
-    t_air_max = 0._wp
-    t_air_min_old = 0._wp
-    t_air_max_old = 0._wp
+    t_air_min = 0._lp
+    t_air_max = 0._lp
+    t_air_min_old = 0._lp
+    t_air_max_old = 0._lp
 
-    area_burned = 0._wp
-    area_burned_fract = 0._wp
-    area_burned_output = 0._wp
-    area_burned_fract_output = 0._wp
-    i_surface = 0._wp
-    dead_fuel_consumption_1hr = 0._wp
-    dead_fuel_consumption_10hr = 0._wp
-    dead_fuel_consumption_100hr = 0._wp
-    dead_fuel_consumption_1000hr = 0._wp
+    area_burned = 0._lp
+    area_burned_fract = 0._lp
+    area_burned_output = 0._lp
+    area_burned_fract_output = 0._lp
+    i_surface = 0._lp
+    dead_fuel_consumption_1hr = 0._lp
+    dead_fuel_consumption_10hr = 0._lp
+    dead_fuel_consumption_100hr = 0._lp
+    dead_fuel_consumption_1000hr = 0._lp
 
-    fuel_moisture = 0._wp
+    fuel_moisture = 0._lp
 
-    reaction_intensity = 0._wp
-    prop_flux_ratio = 0._wp
-    wind_factor = 0._wp
-    eff_heating_number = 0._wp
-    preig_heat = 0._wp
+    reaction_intensity = 0._lp
+    prop_flux_ratio = 0._lp
+    wind_factor = 0._lp
+    eff_heating_number = 0._lp
+    preig_heat = 0._lp
 
-    distance_travelled = 0._wp
-    l2b_ratio = 0._wp
-    frac_consump_fcl = 0._wp
+    distance_travelled = 0._lp
+    l2b_ratio = 0._lp
+    frac_consump_fcl = 0._lp
 
-    ic_pop_dens = 0._wp
-    a_nd = 0._wp
+    ic_pop_dens = 0._lp
+    a_nd = 0._lp
 
     !< Chose daily precipitation. Those are calculated in 3 different ways.
     dfire_pm_id = dsl4jsb_Config(Q_DFIRE_SF_)%dfire_precip_method_id
@@ -361,8 +361,8 @@ CONTAINS
 
     dsl4jsb_Def_config(Q_DFIRE_SF_)
 
-    REAL(wp), POINTER           :: ptr_2D(:, :)
-    REAL(wp), POINTER           :: ptr_2D_time(:, :, :)
+    REAL(lp), POINTER           :: ptr_2D(:, :)
+    REAL(lp), POINTER           :: ptr_2D_time(:, :, :)
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid
     TYPE(t_input_file)          :: input_file
@@ -395,7 +395,7 @@ CONTAINS
         & variable_name='Band1', &
         & fill_array = dfire_init_vars%pop_dens)
     ! Clean: set negative values to 0
-    dfire_init_vars%pop_dens = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    dfire_init_vars%pop_dens = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
 
     CALL input_file%Close()
 
@@ -407,7 +407,7 @@ CONTAINS
         & variable_name='a_nd', &
         & fill_array = dfire_init_vars%a_nd)
     ! Clean: set negative values to 0
-    dfire_init_vars%a_nd = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    dfire_init_vars%a_nd = MERGE(ptr_2D, 0._lp, ptr_2D >= 0._lp)
 
     CALL input_file%Close()
 
@@ -435,7 +435,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
-    REAL(wp),                  INTENT(in) :: dtime
+    REAL(lp),                  INTENT(in) :: dtime
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),           POINTER :: model
     TYPE(t_jsb_grid),            POINTER :: hgrid
@@ -451,7 +451,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: ic_lightning_events_monthly ! out
     dsl4jsb_Real2D_onDomain :: ic_lightning_events         ! out
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
+    REAL(lp),       POINTER :: ptr_3D(:,:,:)  ! tmp pointer
     LOGICAL :: is_experiment_start, read_deposition_data
 
     INTEGER :: current_month, nproma, nblks, i_month, no_omp_thread

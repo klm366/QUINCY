@@ -28,12 +28,12 @@ MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,         ONLY: debug_on, acc_stream, acc_async_sync
-  USE mo_kind,                ONLY: wp, dp
+  USE mo_kind,                ONLY: lp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
+  USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
@@ -52,9 +52,9 @@ MODULE mo_jsb_tile_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_tile_abstract
-  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p
-  PUBLIC :: t_jsb_aggregator_weighted_by_fract, t_jsb_aggregator_sum
+  PUBLIC :: t_jsb_tile_abstract, t_jsb_tile_abstract_p
+  PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, t_jsb_aggregator_weighted_by_fract
+  PUBLIC :: t_jsb_aggregator_sum
 
   ! Declarations for aggregators
 
@@ -78,13 +78,13 @@ MODULE mo_jsb_tile_class
   ! Declarations for tiles
   !
   TYPE :: real_2d_p
-    REAL(wp), POINTER :: p(:,:) => NULL()
+    REAL(lp), POINTER :: p(:,:) => NULL()
   END TYPE
   TYPE :: real_3d_p
-    REAL(wp), POINTER :: p(:,:,:) => NULL()
+    REAL(lp), POINTER :: p(:,:,:) => NULL()
   END TYPE
   !
-  TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
+  TYPE, ABSTRACT, EXTENDS(t_jsb_tile_tree_node) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct), ALLOCATABLE    :: lcts(:) !< List of land cover types for tile;
                                                !< The first entry is always the primary LCT for this tile;
                                                !< The remaining lcts are those inherited for aggregation
@@ -102,8 +102,8 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.       !< Whether any lct of tile is one that has soil
     !
     INTEGER,                  ALLOCATABLE :: process_action(:)        !< List of `action` for all processes
-    REAL(wp),                     POINTER :: fract     (:,:)          !< Fraction of this tile (relative to grid box)
-    REAL(wp),                     POINTER :: fract_old (:,:)          !< Old fractions of this tile (relative to grid box)
+    REAL(lp),                     POINTER :: fract     (:,:)          !< Fraction of this tile (relative to grid box)
+    REAL(lp),                     POINTER :: fract_old (:,:)          !< Old fractions of this tile (relative to grid box)
     CHARACTER(LEN=filename_max)           :: fract_filename           !< Name of file to read tile fractions from. The variable
                                                                       !< names must be either "fract[_max]_"//tile%name,
                                                                       !< or specified by fract_varname (in the use case).
@@ -113,14 +113,18 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
     INTEGER                               :: nr_of_cqts = 0                !< Number of conserved quantity types in use on the tile
-    TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< List of conserved quantities sort by type
+    TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< List of conserved quantities sorted by type (CQT)
     TYPE(t_jsb_lcc_proc_p),   ALLOCATABLE :: lcc_processes(:)              !< List of lcc structures indexed by proc id
     TYPE(t_lnd_bgcm_store),       POINTER :: bgcm_store          => NULL() !< The bgcm store collecting bgcms and their elements on this tile
     TYPE(t_jsb_memory_p),         POINTER :: mem(:)                        !< Memory for all processes on the tile
     !
     CLASS(t_jsb_tile_abstract),   POINTER :: self_tile           => NULL() !< Pointer to the tile to enable assigning it as target
-    ! The next three pointers basically repeat what's already in the base type, but they save "SELECT TYPE"s
-    CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< Pointer to the parent file
+    ! The next three pointers point to the same tiles as `parent`, `first_child` and `next_sibling` of the
+    ! base type (t_jsb_tile_tree_node), but they are of the tile type: the components and methods of these
+    ! tiles can be accessed through them directly, whereas the pointers of the base type would need a
+    ! "SELECT TYPE". Both sets are set when a tile is constructed, and both can be used to navigate the
+    ! tile tree.
+    CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< Pointer to the parent tile
     CLASS(t_jsb_tile_abstract),   POINTER :: first_child_tile    => NULL() !< Pointer to the first child tile
     CLASS(t_jsb_tile_abstract),   POINTER :: next_sibling_tile   => NULL() !< Pointer to the next sibling tile
     !
@@ -162,12 +166,16 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
-    PROCEDURE(Handler_interface),        DEFERRED :: Handler
     PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
     PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
     PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
+
+  !> A type to hold vectors of pointers to tiles
+  TYPE t_jsb_tile_abstract_p
+    CLASS(t_jsb_tile_abstract), POINTER :: p => NULL()
+  END TYPE t_jsb_tile_abstract_p
 
   ! Deferred subroutine interfaces.
   ! Implementations are located in the [[mo_jsb_tile]] module.
@@ -208,14 +216,6 @@ MODULE mo_jsb_tile_class
       CLASS(t_jsb_tile_abstract), INTENT(in) :: this
       INTEGER, INTENT(in) :: iproc
     END FUNCTION Check_on_process
-
-    !> Interface for deferred function [[t_jsb_tile_abstract:Handler]] of [[t_jsb_tile_abstract]] type
-    FUNCTION Handler_interface(this, msg_in) RESULT(return_ptr)
-      IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
-      CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
-      CLASS(t_Message),            INTENT(in)    :: msg_in
-      CLASS(t_Message),            POINTER       :: return_ptr
-    END FUNCTION Handler_interface
 
     !> Interface for deferred subroutine [[t_jsb_tile_abstract:Print]] of [[t_jsb_tile_abstract]] type
     SUBROUTINE Print_interface(this)
@@ -271,9 +271,9 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
     !> Variables needed to calculate aggregation weights
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
-    REAL(wp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
-    REAL(wp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
+    REAL(lp), ALLOCATABLE :: fractions(:,:,:)          !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(lp), POINTER     :: fract_sum(:,:) => NULL()  !< Sum of fractions for fraction weighted averaging
+    REAL(lp), POINTER     :: data_sum(:,:)  => NULL()  !< Sum of data*fraction for fraction weighted averaging
 
     INTEGER :: stream, original_stream !< OpenACC variables for multi-stream aggregation
   CONTAINS
@@ -295,7 +295,7 @@ MODULE mo_jsb_tile_class
   !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_sum
     !> Variables needed to calculate aggregation weights
-    REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
+    REAL(lp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
   CONTAINS
     !> Functions to make use of the aggregator
     PROCEDURE :: BeginAggregate   => BeginAggregate_sum !< Start  multi-stream aggregation (useful for OpenACC)
@@ -448,7 +448,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< Tile whose parent is to be considered
     TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< The landcover type to add to the parent tiles
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_State), POINTER :: current
+    CLASS(t_jsb_tile_tree_node), POINTER :: current
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct_to_parents'
     ! -------------------------------------------------------------------------------------------------- !
@@ -468,7 +468,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
-    REAL(wp), OPTIONAL,         INTENT(in)    :: &
+    REAL(lp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
       & fract_old(:)
 
@@ -520,7 +520,7 @@ CONTAINS
   SUBROUTINE Set_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), OPTIONAL,         INTENT(in)    :: &
+    REAL(lp), OPTIONAL,         INTENT(in)    :: &
       & fract(:,:),        &
       & fract_old(:,:)
 
@@ -579,7 +579,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
-    REAL(wp), OPTIONAL,         INTENT(inout) :: &
+    REAL(lp), OPTIONAL,         INTENT(inout) :: &
       & fract(:),        &
       & fract_old(:)
 
@@ -600,7 +600,7 @@ CONTAINS
   SUBROUTINE Get_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
-    REAL(wp), OPTIONAL,         INTENT(inout) :: &
+    REAL(lp), OPTIONAL,         INTENT(inout) :: &
       & fract(:,:),        &
       & fract_old(:,:)
 
@@ -629,7 +629,7 @@ CONTAINS
   SUBROUTINE Set_fract_ptr(this, ptr)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
+    REAL(lp), POINTER                         :: ptr(:,:)
     ! -------------------------------------------------------------------------------------------------- !
     this%fract => ptr
     __acc_attach(this%fract)
@@ -639,7 +639,7 @@ CONTAINS
   SUBROUTINE Set_fract_old_ptr(this, ptr)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
+    REAL(lp), POINTER                         :: ptr(:,:)
 
     this%fract_old => ptr
     __acc_attach(this%fract_old)
@@ -812,7 +812,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+    ! REAL(lp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_1d'
 
@@ -830,13 +830,13 @@ CONTAINS
 
       !! Section for debugging
       !! It needs to be adapted to absolute tile fractions!
-      !!   => replace 1._wp by parent%fract
+      !!   => replace 1._lp by parent%fract
       !
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
       ! fract(:) = tile%fract(ics:ice,iblk)
       ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._lp - EPSILON(1._lp) .AND. fract(:) > 0._lp)) THEN
       ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
       ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
       ! !     &          all_print=.TRUE.)
@@ -861,7 +861,7 @@ CONTAINS
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
-    ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
+    ! REAL(lp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_2d'
 
@@ -882,7 +882,7 @@ CONTAINS
       ! ALLOCATE(fract_sum(ice-ics+1))
       ! fract(:) = tile%fract(ics:ice,iblk)
       ! fract_sum(:) = SUM(this%fractions(ics:ice,iblk,:), DIM=2)
-      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._wp - EPSILON(1._wp) .AND. fract(:) > 0._wp)) THEN
+      ! ! IF (ASSOCIATED(tile%parent) .AND. ANY( fract_sum(:) < 1._lp - EPSILON(1._lp) .AND. fract(:) > 0._lp)) THEN
       ! !   CALL message(TRIM(routine), 'Sum of child tile fractions on tile '//TRIM(tile%name)//': '//&
       ! !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
       ! !     &          all_print=.TRUE.)
@@ -909,10 +909,10 @@ CONTAINS
     LOGICAL,  OPTIONAL,                        INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
     CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
-    REAL(wp), POINTER :: ptr(:,:)
+    REAL(lp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
-    REAL(wp), POINTER :: fract_sum(:,:)
-    REAL(wp), POINTER :: data_sum(:,:)
+    REAL(lp), POINTER :: fract_sum(:,:)
+    REAL(lp), POINTER :: data_sum(:,:)
     LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
@@ -1004,8 +1004,8 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        data_sum (j,iblk) = 0._wp
-        fract_sum(j,iblk) = 0._wp
+        data_sum (j,iblk) = 0._lp
+        fract_sum(j,iblk) = 0._lp
       END DO
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
@@ -1043,7 +1043,7 @@ CONTAINS
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
-      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      ! IF (ANY(fract_sum(:) > 1._lp + EPSILON(1._lp))) THEN
       !   ! print*, fract_sum
       !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
       !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
@@ -1056,7 +1056,7 @@ CONTAINS
       IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._lp) THEN
             ! ichild: the only child that contained the variable
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
@@ -1064,7 +1064,7 @@ CONTAINS
       ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered.
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          IF (fract_sum(j,iblk) > 0._wp) THEN
+          IF (fract_sum(j,iblk) > 0._lp) THEN
             ! Divide the data sum by the sum of the fractions
             var%ptr(j,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
           ! ELSE
@@ -1106,8 +1106,8 @@ CONTAINS
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
-    REAL(wp), POINTER :: fract_sum(:,:)
-    REAL(wp), POINTER :: data_sum(:,:)
+    REAL(lp), POINTER :: fract_sum(:,:)
+    REAL(lp), POINTER :: data_sum(:,:)
     LOGICAL, ALLOCATABLE :: mask_use_child(:)
 
     INTEGER :: no_children, icount, ichild, i, iproc, ilev, nlev, j
@@ -1205,7 +1205,7 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        fract_sum(j,iblk) = 0._wp
+        fract_sum(j,iblk) = 0._lp
       END DO
       !$ACC LOOP SEQ
       DO i=1,no_children
@@ -1232,7 +1232,7 @@ CONTAINS
       DO ilev = 1, nlev
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          data_sum (j,iblk) = 0._wp
+          data_sum (j,iblk) = 0._lp
         END DO
 
         !$ACC LOOP SEQ
@@ -1258,7 +1258,7 @@ CONTAINS
         IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._lp) THEN
               ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
@@ -1266,7 +1266,7 @@ CONTAINS
         ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            IF (fract_sum(j,iblk) > 0._wp) THEN
+            IF (fract_sum(j,iblk) > 0._lp) THEN
               ! Divide the data sum by the sum of the fractions
               var%ptr(j,ilev,iblk) = data_sum(j,iblk) / fract_sum(j,iblk)
             END IF
@@ -1295,7 +1295,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER     :: return_ptr
 
-    CLASS(t_State), POINTER :: next
+    CLASS(t_jsb_tile_tree_node), POINTER :: next
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_first_child_tile'
 
@@ -1308,8 +1308,6 @@ CONTAINS
     SELECT TYPE (next)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -1326,7 +1324,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-    CLASS(t_State), POINTER :: next
+    CLASS(t_jsb_tile_tree_node), POINTER :: next
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_next_sibling_tile'
 
@@ -1339,8 +1337,6 @@ CONTAINS
     SELECT TYPE (next)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => next
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -1361,7 +1357,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
     CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
 
-    CLASS(t_State), POINTER :: prev
+    CLASS(t_jsb_tile_tree_node), POINTER :: prev
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
 
@@ -1374,8 +1370,6 @@ CONTAINS
     SELECT TYPE (prev)
     CLASS IS (t_jsb_tile_abstract)
       return_ptr => prev
-    CLASS IS (t_State)
-      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
     CLASS DEFAULT
       CALL finish(TRIM(routine), 'Unkown type for tile')
     END SELECT
@@ -1563,7 +1557,7 @@ CONTAINS
     LOGICAL, OPTIONAL,                         INTENT(in)    :: mask(:)        !< T=pft to apply aggregation, F=skip (#pfts)
     CHARACTER(len=*), OPTIONAL,                INTENT(in)    :: mask_on_tile   !< mask is only applied at specific tile level. Prevent at other hsm levels.
 
-    REAL(wp), POINTER :: ptr(:,:)
+    REAL(lp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
 
     INTEGER :: no_children, icount,ichild, i, iproc, j
@@ -1632,7 +1626,7 @@ CONTAINS
       ! With more then one child tile we need to do the weighted averaging.
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO j = ics, ice
-        this%data_sum(j,iblk) = 0._wp
+        this%data_sum(j,iblk) = 0._lp
       END DO
 
       ! Calculate the (weighted) sum of the data and the sum up the fractions
@@ -1661,7 +1655,7 @@ CONTAINS
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
       ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
-      ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
+      ! IF (ANY(fract_sum(:) > 1._lp + EPSILON(1._lp))) THEN
       !   ! print*, fract_sum
       !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
       !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
@@ -1793,7 +1787,7 @@ CONTAINS
       DO ilev = 1, nlev
         !$ACC LOOP GANG(STATIC: 1) VECTOR
         DO j = ics, ice
-          this%data_sum (j,iblk) = 0._wp
+          this%data_sum (j,iblk) = 0._lp
         END DO
 
         !$ACC LOOP SEQ
@@ -1817,7 +1811,7 @@ CONTAINS
         IF (icount == 1) THEN ! Only one child tile needs to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-!            IF (this%fract_sum(j,iblk) > 0._wp) THEN
+!            IF (this%fract_sum(j,iblk) > 0._lp) THEN
               ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
 !            END IF
@@ -1825,7 +1819,7 @@ CONTAINS
         ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
           !$ACC LOOP GANG(STATIC: 1) VECTOR
           DO j = ics, ice
-            !IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            !IF (this%fract_sum(j,iblk) > 0._lp) THEN
               ! Assign data
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk)
             !END IF

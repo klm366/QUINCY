@@ -13,7 +13,7 @@
 MODULE mo_quincy_mavg_class
 
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_quincy_queue,            ONLY: t_queue
 
   IMPLICIT NONE
@@ -23,7 +23,7 @@ MODULE mo_quincy_mavg_class
 
 
   TYPE :: t_mavg
-    REAL(wp) :: dtime_sec       !< length of timestep in seconds [s]
+    REAL(lp) :: dtime_sec       !< length of timestep in seconds [s]
     INTEGER :: ndays            !< how many days to capture [days]
     INTEGER :: ntimesteps       !< how many timesteps per day
 
@@ -41,7 +41,7 @@ MODULE mo_quincy_mavg_class
 CONTAINS
 
   ELEMENTAL FUNCTION create_t_mavg(dtime, ndays) RESULT (new_mavg)
-    REAL(wp), INTENT(in) :: dtime !< length of ts [s]
+    REAL(lp), INTENT(in) :: dtime !< length of ts [s]
     INTEGER, INTENT(in) :: ndays !< how many days [days]
     TYPE(t_mavg) :: new_mavg
     new_mavg % dtime_sec = dtime
@@ -53,8 +53,8 @@ CONTAINS
   ! calculate moving average
   FUNCTION get_mavg(this) RESULT(mavg)
     CLASS(t_mavg), INTENT(in) :: this
-    REAL(wp) :: mavg !< output
-    REAL(wp), ALLOCATABLE :: values(:)
+    REAL(lp) :: mavg !< output
+    REAL(lp), ALLOCATABLE :: values(:)
     INTEGER :: nvalues
     IF (this % vqueue % isEmpty()) THEN
       write(*,*) modname//":: get_mavg:: error: no values to calculate mavg"
@@ -68,8 +68,8 @@ CONTAINS
   ! add new value into the moving average
   SUBROUTINE add_mavg(this, newval)
     CLASS(t_mavg), INTENT(inout) :: this
-    REAL(wp), INTENT(in)         :: newval
-    REAL(wp)                     :: oldval
+    REAL(lp), INTENT(in)         :: newval
+    REAL(lp)                     :: oldval
     IF (this % vqueue % isFull()) THEN
       ! drop oldest value
       oldval = this % vqueue % get()

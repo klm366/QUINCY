@@ -17,7 +17,7 @@
 MODULE mo_q_dfire_sf_damage_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_math_constants,  ONLY: eps8, one_day
@@ -46,17 +46,17 @@ CONTAINS
                               mask_opt)
     INTEGER, INTENT(in)  :: nc
     INTEGER, INTENT(in)  :: nfuels                          !< Dead fuel classes
-    REAL(wp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
-    REAL(wp), INTENT(in) :: height(nc)                      !< Tree height [m]
-    REAL(wp), INTENT(in) :: dbh(nc)                         !< Diameter at breast height [cm]
-    REAL(wp), INTENT(in) :: i_surface(nc)                   !< Fire intensity [kW m-1]
-    REAL(wp), INTENT(in) :: dead_fuel(nc,nfuels)            !< Dead fuel involved in the spread of the fire (1,10,100) [gDM m-2]
-    REAL(wp), INTENT(in) :: frac_consump(nc,nfuels)         !< fraction of fuel consumption for spread fuel class(1,10,100) [0 to 1]
-    REAL(wp), INTENT(in) :: lctlib_r_ck                     !< Resistant factor of the crown (damage) [0 to 1]
-    REAL(wp), INTENT(in) :: lctlib_ck_p                     !< Defoliation factor of the crown scorch [3 to 4]
-    REAL(wp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
-    REAL(wp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
-    REAL(wp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
+    REAL(lp), INTENT(in) :: lctlib_crown_length             !< Crown length of woody PFT [m]
+    REAL(lp), INTENT(in) :: height(nc)                      !< Tree height [m]
+    REAL(lp), INTENT(in) :: dbh(nc)                         !< Diameter at breast height [cm]
+    REAL(lp), INTENT(in) :: i_surface(nc)                   !< Fire intensity [kW m-1]
+    REAL(lp), INTENT(in) :: dead_fuel(nc,nfuels)            !< Dead fuel involved in the spread of the fire (1,10,100) [gDM m-2]
+    REAL(lp), INTENT(in) :: frac_consump(nc,nfuels)         !< fraction of fuel consumption for spread fuel class(1,10,100) [0 to 1]
+    REAL(lp), INTENT(in) :: lctlib_r_ck                     !< Resistant factor of the crown (damage) [0 to 1]
+    REAL(lp), INTENT(in) :: lctlib_ck_p                     !< Defoliation factor of the crown scorch [3 to 4]
+    REAL(lp), INTENT(in) :: lctlib_F_scorch_height          !< Scorch height parameter [-]
+    REAL(lp), INTENT(in) :: lctlib_par1                     !< Bark thickness par1 parameter [-]
+    REAL(lp), INTENT(in) :: lctlib_par2                     !< Bark thickness par2 parameter [-]
     TYPE(t_sf_tree_damage), INTENT(inout) :: prob_mort        !< output
     LOGICAL, INTENT(in), OPTIONAL :: mask_opt(nc)           !< True = Compute gridcell(s) (default = true)
 
@@ -85,7 +85,7 @@ CONTAINS
         !< Calculate bark thickness (Eq. 21 from Thonicke et al. (2010))
         prob_mort % bark_thickness(inc) = lctlib_par1 * dbh(inc) + lctlib_par2
         !< Calculate critical time for cambial damage (tau_c - eq. 20 from Thonicke et al. (2010))
-        prob_mort % tau_c(inc) = 2.9_wp * (prob_mort % bark_thickness(inc) ** 2)
+        prob_mort % tau_c(inc) = 2.9_lp * (prob_mort % bark_thickness(inc) ** 2)
         prob_mort % pm_tau(inc) = calc_prob_mortality_tau(prob_mort % tau_l(inc), prob_mort % tau_c(inc))
 
         !< Eq. 18 from Thonicke et al. (2010)
@@ -116,10 +116,10 @@ CONTAINS
   !>            ----------------------------------------------------------
   !>
   FUNCTION calc_prop_ck(scorch_height, height, crown_length) RESULT (prop_ck)
-    REAL(wp), INTENT(in) :: scorch_height !< [m]
-    REAL(wp), INTENT(in) :: height !< [m]
-    REAL(wp), INTENT(in) :: crown_length !< [m]
-    REAL(wp)             :: prop_ck !< output
+    REAL(lp), INTENT(in) :: scorch_height !< [m]
+    REAL(lp), INTENT(in) :: height !< [m]
+    REAL(lp), INTENT(in) :: crown_length !< [m]
+    REAL(lp)             :: prop_ck !< output
 
     LOGICAL :: are_flames_taller_than_tree
     LOGICAL :: are_flames_shorter_than_crown_length
@@ -128,9 +128,9 @@ CONTAINS
     !< If flames are not reaching high enough, no crown scorch.
     are_flames_shorter_than_crown_length = (height > (scorch_height + crown_length))
     IF (are_flames_taller_than_tree) THEN
-      prop_ck = 1._wp ! Full crown scorch
+      prop_ck = 1._lp ! Full crown scorch
     ELSE IF (are_flames_shorter_than_crown_length) THEN
-      prop_ck = 0._wp ! No crown scorch
+      prop_ck = 0._lp ! No crown scorch
     ELSE !< Otheriwse, let's find out how much [%]
       prop_ck = (scorch_height - height + crown_length) / crown_length ! (Eq. 17 from Thonicke et al. (2010))
     ENDIF
@@ -147,20 +147,20 @@ CONTAINS
   !> Here we adjust the thresholds in order to avoid these small peaks when the three terms of the equation meet.
   !>
   FUNCTION calc_prob_mortality_tau(tau_l, tau_c) RESULT (pm_tau)
-    REAL(wp), INTENT(in) :: tau_l, tau_c
-    REAL(wp) :: pm_tau !< output [0 ot 1]
-    REAL(wp) :: residence_time_ratio !< [0 ot 1]
+    REAL(lp), INTENT(in) :: tau_l, tau_c
+    REAL(lp) :: pm_tau !< output [0 ot 1]
+    REAL(lp) :: residence_time_ratio !< [0 ot 1]
 
     residence_time_ratio = tau_l / tau_c
 
     !< Changed to 0.224 for continuity
-    IF (residence_time_ratio <= 0.224_wp) THEN !< Thonicke et al. (2010): 0.22
-      pm_tau = 0._wp
+    IF (residence_time_ratio <= 0.224_lp) THEN !< Thonicke et al. (2010): 0.22
+      pm_tau = 0._lp
       !< Changed to 1.996 for continuity
-    ELSE IF (residence_time_ratio >= 1.996_wp) THEN !< Thonicke et al. (2010): 2.0
-      pm_tau = 1._wp
+    ELSE IF (residence_time_ratio >= 1.996_lp) THEN !< Thonicke et al. (2010): 2.0
+      pm_tau = 1._lp
     ELSE
-      pm_tau = 0.563_wp * residence_time_ratio - 0.125_wp
+      pm_tau = 0.563_lp * residence_time_ratio - 0.125_lp
     ENDIF
   END FUNCTION calc_prob_mortality_tau
 
@@ -174,16 +174,16 @@ CONTAINS
   FUNCTION calc_tau_l(nfuels, dead_fuel, frac_consump) RESULT (tau_l)
     USE mo_q_dfire_sf_constants, ONLY: df_sf_units_m2_to_cm2
     INTEGER, INTENT(in)  :: nfuels                    !< Number of fuel classes
-    REAL(wp), INTENT(in) :: dead_fuel(nfuels)         !< [gDM/m2]
-    REAL(wp), INTENT(in) :: frac_consump(nfuels)      !< Fraction of consumption [0 to 1]
-    REAL(wp)             :: tau_l                     !< output [min]
+    REAL(lp), INTENT(in) :: dead_fuel(nfuels)         !< [gDM/m2]
+    REAL(lp), INTENT(in) :: frac_consump(nfuels)      !< Fraction of consumption [0 to 1]
+    REAL(lp)             :: tau_l                     !< output [min]
 
-    REAL(wp)             :: tmp(nfuels)               !< Intermediate values
-    REAL(wp)             :: frac_consump_sqrd(nfuels) !< [0 to 1]
+    REAL(lp)             :: tmp(nfuels)               !< Intermediate values
+    REAL(lp)             :: frac_consump_sqrd(nfuels) !< [0 to 1]
 
-    frac_consump_sqrd(:) = 1._wp -  ((1._wp - frac_consump(:)) ** 0.5_wp)
-    tmp(:) = (dead_fuel(:) * 1._wp/df_sf_units_m2_to_cm2) * frac_consump_sqrd(:)
-    tau_l =  39.4_wp * sum(tmp)  ! 2=fuel index
+    frac_consump_sqrd(:) = 1._lp -  ((1._lp - frac_consump(:)) ** 0.5_lp)
+    tmp(:) = (dead_fuel(:) * 1._lp/df_sf_units_m2_to_cm2) * frac_consump_sqrd(:)
+    tau_l =  39.4_lp * sum(tmp)  ! 2=fuel index
 
   END FUNCTION calc_tau_l
 

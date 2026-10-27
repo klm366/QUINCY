@@ -12,7 +12,7 @@
 !>
 MODULE mo_quincy_stats
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
 
   IMPLICIT NONE
   PUBLIC :: stats_average_weight, stats_average_weight_1d
@@ -35,19 +35,19 @@ CONTAINS
   !>
   PURE FUNCTION stats_average_weight_1d(sz, values, weights) RESULT (average)
     INTEGER, INTENT(in)   :: sz !<
-    REAL(wp), INTENT(in)  :: values(sz)
-    REAL(wp), INTENT(in)  :: weights(sz)
-    REAL(wp)              :: average
+    REAL(lp), INTENT(in)  :: values(sz)
+    REAL(lp), INTENT(in)  :: weights(sz)
+    REAL(lp)              :: average
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: total_weights
-    REAL(wp) :: weighted(sz), norm_weights(sz)
+    REAL(lp) :: total_weights
+    REAL(lp) :: weighted(sz), norm_weights(sz)
     ! ----------------------------------------------------------------------------------------------------- !
-    weighted = 0._wp
+    weighted = 0._lp
     norm_weights = weights
 
     !< normalize
     total_weights = sum(weights)
-    IF (total_weights /= 1._wp) THEN
+    IF (total_weights /= 1._lp) THEN
       norm_weights = weights / total_weights
     END IF
 
@@ -61,15 +61,15 @@ CONTAINS
   !> Calculates the average for reals
   !>
   PURE FUNCTION stats_average(values) RESULT (average)
-    REAL(wp), INTENT(in)  :: values(:)
-    REAL(wp)              :: average
+    REAL(lp), INTENT(in)  :: values(:)
+    REAL(lp)              :: average
     ! ----------------------------------------------------------------------------------------------------- !
     IF (SIZE(values) == 0) THEN
       ERROR STOP
     END IF
 
-    IF (SUM(values) == 0._wp) THEN
-      average = 0._wp
+    IF (SUM(values) == 0._lp) THEN
+      average = 0._lp
       RETURN
     END IF
 

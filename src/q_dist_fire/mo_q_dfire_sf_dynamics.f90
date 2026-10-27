@@ -36,7 +36,7 @@
 MODULE mo_q_dfire_sf_dynamics
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
@@ -118,12 +118,12 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER       :: bgcm_store !< the bgcm store of this tile
     INTEGER                               :: iblk, ics, ice, nc, ic, is
     INTEGER                               :: no_children
-    REAL(wp)                              :: dtime      !< timestep
+    REAL(lp)                              :: dtime      !< timestep
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_q_dfire_sf_dynamics'
 
     CLASS(t_jsb_tile_abstract), POINTER   :: box_tile      !< pointer to the box tile to get the fertiliser data
-    REAL(wp), POINTER                     :: grid_cell_area(:) ! [m2]
-    REAL(wp), POINTER                     :: tile_fract(:) ! [%]
+    REAL(lp), POINTER                     :: grid_cell_area(:) ! [m2]
+    REAL(lp), POINTER                     :: tile_fract(:) ! [%]
     LOGICAL                               :: mask_is_tile_enabled(options%nc)
 
 
@@ -135,7 +135,7 @@ CONTAINS
     TYPE(t_sf_fuel_load)                  :: sf_fuel_load                                 !< Fuel load
     TYPE(t_sf_config)                     :: sf_config                                    !< spitfire config
 
-    REAL(wp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
+    REAL(lp)                              :: burnable_area_ha(options%nc)                 !< Burnable area [ha]
 
     TYPE(t_sf_dynamics)                   :: sf_dynamics
 
@@ -341,29 +341,29 @@ CONTAINS
     no_children = tile%Get_no_of_children()
 
     !< Init variables (set output variables to 0)
-    ab_moisture = 0._wp
-    fuel_moisture = 0._wp
-    i_surface = 0._wp
-    frac_consump_fcl = 0._wp
-    area_burned_output = 0._wp
-    area_burned_fract_output = 0._wp
+    ab_moisture = 0._lp
+    fuel_moisture = 0._lp
+    i_surface = 0._lp
+    frac_consump_fcl = 0._lp
+    area_burned_output = 0._lp
+    area_burned_fract_output = 0._lp
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Go science
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
     ALLOCATE(grid_cell_area(options%nc))
-    grid_cell_area = 1._wp ! defined as fraction too, QS has site simulations
-    burnable_area_ha = 1._wp
+    grid_cell_area = 1._lp ! defined as fraction too, QS has site simulations
+    burnable_area_ha = 1._lp
     mask_is_tile_enabled = .TRUE.
-    pot_burn_area = 1._wp
+    pot_burn_area = 1._lp
 #else
     ! IQ
     grid_cell_area => grid % area(ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
     pot_burn_area = grid_cell_area * (grass_fract + forest_fract)
     burnable_area_ha = sf_convert_units("m2", "ha", pot_burn_area)
-    mask_is_tile_enabled = (tile_fract > 0._wp)
+    mask_is_tile_enabled = (tile_fract > 0._lp)
 #endif
 
     sf_fuel_load = t_sf_fuel_load(nc, sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr, & ! params
@@ -460,14 +460,14 @@ CONTAINS
                   mask) ! in
 
     TYPE(t_sf_config), INTENT(in)           :: sf_config
-    REAL(wp), INTENT(in)                    :: grid_cell_area(sf_config%nc)  !< Gridcell area [ha]
+    REAL(lp), INTENT(in)                    :: grid_cell_area(sf_config%nc)  !< Gridcell area [ha]
     TYPE(t_sf_veget_cover_frac), INTENT(in) :: veg_cover_frac                !< Vegetation cover fraction [0 to 1]
     TYPE(t_sf_atm), INTENT(in)              :: sf_atm                        !< Weather
     TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load                  !< Fuel load
 
     TYPE(t_sf_ignitions), INTENT(inout)     :: sf_ignitions                  !< Fire ignition
     TYPE(t_sf_ros), INTENT(inout)           :: sf_ros                        !< Rate of spread
-    REAL(wp), INTENT(INOUT)                 :: nesterov_index(sf_config%nc)  !< Dryness index [Celsius^2]
+    REAL(lp), INTENT(INOUT)                 :: nesterov_index(sf_config%nc)  !< Dryness index [Celsius^2]
     TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture              !< Fuel moisture
     TYPE(t_sf_dynamics), INTENT(inout)      :: sf_dynamics                   !< Spitfire dynamics
     LOGICAL, INTENT(in), OPTIONAL           :: mask(sf_config%nc)            !< Gridcell can burn
@@ -514,7 +514,7 @@ CONTAINS
     CALL calc_sf_ignitions_main(sf_config, sf_ignitions)
 
     !< no ignitions events, no fire conditions
-    has_fire_conditions = has_fire_conditions .AND. (sf_ignitions%e_n_ignitions > 0._wp)
+    has_fire_conditions = has_fire_conditions .AND. (sf_ignitions%e_n_ignitions > 0._lp)
 
     !< Based on ignitions and fire spread conditions, calculate burned area and its fraction.
     CALL calc_area_burned(sf_config%nc, sf_ignitions % e_n_ignitions, & !< in
@@ -560,7 +560,7 @@ CONTAINS
   SUBROUTINE calc_fire_danger_index_main(sf_config, sf_fuel_moisture, fdi, mask)
     TYPE(t_sf_config), INTENT(in) :: sf_config
     TYPE(t_sf_mf), INTENT(in)  :: sf_fuel_moisture
-    REAL(wp), INTENT(out) :: fdi(:)
+    REAL(lp), INTENT(out) :: fdi(:)
     LOGICAL, INTENT(in) :: mask(:)
 
     IF (sf_config%ros_model_id == Q_DFIRE_ROS_THONICKE) THEN
@@ -588,9 +588,9 @@ CONTAINS
   !>
   PURE SUBROUTINE calc_fire_danger_index(nc, fuel_moisture, moisture_extinction, fdi, mask)
     INTEGER, INTENT(in)   :: nc
-    REAL(wp), INTENT(in)  :: fuel_moisture(nc)
-    REAL(wp), INTENT(in)  :: moisture_extinction(nc)
-    REAL(wp), INTENT(out) :: fdi(nc)
+    REAL(lp), INTENT(in)  :: fuel_moisture(nc)
+    REAL(lp), INTENT(in)  :: moisture_extinction(nc)
+    REAL(lp), INTENT(out) :: fdi(nc)
     LOGICAL, INTENT(in), OPTIONAL :: mask(nc)
 
     LOGICAL :: active_mask(nc)
@@ -598,9 +598,9 @@ CONTAINS
     active_mask = .TRUE.
     IF (PRESENT(mask)) active_mask = mask
 
-    fdi = 0._wp
-    WHERE (active_mask .AND. moisture_extinction > 0._wp)
-      fdi = MAX(0._wp, 1._wp - (fuel_moisture / moisture_extinction))
+    fdi = 0._lp
+    WHERE (active_mask .AND. moisture_extinction > 0._lp)
+      fdi = MAX(0._lp, 1._lp - (fuel_moisture / moisture_extinction))
     END WHERE
   END SUBROUTINE calc_fire_danger_index
 
@@ -612,25 +612,25 @@ CONTAINS
   FUNCTION sf_calc_fire_intensity(nc, ndeadpools, nfuels, calorific_heat_content, ros_forward, area_burned_fract, &
       fc_dead_cls, mask) RESULT (i_surface)
     INTEGER, INTENT(in)  :: nc, ndeadpools, nfuels
-    REAL(wp), INTENT(in) :: calorific_heat_content          !< Calorific heat content of fuel [KJ Kg-1]
-    REAL(wp), INTENT(in) :: ros_forward(nc)                 !< Forward rate of spread of the fire [m min-1]
-    REAL(wp), INTENT(in) :: area_burned_fract(nc)           !< Fraction of the area burned [0 to 1]
-    REAL(wp), INTENT(in) :: fc_dead_cls(nc, ndeadpools, nfuels) !< Dead fuel consumption. It includes 1, 10 and 100 hours fuel classes [g DM m-2]
+    REAL(lp), INTENT(in) :: calorific_heat_content          !< Calorific heat content of fuel [KJ Kg-1]
+    REAL(lp), INTENT(in) :: ros_forward(nc)                 !< Forward rate of spread of the fire [m min-1]
+    REAL(lp), INTENT(in) :: area_burned_fract(nc)           !< Fraction of the area burned [0 to 1]
+    REAL(lp), INTENT(in) :: fc_dead_cls(nc, ndeadpools, nfuels) !< Dead fuel consumption. It includes 1, 10 and 100 hours fuel classes [g DM m-2]
     LOGICAL, INTENT(in)  :: mask(nc)                        !< True = compute gridcell(s)
-    REAL(wp)             :: i_surface(nc)                   !< Fire intensity [kW m-1]
+    REAL(lp)             :: i_surface(nc)                   !< Fire intensity [kW m-1]
 
-    REAL(wp) :: tot_fc_dead(nc)                             !< Total dead fuel consumption aggregated over 1h, 10h, and 100h fuel classes [g DM m-2]
+    REAL(lp) :: tot_fc_dead(nc)                             !< Total dead fuel consumption aggregated over 1h, 10h, and 100h fuel classes [g DM m-2]
     INTEGER :: inc
 
     !< Account for fuel classes involved in the spread part
     tot_fc_dead = sf_calc_aggr_fuels(fc_dead_cls)
-    i_surface = 0._wp
+    i_surface = 0._lp
 
     DO inc = 1, nc
-      IF (mask(inc) .AND. area_burned_fract(inc) > 0._wp) THEN
+      IF (mask(inc) .AND. area_burned_fract(inc) > 0._lp) THEN
         !< Calculate the intensity of a surface fire at the flaming front (eq. 15 from Thonicke et al. (2010))
         i_surface(inc) = calorific_heat_content * (tot_fc_dead(inc) * ros_forward(inc)) / &
-            (1000._wp * area_burned_fract(inc) * 60._wp)
+            (1000._lp * area_burned_fract(inc) * 60._lp)
       END IF
     END DO
   END FUNCTION sf_calc_fire_intensity
@@ -643,18 +643,18 @@ CONTAINS
   !>
   SUBROUTINE calc_area_burned(nc, e_n_ignitions, fdi, mean_fire_area, area, ab, ab_fract, mask)
     INTEGER, INTENT(in)   :: nc
-    REAL(wp), INTENT(in)  :: e_n_ignitions(nc)  !< Expected number of ignitions events [ha-1 ts-1]
-    REAL(wp), INTENT(in)  :: fdi(nc)            !< Fire danger index [0 to 1]
-    REAL(wp), INTENT(in)  :: mean_fire_area(nc) !< [ha]
-    REAL(wp), INTENT(in)  :: area(nc)           !< Area of the gridcell [ha]
-    REAL(wp), INTENT(out) :: ab(nc)             !< area_burned [ha]
-    REAL(wp), INTENT(out) :: ab_fract(nc)       !< area_burned fraction [-]
+    REAL(lp), INTENT(in)  :: e_n_ignitions(nc)  !< Expected number of ignitions events [ha-1 ts-1]
+    REAL(lp), INTENT(in)  :: fdi(nc)            !< Fire danger index [0 to 1]
+    REAL(lp), INTENT(in)  :: mean_fire_area(nc) !< [ha]
+    REAL(lp), INTENT(in)  :: area(nc)           !< Area of the gridcell [ha]
+    REAL(lp), INTENT(out) :: ab(nc)             !< area_burned [ha]
+    REAL(lp), INTENT(out) :: ab_fract(nc)       !< area_burned fraction [-]
     LOGICAL, INTENT(in), OPTIONAL :: mask(nc)   !< True=compute gridcell(s)
     LOGICAL :: mask_sel(nc)
     INTEGER :: ic
 
-    ab = 0._wp
-    ab_fract = 0._wp
+    ab = 0._lp
+    ab_fract = 0._lp
 
     mask_sel = .TRUE. !< default
     IF (PRESENT(mask)) THEN
@@ -676,16 +676,16 @@ CONTAINS
   !> Calculate the above ground relative soil moisture
   !>
   FUNCTION calc_ab_moisture(ab_soil_depth_sl, ab_wtr_soil_sl, ab_wtr_wsat_sl, mask) RESULT (ab_moisture)
-    REAL(wp), INTENT(in)                :: ab_soil_depth_sl(:,:)      !< soil depth [m] (#nc, #above ground soil layers)
-    REAL(wp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
-    REAL(wp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
+    REAL(lp), INTENT(in)                :: ab_soil_depth_sl(:,:)      !< soil depth [m] (#nc, #above ground soil layers)
+    REAL(lp), INTENT(in)                :: ab_wtr_soil_sl(:,:)        !< soil water content [m] (#nc, #above ground soil layers)
+    REAL(lp), INTENT(in)                :: ab_wtr_wsat_sl(:,:)        !< soil water saturation [m] (#nc, #above ground soil layers)
     LOGICAL, INTENT(in), OPTIONAL       :: mask(:)                    !< True = gridcell enabled
-    REAL(wp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
+    REAL(lp), ALLOCATABLE               :: ab_moisture(:)             !< Relative above ground soil moisture [-] (nc)
 
     !< Select the first 2 layers from the soil moisture and calculate soil moisture content as a fraction of field capacity
     INTEGER :: is, ic
     INTEGER :: nc, nsl
-    REAL(wp), ALLOCATABLE :: ab_moisture_sl(:,:)
+    REAL(lp), ALLOCATABLE :: ab_moisture_sl(:,:)
     LOGICAL, ALLOCATABLE :: mask_in(:)
 
     nc = SIZE(ab_wtr_wsat_sl, DIM=1)
@@ -700,10 +700,10 @@ CONTAINS
     ENDIF
 
     !< Relative soil moisture for each above ground soil layers
-    ab_moisture_sl = 0._wp
+    ab_moisture_sl = 0._lp
     DO is=1, nsl
       DO ic=1, nc
-        IF (mask_in(ic) .AND. ab_wtr_wsat_sl(ic,is)>0._wp) THEN
+        IF (mask_in(ic) .AND. ab_wtr_wsat_sl(ic,is)>0._lp) THEN
           ab_moisture_sl(ic,is) = ab_wtr_soil_sl(ic,is) / ab_wtr_wsat_sl(ic,is)
         END IF
       END DO
@@ -711,7 +711,7 @@ CONTAINS
 
     !< Average of above ground soil layers
     IF (.NOT. ALLOCATED(ab_moisture)) ALLOCATE(ab_moisture(nc))
-    ab_moisture = 0._wp
+    ab_moisture = 0._lp
     DO ic=1, nc
       IF (mask_in(ic)) THEN
         ab_moisture(ic) = stats_average_weight(nsl, ab_moisture_sl(ic,:), ab_soil_depth_sl(ic,:))
@@ -727,7 +727,7 @@ CONTAINS
   !>
   SUBROUTINE run_diagnostics_at_tile(nc, iblk, grid_cell_area, sf_outputs)
     INTEGER, INTENT(in) :: nc, iblk
-    REAL(wp), INTENT(in) :: grid_cell_area(:)
+    REAL(lp), INTENT(in) :: grid_cell_area(:)
     TYPE(t_sf_dynamics), INTENT(in) :: sf_outputs
 
     LOGICAL :: test_BAfract_is_outside_limits
@@ -742,9 +742,9 @@ CONTAINS
     has_any_test_failed = .FALSE.
 
     ! AB_fract is within fractional limits? 0 to 1
-    IF (ANY(sf_outputs % area_burned_fract > 1._wp)) THEN
+    IF (ANY(sf_outputs % area_burned_fract > 1._lp)) THEN
       DO ic=1, nc
-        IF (sf_outputs % area_burned_fract(ic) > 1._wp) THEN
+        IF (sf_outputs % area_burned_fract(ic) > 1._lp) THEN
           WRITE(*,*) "spitfire.f90:: ic, iblk, AB_fract=", ic, iblk, &
                   sf_outputs % area_burned_fract(ic)
           test_BAfract_is_outside_limits = .TRUE.

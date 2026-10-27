@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_adaptor_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                     ONLY: wp
+  USE mo_kind,                     ONLY: lp
   USE mo_jsb_control,              ONLY: debug_on
   USE mo_exception,                ONLY: finish, message_text
   USE mo_q_dfire_sf_constants,     ONLY: df_sf_carbon_to_biomass_factor, df_sf_units_g_to_kg
@@ -27,7 +27,7 @@ MODULE mo_q_dfire_sf_adaptor_class
 
   IMPLICIT NONE
 
-  PUBLIC :: sf_convert_units!, sf_convert_units_mapped_wp_r2, convert_units_real_wp_r3
+  PUBLIC :: sf_convert_units
 
   PRIVATE
 
@@ -48,9 +48,9 @@ CONTAINS
   RECURSIVE FUNCTION convert_units_real_wp_scalar(src, dst, varIn, aux) RESULT (varOut)
     USE mo_q_dfire_sf_constants, ONLY: df_sf_units_km2_to_ha
     CHARACTER(*), INTENT(in)        :: src, dst
-    REAL(wp), INTENT(in)            :: varIn
-    REAL(wp), INTENT(in), OPTIONAL  :: aux        !< auxiliary values for conversion
-    REAL(wp)                        :: varOut     !< output
+    REAL(lp), INTENT(in)            :: varIn
+    REAL(lp), INTENT(in), OPTIONAL  :: aux        !< auxiliary values for conversion
+    REAL(lp)                        :: varOut     !< output
 
     ! ----------------------------------------------------------------------------------------------------- !
     IF (TRIM(src) == "km2" .AND. TRIM(dst) == "ha") THEN
@@ -71,10 +71,10 @@ CONTAINS
   !>
   RECURSIVE FUNCTION convert_units_real_wp_r1(src, dst, varIn, aux) RESULT (varOut)
     CHARACTER(*), INTENT(in)        :: src, dst
-    REAL(wp), INTENT(in)            :: varIn(:)
-    REAL(wp), INTENT(in), OPTIONAL  :: aux(:)    !< auxiliary values for conversion
-    REAL(wp), ALLOCATABLE           :: var_m2(:), var_g_m2(:) !< tmp variables
-    REAL(wp), ALLOCATABLE           :: varOut(:) !< output
+    REAL(lp), INTENT(in)            :: varIn(:)
+    REAL(lp), INTENT(in), OPTIONAL  :: aux(:)    !< auxiliary values for conversion
+    REAL(lp), ALLOCATABLE           :: var_m2(:), var_g_m2(:) !< tmp variables
+    REAL(lp), ALLOCATABLE           :: varOut(:) !< output
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. ALLOCATED(varOut)) ALLOCATE(varOut, mold = varIn)
 
@@ -149,12 +149,12 @@ CONTAINS
 
   RECURSIVE FUNCTION convert_units_real_wp_r2(src, dst, varIn, aux, nc_dim_opt) RESULT (varOut)
     CHARACTER(*), INTENT(in)        :: src, dst
-    REAL(wp), INTENT(in)            :: varIn(:,:)   !< (#nc, #ndim)
-    REAL(wp), INTENT(in), OPTIONAL  :: aux(:)       !< auxiliary values for conversion
-    REAL(wp), ALLOCATABLE           :: varOut(:,:)  !< output
+    REAL(lp), INTENT(in)            :: varIn(:,:)   !< (#nc, #ndim)
+    REAL(lp), INTENT(in), OPTIONAL  :: aux(:)       !< auxiliary values for conversion
+    REAL(lp), ALLOCATABLE           :: varOut(:,:)  !< output
     INTEGER, OPTIONAL, INTENT(in)   :: nc_dim_opt
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), ALLOCATABLE           :: var_m2(:,:), var_g_m2(:,:) !< tmp variables
+    REAL(lp), ALLOCATABLE           :: var_m2(:,:), var_g_m2(:,:) !< tmp variables
     INTEGER                         :: nc_dim
     ! ----------------------------------------------------------------------------------------------------- !
     nc_dim = 1 !< default, first dimension of array
@@ -227,10 +227,10 @@ CONTAINS
   CONTAINS
     !< Account for nc dimension (gridcell) as aux must match this dimensions
     FUNCTION multiply_by_ncdim_wp_r2(varIn, aux, nc_dim) RESULT (varOut)
-      REAL(wp), INTENT(in) :: varIn(:,:)
-      REAL(wp), INTENT(in) :: aux(:)            !< (#nc)
+      REAL(lp), INTENT(in) :: varIn(:,:)
+      REAL(lp), INTENT(in) :: aux(:)            !< (#nc)
       INTEGER, INTENT(in)  :: nc_dim
-      REAL(wp), ALLOCATABLE :: varOut(:,:)
+      REAL(lp), ALLOCATABLE :: varOut(:,:)
 
       INTEGER :: inc
 
@@ -253,10 +253,10 @@ CONTAINS
 
     !< Same as multiply but for division
     FUNCTION division_by_ncdim_wp_r2(varIn, aux, nc_dim) RESULT (varOut)
-      REAL(wp), INTENT(in) :: varIn(:,:)
-      REAL(wp), INTENT(in) :: aux(:)
+      REAL(lp), INTENT(in) :: varIn(:,:)
+      REAL(lp), INTENT(in) :: aux(:)
       INTEGER, INTENT(in)  :: nc_dim
-      REAL(wp), ALLOCATABLE :: varOut(:,:)
+      REAL(lp), ALLOCATABLE :: varOut(:,:)
 
       INTEGER :: inc
 
@@ -282,12 +282,12 @@ CONTAINS
 
   RECURSIVE FUNCTION convert_units_real_wp_r3(src, dst, varIn, aux, nc_dim_opt) RESULT (varOut)
     CHARACTER(*), INTENT(in)        :: src, dst
-    REAL(wp), INTENT(in)            :: varIn(:,:,:)
-    REAL(wp), INTENT(in), OPTIONAL  :: aux(:)          !< auxiliary values for conversion
+    REAL(lp), INTENT(in)            :: varIn(:,:,:)
+    REAL(lp), INTENT(in), OPTIONAL  :: aux(:)          !< auxiliary values for conversion
     INTEGER, INTENT(in), OPTIONAL   :: nc_dim_opt      !< Define which dimension is nc. It works along with 'aux' as it has to match the nc dimension
-    REAL(wp), ALLOCATABLE           :: varOut(:,:,:)   !< output
+    REAL(lp), ALLOCATABLE           :: varOut(:,:,:)   !< output
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), ALLOCATABLE           :: var_m2(:,:,:), var_g_m2(:,:,:) !< tmp variables
+    REAL(lp), ALLOCATABLE           :: var_m2(:,:,:), var_g_m2(:,:,:) !< tmp variables
     INTEGER, PARAMETER              :: nc_dim_def = 1
     INTEGER                         :: nc_dim
     ! ----------------------------------------------------------------------------------------------------- !
@@ -360,10 +360,10 @@ CONTAINS
   CONTAINS
     !< Account for nc dimension (gridcell) as aux must match this dimensions
     FUNCTION multiply_by_ncdim_wp_r3(varIn, aux, nc_dim) RESULT (varOut)
-      REAL(wp), INTENT(in) :: varIn(:,:,:)
-      REAL(wp), INTENT(in) :: aux(:)            !< (#nc)
+      REAL(lp), INTENT(in) :: varIn(:,:,:)
+      REAL(lp), INTENT(in) :: aux(:)            !< (#nc)
       INTEGER, INTENT(in)  :: nc_dim
-      REAL(wp), ALLOCATABLE :: varOut(:,:,:)
+      REAL(lp), ALLOCATABLE :: varOut(:,:,:)
 
       INTEGER :: inc
 
@@ -390,10 +390,10 @@ CONTAINS
 
     !< Same as multiply but for division
     FUNCTION division_by_ncdim_wp_r3(varIn, aux, nc_dim) RESULT (varOut)
-      REAL(wp), INTENT(in) :: varIn(:,:,:)
-      REAL(wp), INTENT(in) :: aux(:)
+      REAL(lp), INTENT(in) :: varIn(:,:,:)
+      REAL(lp), INTENT(in) :: aux(:)
       INTEGER, INTENT(in)  :: nc_dim
-      REAL(wp), ALLOCATABLE :: varOut(:,:,:)
+      REAL(lp), ALLOCATABLE :: varOut(:,:,:)
 
       INTEGER :: inc
 
@@ -424,10 +424,10 @@ CONTAINS
 
   FUNCTION convert_units_real_wp_r4(src, dst, varIn, aux, nc_dim_opt) RESULT (varOut)
     CHARACTER(*), INTENT(in)        :: src, dst
-    REAL(wp), INTENT(in)            :: varIn(:,:,:,:)
-    REAL(wp), INTENT(in), OPTIONAL  :: aux(:)          !< auxiliary values for conversion
+    REAL(lp), INTENT(in)            :: varIn(:,:,:,:)
+    REAL(lp), INTENT(in), OPTIONAL  :: aux(:)          !< auxiliary values for conversion
     INTEGER, INTENT(in), OPTIONAL   :: nc_dim_opt      !< Define which dimension is nc. It works along with 'aux' as it has to match the nc dimension
-    REAL(wp), ALLOCATABLE           :: varOut(:,:,:,:)   !< output
+    REAL(lp), ALLOCATABLE           :: varOut(:,:,:,:)   !< output
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER, PARAMETER              :: nc_dim_def = 1
     INTEGER                         :: nc_dim
@@ -451,10 +451,10 @@ CONTAINS
   CONTAINS
     !< Account for nc dimension (gridcell) as aux must match this dimensions
     FUNCTION multiply_by_ncdim_wp_r4(varIn, aux, nc_dim) RESULT (varOut)
-      REAL(wp), INTENT(in) :: varIn(:,:,:,:)
-      REAL(wp), INTENT(in) :: aux(:)            !< (#nc)
+      REAL(lp), INTENT(in) :: varIn(:,:,:,:)
+      REAL(lp), INTENT(in) :: aux(:)            !< (#nc)
       INTEGER, INTENT(in)  :: nc_dim
-      REAL(wp), ALLOCATABLE :: varOut(:,:,:,:)
+      REAL(lp), ALLOCATABLE :: varOut(:,:,:,:)
 
       INTEGER :: inc
 
@@ -493,16 +493,16 @@ CONTAINS
   FUNCTION sf_convert_units_mapped_wp_r2 (src, dsts, varIn, dim, aux) result (varOut)
     CHARACTER(len=*), INTENT(in) :: src       !<
     CHARACTER(len=*), INTENT(in) :: dsts(:)   !< dsts size == as SIZE(varIn, dim="dim")
-    REAL(wp), INTENT(in) :: varIn(:,:)        !< (#dim1, #dim2), It assumes nc=dim1.
+    REAL(lp), INTENT(in) :: varIn(:,:)        !< (#dim1, #dim2), It assumes nc=dim1.
     INTEGER, INTENT(in) :: dim                !< Dimension from varIn must have the same size as dsts
-    REAL(wp), INTENT(in), OPTIONAL :: aux(:)  !< Auxiliary data for units conversion (e.g: soil_depth_sl)
-    REAL(wp), ALLOCATABLE :: varOut(:,:)      !< (#dim1, #dim2), It assumes nc=dim1
+    REAL(lp), INTENT(in), OPTIONAL :: aux(:)  !< Auxiliary data for units conversion (e.g: soil_depth_sl)
+    REAL(lp), ALLOCATABLE :: varOut(:,:)      !< (#dim1, #dim2), It assumes nc=dim1
 
     INTEGER :: iunit
 
     IF (.NOT. ALLOCATED(varOut)) THEN
       ALLOCATE(varOut, mold=varIn)
-      varOut = 0._wp
+      varOut = 0._lp
     END IF
 
     IF (SIZE(dsts) /= SIZE(varIn, dim=2)) THEN

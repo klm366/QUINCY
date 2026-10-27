@@ -20,7 +20,7 @@ MODULE mo_q_assimi_config_class
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_math_constants,ONLY: eps4
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -77,9 +77,9 @@ CONTAINS
     LOGICAL                     :: flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
     CHARACTER(15)               :: canopy_conductance_scheme_string
-    REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer
-    REAL(wp)                    :: dAPAR
-    REAL(wp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
+    REAL(lp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer
+    REAL(lp)                    :: dAPAR
+    REAL(lp)                    :: k_canopy_layer                     !< extinction coefficient to calculate canopy layer depth
     INTEGER                     :: icanopy
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy_q_assimi
 
@@ -142,7 +142,7 @@ CONTAINS
     END SELECT
 
     ! extinction coefficient for canopy layer depth calculation
-    k_canopy_layer = 0.7_wp
+    k_canopy_layer = 0.7_lp
 
     !> canopy layer depth calculation
     !>
@@ -157,13 +157,13 @@ CONTAINS
     ALLOCATE(canopy_layer_thickness_profile(config%ncanopy))
     SELECT CASE(TRIM(config%canopy_layer_scheme))
     CASE ("standard")
-      canopy_layer_thickness_profile(:) = 0.5_wp
+      canopy_layer_thickness_profile(:) = 0.5_lp
     CASE ("fapar")
       ! alternative canopy layer depth calculation, approximately proportional to FAPAR
       ! to reduce impact of actual canopy layering on PS calculation
-      dAPAR = 1.0_wp / REAL(config%ncanopy, KIND = wp)
+      dAPAR = 1.0_lp / REAL(config%ncanopy, KIND = lp)
       DO icanopy = 1,config%ncanopy
-        canopy_layer_thickness_profile(icanopy) = -1.0_wp / k_canopy_layer * LOG(1._wp - (dAPAR * icanopy) + eps4)
+        canopy_layer_thickness_profile(icanopy) = -1.0_lp / k_canopy_layer * LOG(1._lp - (dAPAR * icanopy) + eps4)
       END DO
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme', config%canopy_layer_scheme
@@ -176,7 +176,7 @@ CONTAINS
     !! vgrid_canopy_q_assimi% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
     !!
     !! note: the axis of the q_canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
-    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
+    !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_lp * (lbounds(:) + ubounds(:))
     vgrid_canopy_q_assimi  => new_vgrid('q_canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers (leaf mass per layer as LAI) from Q_ASSIMI_ QUINCY', &
       & units = 'm2 m-2 LAI', &

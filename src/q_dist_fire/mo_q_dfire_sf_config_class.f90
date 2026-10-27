@@ -15,7 +15,7 @@ MODULE mo_q_dfire_sf_config_class
 
   USE mo_exception,         ONLY: message, finish, message_text
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_util,              ONLY: tolower
   USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_q_dfire_sf_constants, ONLY: sf_fuel_dead_fuel_nr, sf_fuel_live_fuel_nr, df_sf_fc_full_nr
@@ -67,31 +67,31 @@ MODULE mo_q_dfire_sf_config_class
     CHARACTER(len=20) :: dfire_precip_method_name    !< precipitation method name, from namelist
     INTEGER           :: dfire_precip_method_id      !< precipitation method id (1=,2=,3=), internal
 
-    REAL(wp)          :: density_human_population    !< average human population density in the grid cell [individuals km-2]
-    REAL(wp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
-    REAL(wp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
+    REAL(lp)          :: density_human_population    !< average human population density in the grid cell [individuals km-2]
+    REAL(lp)          :: lightning_frequency         !< avrg number of all lightnings [ha-1 d-1]
+    REAL(lp)          :: a_nd                        !< Propensity of people to produce ignition events (Eq. 3, Thonicke et al. (2010))
                                                      !< [ignitions indivual-1 d-1]
-    REAL(wp)          :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
+    REAL(lp)          :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumed in crown scorch. 4=fuel classes
 
     ! input data
     CHARACTER(len=filename_max) :: ic_popdens_filename, ic_lightning_events_filename, ic_human_igns_filename
 
     !< Fuel ratio flags (how much fuel allocate to the dead fuel classes)
-    REAL(wp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
-    REAL(wp)          :: ratio_dom_assoc_to_dead_fuel        !< Ratio to include dom_assoc as dead fuel
-    REAL(wp)          :: ratio_dom_to_dead_fuel              !< Ratio to include dom as dead fuel
-    REAL(wp)          :: ratio_soluable_litter_to_dead_fuel  !< Ratio to include soluable as dead fuel
-    REAL(wp)          :: ratio_residue_to_dead_fuel          !< Ratio to include residue as dead fuel
-    REAL(wp)          :: ratio_residue_assoc_to_dead_fuel    !< Ratio to include residue_assoc as dead fuel
+    REAL(lp)          :: ratio_polymeric_litter_to_dead_fuel !< Ratio to include polymeric litter as dead fuel
+    REAL(lp)          :: ratio_dom_assoc_to_dead_fuel        !< Ratio to include dom_assoc as dead fuel
+    REAL(lp)          :: ratio_dom_to_dead_fuel              !< Ratio to include dom as dead fuel
+    REAL(lp)          :: ratio_soluable_litter_to_dead_fuel  !< Ratio to include soluable as dead fuel
+    REAL(lp)          :: ratio_residue_to_dead_fuel          !< Ratio to include residue as dead fuel
+    REAL(lp)          :: ratio_residue_assoc_to_dead_fuel    !< Ratio to include residue_assoc as dead fuel
 
     !< Dev Flags
     LOGICAL           :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL           :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
-    REAL(wp)          :: tree_height_factor          !< Tree height factor for spitfire
-    REAL(wp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
-    REAL(wp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
-    REAL(wp)          :: live_fuel_factor            !< Live fuel factor for spitfire
+    REAL(lp)          :: tree_height_factor          !< Tree height factor for spitfire
+    REAL(lp)          :: tree_diameter_factor        !< Tree diameter factor for spitfire
+    REAL(lp)          :: dead_fuel_factor            !< Dead fuel factor for spitfire
+    REAL(lp)          :: live_fuel_factor            !< Live fuel factor for spitfire
     LOGICAL           :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
   CONTAINS
@@ -126,10 +126,10 @@ CONTAINS
     INTEGER                       :: dfire_precip_method_id   !< precipitation method id (1=,2=,3=), internal
     CHARACTER(len=20)             :: ros_modelname            !< name of rate of spread model
     INTEGER                       :: ros_model_id             !< rate of spread ID, derived from 'ros_modelname'
-    REAL(wp)                      :: density_human_population !< Human population density, used in QS
-    REAL(wp)                      :: lightning_frequency      !< Lightning frequency events, used in QS
-    REAL(wp)                      :: a_nd                     !< Human-caused ignition events, used in QS
-    REAL(wp)                      :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumption from crown scorch
+    REAL(lp)                      :: density_human_population !< Human population density, used in QS
+    REAL(lp)                      :: lightning_frequency      !< Lightning frequency events, used in QS
+    REAL(lp)                      :: a_nd                     !< Human-caused ignition events, used in QS
+    REAL(lp)                      :: fract_crown_scorch(sf_fuel_classes_nr) !< Fraction of live fuel consumption from crown scorch
     CHARACTER(len=filename_max)   :: ic_popdens_filename                    !< Filename for human population density input, used in IQJ
     CHARACTER(len=filename_max)   :: ic_lightning_events_filename           !< Filename for lightning events input, used in IQJ
     CHARACTER(len=filename_max)   :: ic_human_igns_filename                 !< Filename for human caused ignitions input, used in IQJ
@@ -140,19 +140,19 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_fuel_moisture
     TYPE(t_jsb_vgrid), POINTER    :: vgrid_months_in_year
 
-    REAL(wp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
-    REAL(wp)                      :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
-    REAL(wp)                      :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
-    REAL(wp)                      :: ratio_soluable_litter_to_dead_fuel !< Ratio to include soluable as dead fuel
-    REAL(wp)                      :: ratio_residue_to_dead_fuel         !< Ratio to include residue as dead fuel
-    REAL(wp)                      :: ratio_residue_assoc_to_dead_fuel   !< Ratio to include residue_assoc as dead fuel
+    REAL(lp)                      :: ratio_polymeric_litter_to_dead_fuel !< Ratio polymeric litter to include as dead fuels
+    REAL(lp)                      :: ratio_dom_assoc_to_dead_fuel       !< Ratio to include dom_assoc as dead fuel
+    REAL(lp)                      :: ratio_dom_to_dead_fuel             !< Ratio to include dom as dead fuel
+    REAL(lp)                      :: ratio_soluable_litter_to_dead_fuel !< Ratio to include soluable as dead fuel
+    REAL(lp)                      :: ratio_residue_to_dead_fuel         !< Ratio to include residue as dead fuel
+    REAL(lp)                      :: ratio_residue_assoc_to_dead_fuel   !< Ratio to include residue_assoc as dead fuel
     LOGICAL                       :: flag_has_dead_feedback      !< Flag to enable dead fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_live_feedback      !< Flag to enable live fuel feedback from Spitfire into Quincy
     LOGICAL                       :: flag_has_prob_mort_feedback !< Flag to enable live probability of mortality from Spitfire into Quincy (q_veg_dynamics.f90)
-    REAL(wp)                      :: tree_height_factor          !< Tree height factor for spitfire
-    REAL(wp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
-    REAL(wp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
-    REAL(wp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
+    REAL(lp)                      :: tree_height_factor          !< Tree height factor for spitfire
+    REAL(lp)                      :: tree_diameter_factor        !< Tree diameter factor for spitfire
+    REAL(lp)                      :: dead_fuel_factor            !< Dead fuel factor for spitfire
+    REAL(lp)                      :: live_fuel_factor            !< Live fuel factor for spitfire
     LOGICAL                       :: has_diagnostics             !< Enable diagnostics for spitfire, in case of any inconsistencies it stops the simulation
 
     CHARACTER(len=*), PARAMETER   :: routine = TRIM(modname)//':Init_q_dfire_sf_config'
@@ -208,19 +208,19 @@ CONTAINS
     ic_lightning_events_filename = "ic_lightning_events.nc"
     ic_human_igns_filename   = "ic_human_igns_events.nc"
     fract_crown_scorch       = [1.0, 0.05, 0., 0.]
-    ratio_polymeric_litter_to_dead_fuel = 0._wp
-    ratio_dom_assoc_to_dead_fuel        = 0._wp
-    ratio_dom_to_dead_fuel              = 0._wp
-    ratio_soluable_litter_to_dead_fuel  = 0._wp
-    ratio_residue_to_dead_fuel          = 0._wp
-    ratio_residue_assoc_to_dead_fuel    = 0._wp
+    ratio_polymeric_litter_to_dead_fuel = 0._lp
+    ratio_dom_assoc_to_dead_fuel        = 0._lp
+    ratio_dom_to_dead_fuel              = 0._lp
+    ratio_soluable_litter_to_dead_fuel  = 0._lp
+    ratio_residue_to_dead_fuel          = 0._lp
+    ratio_residue_assoc_to_dead_fuel    = 0._lp
     flag_has_dead_feedback   = .TRUE.
     flag_has_live_feedback   = .TRUE.
     flag_has_prob_mort_feedback = .TRUE.
-    tree_height_factor       = 1._wp
-    tree_diameter_factor     = 1._wp
-    dead_fuel_factor         = 1.0_wp
-    live_fuel_factor         = 1.0_wp
+    tree_height_factor       = 1._lp
+    tree_diameter_factor     = 1._lp
+    dead_fuel_factor         = 1.0_lp
+    live_fuel_factor         = 1.0_lp
     has_diagnostics          = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! read the namelist

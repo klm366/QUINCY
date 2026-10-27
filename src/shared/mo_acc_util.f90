@@ -17,8 +17,8 @@
 #define _ICON_STYLE_
 
 #ifdef _ICON_STYLE_
-#define _REAL_TYPE_ wp
-#define _ZERO_DP_ 0.0_wp
+#define _REAL_TYPE_ lp
+#define _ZERO_DP_ 0.0_lp
 #else
 #define _REAL_TYPE_ 8
 #define _ZERO_DP_ 0.0
@@ -29,7 +29,7 @@
 MODULE mo_acc_util
 
 #ifdef _ICON_STYLE_
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: lp
   USE mo_exception, ONLY: finish
 #endif
 
@@ -699,7 +699,7 @@ END MODULE mo_acc_util
 MODULE mo_acc_util
 
 #ifdef _ICON_STYLE_
-  USE mo_kind,      ONLY: wp
+  USE mo_kind,      ONLY: lp
   USE mo_exception, ONLY: finish
 #endif
 

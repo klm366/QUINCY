@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_ignition_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -59,20 +59,20 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_ignitions(nc, max_dens_hum_pop, dens_hum_pop, a_nd, lightning_freq, e_n_humans, e_n_lightnings, e_n_ignitions)
     INTEGER, INTENT(in)    :: nc                     !< dimensions
-    REAL(wp), INTENT(in)   :: dens_hum_pop(nc)       !< average human population density in the grid cell
+    REAL(lp), INTENT(in)   :: dens_hum_pop(nc)       !< average human population density in the grid cell
                                                      !< [individuals km-2]
-    REAL(wp), INTENT(in)   :: max_dens_hum_pop       !< max human population density allowed per gridcell
+    REAL(lp), INTENT(in)   :: max_dens_hum_pop       !< max human population density allowed per gridcell
                                                      !< [individuals km-2]
-    REAL(wp), INTENT(in)   :: lightning_freq(nc)     !< average number of flashes per day [ha-1 d-1]
-    REAL(wp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
+    REAL(lp), INTENT(in)   :: lightning_freq(nc)     !< average number of flashes per day [ha-1 d-1]
+    REAL(lp), INTENT(in)   :: a_nd(nc)               !< propensity to people to produce ignitions events
                                                      !< [ignitions individual-1 d-1]
-    REAL(wp), INTENT(out)  :: e_n_humans(nc)         !< Expected number of human-caused ignitions [ha-1 ts-1]
-    REAL(wp), INTENT(out)  :: e_n_lightnings(nc)     !<
-    REAL(wp), INTENT(out)  :: e_n_ignitions(nc)      !<
+    REAL(lp), INTENT(out)  :: e_n_humans(nc)         !< Expected number of human-caused ignitions [ha-1 ts-1]
+    REAL(lp), INTENT(out)  :: e_n_lightnings(nc)     !<
+    REAL(lp), INTENT(out)  :: e_n_ignitions(nc)      !<
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sf_ignition'
-    REAL(wp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]
-    REAL(wp)             :: k_pd(nc)                 !< Spatial dependence of human-caused ignitions [-]
+    REAL(lp)             :: sel_dens_hum_pop(nc)     !< selected average human population density [indiv km-2]
+    REAL(lp)             :: k_pd(nc)                 !< Spatial dependence of human-caused ignitions [-]
     INTEGER              :: ic
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -85,11 +85,11 @@ CONTAINS
 
     !< Calculate how likely a fire is about to ignite due to human population
     !< Section 2.2.1, equations 4 from Thonicke et al. (2010)
-    k_pd = 30.0_wp * exp(-0.5_wp * sqrt(sel_dens_hum_pop))
+    k_pd = 30.0_lp * exp(-0.5_lp * sqrt(sel_dens_hum_pop))
 
     !< Calculate how likely a fire is about to ignite due to human population
     !< Section 2.2.1, equation 3 from Thonicke et al. (2010)
-    e_n_humans = sel_dens_hum_pop * k_pd * a_nd / 100._wp
+    e_n_humans = sel_dens_hum_pop * k_pd * a_nd / 100._lp
 
     e_n_lightnings = lightning_freq * df_sf_lign_cg * df_sf_lign_eff
     !< Section 2.2, last paragraph (below eq. 2 from Thonicke et al. (2010))

@@ -18,7 +18,7 @@
 MODULE mo_q_dfire_sf_fmoist_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: eps8
@@ -48,7 +48,7 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_fuel_moisture_main(sf_config, nesterov_index, sf_fuel_load, sf_fuel_moisture, mask)
     TYPE(t_sf_config), INTENT(in)           :: sf_config
-    REAL(wp), INTENT(in)                    :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
+    REAL(lp), INTENT(in)                    :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
     TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
     TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture
     LOGICAL, INTENT(in)                     :: mask(:)
@@ -74,7 +74,7 @@ CONTAINS
                                      ix_1000hr => df_sf_fc_1000hr_idx
 
     TYPE(t_sf_config), INTENT(in)         :: sf_config
-    REAL(wp), INTENT(in)                  :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
+    REAL(lp), INTENT(in)                  :: nesterov_index(:) !< Nesterov index = Dryness index [Celsius^2]
     TYPE(t_sf_fuel_load), INTENT(in)      :: sf_fuel_load
     TYPE(t_sf_mf), INTENT(inout)          :: sf_fuel_moisture
 
@@ -103,21 +103,21 @@ CONTAINS
   !>
   SUBROUTINE calc_sf_fuel_moisture_for_thonicke(nc, nalphas, nfuels, alphas, nesterov_index, litter_moisture, w_oi, live_fuel_lvg, fuel_moisture)
     INTEGER, INTENT(in)                 :: nc, nalphas, nfuels        !< Number of gridcells, number of alpha params, number of fuels used to calc fuel moisture
-    REAL(wp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
-    REAL(wp), INTENT(in)                :: nesterov_index(nc)         !< Nesterov index = Dryness index [Celsius^2]
-    REAL(wp), INTENT(in)                :: litter_moisture(nc)        !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
-    REAL(wp), INTENT(in)                :: w_oi(nc,nfuels)            !< Dead fuel involved in the calculation of fuel moisture [g DM m-2]
-    REAL(wp), INTENT(in)                :: live_fuel_lvg(nc)          !< Total live grass fuel [g DM m-2]
-    REAL(wp), INTENT(out)               :: fuel_moisture(nc, df_sf_omegas_nr) !< output [0 to 1]
+    REAL(lp), INTENT(in)                :: alphas(nalphas)            !< Drying parameter for 1, 10 and 100 hours fuel class [Celsius-2]
+    REAL(lp), INTENT(in)                :: nesterov_index(nc)         !< Nesterov index = Dryness index [Celsius^2]
+    REAL(lp), INTENT(in)                :: litter_moisture(nc)        !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
+    REAL(lp), INTENT(in)                :: w_oi(nc,nfuels)            !< Dead fuel involved in the calculation of fuel moisture [g DM m-2]
+    REAL(lp), INTENT(in)                :: live_fuel_lvg(nc)          !< Total live grass fuel [g DM m-2]
+    REAL(lp), INTENT(out)               :: fuel_moisture(nc, df_sf_omegas_nr) !< output [0 to 1]
 
     LOGICAL :: has_live_fuel_lvg(nc), has_dead_fuel(nc)
     INTEGER :: inc
 
     has_dead_fuel = sf_calc_has_any_fuel(w_oi)
-    has_live_fuel_lvg = (live_fuel_lvg > 0._wp)
+    has_live_fuel_lvg = (live_fuel_lvg > 0._lp)
 
     !< init outputs
-    fuel_moisture = 0._wp
+    fuel_moisture = 0._lp
 
     DO inc = 1, nc
       IF (has_live_fuel_lvg(inc) .OR. has_dead_fuel(inc)) THEN
@@ -138,12 +138,12 @@ CONTAINS
                                 litter_moisture, &
                                 live_fuel_lvg, w_oi) RESULT(omegas)
     INTEGER, INTENT(in)  :: nalphas, nfuels         !< Number of alpha params, number of fuel classes
-    REAL(wp), INTENT(in) :: alphas(nalphas)         !< Drying parameter for 1, 10, 100 hours fuel classes [Celsius^2]
-    REAL(wp), INTENT(in) :: nesterov_index          !< Nesterov index [Celsius^2]
-    REAL(wp), INTENT(in) :: litter_moisture         !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
-    REAL(wp), INTENT(in) :: live_fuel_lvg           !< Livegrass fuel [g DM m-2]
-    REAL(wp), INTENT(in) :: w_oi(nfuels)            !< Total dead fuel (1, 10 and 100 hours) [g DM m-2]
-    REAL(wp)             :: omegas(df_sf_omegas_nr) !< output 1=omega_o, 2=omega_n_l
+    REAL(lp), INTENT(in) :: alphas(nalphas)         !< Drying parameter for 1, 10, 100 hours fuel classes [Celsius^2]
+    REAL(lp), INTENT(in) :: nesterov_index          !< Nesterov index [Celsius^2]
+    REAL(lp), INTENT(in) :: litter_moisture         !< Relative litter moisture content, approximated by relative top-layer soil moisture content (== w_s,1) [0 to 1]
+    REAL(lp), INTENT(in) :: live_fuel_lvg           !< Livegrass fuel [g DM m-2]
+    REAL(lp), INTENT(in) :: w_oi(nfuels)            !< Total dead fuel (1, 10 and 100 hours) [g DM m-2]
+    REAL(lp)             :: omegas(df_sf_omegas_nr) !< output 1=omega_o, 2=omega_n_l
 
     INTEGER, PARAMETER :: ix_woi_1hr = 1
     INTEGER, PARAMETER :: nr_fuels = 4              !< 4 = (3 = total dead fuels (1,10,100)) + (1 = livegrass)
@@ -151,44 +151,44 @@ CONTAINS
     INTEGER, PARAMETER :: ix_alpha_1hr = 1
     INTEGER, PARAMETER :: nr_fine_fuels = 2         !< 1 hour dead fuel + livegrass
 
-    REAL(wp) :: omega_lvg, omega_1hr
+    REAL(lp) :: omega_lvg, omega_1hr
 
-    REAL(wp) :: alpha_lvg, alpha_1hr
-    REAL(wp) :: alphas_o(nr_fuels), alpha_o_weighted, weighted_alphas
+    REAL(lp) :: alpha_lvg, alpha_1hr
+    REAL(lp) :: alphas_o(nr_fuels), alpha_o_weighted, weighted_alphas
 
-    REAL(wp) :: dead_fuel_1hr
-    REAL(wp) :: fuels_o(nr_fuels) !< fuels used to calculate omega_o (dead 1, 10 and 100 hours + live grass)
+    REAL(lp) :: dead_fuel_1hr
+    REAL(lp) :: fuels_o(nr_fuels) !< fuels used to calculate omega_o (dead 1, 10 and 100 hours + live grass)
     LOGICAL :: has_live_fuel_lvg, has_dead_fuel, has_dead_fuel_1hr
 
-    has_dead_fuel = (SUM(w_oi) > 0._wp)
-    has_dead_fuel_1hr = (w_oi(ix_fuel_1hr) > 0._wp)
-    has_live_fuel_lvg = (live_fuel_lvg > 0._wp)
+    has_dead_fuel = (SUM(w_oi) > 0._lp)
+    has_dead_fuel_1hr = (w_oi(ix_fuel_1hr) > 0._lp)
+    has_live_fuel_lvg = (live_fuel_lvg > 0._lp)
 
     !< init outputs
-    omegas(df_sf_omega_o_idx) = 0._wp   !< omega_o: combine all fuels (1,10,100 and 1000 hours dead fuel + live grass)
-    omegas(df_sf_omega_nl_idx) = 0._wp  !< omega_n,l: combine 1 hour dead fuel and live grass
+    omegas(df_sf_omega_o_idx) = 0._lp   !< omega_o: combine all fuels (1,10,100 and 1000 hours dead fuel + live grass)
+    omegas(df_sf_omega_nl_idx) = 0._lp  !< omega_n,l: combine 1 hour dead fuel and live grass
 
     !< Calculate omega_n,l (dead 1hr + livegrass)
     !< According to Thonicke et al. (2010) eq. B3, the omega_1hr and lvg_moisture must be weighted in order to compute omega_n,l
 
     !< Compute omega_1hr
-    weighted_alphas = 0._wp
-    omega_1hr = 0._wp
-    alpha_1hr = 0._wp
-    omega_lvg = 0._wp
+    weighted_alphas = 0._lp
+    omega_1hr = 0._lp
+    alpha_1hr = 0._lp
+    omega_lvg = 0._lp
     IF (has_dead_fuel_1hr) THEN
       alpha_1hr = alphas(ix_alpha_1hr)
       omega_1hr = calc_omega(alpha_1hr, nesterov_index)
     END IF
 
     !< Compute alpha livegrass (Pfeiffer et al. (2013), Eq. A6 and A7)
-    alpha_lvg = 0._wp
-    IF (has_live_fuel_lvg .AND. nesterov_index > 0._wp) THEN
+    alpha_lvg = 0._lp
+    IF (has_live_fuel_lvg .AND. nesterov_index > 0._lp) THEN
       !< Thonicke et al. (2010) Eq. B2
-      omega_lvg = max(0._wp, (10._wp/9._wp) * litter_moisture - (1._wp / 9._wp) )
+      omega_lvg = max(0._lp, (10._lp/9._lp) * litter_moisture - (1._lp / 9._lp) )
 
       !< Derived from Eq. 6 from Thonicke et al. (2010)
-      IF (omega_lvg > 0._wp) alpha_lvg = - (log(omega_lvg) / nesterov_index)
+      IF (omega_lvg > 0._lp) alpha_lvg = - (log(omega_lvg) / nesterov_index)
     END IF
 
     !< Calculate 1hr fuel moisture
@@ -222,9 +222,9 @@ CONTAINS
   !> Eq. 6 from Thonicke et al. (2010)
   !>
   ELEMENTAL FUNCTION calc_omega(alpha, nesterov_index) RESULT (omega)
-    REAL(wp), INTENT(in) :: alpha          !< Drying parameter for fuel class [Celsius-2]
-    REAL(wp), INTENT(in) :: nesterov_index !< Nesterov index [Celsius^2]
-    REAL(wp)             :: omega          !< Relative fuel moisture [-]
+    REAL(lp), INTENT(in) :: alpha          !< Drying parameter for fuel class [Celsius-2]
+    REAL(lp), INTENT(in) :: nesterov_index !< Nesterov index [Celsius^2]
+    REAL(lp)             :: omega          !< Relative fuel moisture [-]
 
     omega = exp(-alpha * nesterov_index)
   END FUNCTION calc_omega
@@ -251,7 +251,7 @@ CONTAINS
                                      ix_wdy => df_sf_ix_sigma_lv_wdy
 
     TYPE(t_sf_config), INTENT(in)           :: sf_config
-    REAL(wp), INTENT(in)                    :: nesterov_index(:)
+    REAL(lp), INTENT(in)                    :: nesterov_index(:)
     TYPE(t_sf_fuel_load), INTENT(in)        :: sf_fuel_load
     TYPE(t_sf_mf), INTENT(inout)            :: sf_fuel_moisture
     LOGICAL, INTENT(in)                     :: mask(:) !< True: gridcell enabled
@@ -276,14 +276,14 @@ CONTAINS
     sf_fuel_moisture % fuel_moisture_for_fc = sf_fuel_moisture%dead
 
     !< calculate mixed fuel moisture weighted by fuel load
-    sf_fuel_moisture % woi_dd = 0._wp
+    sf_fuel_moisture % woi_dd = 0._lp
     sf_fuel_moisture % woi_dd(:,ix_1hr) = sf_fuel_load % dead_fuel_litter(:,ix_1hr) * df_sf_units_g_to_kg
     sf_fuel_moisture % woi_dd(:,ix_10hr) = sf_fuel_load % dead_fuel_litter(:,ix_10hr) * df_sf_units_g_to_kg
     sf_fuel_moisture % woi_dd(:,ix_100hr) = sf_fuel_load % dead_fuel_litter(:,ix_100hr) * df_sf_units_g_to_kg
     sf_fuel_moisture % woi_dd(:,ix_clvg) = sf_fuel_load % tot_dead_fuel_grass * df_sf_units_g_to_kg  !< 4 = dry livegrass
 
-    sf_fuel_moisture % woi_lv = 0._wp
-    sf_fuel_moisture % woi_lv(:,ix_lvg) = 0._wp !< 1 = wet livegrass, not yet implemented
+    sf_fuel_moisture % woi_lv = 0._lp
+    sf_fuel_moisture % woi_lv(:,ix_lvg) = 0._lp !< 1 = wet livegrass, not yet implemented
     sf_fuel_moisture % woi_lv(:,ix_wdy) = sf_fuel_load % tot_live_fuel_tree * df_sf_units_g_to_kg !< 2= woody fuel
 
     sf_fuel_moisture % me_dd = sf_fuel_moisture % moisture_extinction
@@ -338,18 +338,18 @@ CONTAINS
     INTEGER, INTENT(in)       :: ndd                     !< Dead fuel classes
     INTEGER, INTENT(in)       :: nlitros                 !< Dead litter fuel classes involved in fire spread -1 to 100 hours-
     INTEGER, INTENT(in)       :: nlv                     !< Live fuel classes
-    REAL(wp), INTENT(in)      :: alphas_dd(4)            !< Drying parameter for dead fuels [cm2/cm3] (1, 10, 100 hours, cured livegrass)
-    REAL(wp), INTENT(in)      :: lvg_moisture(nc)        !< live grass fuel moisture [%]
-    REAL(wp), INTENT(in)      :: dead_fuel_litter(nc,nlitros) !< dead fuel [g DM m-2] (#nc, #dead litter ros fuel classes -1 to 100 hours-)
-    REAL(wp), INTENT(in)      :: dead_fuel_grass(nc)     !< dead fuel grass [g DM m-2] (#nc)
-    REAL(wp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
+    REAL(lp), INTENT(in)      :: alphas_dd(4)            !< Drying parameter for dead fuels [cm2/cm3] (1, 10, 100 hours, cured livegrass)
+    REAL(lp), INTENT(in)      :: lvg_moisture(nc)        !< live grass fuel moisture [%]
+    REAL(lp), INTENT(in)      :: dead_fuel_litter(nc,nlitros) !< dead fuel [g DM m-2] (#nc, #dead litter ros fuel classes -1 to 100 hours-)
+    REAL(lp), INTENT(in)      :: dead_fuel_grass(nc)     !< dead fuel grass [g DM m-2] (#nc)
+    REAL(lp), INTENT(in)      :: nesterov_index(nc)      !< Nesterov index = Dryness index [Celsius^2]
     LOGICAL, INTENT(in)       :: mask(nc)
     TYPE(t_sf_mf), INTENT(inout) :: mf
 
-    REAL(wp) :: dead_fuel(nc,4) !< [g DM m-2]
-    REAL(wp) :: alphas_weighted_ros(nc) !<  [deg C-2]
-    REAL(wp) :: alphas_weighted_dd(nc) !<  [deg C-2]
-    REAL(wp) :: mf_10hr
+    REAL(lp) :: dead_fuel(nc,4) !< [g DM m-2]
+    REAL(lp) :: alphas_weighted_ros(nc) !<  [deg C-2]
+    REAL(lp) :: alphas_weighted_dd(nc) !<  [deg C-2]
+    REAL(lp) :: mf_10hr
     INTEGER :: ic
 
     dead_fuel(:,ix_1hr:ix_100hr) = dead_fuel_litter
@@ -357,7 +357,7 @@ CONTAINS
 
     DO ic = 1, nc
       IF (.NOT. mask(ic)) CYCLE
-      mf_10hr = 0._wp
+      mf_10hr = 0._lp
 
       !< Ensure there is fuel
       IF (SUM(dead_fuel_litter(ic,:)) > eps8) THEN
@@ -371,18 +371,18 @@ CONTAINS
         mf%dead(ic,ix_1hr) = calc_omega(alphas_weighted_dd(ic), nesterov_index(ic)) !< Pfeiffer
       ENDIF
 
-      mf%dead(ic,ix_10hr) = mf_10hr * 1.01_wp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
-      mf%dead(ic,ix_100hr) = mf_10hr * 1.02_wp
-      mf%dead(ic,ix_1000hr) = mf_10hr * 1.02_wp
+      mf%dead(ic,ix_10hr) = mf_10hr * 1.01_lp !< Andrews PL (2018), section 5.3.1, 2nd paragraph
+      mf%dead(ic,ix_100hr) = mf_10hr * 1.02_lp
+      mf%dead(ic,ix_1000hr) = mf_10hr * 1.02_lp
       mf%dead(ic,ix_clvg) = mf%dead(ic,ix_1hr) ! Same as in Oberhagemann et al. (2025), fuelload.c
 
-      !< in case  mf_10hr > 1.0_wp, limit to 1.0_wp
-      mf%dead(ic,ix_10hr) = MIN(mf%dead(ic,ix_10hr), 1.0_wp)
-      mf%dead(ic,ix_100hr) = MIN(mf%dead(ic,ix_100hr), 1.0_wp)
-      mf%dead(ic,ix_1000hr) = MIN(mf%dead(ic,ix_1000hr), 1.0_wp)
+      !< in case  mf_10hr > 1.0_lp, limit to 1.0_lp
+      mf%dead(ic,ix_10hr) = MIN(mf%dead(ic,ix_10hr), 1.0_lp)
+      mf%dead(ic,ix_100hr) = MIN(mf%dead(ic,ix_100hr), 1.0_lp)
+      mf%dead(ic,ix_1000hr) = MIN(mf%dead(ic,ix_1000hr), 1.0_lp)
     ENDDO
     mf%live(:,ix_lvg) = lvg_moisture
-    mf%live(:,ix_wdy) = 0._wp !  For later, for shrubs
+    mf%live(:,ix_wdy) = 0._lp !  For later, for shrubs
   END SUBROUTINE calc_sf_fuel_moisture_for_oberhagemann
 
 
@@ -394,8 +394,8 @@ CONTAINS
   FUNCTION calc_mflg_ober(nc, lfmc_par, phen) RESULT (mf_lg)
     INTEGER, INTENT(in) :: nc
     TYPE(t_sf_lfmc), INTENT(in) :: lfmc_par  !< livegrass moisture parameters
-    REAL(wp), INTENT(in) :: phen(nc)      !< Livegrass phenological status [0 to 1]
-    REAL(wp), ALLOCATABLE :: mf_lg(:)     ! Livegrass moisture [0.3 to 2.5]
+    REAL(lp), INTENT(in) :: phen(nc)      !< Livegrass phenological status [0 to 1]
+    REAL(lp), ALLOCATABLE :: mf_lg(:)     ! Livegrass moisture [0.3 to 2.5]
 
     ! As paper's source code
     mf_lg = lfmc_par%b + (lfmc_par%max - lfmc_par%b) * phen

@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_fuel_consump_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
 
@@ -58,16 +58,16 @@ CONTAINS
   FUNCTION sf_calc_dead_fuel_consumption(area_burned_frac, &
       fract_consumption, dead_fuel, mask) RESULT (dead_fc)
 
-    REAL(wp), INTENT(in)                 :: area_burned_frac(:)       !< Fraction of the area burned (#nc) [0 to 1]
-    REAL(wp), INTENT(in)                 :: fract_consumption(:, :)   !< Dead fraction of consumption (#nc,#fuel classes) [0 to 1]
-    REAL(wp), INTENT(in)                 :: dead_fuel(:,:,:)          !< (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
+    REAL(lp), INTENT(in)                 :: area_burned_frac(:)       !< Fraction of the area burned (#nc) [0 to 1]
+    REAL(lp), INTENT(in)                 :: fract_consumption(:, :)   !< Dead fraction of consumption (#nc,#fuel classes) [0 to 1]
+    REAL(lp), INTENT(in)                 :: dead_fuel(:,:,:)          !< (#nc, #dead fuel pools, #fuel classes) [g DM m-2]
     LOGICAL, INTENT(in)                  :: mask(:)                   !< True = gridcells to compute
-    REAL(wp), ALLOCATABLE                :: dead_fc(:,:,:)            !< output (nc, ndeadpools, nfuelclass) [g DM m-2]
+    REAL(lp), ALLOCATABLE                :: dead_fc(:,:,:)            !< output (nc, ndeadpools, nfuelclass) [g DM m-2]
 
     INTEGER  :: iclass, idpool, ic
 
     IF (.NOT. ALLOCATED(dead_fc)) ALLOCATE(dead_fc, mold=dead_fuel)
-    dead_fc = 0._wp
+    dead_fc = 0._lp
 
     DO iclass=1, SIZE(dead_fuel, DIM=3) !< 3 = dead fuel idx
       DO idpool = 1, SIZE(dead_fuel, DIM=2) !< 2 = dead fuel pool indices
@@ -93,16 +93,16 @@ CONTAINS
       area_burned_frac, live_fuel, mask) RESULT (live_fc)
 
     INTEGER, INTENT(in) :: nc, nlivepools, nfuelclass
-    REAL(wp), INTENT(in) :: prop_crown_scorch(nc)               !< Proportion of the crown scorch by the fire [0 to 1]
-    REAL(wp), INTENT(in) :: fract_crown_scorch(nfuelclass)      !< Fraction of the crown scorch consumed as live fuel for each fuel class [0 to 1]
-    REAL(wp), INTENT(in) :: area_burned_frac(nc)                !< Fraction of the area burned by a fire [0 to 1]
-    REAL(wp), INTENT(in) :: live_fuel(nc,nlivepools,nfuelclass) !< Live fuel [g DM m-2]
+    REAL(lp), INTENT(in) :: prop_crown_scorch(nc)               !< Proportion of the crown scorch by the fire [0 to 1]
+    REAL(lp), INTENT(in) :: fract_crown_scorch(nfuelclass)      !< Fraction of the crown scorch consumed as live fuel for each fuel class [0 to 1]
+    REAL(lp), INTENT(in) :: area_burned_frac(nc)                !< Fraction of the area burned by a fire [0 to 1]
+    REAL(lp), INTENT(in) :: live_fuel(nc,nlivepools,nfuelclass) !< Live fuel [g DM m-2]
     LOGICAL, INTENT(in)  :: mask(nc)                            !< True = compute gridcell(s)
-    REAL(wp) :: live_fc(nc,sf_fuel_live_fuel_nr)                !< output [g DM m-2]
+    REAL(lp) :: live_fc(nc,sf_fuel_live_fuel_nr)                !< output [g DM m-2]
 
     INTEGER :: iclass, ilvpool, ic
 
-    live_fc = 0._wp
+    live_fc = 0._lp
 
     DO ilvpool = 1, nlivepools
       DO iclass=1, nfuelclass
@@ -129,18 +129,18 @@ CONTAINS
                   fc_dead, mask) RESULT (fc_dead_els)
 
     INTEGER, INTENT(in) :: nc, ndeadpools, nEMelems
-    REAL(wp), INTENT(in) :: veg_pool_mt(:,:,:)        !< [molX/m2] (#pool, #elements, #nc)
-    REAL(wp), INTENT(in) :: sb_pool_mt(:,:,:)         !< [molX/m3] (#pool, #elements, #nc)
-    REAL(wp), INTENT(in) :: fc_dead(:,:)              !< Dead fuel consumption in QS units [molX/m2] (#nc, #ndeadpools)
+    REAL(lp), INTENT(in) :: veg_pool_mt(:,:,:)        !< [molX/m2] (#pool, #elements, #nc)
+    REAL(lp), INTENT(in) :: sb_pool_mt(:,:,:)         !< [molX/m3] (#pool, #elements, #nc)
+    REAL(lp), INTENT(in) :: fc_dead(:,:)              !< Dead fuel consumption in QS units [molX/m2] (#nc, #ndeadpools)
     LOGICAL, INTENT(in)  :: mask(:)                   !< (#nc)
-    REAL(wp), ALLOCATABLE :: fc_dead_els(:,:,:)       !< (nc,ndeadpools,df_sf_elements_nr) !< Output [molX/m2]
+    REAL(lp), ALLOCATABLE :: fc_dead_els(:,:,:)       !< (nc,ndeadpools,df_sf_elements_nr) !< Output [molX/m2]
 
     INTEGER :: ic
 
     IF (.NOT. ALLOCATED(fc_dead_els)) THEN
       ALLOCATE(fc_dead_els(nc,ndeadpools,nEMelems))
     END IF
-    fc_dead_els = 0._wp
+    fc_dead_els = 0._lp
 
     !< woody litter
     !write(*,*) "calc_dead_fc_pop_elems = fc_dead (woody) =", fc_dead(:,t_sf_fuel_dead_fuel_woody_ix)
@@ -150,73 +150,73 @@ CONTAINS
       IF (.NOT. mask(ic)) CYCLE ! skip gridcell if no fire
 
       ! woody litter
-      IF (sb_pool_mt(ix_woody_litter,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_woody_litter,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_woody_ix,:) = sb_pool_mt(ix_woody_litter,:,ic) * &
                 fc_dead(ic,t_sf_fuel_dead_fuel_woody_ix) / sb_pool_mt(ix_woody_litter,ixC,ic)
       ENDIF
 
       ! polymeric litter
-      IF (sb_pool_mt(ix_polymeric_litter,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_polymeric_litter,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_polymeric_ix,:) = sb_pool_mt(ix_polymeric_litter,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_polymeric_ix) / sb_pool_mt(ix_polymeric_litter,ixC,ic)
       END IF
 
       ! soluable litter
-      IF (sb_pool_mt(ix_soluable_litter,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_soluable_litter,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_soluable_ix,:) = sb_pool_mt(ix_soluable_litter,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_soluable_ix) / sb_pool_mt(ix_soluable_litter,ixC,ic)
       END IF
 
       ! residue litter
-      IF (sb_pool_mt(ix_residue,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_residue,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_res_ix,:) = sb_pool_mt(ix_residue,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_res_ix) / sb_pool_mt(ix_residue,ixC,ic)
       END IF
 
       ! residue_assoc litter
-      IF (sb_pool_mt(ix_residue_assoc,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_residue_assoc,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_res_assoc_ix,:) = sb_pool_mt(ix_residue_assoc,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_res_assoc_ix) / sb_pool_mt(ix_residue_assoc,ixC,ic)
       END IF
 
       ! dom litter
-      IF (sb_pool_mt(ix_dom,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_dom,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_dom_ix,:) = sb_pool_mt(ix_dom,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_dom_ix) / sb_pool_mt(ix_dom,ixC,ic)
       END IF
 
       ! dom_assoc litter
-      IF (sb_pool_mt(ix_dom_assoc,ixC,ic) > 0._wp) THEN
+      IF (sb_pool_mt(ix_dom_assoc,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_dom_assoc_ix,:) = sb_pool_mt(ix_dom_assoc,:,ic) * &
             fc_dead(ic,t_sf_fuel_dead_fuel_dom_assoc_ix) / sb_pool_mt(ix_dom_assoc,ixC,ic)
       END IF
 
       ! leaf
-      IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_leaf_ix,:) = veg_pool_mt(ix_leaf,:,ic) * &
           fc_dead(ic,t_sf_fuel_dead_fuel_grass_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
       ENDIF
 
       !< sap wood
-      IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_sap_ix,:) = veg_pool_mt(ix_sap_wood,:,ic) * &
           fc_dead(ic,t_sf_fuel_dead_fuel_grass_sap_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
       ENDIF
 
       !< labile
-      IF (veg_pool_mt(ix_labile,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_labile,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_labile_ix,:) = veg_pool_mt(ix_labile,:,ic) * &
           fc_dead(ic,t_sf_fuel_dead_fuel_grass_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
       ENDIF
 
       !< reserve
-      IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_reserve_ix,:) = veg_pool_mt(ix_reserve,:,ic) * &
           fc_dead(ic,t_sf_fuel_dead_fuel_grass_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
       ENDIF
 
       !< fruit
-      IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._lp) THEN
         fc_dead_els(ic,t_sf_fuel_dead_fuel_grass_fruit_ix,:) = veg_pool_mt(ix_fruit,:,ic) * &
           fc_dead(ic,t_sf_fuel_dead_fuel_grass_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
       ENDIF
@@ -236,48 +236,48 @@ CONTAINS
       fc_live, mask) RESULT (fc_live_els)
 
     INTEGER, INTENT(in) :: nc, nlivepools, nEMelems
-    REAL(wp), INTENT(in) :: veg_pool_mt(:,:,:)        !< [molX/m2] (#pool, #elements, #nc)
-    REAL(wp), INTENT(in) :: fc_live(:,:)              !< Live fuel consumption in QS units [molX/m2] (#nc, #nlivepools)
+    REAL(lp), INTENT(in) :: veg_pool_mt(:,:,:)        !< [molX/m2] (#pool, #elements, #nc)
+    REAL(lp), INTENT(in) :: fc_live(:,:)              !< Live fuel consumption in QS units [molX/m2] (#nc, #nlivepools)
     LOGICAL, INTENT(in)  :: mask(:)                   !< (#nc)
-    REAL(wp), ALLOCATABLE :: fc_live_els(:,:,:)    !< (nc,nlivepools,df_sf_elements_nr) !< Output [molX/m3]
+    REAL(lp), ALLOCATABLE :: fc_live_els(:,:,:)    !< (nc,nlivepools,df_sf_elements_nr) !< Output [molX/m3]
     INTEGER               :: ic
 
     IF (.NOT. ALLOCATED(fc_live_els)) THEN
       ALLOCATE(fc_live_els(nc,nlivepools,nEMelems))
     END IF
-    fc_live_els = 0._wp
+    fc_live_els = 0._lp
 
     DO ic=1, SIZE(veg_pool_mt, DIM=3) !< 3=nc dimension index
 
       IF (.NOT. mask(ic)) CYCLE ! skip gridcell if no fire
 
       !< leaf
-      IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_leaf,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_leaf_ix,:) = veg_pool_mt(ix_leaf,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_leaf_ix) / veg_pool_mt(ix_leaf,ixC,ic)
       ENDIF
       ! sap wood
-      IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_sap_wood,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_sap_wood_ix,:) = veg_pool_mt(ix_sap_wood,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_sap_wood_ix) / veg_pool_mt(ix_sap_wood,ixC,ic)
       ENDIF
       ! heart wood
-      IF (veg_pool_mt(ix_heart_wood,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_heart_wood,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_heart_wood_ix,:) = veg_pool_mt(ix_heart_wood,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_heart_wood_ix) / veg_pool_mt(ix_heart_wood,ixC,ic)
       ENDIF
       ! labile
-      IF (veg_pool_mt(ix_labile,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_labile,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_labile_ix,:) = veg_pool_mt(ix_labile,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_labile_ix) / veg_pool_mt(ix_labile,ixC,ic)
       ENDIF
       ! reserve
-      IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_reserve,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_reserve_ix,:) = veg_pool_mt(ix_reserve,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_reserve_ix) / veg_pool_mt(ix_reserve,ixC,ic)
       ENDIF
       ! fruit
-      IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._wp) THEN
+      IF (veg_pool_mt(ix_fruit,ixC,ic) > 0._lp) THEN
         fc_live_els(ic,t_sf_fuel_live_fuel_fruit_ix,:) = veg_pool_mt(ix_fruit,:,ic) * &
           fc_live(ic,t_sf_fuel_live_fuel_fruit_ix) / veg_pool_mt(ix_fruit,ixC,ic)
       ENDIF

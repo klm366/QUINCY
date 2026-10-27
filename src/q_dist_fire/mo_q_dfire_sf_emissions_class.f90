@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_emissions_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -43,9 +43,9 @@ CONTAINS
   !> https://gitlab.dkrz.de/quincy-community/quincy-model-developers/qs-development/-/issues/113#peiffers-eqs-a83-to-a86
   !>
   FUNCTION sf_calc_emissions_species(emission_factors, bb, mask) RESULT (emissions)
-    REAL(wp), INTENT(in)           :: emission_factors(:) !< emissions factors (#nspecs) [molX/kgDM/m2]
-    REAL(wp), INTENT(in)           :: bb(:,:)             !< Burned biomass (#nc,#npools) [kgDM m-2]
-    REAL(wp), ALLOCATABLE          :: emissions(:,:,:)    !< output (#nc,#npools,#nspecs) [mol m-2]
+    REAL(lp), INTENT(in)           :: emission_factors(:) !< emissions factors (#nspecs) [molX/kgDM/m2]
+    REAL(lp), INTENT(in)           :: bb(:,:)             !< Burned biomass (#nc,#npools) [kgDM m-2]
+    REAL(lp), ALLOCATABLE          :: emissions(:,:,:)    !< output (#nc,#npools,#nspecs) [mol m-2]
     LOGICAL, INTENT(in)            :: mask(:)             !< True = compute gridcell(s) (#nc)
 
     INTEGER :: ispecs, ipool, ic
@@ -57,7 +57,7 @@ CONTAINS
     nspecs = SIZE(emission_factors)
 
     IF (.NOT. ALLOCATED(emissions)) ALLOCATE(emissions(nc,npools,nspecs))
-    emissions = 0._wp
+    emissions = 0._lp
 
     ! Eq. A86 from Pfeiffer et al. (2013)
     DO ispecs=1, nspecs
@@ -77,8 +77,8 @@ CONTAINS
   !> Calculate elements/nutrients from species emitted
   !>
   SUBROUTINE sf_calc_emitted_elements(emissions_spc, emissions_els, mask)
-    REAL(wp), INTENT(in) :: emissions_spc(:,:,:)    !< [molX/m2] (#nc,#npools,#nspecs)
-    REAL(wp), INTENT(inout) :: emissions_els(:,:,:) !< [molX/m2] (#nc,#npools,#nelements)
+    REAL(lp), INTENT(in) :: emissions_spc(:,:,:)    !< [molX/m2] (#nc,#npools,#nspecs)
+    REAL(lp), INTENT(inout) :: emissions_els(:,:,:) !< [molX/m2] (#nc,#npools,#nelements)
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)
 
     LOGICAL, ALLOCATABLE :: mask_opt(:)
@@ -94,7 +94,7 @@ CONTAINS
       mask_opt = mask
     END IF
 
-    emissions_els = 0._wp
+    emissions_els = 0._lp
 
     !< Back calculate emitted elements into C, N and P = 0
     DO ipool = 1, npools
@@ -119,8 +119,8 @@ CONTAINS
   !> Isotopes are derived at the same ratio as fuel consumption
   !>
   SUBROUTINE sf_calc_emitted_isotopes(fuel_consumption, emissions_els, mask)
-    REAL(wp), INTENT(in)    :: fuel_consumption(:,:,:)  !< [molX/m2] (#nc,#npools, #elements)
-    REAL(wp), INTENT(inout) :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
+    REAL(lp), INTENT(in)    :: fuel_consumption(:,:,:)  !< [molX/m2] (#nc,#npools, #elements)
+    REAL(lp), INTENT(inout) :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)            !< True=compute gridcell(s)
 
     INTEGER :: nc, npools
@@ -145,19 +145,19 @@ CONTAINS
   !> Calculate amount for each isotope (C13,C14,N15) at the same ratio as its nutrient
   !>
   SUBROUTINE calc_isotopes_same_ratio_as_nutrients(var, amount, mask)
-    REAL(wp), INTENT(in) :: var(:,:) !< (#nc,#elements)
-    REAL(wp), INTENT(inout) :: amount(:,:) !< (#nc,#elements)
+    REAL(lp), INTENT(in) :: var(:,:) !< (#nc,#elements)
+    REAL(lp), INTENT(inout) :: amount(:,:) !< (#nc,#elements)
     LOGICAL, INTENT(in) :: mask(:) !< TRUE=compute gridcell(s) (#nc)
     INTEGER :: ic
 
-    amount(:,ixC13) = 0._wp
-    amount(:,ixC14) = 0._wp
-    amount(:,ixN15) = 0._wp
+    amount(:,ixC13) = 0._lp
+    amount(:,ixC14) = 0._lp
+    amount(:,ixN15) = 0._lp
     DO ic=1, SIZE(mask)
       IF (mask(ic)) THEN
-        IF (var(ic,ixC) > 0._wp) amount(ic,ixC13)= var(ic,ixC13) * amount(ic,ixC)/var(ic,ixC)
-        IF (var(ic,ixC) > 0._wp) amount(ic,ixC14)= var(ic,ixC14) * amount(ic,ixC)/var(ic,ixC)
-        IF (var(ic,ixN) > 0._wp) amount(ic,ixN15)= var(ic,ixN15) * amount(ic,ixN)/var(ic,ixN)
+        IF (var(ic,ixC) > 0._lp) amount(ic,ixC13)= var(ic,ixC13) * amount(ic,ixC)/var(ic,ixC)
+        IF (var(ic,ixC) > 0._lp) amount(ic,ixC14)= var(ic,ixC14) * amount(ic,ixC)/var(ic,ixC)
+        IF (var(ic,ixN) > 0._lp) amount(ic,ixN15)= var(ic,ixN15) * amount(ic,ixN)/var(ic,ixN)
       END IF
     END DO
 
@@ -175,8 +175,8 @@ CONTAINS
   !> However, it breaks CN ratio, as well as other potential issues.
   !>
   SUBROUTINE sf_patch_emissions(fc, emissions, mask)
-    REAL(wp), INTENT(in) :: fc(:,:,:)           ! Fuel consumption (nc,pools,elements)
-    REAL(wp), INTENT(inout) :: emissions(:,:,:) ! Emissions (nc,pools,elements)
+    REAL(lp), INTENT(in) :: fc(:,:,:)           ! Fuel consumption (nc,pools,elements)
+    REAL(lp), INTENT(inout) :: emissions(:,:,:) ! Emissions (nc,pools,elements)
     LOGICAL, INTENT(in) :: mask(:)              !
 
     INTEGER :: ic, ip, iel
@@ -203,14 +203,14 @@ CONTAINS
   !> Any non mass conservation is capped to 0 but included into mass overflow for diagnostics.
   !>
   SUBROUTINE sf_calc_emissions(emission_factors, bb, fc_els, emissions_spc, emissions_els, mask)
-    REAL(wp), INTENT(in)          :: emission_factors(:)      !< emissions factors (#nspecs) [molX/kgDM/m2]
-    REAL(wp), INTENT(in)          :: bb(:,:)                  !< Burnt biomass (#nc,#npools) [gDM m-2]
-    REAL(wp), INTENT(in)          :: fc_els(:,:,:)            !< Fuel consumption [molX/m2] (#nc,#npools, #elements)
-    REAL(wp), INTENT(out)         :: emissions_spc(:,:,:)     !< Emissions by species [molX/m2] (#nc,#npools,#elements)
-    REAL(wp), INTENT(out)         :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
+    REAL(lp), INTENT(in)          :: emission_factors(:)      !< emissions factors (#nspecs) [molX/kgDM/m2]
+    REAL(lp), INTENT(in)          :: bb(:,:)                  !< Burnt biomass (#nc,#npools) [gDM m-2]
+    REAL(lp), INTENT(in)          :: fc_els(:,:,:)            !< Fuel consumption [molX/m2] (#nc,#npools, #elements)
+    REAL(lp), INTENT(out)         :: emissions_spc(:,:,:)     !< Emissions by species [molX/m2] (#nc,#npools,#elements)
+    REAL(lp), INTENT(out)         :: emissions_els(:,:,:)     !< Emissions by elements [molX/m2] (#nc,#npools,#elements)
     LOGICAL, INTENT(in), OPTIONAL :: mask(:)                  !< True=compute gridcell(s)
 
-    REAL(wp), ALLOCATABLE         :: bb_in_kg(:,:)            !< Burnt biomass (#nc,#npools) [kgDM m-2]
+    REAL(lp), ALLOCATABLE         :: bb_in_kg(:,:)            !< Burnt biomass (#nc,#npools) [kgDM m-2]
 
     ! Calc Emissions (by Species)
     !< Calculate fire damage to plants (total biomass burned and tree mortality) based on total dead and

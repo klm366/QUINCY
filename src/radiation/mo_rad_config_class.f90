@@ -16,7 +16,7 @@ MODULE mo_rad_config_class
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
@@ -55,7 +55,7 @@ MODULE mo_rad_config_class
                                       !     is calculated from a logarithmically decreasing function shaped by
                                       !     the mineral soil albedo and the carbon content within the soil
                                       !     linearily from the carbon in the soil
-    REAL(wp) :: &
+    REAL(lp) :: &
       & albedo_age_weight, &          !< 0: snow age scheme with zero weight: only temperature scheme for snow albedo
                                       !      is used
                                       ! 1: only snow age scheme is used, temperature scheme with zero weight
@@ -91,7 +91,7 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_litter
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
-    REAL(wp)                    :: albedo_age_weight
+    REAL(lp)                    :: albedo_age_weight
     INTEGER                     :: nspec                    !< number of spectral bands
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral           !< vgrid for 3d var with spectral band
 
@@ -124,7 +124,7 @@ CONTAINS
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
     use_alb_canopy            = .FALSE.
-    albedo_age_weight         = 0.5_wp
+    albedo_age_weight         = 0.5_lp
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))

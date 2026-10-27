@@ -27,7 +27,7 @@
 MODULE mo_q_dfire_sf_impacts
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
@@ -115,48 +115,48 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc, ic, ipool, iel, ip
     INTEGER                               :: no_children
-    REAL(wp)                              :: dtime      !< timestep
+    REAL(lp)                              :: dtime      !< timestep
 
     ! add here local variables
-    REAL(wp), POINTER                     :: area(:), tile_fract(:)
+    REAL(lp), POINTER                     :: area(:), tile_fract(:)
 
-    REAL(wp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
+    REAL(lp)                              :: dbh(options%nc) !< Tree diameter breast at height [cm]
 
-    REAL(wp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
+    REAL(lp)                              :: w_oi(options%nc, df_sf_fc_full_nr) !< Dead fuel by fuel classes [g DM m-2]
     LOGICAL                               :: is_fire_intense_enough(options%nc) !< TRUE=1, FALSE=0
-    REAL(wp)                              :: fc_dead_cls(options%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr) !< Dead fuel consumption for current PFT [g DM m-2]
-    REAL(wp)                              :: fc_live(options%nc,sf_fuel_live_fuel_nr)   !< Live fuel consumption (#nc, #live pools) for current PFT [g DM m-2]
-    REAL(wp)                              :: emissions_live_spc(options%nc,sf_fuel_live_fuel_nr,df_sf_species_nr) !< emissions (#nc, #live pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
-    REAL(wp)                              :: emissions_dead_spc(options%nc,sf_fuel_dead_fuel_nr,df_sf_species_nr) !< emissions (#nc, #dead pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+    REAL(lp)                              :: fc_dead_cls(options%nc, sf_fuel_dead_fuel_nr, df_sf_fc_full_nr) !< Dead fuel consumption for current PFT [g DM m-2]
+    REAL(lp)                              :: fc_live(options%nc,sf_fuel_live_fuel_nr)   !< Live fuel consumption (#nc, #live pools) for current PFT [g DM m-2]
+    REAL(lp)                              :: emissions_live_spc(options%nc,sf_fuel_live_fuel_nr,df_sf_species_nr) !< emissions (#nc, #live pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
+    REAL(lp)                              :: emissions_dead_spc(options%nc,sf_fuel_dead_fuel_nr,df_sf_species_nr) !< emissions (#nc, #dead pools, #df_sf_species_nr) [mol X Kg-1 DM-1 m-2]
 
-    REAL(wp)                              :: emissions_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #live pools, #elements) [mol X m-2]
-    REAL(wp)                              :: emissions_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #dead pools, #elements) [mol X m-2]
+    REAL(lp)                              :: emissions_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #live pools, #elements) [mol X m-2]
+    REAL(lp)                              :: emissions_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions by elements (#nc, #dead pools, #elements) [mol X m-2]
 
-    REAL(wp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
-    REAL(wp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
+    REAL(lp)                              :: area_burned_pft(options%nc) !< Area burned for current PFT [ha]
+    REAL(lp)                              :: area_burned_fract_pft(options%nc) !< Fraction of the area burned for current PFT [-]
 
     TYPE(t_sf_tree_damage)                :: prob_mort                 !< Tree mortality
-    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_cls(:,:,:) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
+    REAL(lp), ALLOCATABLE                 :: live_tree_fuel_cls(:,:,:) !< live fuel for 1, 10, 100 and 1000 hours fuel classes [g DM m-2]
 
-    REAL(wp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
-    REAL(wp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
+    REAL(lp), ALLOCATABLE                 :: fc_live_mol_m2(:,:)  !< Total live fuel consumption (nc, live fuels) [molX/m2]
+    REAL(lp), ALLOCATABLE                 :: fc_dead_mol_m2(:,:)  !< Total dead fuel consumption (nc, t_sf_fuel_dead_fuel_nr) [molX/m2]
 
-    REAL(wp), ALLOCATABLE                 :: fc_dead_el(:,:,:)   !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
-    REAL(wp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
+    REAL(lp), ALLOCATABLE                 :: fc_dead_el(:,:,:)   !< dead fuel consumption (#nc, #dead pools, #Elements) [molX m-2]
+    REAL(lp), ALLOCATABLE                 :: fc_live_el(:,:,:)   !< live fuel consumption (#nc, #live pools, #Elemens) [molX m-2]
 
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2]
+    REAL(lp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:) !< Dead fuel [g MD m-2]
 
-    REAL(wp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
-    REAL(wp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
+    REAL(lp)                              :: residue_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elements) [mol m-2]
+    REAL(lp)                              :: residue_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elements) [mol m-2]
 
-    REAL(wp)                              :: mass_imbalance_emitted_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elems) [mol m-2]
-    REAL(wp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
+    REAL(lp)                              :: mass_imbalance_emitted_dead_el(options%nc,sf_fuel_dead_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #dead pools, #elems) [mol m-2]
+    REAL(lp)                              :: mass_imbalance_emitted_live_el(options%nc,sf_fuel_live_fuel_nr,df_sf_elements_nr) !< emissions (#nc, #live pools, #elems) [mol m-2]
 
-    REAL(wp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:)               !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
-    REAL(wp), ALLOCATABLE                 :: emissions_dead_in_m3(:,:,:)        !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
-    REAL(wp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
+    REAL(lp), ALLOCATABLE                 :: sb_pool_in_m2(:,:,:)               !< BGCM sb_pool (#pools,#elements,#nc) [molX/m2]
+    REAL(lp), ALLOCATABLE                 :: emissions_dead_in_m3(:,:,:)        !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
+    REAL(lp), ALLOCATABLE                 :: residue_dead_in_m3(:,:,:)          !< (#nc,#pools,#elements) sb_pool fuels in molX/m3, veg_pool fuels in molX/m2
 
-    REAL(wp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
+    REAL(lp), ALLOCATABLE                 :: lctlib_emission_factors(:)         !< Array packed with emission factors from lctlib (#species)
 
     INTEGER, ALLOCATABLE, SAVE            :: dead_elements(:) !< List of dead element indices
     INTEGER, ALLOCATABLE, SAVE            :: live_elements(:) !< List of live element indices
@@ -331,42 +331,42 @@ CONTAINS
     ! init here
 #ifdef __QUINCY_STANDALONE__
     ALLOCATE(area(1), tile_fract(1))
-    area = 1._wp
-    tile_fract = 1._wp
+    area = 1._lp
+    tile_fract = 1._lp
 #else
     area => grid %area (ics:ice, iblk)
     tile_fract => tile%fract(ics:ice, iblk)
 #endif
     is_fire_intense_enough = real2logical(mask_is_fire_intense_enough)
-    fc_live = 0._wp
-    pm_fire = 0._wp
-    pm_fire_output = 0._wp
-    pm_prop_ck = 0._wp
-    pm_tau = 0._wp
-    tau_l = 0._wp
-    tau_c = 0._wp
-    bark_thickness = 0._wp
-    DBH_diag = 0._wp
-    par1_diag = 0._wp
-    par2_diag = 0._wp
+    fc_live = 0._lp
+    pm_fire = 0._lp
+    pm_fire_output = 0._lp
+    pm_prop_ck = 0._lp
+    pm_tau = 0._lp
+    tau_l = 0._lp
+    tau_c = 0._lp
+    bark_thickness = 0._lp
+    DBH_diag = 0._lp
+    par1_diag = 0._lp
+    par2_diag = 0._lp
 
-    ck = 0._wp
-    r_ck = 0._wp
-    ck_p = 0._wp
-    scorch_height = 0._wp
-    F_scorch_height = 0._wp
-    crown_length = 0._wp
-    tree_height = 0._wp
+    ck = 0._lp
+    r_ck = 0._lp
+    ck_p = 0._lp
+    scorch_height = 0._lp
+    F_scorch_height = 0._lp
+    crown_length = 0._lp
+    tree_height = 0._lp
 
-    fuel_consumption_els = 0._wp
-    emissions_spc = 0._wp
-    emissions_els = 0._wp
-    residue_els = 0._wp
-    overflow_els = 0._wp
-    veg_fire_litterfall_total_els = 0._wp
-    veg_fire_emissions_total_els = 0._wp
-    sb_fire_emissions_total_els = 0._wp
-    sb_fire_litter_ash_total_els = 0._wp
+    fuel_consumption_els = 0._lp
+    emissions_spc = 0._lp
+    emissions_els = 0._lp
+    residue_els = 0._lp
+    overflow_els = 0._lp
+    veg_fire_litterfall_total_els = 0._lp
+    veg_fire_emissions_total_els = 0._lp
+    sb_fire_emissions_total_els = 0._lp
+    sb_fire_litter_ash_total_els = 0._lp
 
     ALLOCATE( dead_fuel_fcl(options%nc,sf_fuel_dead_fuel_nr,df_sf_fc_full_nr) )
     dead_fuel_fcl(:,:,df_sf_fc_1hr_idx) = dead_fuel_1hr_dfp
@@ -433,8 +433,8 @@ CONTAINS
       dbh(:) = sf_convert_units("m", "cm", diameter) !< dbh to spitfire units
 
       is_fire_intense_enough = is_fire_intense_enough .AND. &
-                                (tile_fract > 0._wp) .AND. & ! tile is empty, skip
-                                (height > 0._wp) ! height is not yet initialized, skip
+                                (tile_fract > 0._lp) .AND. & ! tile is empty, skip
+                                (height > 0._lp) ! height is not yet initialized, skip
 
       CALL calc_sf_tree_damage(nc, df_sf_fc_spread_nr, &
                                     lctlib%q_crown_length, lctlib%q_crown_damage_p, lctlib%q_crown_damage_r_ck, &
@@ -531,13 +531,13 @@ CONTAINS
 
     ! Convert sb_pool related dead fuel pools into m3 to operate with sb_pool related fluxes
     ALLOCATE(emissions_dead_in_m3, source=emissions_dead_el)
-    emissions_dead_in_m3 = 0._wp
+    emissions_dead_in_m3 = 0._lp
     emissions_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
                           emissions_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
                           soil_depth_sl(:,df_sf_spq_layer_top_sl))
 
     ALLOCATE(residue_dead_in_m3, source=residue_dead_el)
-    residue_dead_in_m3 = 0._wp
+    residue_dead_in_m3 = 0._lp
     residue_dead_in_m3(:,ixs_sf_dead_litter_fuel_pools,:) = sf_convert_units("-/m2", "-/m3", &
                           residue_dead_el(:,ixs_sf_dead_litter_fuel_pools,:), &
                           soil_depth_sl(:,df_sf_spq_layer_top_sl))
@@ -561,12 +561,12 @@ CONTAINS
                               mask=is_fire_intense_enough)
 
     ! for diagnostics:
-    fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
+    fuel_consumption_els = (SUM(fc_dead_el, DIM=2) + SUM(fc_live_el, DIM=2)) / dtime * 1000000._lp !< 2 = fuel pool index
     emissions_spc = (SUM(emissions_dead_spc, DIM=2) + SUM(emissions_live_spc, DIM=2)) / dtime !< 2 = fuel pool index
-    emissions_els = (SUM(emissions_dead_el, DIM=2) + SUM(emissions_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
-    residue_els = (SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2)) / dtime * 1000000._wp !< 2 = fuel pool index
+    emissions_els = (SUM(emissions_dead_el, DIM=2) + SUM(emissions_live_el, DIM=2)) / dtime * 1000000._lp !< 2 = fuel pool index
+    residue_els = (SUM(residue_dead_el, DIM=2) + SUM(residue_live_el, DIM=2)) / dtime * 1000000._lp !< 2 = fuel pool index
     overflow_els = (SUM(mass_imbalance_emitted_dead_el, DIM=2) + & !< 2 = fuel pool index
-                        SUM(mass_imbalance_emitted_live_el, DIM=2)) / dtime * 1000000._wp
+                        SUM(mass_imbalance_emitted_live_el, DIM=2)) / dtime * 1000000._lp
     ! for diagnostics (fluxes):
     DO ipool=1, SIZE(veg_fire_litterfall_mt,DIM=1)
       DO iel=1, df_sf_elements_nr
@@ -578,10 +578,10 @@ CONTAINS
         END DO
       END DO
     END DO
-    veg_fire_litterfall_total_els = veg_fire_litterfall_total_els / dtime * 1000000._wp ! to umols s-1
-    sb_fire_emissions_total_els = sb_fire_emissions_total_els / dtime * 1000000._wp
-    veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._wp
-    sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._wp
+    veg_fire_litterfall_total_els = veg_fire_litterfall_total_els / dtime * 1000000._lp ! to umols s-1
+    sb_fire_emissions_total_els = sb_fire_emissions_total_els / dtime * 1000000._lp
+    veg_fire_emissions_total_els = veg_fire_emissions_total_els / dtime * 1000000._lp
+    sb_fire_litter_ash_total_els = sb_fire_litter_ash_total_els / dtime * 1000000._lp
 
     IF (dsl4jsb_Config(Q_DFIRE_SF_)%has_diagnostics) THEN
       CALL run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
@@ -595,12 +595,12 @@ CONTAINS
   !>
   SUBROUTINE run_diagnostics_at_pft(nc, sb_pool_mt, sb_fire_emissions_mt, sb_fire_litter_ash_mt)
     INTEGER, INTENT(in) :: nc
-    REAL(wp), INTENT(in) :: sb_pool_mt(:,:,:,:)
-    REAL(wp), INTENT(in) :: sb_fire_emissions_mt(:,:,:,:)
-    REAL(wp), INTENT(in) :: sb_fire_litter_ash_mt(:,:,:,:)
+    REAL(lp), INTENT(in) :: sb_pool_mt(:,:,:,:)
+    REAL(lp), INTENT(in) :: sb_fire_emissions_mt(:,:,:,:)
+    REAL(lp), INTENT(in) :: sb_fire_litter_ash_mt(:,:,:,:)
 
     INTEGER :: ic, ip, iel
-    REAL(wp) :: diff
+    REAL(lp) :: diff
     LOGICAL :: test_is_sb_pool_negative
     LOGICAL :: has_any_test_failed
 
@@ -609,7 +609,7 @@ CONTAINS
 
     IF (ANY((sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl) - &
             (sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl) + &
-             sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl))) < 0._wp)) THEN
+             sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl))) < 0._lp)) THEN
 
       DO ic=1, nc
         DO ip=1, SIZE(sb_pool_mt, DIM=1) !ndeadpools
@@ -617,7 +617,7 @@ CONTAINS
             diff = sb_pool_mt(ip,iel,ic,df_sf_spq_layer_top_sl) - &
                    (sb_fire_emissions_mt(ip,iel,ic,df_sf_spq_layer_top_sl) + &
                    sb_fire_litter_ash_mt(ip,iel,ic,df_sf_spq_layer_top_sl))
-            IF (diff < 0._wp) THEN
+            IF (diff < 0._lp) THEN
               WRITE(*,*) "post.f90:: ic, pool, el, sb(ic,pool,el), ab_fract =", &
                       ic, ip, iel, diff
               WRITE(*,*) "post.f90:: sb_pool, sb_fire_em, sb_fire_ash =", &
@@ -644,26 +644,26 @@ CONTAINS
   !> Calculate residue and any mass imbalance
   !>
   ELEMENTAL SUBROUTINE sf_calc_residue(fuel_consumption, emitted_elements, residue, mass_overflow)
-    REAL(wp), INTENT(in) :: fuel_consumption !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(in) :: emitted_elements !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(out) :: residue         !< (#nc,#pools,#elements) [molX/m2]
-    REAL(wp), INTENT(out) :: mass_overflow   !< (#nc,#pools,#elements) [molX/m2]
+    REAL(lp), INTENT(in) :: fuel_consumption !< (#nc,#pools,#elements) [molX/m2]
+    REAL(lp), INTENT(in) :: emitted_elements !< (#nc,#pools,#elements) [molX/m2]
+    REAL(lp), INTENT(out) :: residue         !< (#nc,#pools,#elements) [molX/m2]
+    REAL(lp), INTENT(out) :: mass_overflow   !< (#nc,#pools,#elements) [molX/m2]
 
     !< Compute residue, where Emitted elements < FC
     residue = fuel_consumption - emitted_elements
-    mass_overflow = 0._wp
+    mass_overflow = 0._lp
 
-    IF (residue < 0._wp) THEN
+    IF (residue < 0._lp) THEN
       mass_overflow = ABS(residue)
-      residue = 0._wp
+      residue = 0._lp
     END IF
     ! Use for debugging
     !DO ic=1, SIZE(residue, DIM=1) ! 1= nc dimension index
     !  DO ipool=1, SIZE(residue, DIM=2) ! 2=pool dimension index
     !    DO iel=1, SIZE(residue, DIM=3) ! 3=elements dimension index
-    !      IF (residue(ic,ipool,iel) < 0._wp .AND. mask(ic) THEN
+    !      IF (residue(ic,ipool,iel) < 0._lp .AND. mask(ic) THEN
     !        mass_overflow(ic,ipool,iel) = ABS(residue(ic,ipool,iel))
-    !        residue(ic,ipool,iel) = 0._wp
+    !        residue(ic,ipool,iel) = 0._lp
     !      END IF
     !    END DO
     !  END DO

@@ -12,7 +12,7 @@
 !>
 MODULE mo_quincy_queue
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
 
   IMPLICIT NONE
   PUBLIC :: t_queue
@@ -21,7 +21,7 @@ MODULE mo_quincy_queue
 
   ! array queue
   TYPE :: t_queue
-    REAL(wp), ALLOCATABLE :: elements(:)
+    REAL(lp), ALLOCATABLE :: elements(:)
     INTEGER :: ifront, irear
     INTEGER :: capacity
   CONTAINS
@@ -53,7 +53,7 @@ CONTAINS
 
   SUBROUTINE put(this, item)
     CLASS(t_queue), INTENT(inout) :: this
-    REAL(wp), INTENT(in) :: item
+    REAL(lp), INTENT(in) :: item
     !write(*,*) "mo_quincy_mavg_class:: put:: new item ", item, "..."
 
     IF (this % isFull()) THEN
@@ -70,7 +70,7 @@ CONTAINS
 
   FUNCTION get(this) RESULT (item)
     CLASS(t_queue), INTENT(inout) :: this
-    REAL(wp) :: item !< output
+    REAL(lp) :: item !< output
 
     !!write(*,*) "mo_quincy_mavg_class:: get:: starting..."
 
@@ -107,7 +107,7 @@ CONTAINS
 
   FUNCTION getAll(this) RESULT (allelems)
     CLASS(t_queue), INTENT(in) :: this
-    REAL(wp), ALLOCATABLE :: allelems(:)
+    REAL(lp), ALLOCATABLE :: allelems(:)
     !!is empty, then error
     IF (this % isEmpty()) THEN
       WRITE(*,*) modname//":: getAll:: error: queue is empty"

@@ -22,7 +22,7 @@ MODULE mo_seb_interface
 
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_jsb_time,        ONLY: is_time_experiment_start
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -496,19 +496,19 @@ CONTAINS
       & sw_srf_net,         &               !< Shortwave net radiation on land surface             [W m-2]
       & sensible_hflx,      &               !< Sensible heat flux                                  [W m-2]
       & latent_hflx,        &               !< Latent heat flux                                    [W m-2]
-      & forc_hflx,          &               !< Ground heat flux                                    [W m-2]
+      & forc_hflx,          &               !< Ground heat and residual phase change flux          [W m-2]
       & le_phase_change,    &               !< Latent energy required/released due to phase change [J m-2]
       & t,                  &               !< Current time steps temperature                          [K]
       & t_old,              &               !< Previous time steps temperature                         [K]
       & net_srf_rad_balance                 !< Net surface radiation balance                       [W m-2]
 
-    REAL(wp), POINTER :: &
+    REAL(lp), POINTER :: &
       & tile_fract(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(lp), DIMENSION(options%nc) :: &
       & lw_srf_up,       &
       & sw_srf_up,       &
       & sw_srf_down,     &
@@ -519,7 +519,7 @@ CONTAINS
     INTEGER  :: n_cells, ie
     INTEGER  :: cell_idx(options%nc)
 
-    REAL(wp) :: dtime
+    REAL(lp) :: dtime
     LOGICAL  :: is_experiment_start
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
@@ -576,7 +576,7 @@ CONTAINS
       ! Compute surface/skin temperature change
       delta_t_srf(ic) = t(ic) - t_old(ic)
 
-      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_wp)) THEN
+      IF (.NOT. is_experiment_start .AND. tile_fract(ic) > EPSILON(1.0_lp)) THEN
         ! Compute energy flux residual (without surface/skin temperature change)
         net_srf_rad_balance(ic) = rad_srf_net(ic) + sensible_hflx(ic) + latent_hflx(ic) &
           &                     + forc_hflx(ic) + le_phase_change(ic) / dtime
@@ -590,9 +590,9 @@ CONTAINS
     ! compensate for it, and large values do not necessarily indicate a problem.
 #ifndef _OPENACC
     DO ic=1,nc
-      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._wp) THEN
+      IF (dsl4jsb_Config(SEB_)%eb_threshold > 0._lp) THEN
         IF (ABS(net_srf_rad_balance(ic)) > dsl4jsb_Config(SEB_)%eb_threshold .OR. &
-          & ((t(ic) > 400._wp .OR. t(ic) < 50._wp).AND. tile_fract(ic) > EPSILON(1.0_wp))) THEN
+          & ((t(ic) > 400._lp .OR. t(ic) < 50._lp).AND. tile_fract(ic) > EPSILON(1.0_lp))) THEN
           n_cells = n_cells + 1       ! Count number of cells with energy balance issues of this time step
           cell_idx(n_cells) = ic      ! Index of the respective grid cell (on chunk)
         END IF
@@ -657,14 +657,13 @@ CONTAINS
   !! The routine is called at the beginning and at the end of each time step.
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE seb_check_temperature_range(model_id, no_omp_thread)
+  SUBROUTINE seb_check_temperature_range(model_id)
 
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-    USE mo_jsb_parallel,        ONLY: Get_omp_thread
 
     ! Argument
-    INTEGER, INTENT(in) :: model_id, no_omp_thread
+    INTEGER, INTENT(in) :: model_id
 
     ! Local variables
     TYPE(t_jsb_model), POINTER           :: model
@@ -673,8 +672,8 @@ CONTAINS
 
     dsl4jsb_Def_memory(SEB_)
 
-    INTEGER                       :: iblk, ic
-    REAL(wp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
+    INTEGER                       :: iblk, ic, itile
+    REAL(lp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
 
     dsl4jsb_Real2D_onDomain :: t
@@ -686,26 +685,20 @@ CONTAINS
     lat   => grid%lat(:,:)
     lon   => grid%lon(:,:)
 
-    !vg no_omp_thread = Get_omp_thread()
 #ifndef __QUINCY_STANDALONE__
-    CALL model%Get_top_tile(tile)
-    DO WHILE (ASSOCIATED(tile))
-      IF ((tile%Has_children() .AND. .NOT. tile%visited(no_omp_thread)) .OR. .NOT. tile%Is_process_active(SEB_)) THEN
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(model%tiles_postorder)
+      tile => model%tiles_postorder(itile)%p
+      IF (.NOT. tile%Is_process_active(SEB_)) CYCLE
 #endif
-
-      ! We're on a leaf or on the way up.
 
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_var2D_onDomain(SEB_, t)
 
       tile_fract => tile%fract(:,:)
-      IF (ANY(t(:,:) < 50._wp .OR. t(:,:) > 400._wp)) THEN
+      IF (ANY(t(:,:) < 50._lp .OR. t(:,:) > 400._lp)) THEN
         DO iblk = 1, grid%nblks
           DO ic = 1, grid%nproma
-            IF ((t(ic,iblk) < 50._wp .OR. t(ic,iblk) > 400._wp) .AND. tile_fract(ic,iblk) > 0._wp) THEN
+            IF ((t(ic,iblk) < 50._lp .OR. t(ic,iblk) > 400._lp) .AND. tile_fract(ic,iblk) > 0._lp) THEN
               WRITE (message_text,*) 'Temperature out of bound: ', t(ic,iblk), 'K',             NEW_LINE('a'), &
                 & 'on ',TRIM(tile%name),' tile at', lat(ic,iblk), 'N and ', lon(ic,iblk), 'E',  NEW_LINE('a'), &
                 & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:', tile_fract(ic,iblk),'):',          NEW_LINE('a'), &
@@ -716,7 +709,6 @@ CONTAINS
         END DO
       END IF
 #ifndef __QUINCY_STANDALONE__
-      CALL model%Goto_next_tile(tile)
     ENDDO
 #endif
   END SUBROUTINE seb_check_temperature_range
@@ -732,15 +724,15 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(lp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SEB_)
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
 
     dsl4jsb_Real2D_onDomain :: t
-    REAL(wp), POINTER       :: t_gmean(:)
+    REAL(lp), POINTER       :: t_gmean(:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_var2D_onDomain(SEB_,  t) ! in
@@ -750,7 +742,7 @@ CONTAINS
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
     IF (SEB__mem%t_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(t_gmean, t, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(t_gmean, t, land_area_scaling, 1.0_lp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(SEB__mem%t_gmean%ptr(:))
     END IF
 

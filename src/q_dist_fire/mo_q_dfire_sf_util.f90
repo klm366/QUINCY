@@ -13,7 +13,7 @@
 MODULE mo_q_dfire_sf_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
   USE mo_jsb_math_constants,    ONLY: eps8, eps1
@@ -61,7 +61,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    REAL(wp)                                :: dtime                !< timestep
+    REAL(lp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_dist_fire'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -111,7 +111,7 @@ CONTAINS
   !>
   SUBROUTINE calculate_daily_weather(tile, options)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: one_day
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -134,7 +134,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
     INTEGER                                 :: iblk, ics, ice, nc, ic
-    REAL(wp)                                :: dtime              !< timestep
+    REAL(lp)                                :: dtime              !< timestep
     LOGICAL                                 :: is_midnight(options%nc) !< is peak of the day
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_daily_weather'
     ! ---------------------------
@@ -214,7 +214,7 @@ CONTAINS
         ! init variables after min/max daily value
         t_air_max_old(ic)        = t_air(ic)  !< current temperature
         t_air_min_old(ic)        = t_air(ic)
-        precip_daytime_old(ic)   = 0._wp      !< no precipitation
+        precip_daytime_old(ic)   = 0._lp      !< no precipitation
       END IF
     END DO
 
@@ -238,7 +238,7 @@ CONTAINS
   !>
   SUBROUTINE calculate_pure_moving_averages(tile, options)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
@@ -262,7 +262,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
     INTEGER                                 :: iblk, ics, ice, nc, ic
-    REAL(wp)                                :: dtime                !< timestep
+    REAL(lp)                                :: dtime                !< timestep
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
     TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type(:)
     ! ---------------------------
@@ -325,9 +325,9 @@ CONTAINS
   FUNCTION utils_linspace(start,end,num,endpoint,step) RESULT (samples)
 
     ! PARAMETERS
-    REAL(wp), INTENT(in) :: start
+    REAL(lp), INTENT(in) :: start
     !! The starting value of the sequence.
-    REAL(wp), INTENT(in) :: end
+    REAL(lp), INTENT(in) :: end
     !! The end value of the sequence, unless `endpoint` is set to `.false.`.
     !! In that case, the sequence consists of all but the last of `num + 1`
     !! evenly spaced samples, so that `end` is excluded. Note that the
@@ -336,17 +336,17 @@ CONTAINS
     !! Number of samples to generate. Default value is 50.
     LOGICAL, INTENT(in), OPTIONAL :: endpoint
     !! If `.true.`, `end` is the last sample. Otherwise, it is not included. Default is `.true.`.
-    REAL(wp), INTENT(out), OPTIONAL :: step
+    REAL(lp), INTENT(out), OPTIONAL :: step
     !! If present, `step` is the size of spacing between samples.
 
     ! RETURNS
-    REAL(wp), ALLOCATABLE :: samples(:)
+    REAL(lp), ALLOCATABLE :: samples(:)
     !! There are `num` equally spaced samples in the closed interval `[start, stop]` or
     !! the half-open interval `[start, stop)` (depending on whether `endpoint` is `.true.` or `.false.`).
 
     INTEGER :: num_, i
     LOGICAL :: endpoint_
-    REAL(wp) :: step_
+    REAL(lp) :: step_
 
     num_ = 50
     IF (present(num)) num_ = num
@@ -356,9 +356,9 @@ CONTAINS
 
     ! find step size
     IF (endpoint_) then
-      step_ = (end - start)/REAL(num_-1,wp)
+      step_ = (end - start)/REAL(num_-1,lp)
     ELSE
-      step_ = (end - start)/REAL(num_,wp)
+      step_ = (end - start)/REAL(num_,lp)
     END IF
 
     IF (present(step)) step = step_
@@ -372,16 +372,16 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Convert logical into real(wp)
-  !> TRUE=1._wp, FALSE=0._wp
+  !> Convert logical into real(lp)
+  !> TRUE=1._lp, FALSE=0._lp
   !>
-  ELEMENTAL PURE REAL(wp) FUNCTION logical2real(val)
+  ELEMENTAL PURE REAL(lp) FUNCTION logical2real(val)
     LOGICAL, INTENT(in) :: val
 
     IF (val) THEN
-      logical2real = 1._wp
+      logical2real = 1._lp
     ELSE
-      logical2real = 0._wp
+      logical2real = 0._lp
     ENDIF
 
   END FUNCTION logical2real
@@ -390,14 +390,14 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Convert real to logical:
-  !> TRUE=1._wp, FALSE=0._wp
+  !> TRUE=1._lp, FALSE=0._lp
   !>
   PURE ELEMENTAL LOGICAL FUNCTION real2logical(val)
-    REAL(wp), INTENT(in) :: val
+    REAL(lp), INTENT(in) :: val
 
-    IF (val == 1._wp) THEN
+    IF (val == 1._lp) THEN
       real2logical = .TRUE.
-    ELSE ! (val == 0._wp)
+    ELSE ! (val == 0._lp)
       real2logical = .FALSE.
     ENDIF
   END FUNCTION real2logical
@@ -413,9 +413,9 @@ CONTAINS
     USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
                                ix_residue, ix_residue_assoc, ix_dom, ix_dom_assoc
 
-    REAL(wp), INTENT(in) :: sb_fire_emissions(:,:,:)
-    REAL(wp), INTENT(in) :: sb_fire_litter_ash(:,:,:)
-    REAL(wp), INTENT(inout) :: sb_pool(:,:,:)
+    REAL(lp), INTENT(in) :: sb_fire_emissions(:,:,:)
+    REAL(lp), INTENT(in) :: sb_fire_litter_ash(:,:,:)
+    REAL(lp), INTENT(inout) :: sb_pool(:,:,:)
 
     !> 1. Remove fire emissions from sb_pool_mt
     sb_pool = sb_pool - sb_fire_emissions
@@ -457,10 +457,10 @@ CONTAINS
 
     INTEGER, INTENT(IN)              :: nc
     TYPE(t_jsb_model), POINTER       :: model
-    REAL(wp), INTENT(IN)             :: veg_fire_emissions_mt(:,:,:)
-    REAL(wp), INTENT(IN)             :: veg_fire_litterfall_mt(:,:,:)
-    REAL(wp), INTENT(INOUT)          :: veg_pool_mt(:,:,:)
-    REAL(wp), INTENT(INOUT)          :: veg_litterfall_mt(:,:,:)
+    REAL(lp), INTENT(IN)             :: veg_fire_emissions_mt(:,:,:)
+    REAL(lp), INTENT(IN)             :: veg_fire_litterfall_mt(:,:,:)
+    REAL(lp), INTENT(INOUT)          :: veg_pool_mt(:,:,:)
+    REAL(lp), INTENT(INOUT)          :: veg_litterfall_mt(:,:,:)
 
     INTEGER                          :: nr_of_veg_bgcm_comp
     INTEGER                          :: ic, ielem, ix_elem, ix_comp
@@ -502,9 +502,9 @@ CONTAINS
   !> Small helper routine to transfer matter between pools
   !>
   SUBROUTINE pool_transfer(amount, from, to)
-    REAL(wp), INTENT(in) :: amount(:,:)
-    REAL(wp), INTENT(inout) :: from(:,:)
-    REAL(wp), INTENT(inout) :: to(:,:)
+    REAL(lp), INTENT(in) :: amount(:,:)
+    REAL(lp), INTENT(inout) :: from(:,:)
+    REAL(lp), INTENT(inout) :: to(:,:)
 
     from = from - amount
     to = to + amount
@@ -516,20 +516,20 @@ CONTAINS
   !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010)), used to calculate rate of spread
   !>
   ELEMENTAL PURE FUNCTION calc_ros_wind_factor(u_f_wind, sigma, beta, beta_op) RESULT (wind_factor)
-    REAL(wp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
-    REAL(wp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
-    REAL(wp), INTENT(in)        :: beta         !< Packing ratio [-]
-    REAL(wp), INTENT(in)        :: beta_op      !< Optimum packing ratio [-]
-    REAL(wp)                    :: wind_factor  !< Output [-]
+    REAL(lp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
+    REAL(lp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
+    REAL(lp), INTENT(in)        :: beta         !< Packing ratio [-]
+    REAL(lp), INTENT(in)        :: beta_op      !< Optimum packing ratio [-]
+    REAL(lp)                    :: wind_factor  !< Output [-]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: C_var, B_var, E_var
-    REAL(wp)                    :: beta_ratio
+    REAL(lp)                    :: C_var, B_var, E_var
+    REAL(lp)                    :: beta_ratio
     ! ----------------------------------------------------------------------------------------------------- !
-    C_var = 7.47_wp * exp(-0.8711_wp * (sigma**0.55_wp)) !< Eq. A8
-    B_var = 0.15988_wp * (sigma ** 0.54_wp) !< Eq. A7
-    E_var = 0.7515_wp * exp(-0.01094_wp * sigma) !< Eq. A9
+    C_var = 7.47_lp * exp(-0.8711_lp * (sigma**0.55_lp)) !< Eq. A8
+    B_var = 0.15988_lp * (sigma ** 0.54_lp) !< Eq. A7
+    E_var = 0.7515_lp * exp(-0.01094_lp * sigma) !< Eq. A9
     beta_ratio = beta / beta_op
-    wind_factor = C_var * ((3.281_wp * u_f_wind) ** B_var) * (beta_ratio ** (-E_var))
+    wind_factor = C_var * ((3.281_lp * u_f_wind) ** B_var) * (beta_ratio ** (-E_var))
   END FUNCTION calc_ros_wind_factor
 
 
@@ -540,14 +540,14 @@ CONTAINS
   !> Used to calculate rate of spread
   !>
   ELEMENTAL PURE FUNCTION calc_ros_prop_flux_ratio(sigma, beta) RESULT (prop_flux_ratio)
-    REAL(wp), INTENT(in) :: sigma           !< surface-area to volume ratio of the fuel [cm-1]
-    REAL(wp), INTENT(in) :: beta            !< packing ratio [-]
-    REAL(wp)             :: prop_flux_ratio !< output [-]
+    REAL(lp), INTENT(in) :: sigma           !< surface-area to volume ratio of the fuel [cm-1]
+    REAL(lp), INTENT(in) :: beta            !< packing ratio [-]
+    REAL(lp)             :: prop_flux_ratio !< output [-]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: e_calc
+    REAL(lp) :: e_calc
     ! ----------------------------------------------------------------------------------------------------- !
-    e_calc = (0.792_wp + 3.7597_wp * sqrt(sigma)) * (beta + 0.1_wp)
-    prop_flux_ratio = exp(e_calc) / (192._wp + 7.9095_wp * sigma)
+    e_calc = (0.792_lp + 3.7597_lp * sqrt(sigma)) * (beta + 0.1_lp)
+    prop_flux_ratio = exp(e_calc) / (192._lp + 7.9095_lp * sigma)
   END FUNCTION calc_ros_prop_flux_ratio
 
 
@@ -558,13 +558,13 @@ CONTAINS
   !> Used to calculate rate of spread
   !>
   ELEMENTAL PURE FUNCTION calc_ros_opt_react_velocity(max_react_vel, beta, beta_op, A_var) RESULT (opt_react_vel)
-    REAL(wp), INTENT(in)        :: max_react_vel   !< Maximum reaction velocity [min-1]
-    REAL(wp), INTENT(in)        :: beta            !< packing ratio [kg m-3]
-    REAL(wp), INTENT(in)        :: beta_op         !< Eq. A6 [-]
-    REAL(wp), INTENT(in)        :: A_var           !< [-]
-    REAL(wp)                    :: opt_react_vel   !< output [min-1]
+    REAL(lp), INTENT(in)        :: max_react_vel   !< Maximum reaction velocity [min-1]
+    REAL(lp), INTENT(in)        :: beta            !< packing ratio [kg m-3]
+    REAL(lp), INTENT(in)        :: beta_op         !< Eq. A6 [-]
+    REAL(lp), INTENT(in)        :: A_var           !< [-]
+    REAL(lp)                    :: opt_react_vel   !< output [min-1]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: beta_ratio
+    REAL(lp) :: beta_ratio
     ! ----------------------------------------------------------------------------------------------------- !
     beta_ratio = beta / beta_op
     opt_react_vel = max_react_vel * (beta_ratio ** A_var) * exp(A_var * (1 - beta_ratio))
@@ -585,12 +585,12 @@ CONTAINS
     USE mo_q_dfire_sf_constants, ONLY: df_sf_fuel_class_factors
 
     INTEGER, INTENT(in)         :: nfclasses !< The number of used fuel classes
-    REAL(wp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]
-    REAL(wp), INTENT(in)        :: dead_fuel(nfclasses) !< 1, 10, 100 hours [gDM m-2]
-    REAL(wp)                    :: fbd !< output [kg m-3]
+    REAL(lp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]
+    REAL(lp), INTENT(in)        :: dead_fuel(nfclasses) !< 1, 10, 100 hours [gDM m-2]
+    REAL(lp)                    :: fbd !< output [kg m-3]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: total_dead_fuel
-    REAL(wp)                    :: fbd_accounting_fc
+    REAL(lp)                    :: total_dead_fuel
+    REAL(lp)                    :: fbd_accounting_fc
     ! ----------------------------------------------------------------------------------------------------- !
     total_dead_fuel = sum(dead_fuel)
     fbd_accounting_fc = fuel_bulk_density * SUM(dead_fuel * df_sf_fuel_class_factors)

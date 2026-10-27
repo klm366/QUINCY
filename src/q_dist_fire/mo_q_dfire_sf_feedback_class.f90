@@ -14,7 +14,7 @@
 MODULE mo_q_dfire_sf_feedback_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish
 
@@ -67,12 +67,12 @@ CONTAINS
 
     INTEGER, INTENT(in)                   :: dix(:)                       !< Dead fuel elements indices (flag_sb_interactive_n, flag_sb_interactive_p)
     INTEGER, INTENT(in)                   :: lix(:)                       !< Live fuel elements indices (flag_veg_interactive_n, flag_veg_interactive_p)
-    REAL(wp), INTENT(in)                  :: emissions(:,:,:)             !< Dead emissions (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
-    REAL(wp), INTENT(in)                  :: residue(:,:,:)               !< Residue from dead fuel consumption (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
-    REAL(wp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bccm veg_pool (#pool, #element, #nc) [mol/m2]
-    REAL(wp), INTENT(inout)               :: sb_fire_emissions_mt(:,:,:)  !< bgcm sb_pool (#pool, #element, #nc) [mol/m3]
-    REAL(wp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
-    REAL(wp), INTENT(inout)               :: sb_fire_litter_ash_mt(:,:,:) !< bgcm sb_pool (#pools, #element, #nc) [mol/m3]
+    REAL(lp), INTENT(in)                  :: emissions(:,:,:)             !< Dead emissions (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
+    REAL(lp), INTENT(in)                  :: residue(:,:,:)               !< Residue from dead fuel consumption (#nc, #dead fuel pools, #elems) [molX/m3 and molX/m2]
+    REAL(lp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bccm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(lp), INTENT(inout)               :: sb_fire_emissions_mt(:,:,:)  !< bgcm sb_pool (#pool, #element, #nc) [mol/m3]
+    REAL(lp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(lp), INTENT(inout)               :: sb_fire_litter_ash_mt(:,:,:) !< bgcm sb_pool (#pools, #element, #nc) [mol/m3]
     LOGICAL, INTENT(in)                   :: mask(:)                      !< True = Gridcells to compute
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':calc_sf_feedback_dead'
@@ -165,10 +165,10 @@ CONTAINS
   SUBROUTINE calc_sf_feedback_live(lix, emissions, residue, veg_fire_emissions_mt, veg_litterfall_mt, mask)
 
     INTEGER, INTENT(in)                   :: lix(:)                       !< Live fuel element indices (flag_veg_interactive_n, flag_veg_interactive_p)
-    REAL(wp), INTENT(in)                  :: emissions(:,:,:)             !< Live emissions (#nc,#n live pools,#elems) [mol/m2]
-    REAL(wp), INTENT(in)                  :: residue(:,:,:)               !< Residue from live emissions (#nc,#n live pools,#elems) [mol/m2]
-    REAL(wp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
-    REAL(wp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(lp), INTENT(in)                  :: emissions(:,:,:)             !< Live emissions (#nc,#n live pools,#elems) [mol/m2]
+    REAL(lp), INTENT(in)                  :: residue(:,:,:)               !< Residue from live emissions (#nc,#n live pools,#elems) [mol/m2]
+    REAL(lp), INTENT(inout)               :: veg_fire_emissions_mt(:,:,:) !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
+    REAL(lp), INTENT(inout)               :: veg_litterfall_mt(:,:,:)     !< bgcm veg_pool (#pool, #element, #nc) [mol/m2]
     LOGICAL, INTENT(in)                   :: mask(:)                      !< True = compute gridcell(s)
 
     INTEGER                               :: inc

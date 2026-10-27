@@ -13,7 +13,7 @@
 MODULE mo_q_dfire_sf_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: message
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
@@ -49,8 +49,8 @@ MODULE mo_q_dfire_sf_memory_class
     TYPE(t_jsb_var_real2d)               :: pot_burn_area       !< Potential burnable area (forest + grass area only) [m2?]
 
     TYPE(t_jsb_var_real2d)               :: mask_is_fire_intense_enough !< Mask (LOGICAL): TRUE=current fire is intense enough to exist [-]
-                                                                !< Conversion required from REAL(wp) <-> LOGICAL
-                                                                !< True = 1._wp, False = 0._wp
+                                                                !< Conversion required from REAL(lp) <-> LOGICAL
+                                                                !< True = 1._lp, False = 0._lp
 
     ! dead fuel
     TYPE(t_jsb_var_real3d)               :: dead_fuel_consumption_1hr !< [g DM m-2]
@@ -167,7 +167,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('fdi', mem%fdi, &
         & hgrid, vgrid_surface, &
@@ -178,7 +178,7 @@ CONTAINS
         & output_level = BASIC, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('t_air_max', mem%t_air_max, &
         & hgrid, vgrid_surface, &
@@ -189,7 +189,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('t_air_min', mem%t_air_min, &
         & hgrid, vgrid_surface, &
@@ -200,7 +200,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 9999.0_wp)
+        & initval_r = 9999.0_lp)
 
     CALL mem%Add_var('t_air_max_old', mem%t_air_max_old, &
         & hgrid, vgrid_surface, &
@@ -211,7 +211,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('t_air_min_old', mem%t_air_min_old, &
         & hgrid, vgrid_surface, &
@@ -222,7 +222,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 9999.0_wp)
+        & initval_r = 9999.0_lp)
 
     CALL mem%Add_var('mask_is_fire_intense_enough', mem%mask_is_fire_intense_enough, &
         & hgrid, vgrid_surface, &
@@ -233,7 +233,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     !< Precipitation related variables
     CALL mem%Add_var('precip_daily', mem%precip_daily, &
@@ -245,7 +245,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('precip_mavg', mem%precip_mavg, &
         & hgrid, vgrid_surface, &
@@ -256,7 +256,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('precip_qc_mavg', mem%precip_qc_mavg, &
         & hgrid, vgrid_surface, &
@@ -267,7 +267,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('precip_daily_mmd', mem%precip_daily_mmd, &
         & hgrid, vgrid_surface, &
@@ -278,7 +278,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('precip_daytime', mem%precip_daytime, &
         & hgrid, vgrid_surface, &
@@ -289,7 +289,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('precip_daytime_old', mem%precip_daytime_old, &
         & hgrid, vgrid_surface, &
@@ -300,7 +300,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('pot_burn_area', mem%pot_burn_area, &
         & hgrid, vgrid_surface, &
@@ -311,7 +311,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('dead_fuel_consumption_1hr', mem%dead_fuel_consumption_1hr, &
         & hgrid, vgrid_dead_fuel_pools, &
@@ -322,7 +322,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('dead_fuel_consumption_10hr', mem%dead_fuel_consumption_10hr, &
         & hgrid, vgrid_dead_fuel_pools, &
@@ -333,7 +333,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('dead_fuel_consumption_100hr', mem%dead_fuel_consumption_100hr, &
         & hgrid, vgrid_dead_fuel_pools, &
@@ -344,7 +344,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('dead_fuel_consumption_1000hr', mem%dead_fuel_consumption_1000hr, &
         & hgrid, vgrid_dead_fuel_pools, &
@@ -355,7 +355,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ab_moisture', mem%ab_moisture, &
         & hgrid, vgrid_surface, &
@@ -366,7 +366,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('area_burned_fract', mem%area_burned_fract, &
         & hgrid, vgrid_surface, &
@@ -377,7 +377,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('area_burned', mem%area_burned, &
         & hgrid, vgrid_surface, &
@@ -388,7 +388,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('area_burned_fract_output', mem%area_burned_fract_output, &
         & hgrid, vgrid_surface, &
@@ -399,7 +399,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('area_burned_output', mem%area_burned_output, &
         & hgrid, vgrid_surface, &
@@ -410,7 +410,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('i_surface', mem%i_surface, &
         & hgrid, vgrid_surface, &
@@ -421,7 +421,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ros_f', mem%ros_f, &
         & hgrid, vgrid_surface, &
@@ -432,7 +432,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ros_b', mem%ros_b, &
         & hgrid, vgrid_surface, &
@@ -443,7 +443,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('mean_fire_area', mem%mean_fire_area, &
         & hgrid, vgrid_surface, &
@@ -454,7 +454,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('fire_duration', mem%fire_duration, &
         & hgrid, vgrid_surface, &
@@ -465,7 +465,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('e_n_ignitions', mem%e_n_ignitions, &
         & hgrid, vgrid_surface, &
@@ -476,7 +476,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('e_n_humans', mem%e_n_humans, &
         & hgrid, vgrid_surface, &
@@ -487,7 +487,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('e_n_lightning', mem%e_n_lightning, &
         & hgrid, vgrid_surface, &
@@ -498,7 +498,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('frac_consump_fcl', mem%frac_consump_fcl, &
         & hgrid, vgrid_fuel_classes, &
@@ -509,7 +509,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('distance_travelled', mem%distance_travelled, &
         & hgrid, vgrid_surface, &
@@ -520,7 +520,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('l2b_ratio', mem%l2b_ratio, &
         & hgrid, vgrid_surface, &
@@ -531,7 +531,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('reaction_intensity', mem%reaction_intensity, &
         & hgrid, vgrid_surface, &
@@ -542,7 +542,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('prop_flux_ratio', mem%prop_flux_ratio, &
         & hgrid, vgrid_surface, &
@@ -554,7 +554,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('wind_factor', mem%wind_factor, &
         & hgrid, vgrid_surface, &
@@ -566,7 +566,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('eff_heating_number', mem%eff_heating_number, &
         & hgrid, vgrid_surface, &
@@ -578,7 +578,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('preig_heat', mem%preig_heat, &
         & hgrid, vgrid_surface, &
@@ -589,7 +589,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('optimum_reaction_velocity', mem%opt_react_velo, &
         & hgrid, vgrid_surface, &
@@ -600,7 +600,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('net_fuel_load', mem%net_fuel_load, &
         & hgrid, vgrid_surface, &
@@ -611,7 +611,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('Moisture_dampening_coefficient', mem%moist_damp_coeff, &
         & hgrid, vgrid_surface, &
@@ -622,7 +622,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('Mineral_dampening_coefficient', mem%mineral_damp_coeff, &
         & hgrid, vgrid_surface, &
@@ -633,7 +633,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('fuel_moisture', mem%fuel_moisture, &
         & hgrid, vgrid_fuel_moisture, &
@@ -645,7 +645,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ic_pop_dens', mem%ic_pop_dens, &
         & hgrid, vgrid_surface, &
@@ -657,7 +657,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ic_lightning_events_monthly', mem%ic_lightning_events_monthly, &
         & hgrid, vgrid_months_in_year, &
@@ -669,7 +669,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('ic_lightning_events', mem%ic_lightning_events, &
         & hgrid, vgrid_months_in_year, &
@@ -681,7 +681,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
     CALL mem%Add_var('a_nd', mem%a_nd, &
         & hgrid, vgrid_surface, &
@@ -693,7 +693,7 @@ CONTAINS
         & output_level = FULL, & ! DIAGNOSTICS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
   END SUBROUTINE Init_q_dfire_sf_memory
 

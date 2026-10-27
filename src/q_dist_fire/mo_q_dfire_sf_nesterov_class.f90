@@ -15,7 +15,7 @@
 MODULE mo_q_dfire_sf_nesterov_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message, finish
 
@@ -45,7 +45,7 @@ CONTAINS
   !> Set default time-step as one day, except if given by optional argument in the function call
   !>
   !> Note: Take into account?
-  !> from jsb constants: rain_as_snow_temp_thresh = Tzero + 2.5_wp     ! source: OCN-weather generator
+  !> from jsb constants: rain_as_snow_temp_thresh = Tzero + 2.5_lp     ! source: OCN-weather generator
   !>
   !> https://wikifire.wsl.ch/tiki-indexea83.html?page=Nesterov+ignition+index
   !>
@@ -56,23 +56,23 @@ CONTAINS
                                &  RESULT (nesterov_index)
 
     INTEGER, INTENT(in)                 :: nc !< dimenion
-    REAL(wp), INTENT(in)                :: tmax_daily(nc)           !< daily max temperature [Celsius]
-    REAL(wp), INTENT(in)                :: tmin_daily(nc)           !< daily min temperature [Celsius]
-    REAL(wp), INTENT(in)                :: precipitation_daily(nc)  !< daily precipitation [mm day-1]
-    REAL(wp), DIMENSION(nc), INTENT(in) :: nesterov_index_prev      !< cumulative function [Celsius^2]
-    REAL(wp), DIMENSION(nc)             :: nesterov_index           !< output [Celsius^2]
-    REAL(wp), OPTIONAL                  :: o_precip_thd             !< redefine precipitation threshold [mm day-1]
-    REAL(wp), OPTIONAL                  :: o_frost_thd              !< redefine frosting threshold [Celsius]
-    REAL(wp), OPTIONAL                  :: o_tsfactor               !< timestep adjust (daily * tsfactor)
+    REAL(lp), INTENT(in)                :: tmax_daily(nc)           !< daily max temperature [Celsius]
+    REAL(lp), INTENT(in)                :: tmin_daily(nc)           !< daily min temperature [Celsius]
+    REAL(lp), INTENT(in)                :: precipitation_daily(nc)  !< daily precipitation [mm day-1]
+    REAL(lp), DIMENSION(nc), INTENT(in) :: nesterov_index_prev      !< cumulative function [Celsius^2]
+    REAL(lp), DIMENSION(nc)             :: nesterov_index           !< output [Celsius^2]
+    REAL(lp), OPTIONAL                  :: o_precip_thd             !< redefine precipitation threshold [mm day-1]
+    REAL(lp), OPTIONAL                  :: o_frost_thd              !< redefine frosting threshold [Celsius]
+    REAL(lp), OPTIONAL                  :: o_tsfactor               !< timestep adjust (daily * tsfactor)
     LOGICAL, OPTIONAL                   :: mask(nc)                 !< True if gridcell is enabled
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: tdew_daily(nc)          !< dew temperature
+    REAL(lp) :: tdew_daily(nc)          !< dew temperature
     LOGICAL  :: is_frost(nc)
     LOGICAL  :: is_wet_enough(nc)
-    REAL(wp) :: ni_inc(nc)              !< nesterov index increase
-    REAL(wp) :: precip_thd              !< precipitation threshold
-    REAL(wp) :: frost_thd               !< rain as frost threshold
-    REAL(wp) :: tsfactor
+    REAL(lp) :: ni_inc(nc)              !< nesterov index increase
+    REAL(lp) :: precip_thd              !< precipitation threshold
+    REAL(lp) :: frost_thd               !< rain as frost threshold
+    REAL(lp) :: tsfactor
     INTEGER  :: ic
     LOGICAL  :: mask_in(nc)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -82,7 +82,7 @@ CONTAINS
     frost_thd = df_sf_frost_trhd
     IF (PRESENT(o_frost_thd)) frost_thd = o_frost_thd
 
-    tsfactor = 1._wp
+    tsfactor = 1._lp
     IF (PRESENT(o_tsfactor)) tsfactor = o_tsfactor
 
     mask_in = .TRUE.
@@ -94,7 +94,7 @@ CONTAINS
     DO ic=1, nc
       IF (is_wet_enough(ic) .OR. is_frost(ic) .OR. .NOT. mask_in(ic)) THEN
         ! reset to 0
-        nesterov_index(ic) = 0._wp
+        nesterov_index(ic) = 0._lp
       ELSE
         tdew_daily(ic) = tmin_daily(ic) - frost_thd
         ni_inc(ic) = (tmax_daily(ic) * (tmax_daily(ic) - tdew_daily(ic))) * tsfactor

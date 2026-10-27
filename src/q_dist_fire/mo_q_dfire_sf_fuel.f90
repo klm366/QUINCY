@@ -23,7 +23,7 @@
 MODULE mo_q_dfire_sf_fuel
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
@@ -100,26 +100,26 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER       :: lctlib     !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc, ic
     INTEGER                               :: no_children
-    REAL(wp)                              :: dtime      !< timestep
+    REAL(lp)                              :: dtime      !< timestep
 
     INTEGER                               :: lctlib_growthform(options%nc)
 
-    REAL(wp)                              :: tile_fract(options%nc)      !< [%]
-    REAL(wp), POINTER                     :: grid_cell_area(:)           ! [m2]
-    REAL(wp), POINTER                     :: tile_fract_ref(:)           ! [%]
-    REAL(wp), ALLOCATABLE                 :: top_soil_depth_sl(:)        !< Top soil depth layer [m]
-    REAL(wp)                              :: cured_lvg_fract(options%nc) !< Cured live grass fraction considered as dead fuel [%]
+    REAL(lp)                              :: tile_fract(options%nc)      !< [%]
+    REAL(lp), POINTER                     :: grid_cell_area(:)           ! [m2]
+    REAL(lp), POINTER                     :: tile_fract_ref(:)           ! [%]
+    REAL(lp), ALLOCATABLE                 :: top_soil_depth_sl(:)        !< Top soil depth layer [m]
+    REAL(lp)                              :: cured_lvg_fract(options%nc) !< Cured live grass fraction considered as dead fuel [%]
 
-    REAL(wp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:)         !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
-    REAL(wp), ALLOCATABLE                 :: sb_pool_slim(:,:)           !< debug only  (#pools, #nc)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:)        !< (#nc,#dead fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:)  !< (#nc,#live fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: cured_live_grass_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:)   !< (#nc,#live fuel pools,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:)   !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
-    REAL(wp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:)        !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: veg_pool_in_gdm(:,:)        !< Live fuel (#nc,#live fuel pools) [g DM m-2]
-    REAL(wp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:)         !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
+    REAL(lp), POINTER, CONTIGUOUS         :: live_fuel_frac(:,:)         !< live fuel classes allocation from veg_pool (#fuel classes,#live pools)
+    REAL(lp), ALLOCATABLE                 :: sb_pool_slim(:,:)           !< debug only  (#pools, #nc)
+    REAL(lp), ALLOCATABLE                 :: dead_fuel_fcl(:,:,:)        !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(lp), ALLOCATABLE                 :: live_grass_fuel_fcl(:,:,:)  !< (#nc,#live fuel pools,#fuel classes)
+    REAL(lp), ALLOCATABLE                 :: cured_live_grass_fuel_fcl(:,:,:) !< (#nc,#dead fuel pools,#fuel classes)
+    REAL(lp), ALLOCATABLE                 :: live_tree_fuel_fcl(:,:,:)   !< (#nc,#live fuel pools,#fuel classes)
+    REAL(lp), ALLOCATABLE                 :: dead_fuel_spread_fcl(:,:)   !< (#nc,#dead fuel pools-1,10,100-,#fuel classes)
+    REAL(lp), ALLOCATABLE                 :: live_fuel_fcl(:,:,:)        !< Live fuel (#nc,#live fuel pools, #fuel classes) [g DM m-2]
+    REAL(lp), ALLOCATABLE                 :: veg_pool_in_gdm(:,:)        !< Live fuel (#nc,#live fuel pools) [g DM m-2]
+    REAL(lp), ALLOCATABLE                 :: sb_pool_in_gdm(:,:)         !< Dead fuel (#nc,#dead fuel pools) [g DM m-2]
     TYPE(t_sf_fuel_class)                 :: fuel_cls                    !< Fuel [g DM m-2]
 
     CHARACTER(len=*), PARAMETER           :: routine = TRIM(modname)//':update_fdire_sf_fuel'
@@ -222,9 +222,9 @@ CONTAINS
     tile_fract_ref => tile%fract(ics:ice, iblk)
 #endif
 
-    forest_fract=0._wp
-    grass_fract=0._wp
-    fuel_bulk_density = 0._wp
+    forest_fract=0._lp
+    grass_fract=0._lp
+    fuel_bulk_density = 0._lp
     top_soil_depth_sl = soil_depth_sl(:,df_sf_spq_layer_top_sl)
     lctlib_growthform(:) = lctlib%growthform
 
@@ -236,9 +236,9 @@ CONTAINS
     ! todo: move to init (static setup)
 #ifdef __QUINCY_STANDALONE__
     IF (lctlib%ForestFlag) THEN
-      forest_fract=1._wp
+      forest_fract=1._lp
     ELSE IF (lctlib%GrassFlag) THEN
-      grass_fract = 1._wp
+      grass_fract = 1._lp
     !ELSE ! ignore
     END IF
 #else
@@ -251,8 +251,8 @@ CONTAINS
 #endif
 
     !< Oberhagemann related, required to calculate livegrass moisture at PFT level due to PFT parameters
-    lvg_moisture = 0._wp
-    cured_lvg_fract = 1._wp !< Thonicke's considers all live grass as dead fuel.
+    lvg_moisture = 0._lp
+    cured_lvg_fract = 1._lp !< Thonicke's considers all live grass as dead fuel.
 
     IF (lctlib%growthform == igrass) THEN
       IF (dsl4jsb_Config(Q_DFIRE_SF_)%ros_model_id == Q_DFIRE_ROS_OBERHAGEMANN) THEN
@@ -260,7 +260,7 @@ CONTAINS
         lvg_moisture = calc_mflg_ober(nc, lctlib_lfmc, growing_season)
 
         !< Oberhagemann et al. (2025), Section "Improvements to the treatment of live grass moisture in SPITFIRE", page 2031-2032
-        cured_lvg_fract = max(0._wp, min(1._wp, (lvg_moisture - 0.3_wp) / (1.2_wp - 0.3_wp)))
+        cured_lvg_fract = max(0._lp, min(1._lp, (lvg_moisture - 0.3_lp) / (1.2_lp - 0.3_lp)))
       END IF
     END IF
 
@@ -294,7 +294,7 @@ CONTAINS
 
     dead_fuel_spread_fcl = SUM(dead_fuel_fcl(:,:,df_sf_fc_1hr_idx:df_sf_fc_100hr_idx), DIM=2) !< 2 = fuel pools dimension index
     DO ic = 1, nc
-      IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._wp) THEN
+      IF (SUM(dead_fuel_spread_fcl(ic,:)) > 0._lp) THEN
         fuel_bulk_density(ic) = calc_ros_fbd(3, lctlib%q_fuel_bulk_density, dead_fuel_spread_fcl(ic,:)) ! 3=fuel classes (1,10 and 100 hours)
       ENDIF
     END DO
