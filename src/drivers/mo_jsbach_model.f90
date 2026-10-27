@@ -135,6 +135,9 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_derived_variable_handling, ONLY: update_statistics
+#ifndef __NO_RAGNAROK__
+    USE mo_ragnarok_setup,          ONLY: init_ragnarok_model, finalize_ragnarok_model
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
@@ -259,6 +262,10 @@ CONTAINS
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
          &                          num_dio_procs=proc0_shift)
+
+#ifndef __NO_RAGNAROK__
+    CALL init_ragnarok_model()
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 4.2 Initialize various timers
@@ -751,6 +758,9 @@ CONTAINS
     CALL destruct_icon_communication()
     CALL finalize_external_forcing(no_models)
     CALL jsbach_finalize()
+#ifndef __NO_RAGNAROK__
+    CALL finalize_ragnarok_model()
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 21.0 Delete variable lists

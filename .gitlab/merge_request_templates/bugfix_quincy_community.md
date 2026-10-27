@@ -57,7 +57,7 @@
   * provide details about the test simulation
 
 #### associated merge requests
-* ICON-mpim MR: add link (full url) to the MR in the ICON-Land repository
+* icon MR: add link (full url) to the MR in the ICON-Land repository
 * QS MR: add link (full url) to the MR in the ICON-Land repository
   * brief summary of QS test simulations
 * iq-scripts MR: add link (full url) to the MR in the ICON-Land repository
