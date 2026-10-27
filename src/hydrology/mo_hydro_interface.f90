@@ -2118,6 +2118,8 @@ CONTAINS
       & wtr_soil_inaccessible_sl(options%nc, options%nsoil_w)     !< Actual amount of plant inaccessible water
                                                                   !< (ice+supercooled) [m]
     REAL(lp) :: wtr_rootzone_pwp(options%nc)                      !< Amount of liquid water at wilting point [m]
+    REAL(lp) :: wtr_rootzone_above_pwp(options%nc)                !< QUINCY rooted water above wilting point [m]
+    REAL(lp) :: wtr_rootzone_capacity(options%nc)                 !< QUINCY rooted capacity above wilting point [m]
     REAL(lp) :: hlp1                                              !< helper variable
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
@@ -2163,6 +2165,7 @@ CONTAINS
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
     !$ACC   CREATE(wpi_pwp_soil_sl, wtr_soil_pwp_sl, wtr_soil_avail_sl, wtr_soil_avail_max_sl) &
     !$ACC   CREATE(wtr_soil_inaccessible_sl, wtr_rootzone_pwp) &
+    !$ACC   CREATE(wtr_rootzone_above_pwp, wtr_rootzone_capacity) &
     !$ACC   ASYNC(acc_stream)
 
     !> Water stress is calculated from the ratio between the actual plant available water
@@ -2305,13 +2308,30 @@ CONTAINS
       !> a different approach to account for water stress: there we use the relative soil moisture as measure
       !> for water stress directly, instead of using the water stress factor.
     CASE (MODEL_QUINCY)
-      ! Calculate relative plant available water content of the root zone
-      !
+      !> Clip water above the wilting point in each layer before root-zone integration:
+      !> a = MIN(1, SUM(f * MAX(W-Wpwp,0)) / SUM(f * MAX(Wfc-Wpwp,0))).
+      !> W, Wpwp and Wfc are the ice/supercooling-corrected layer amounts [m] above;
+      !> f is rooted layer thickness / soil layer thickness, not a root-carbon weight.
+      !> Dry layers cannot cancel accessible water in wetter layers. A zero capacity gives a=0.
+      !> Reuse scratch arrays only after saving the original root-zone diagnostics above.
+      !> No stored water/ice mass is modified. This applies to both QUINCY soil models.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          wtr_soil_avail_sl(ic,is) = MAX(wtr_soil_avail_sl(ic,is) - wtr_soil_pwp_sl(ic,is), 0._lp)
+          wtr_soil_avail_max_sl(ic,is) = MAX(wtr_soil_avail_max_sl(ic,is) - wtr_soil_pwp_sl(ic,is), 0._lp)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      CALL get_amount_in_rootzone(wtr_soil_avail_sl(:,:), &
+        & soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_above_pwp(:))
+      CALL get_amount_in_rootzone(wtr_soil_avail_max_sl(:,:), &
+        & soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_capacity(:))
+
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
-        IF ((wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)) > 0.0_lp) THEN
-          wtr_plant_avail_rel(ic) = MIN(MAX(wtr_rootzone_avail(ic) - wtr_rootzone_pwp(ic), 0.0_lp) &
-            &                       / (wtr_rootzone_avail_max(ic) - wtr_rootzone_pwp(ic)), 1.0_lp)
+        IF (wtr_rootzone_capacity(ic) > 0._lp) THEN
+          wtr_plant_avail_rel(ic) = MIN(wtr_rootzone_above_pwp(ic) / wtr_rootzone_capacity(ic), 1._lp)
         ELSE
           wtr_plant_avail_rel(ic) = 0.0_lp
         END IF

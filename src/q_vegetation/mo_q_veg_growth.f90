@@ -1720,7 +1720,11 @@ CONTAINS
       n_l2r_scal = 1.0_lp
     END IF
     IF (flag_veg_interactive_p) THEN
-      p_l2r_scal = growth_np / MAX(eps8, labile_nitrogen / MAX(eps8, labile_phosphorus))
+      ! Compare available and required P per unit C, independently of labile N.
+      ! Inputs are allocation-timescale means; growth C:P is the product of
+      ! the existing growth C:N and N:P ratios [mol C/mol P]. Retain the
+      ! numerical guards and the independent nutrient/crop bypasses below.
+      p_l2r_scal = (growth_cn * growth_np) / MAX(eps8, labile_carbon / MAX(eps8, labile_phosphorus))
     ELSE
       p_l2r_scal = 1.0_lp
     END IF
