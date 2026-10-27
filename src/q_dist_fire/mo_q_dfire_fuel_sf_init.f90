@@ -13,7 +13,7 @@
 MODULE mo_q_dfire_fuel_sf_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_exception,               ONLY: message
   USE mo_jsb_control,             ONLY: debug_on
 
@@ -166,53 +166,53 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_SF_, sb_fire_emissions_total_els)
     dsl4jsb_Get_var3D_onDomain(Q_DFIRE_FUEL_SF_, sb_fire_litter_ash_total_els)
     ! ----------------------------------------------------------------------------------------------------- !
-    dead_fuel_1hr_dfp = 0._wp
-    dead_fuel_10hr_dfp = 0._wp
-    dead_fuel_100hr_dfp = 0._wp
-    dead_fuel_1000hr_dfp = 0._wp
+    dead_fuel_1hr_dfp = 0._lp
+    dead_fuel_10hr_dfp = 0._lp
+    dead_fuel_100hr_dfp = 0._lp
+    dead_fuel_1000hr_dfp = 0._lp
 
-    live_grass_fuel_1hr_lfp = 0._wp
-    cured_live_grass_fuel_1hr_dfp = 0._wp
-    live_tree_fuel_1hr_lfp = 0._wp
-    live_tree_fuel_10hr_lfp = 0._wp
-    live_tree_fuel_100hr_lfp = 0._wp
-    live_tree_fuel_1000hr_lfp = 0._wp
+    live_grass_fuel_1hr_lfp = 0._lp
+    cured_live_grass_fuel_1hr_dfp = 0._lp
+    live_tree_fuel_1hr_lfp = 0._lp
+    live_tree_fuel_10hr_lfp = 0._lp
+    live_tree_fuel_100hr_lfp = 0._lp
+    live_tree_fuel_1000hr_lfp = 0._lp
 
-    forest_fract = 0._wp
-    grass_fract = 0._wp
+    forest_fract = 0._lp
+    grass_fract = 0._lp
 
-    fuel_bulk_density = 0._wp
+    fuel_bulk_density = 0._lp
 
-    pm_fire = 0._wp
-    pm_fire_output = 0._wp
-    pm_prop_ck = 0._wp
-    pm_tau = 0._wp
-    tau_l = 0._wp
-    tau_c = 0._wp
-    par1_diag = 0._wp
-    par2_diag = 0._wp
-    bark_thickness = 0._wp
-    DBH_diag = 0._wp
+    pm_fire = 0._lp
+    pm_fire_output = 0._lp
+    pm_prop_ck = 0._lp
+    pm_tau = 0._lp
+    tau_l = 0._lp
+    tau_c = 0._lp
+    par1_diag = 0._lp
+    par2_diag = 0._lp
+    bark_thickness = 0._lp
+    DBH_diag = 0._lp
 
-    ck = 0._wp
-    r_ck = 0._wp
-    ck_p = 0._wp
-    scorch_height = 0._wp
-    F_scorch_height = 0._wp
-    crown_length = 0._wp
-    tree_height = 0._wp
-    lvg_moisture = 0._wp
+    ck = 0._lp
+    r_ck = 0._lp
+    ck_p = 0._lp
+    scorch_height = 0._lp
+    F_scorch_height = 0._lp
+    crown_length = 0._lp
+    tree_height = 0._lp
+    lvg_moisture = 0._lp
 
-    fuel_consumption_els = 0._wp
-    emissions_spc = 0._wp
-    emissions_els = 0._wp
-    residue_els = 0._wp
-    overflow_els = 0._wp
+    fuel_consumption_els = 0._lp
+    emissions_spc = 0._lp
+    emissions_els = 0._lp
+    residue_els = 0._lp
+    overflow_els = 0._lp
 
-    veg_fire_litterfall_total_els = 0._wp
-    veg_fire_emissions_total_els = 0._wp
-    sb_fire_emissions_total_els = 0._wp
-    sb_fire_litter_ash_total_els = 0._wp
+    veg_fire_litterfall_total_els = 0._lp
+    veg_fire_emissions_total_els = 0._lp
+    sb_fire_emissions_total_els = 0._lp
+    sb_fire_litter_ash_total_els = 0._lp
 
     !< All PFTs values are loaded, it is useful for aggregation to account for all of them
     !< Initialization at the process only loads those values that are specific to the PFT,

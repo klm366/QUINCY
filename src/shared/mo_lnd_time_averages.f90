@@ -36,7 +36,7 @@ MODULE mo_lnd_time_averages
     REAL(lp),SAVE :: mavg_period_yearly            = 365.0_lp             !< 365 days
 
   ! specific memory time-scales (in days):
-    REAL(lp),SAVE :: mavg_period_dfire             = 1.0_wp               !< dist fire process
+    REAL(lp),SAVE :: mavg_period_dfire             = 1.0_lp               !< dist fire process
     REAL(lp),SAVE :: mavg_period_tsoa              = 2.0_lp               !< memory time_scale for state of acclimation
     REAL(lp),SAVE :: mavg_period_tuptake           = 3.0_lp               !< nutrient uptake processes (demand, BNF)
     REAL(lp),SAVE :: mavg_period_tlabile           = 7.0_lp               !< labile pool

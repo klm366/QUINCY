@@ -1241,11 +1241,11 @@ CONTAINS
     IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
       IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
         net_biosphere_production(:) = net_biosphere_production(:) - &
-          SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+          SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
         net_biosphere_production_c13(:) = net_biosphere_production_c13(:) - &
-          SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+          SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
         net_biosphere_production_c14(:) = net_biosphere_production_c14(:) - &
-          SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._wp
+          SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
       ENDIF
     ENDIF
 

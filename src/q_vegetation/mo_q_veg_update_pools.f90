@@ -854,11 +854,11 @@ CONTAINS
       IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
         IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
           net_biosphere_production(ic) = net_biosphere_production(ic) - &
-            SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._wp )
+            SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._lp )
           net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
-            SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._wp )
+            SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._lp )
           net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
-            SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._wp )
+            SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._lp )
         ENDIF
       ENDIF
 
