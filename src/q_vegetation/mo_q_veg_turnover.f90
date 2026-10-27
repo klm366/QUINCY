@@ -596,7 +596,7 @@ CONTAINS
     ! soil pH effects on fine root
     IF (config_ph_on_fine_root .AND. (.NOT. l_transient_spinup)) THEN ! transient simulation
       IF (config_ph_future) THEN
-        IF (time_year >= 2014) THEN 
+        IF (time_year >= 2010) THEN 
           IF (time_month == 1 .AND. time_day == 1) THEN 
             IF (ABS(time_day_seconds - 2 * dtime) < eps1) THEN
                DO ic = 1, nc
@@ -799,21 +799,29 @@ CONTAINS
     IF (ph > 5.0_wp .AND. ph <= 5.5_wp) THEN
 !       ratio_modifier = 1.0_wp - 0.4164_wp * delta_ph
        ratio_modifier = 1.0_wp / exp(0.59_wp * delta_ph)
+!       ratio_modifier = 1.0_wp / exp(-0.28_wp * delta_ph) !low boundary
+!       ratio_modifier = 1.0_wp / exp(2.04_wp * delta_ph) !high boundary
     END IF
 
     IF (ph > 4.5_wp .AND. ph <= 5.0_wp) THEN
 !       ratio_modifier = 1.0_wp - 0.3739_wp * delta_ph
        ratio_modifier = 1.0_wp / exp(0.47_wp * delta_ph)
+!       ratio_modifier = 1.0_wp / exp(-0.04_wp * delta_ph) !low boundary
+!       ratio_modifier = 1.0_wp / exp(0.87_wp * delta_ph) !high boundary
     END IF
 
     IF (ph > 4.0_wp .AND. ph <= 4.5_wp) THEN
 !       ratio_modifier = 1.0_wp - 0.3658_wp * delta_ph
-       ratio_modifier = 1.0_wp / exp(0.45_wp * delta_ph)
+       ratio_modifier = 1.0_wp / exp(0.56_wp * delta_ph)
+!       ratio_modifier = 1.0_wp / exp(0.07_wp * delta_ph) !low boundary
+!       ratio_modifier = 1.0_wp / exp(1.89_wp * delta_ph) !high boundary
     END IF
 
     IF (ph <= 4.0_wp) THEN
 !       ratio_modifier = 1.0_wp - 1.0517_wp * delta_ph
-       ratio_modifier = 1.0_wp / exp(1.22_wp * delta_ph)
+       ratio_modifier = 1.0_wp / exp(1.32_wp * delta_ph)
+!       ratio_modifier = 1.0_wp / exp(0.64_wp * delta_ph) !low boundary
+!       ratio_modifier = 1.0_wp / exp(2.14_wp * delta_ph) !high boundary
     END IF
 
   END FUNCTION calc_ph_on_fine_root_turnover

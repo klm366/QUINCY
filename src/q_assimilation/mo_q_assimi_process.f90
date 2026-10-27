@@ -148,6 +148,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tacclim_mavg
+    dsl4jsb_Real2D_onChunk      :: ph_fine_root_factor_acc
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
@@ -237,6 +238,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)             ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tacclim_mavg)   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, ph_fine_root_factor_acc)        ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(VEG_, lai_cl)                         ! in
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)                ! in

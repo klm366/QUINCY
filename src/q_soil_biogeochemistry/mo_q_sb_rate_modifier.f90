@@ -206,7 +206,7 @@ CONTAINS
         rmm_decomposition(ic, is)    = MAX(1._wp - wtr_soil_pot_sl(ic, is) / kmr_decomposition, 0.0_wp)
         IF (dsl4jsb_Config(SB_)%flag_ph_on_som .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
           IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
-            IF (get_year(options%current_datetime) >= 2014) THEN
+            IF (get_year(options%current_datetime) >= 2010) THEN
               IF (get_month(options%current_datetime) == 1 .AND. & 
                     & get_day(options%current_datetime) == 1 .AND. &
                     & ABS(get_secs_of_day(options%current_datetime) - 2 * dtime) < eps1) THEN
@@ -224,6 +224,10 @@ CONTAINS
           END IF ! if future or not
         ELSE
            rph_decomposition(ic, is) = 1.0_wp
+        END IF
+
+        IF (is > 2) THEN
+          rph_decomposition(ic, is) = 1.0_wp
         END IF
         !>  1.2 JSM
         !>
@@ -551,7 +555,9 @@ CONTAINS
        rate_modifier = 1.0_wp
     ELSE
 !       rate_modifier = 1.0_wp + 0.3_wp * delta_ph ! delta_ph is negative
-        rate_modifier = exp(0.39_wp * delta_ph)
+        rate_modifier = exp(0.35_wp * delta_ph)
+!        rate_modifier = exp(-0.05_wp * delta_ph) !low boundary
+!        rate_modifier = exp(0.84_wp * delta_ph) !high boundary
     END IF
 
 !    IF (ph > 4.5_wp .AND. ph <= 6.0_wp) THEN

@@ -1259,7 +1259,7 @@ CONTAINS
     ph_cal_flag = 0
     IF (dsl4jsb_Config(SB_)%flag_ph .AND. (.NOT. model%config%l_transient_spinup)) THEN ! transient simulation
       IF (dsl4jsb_Config(SB_)%flag_ph_future) THEN
-        IF (get_year(options%current_datetime) >= 2014 .AND. &
+        IF (get_year(options%current_datetime) >= 2010 .AND. &
             & get_month(options%current_datetime) == 1 .AND. &
             & get_day(options%current_datetime) == 1 .AND. &
               ABS(get_secs_of_day(options%current_datetime) - dtime) < eps1) THEN
