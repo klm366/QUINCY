@@ -794,6 +794,8 @@ CONTAINS
         & t_cf('vol_porosity_sl', 'm/m', 'Volumetric soil porosity'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
+        & output_level = FULL,                                                 &
+        & loutput = .TRUE.,                                                    &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_lp )
 
@@ -1345,8 +1347,8 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
-          & output_level = NONE, &
-          & loutput = .FALSE., &
+          & output_level = FULL, &
+          & loutput = .TRUE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_lp)
 

@@ -1682,10 +1682,13 @@ CONTAINS
     & num_sl_above_bedrock, &
     & sb_model_scheme, &
     & sb_pool_mt, &
+    & bulk_carbon_max, &
+    & surface_burial_frac, &
     & bulk_soil_carbon_sl, &
     & soil_litter_carbon_sl, &
     & volume_min_sl)
 
+    USE mo_jsb_math_constants,     ONLY: eps8
     USE mo_jsb_physical_constants, ONLY: molar_mass_C
     USE mo_sb_constants,           ONLY: rho_bulk_org, carbon_per_dryweight_SOM
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1694,6 +1697,8 @@ CONTAINS
     REAL(lp),         INTENT(in)    :: num_sl_above_bedrock(:)    !<
     CHARACTER(len=*), INTENT(in)    :: sb_model_scheme            !< soil model scheme: simple_1d or jsm
     REAL(lp),         INTENT(in)    :: sb_pool_mt(:,:,:,:)        !< pools [mol/m3]
+    REAL(lp),         INTENT(in)    :: bulk_carbon_max(:,:)       !< maximum bulk carbon [mol/m3]
+    REAL(lp),         INTENT(inout) :: surface_burial_frac(:,:)   !< buried fraction of non-associated surface SOM
     REAL(lp),         INTENT(inout) :: bulk_soil_carbon_sl(:,:)   !< mol/m3
     REAL(lp),         INTENT(inout) :: soil_litter_carbon_sl(:,:) !< mol/m3
     REAL(lp),         INTENT(inout) :: volume_min_sl(:,:)         !< m3/m3
@@ -1701,30 +1706,53 @@ CONTAINS
     INTEGER                                             :: isoil, ic
     REAL(lp), DIMENSION(nc, nsoil_w)                    :: om_dens_sl   !< organic matter density [kg / m3]
     REAL(lp), DIMENSION(nc, nsoil_w)                    :: lit_dens_sl  !< litter density [kg / m3]
+    REAL(lp)                                            :: carbon_at_zero_mineral_volume
+    REAL(lp)                                            :: min_mineral_volume_fraction
+    REAL(lp)                                            :: surface_partial_carbon
+    REAL(lp)                                            :: surface_fixed_carbon
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bulk_soil_carbon'
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 calculate the content of organic matter [mol/m3] and litter [mol/m3]
     !>
-    bulk_soil_carbon_sl(:,:) = sb_pool_mt(ix_microbial, ixC, :, :)       &
-      &                      + sb_pool_mt(ix_residue, ixC, :, :)         &
-      &                      + sb_pool_mt(ix_residue_assoc, ixC, :, :)   &
-      &                      + sb_pool_mt(ix_dom, ixC, :, :)             &
-      &                      + sb_pool_mt(ix_dom_assoc, ixC, :, :)
+    bulk_soil_carbon_sl(:,:)   = 0.0_lp
+    soil_litter_carbon_sl(:,:) = 0.0_lp
 
-    ! Note: woody litter in the top-layer is assumed to be intact trunks of wood on the ground. They do not
-    !   mix with the mineral soil and therefore a correction term for the soil bulk density is not needed. ...
-    soil_litter_carbon_sl(:,1) = sb_pool_mt(ix_soluable_litter, ixC, :, 1)   &
-      &                        + sb_pool_mt(ix_polymeric_litter, ixC, :, 1)
-
-    ! ... Woody litter in the lower soil layers are from dying course roots. They disintegrate rather quickly
-    ! and therefore mix with the mineral soil, requiring a correction of the soil bulk density term (mixing
-    ! OM and mineral soils.)
+    ! Woody litter remains above the first mineral layer. Other non-associated surface pools contribute
+    ! only with the fraction that can be buried without violating the mineral-volume constraint.
     DO ic = 1,nc
-      DO isoil = 2, NINT(num_sl_above_bedrock(ic))
-        soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_woody_litter, ixC, ic, isoil)    &
-          &                            + sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)  &
-          &                            + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
+      DO isoil = 1, NINT(num_sl_above_bedrock(ic))
+        IF (isoil == 1 .AND. sb_model_scheme == 'jsm') THEN
+          surface_partial_carbon = sb_pool_mt(ix_soluable_litter, ixC, ic, isoil)  &
+            & + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)                    &
+            & + sb_pool_mt(ix_microbial, ixC, ic, isoil)                           &
+            & + sb_pool_mt(ix_dom, ixC, ic, isoil)                                 &
+            & + sb_pool_mt(ix_residue, ixC, ic, isoil)
+          surface_fixed_carbon = sb_pool_mt(ix_residue_assoc, ixC, ic, isoil) &
+            & + sb_pool_mt(ix_dom_assoc, ixC, ic, isoil)
+          surface_burial_frac(ic,isoil) = MIN(1.0_lp, MAX(0.0_lp, surface_burial_frac(ic,isoil)))
+          IF (surface_partial_carbon > eps8) THEN
+            surface_burial_frac(ic,isoil) = MIN(surface_burial_frac(ic,isoil), MAX(0.0_lp, &
+              & (bulk_carbon_max(ic,isoil) - surface_fixed_carbon) / surface_partial_carbon))
+          ELSE
+            surface_burial_frac(ic,isoil) = 0.0_lp
+          END IF
+          bulk_soil_carbon_sl(ic,isoil) = surface_burial_frac(ic,isoil) * &
+            & (sb_pool_mt(ix_microbial, ixC, ic, isoil) + sb_pool_mt(ix_dom, ixC, ic, isoil) + &
+            &  sb_pool_mt(ix_residue, ixC, ic, isoil)) + surface_fixed_carbon
+          soil_litter_carbon_sl(ic,isoil) = surface_burial_frac(ic,isoil) * &
+            & (sb_pool_mt(ix_soluable_litter, ixC, ic, isoil) + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil))
+        ELSE
+          surface_burial_frac(ic,isoil) = 1.0_lp
+          bulk_soil_carbon_sl(ic,isoil) = sb_pool_mt(ix_microbial, ixC, ic, isoil)      &
+            & + sb_pool_mt(ix_residue, ixC, ic, isoil) + sb_pool_mt(ix_residue_assoc, ixC, ic, isoil) &
+            & + sb_pool_mt(ix_dom, ixC, ic, isoil) + sb_pool_mt(ix_dom_assoc, ixC, ic, isoil)
+          IF (isoil > 1) THEN
+            soil_litter_carbon_sl(ic,isoil) = sb_pool_mt(ix_woody_litter, ixC, ic, isoil) &
+              & + sb_pool_mt(ix_soluable_litter, ixC, ic, isoil) &
+              & + sb_pool_mt(ix_polymeric_litter, ixC, ic, isoil)
+          END IF
+        END IF
       END DO
     END DO
 
@@ -1740,9 +1768,11 @@ CONTAINS
     !>
     om_dens_sl  = bulk_soil_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._lp    ! OM density [kg/m3]
     lit_dens_sl = soil_litter_carbon_sl * molar_mass_C / carbon_per_dryweight_SOM / 1000._lp  ! litter density [kg/m3]
+    carbon_at_zero_mineral_volume = carbon_per_dryweight_SOM * rho_bulk_org * 1000._lp / molar_mass_C
     DO ic = 1,nc
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
-        volume_min_sl(ic,isoil) = MAX(0.01_lp, &
+        min_mineral_volume_fraction = 1._lp - bulk_carbon_max(ic,isoil) / carbon_at_zero_mineral_volume
+        volume_min_sl(ic,isoil) = MAX(min_mineral_volume_fraction, &
           &   MIN( 0.99_lp, 1._lp - om_dens_sl(ic,isoil) / rho_bulk_org - lit_dens_sl(ic,isoil) / rho_bulk_org))
       END DO
     END DO

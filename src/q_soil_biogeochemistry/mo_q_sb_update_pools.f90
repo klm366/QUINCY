@@ -350,6 +350,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
     dsl4jsb_Real3D_onChunk :: volume_min_sl
+    dsl4jsb_Real3D_onChunk :: surface_burial_frac
+    dsl4jsb_Real3D_onChunk :: bulk_carbon_max
     dsl4jsb_Real3D_onChunk :: dom_cn_mavg
     dsl4jsb_Real3D_onChunk :: dom_cp_mavg
     ! Get local variables from options argument
@@ -632,6 +634,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_nh4_min_sl)             ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       qmax_po4_om_sl)              ! in
     dsl4jsb_Get_var3D_onChunk(SB_,       volume_min_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SB_,       surface_burial_frac)         ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       bulk_carbon_max)             ! in
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "jsm") THEN
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cn_mavg)
       dsl4jsb_Get_var3D_onChunk(SB_,       dom_cp_mavg)
@@ -758,7 +762,7 @@ CONTAINS
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._lp
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_w, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
-        &                                             sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
+        &                                             surface_burial_frac(:,:), sb_pool_mt, sb_pool_prev_timestep_hlp_mt)
       ! particle transport of organic and inorganic pools
       CALL calc_particle_transport_wrapper( &
         & nc, nsoil_w, num_sl_above_bedrock(:), soil_depth_sl(:,:), &                         ! in
@@ -873,6 +877,8 @@ CONTAINS
       & num_sl_above_bedrock(:), &
       & TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
       & sb_pool_mt(:,:,:,:), &                       ! in
+      & bulk_carbon_max(:,:), &                      ! in
+      & surface_burial_frac(:,:), &                  ! inout
       & bulk_soil_carbon_sl, &                       ! inout
       & soil_litter_carbon_sl, &                     ! inout
       & volume_min_sl)                               ! inout

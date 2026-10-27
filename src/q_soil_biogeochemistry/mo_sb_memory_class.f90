@@ -270,8 +270,10 @@ MODULE mo_sb_memory_class
     !>3D JSM diagnostics (Jena Soil Model)
     !>
     TYPE(t_jsb_var_real3d)  :: &
-                            qmax_org, &                           !< sorption capacity of dom of mineral soil [kg C kg-1 mineral soil]
-                            qmax_po4, &                           !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
+                            qmax_org, &             !< DOM sorption capacity of mineral soil [kg C kg-1 mineral soil]
+                            surface_burial_frac, & !< buried fraction of non-associated surface SOM [unitless]
+                            bulk_carbon_max, &     !< maximum bulk carbon allowed by mineral volume [mol m-3]
+                            qmax_po4, &            !< sorption capacity of po4 of mineral soil [mol P m-3 soil]
                             qmax_nh4, &                           !< sorption capacity of nh4 of mineral soil [mol N m-3 soil]
                             qmax_fast_po4, &                      !< sorption capacity of po4 of the Fe/Al pool [mol P m-3 soil]
                             qmax_slow_po4, &                      !< sorption capacity of po4 of the clay/silt pool [mol P m-3 soil]
@@ -386,6 +388,27 @@ MODULE mo_sb_memory_class
       & noy_deposition_monthly,  &            !< surface downward oxidised nitrogen deposition velocity [kg/m2/s]
       & p_deposition_monthly                  !< surface downward reduced phosphorus deposition velocity [kg/m2/s]
 
+    ! Monthly forcing climatology collected by coupled QLAND and replayed by QSOIL.
+    TYPE(t_jsb_var_real3d) :: &
+      & sb_spinup_accelerator_forcing_time, &
+      & sb_spinup_accelerator_litterfall_sum, &
+      & sb_spinup_accelerator_fine_root_c_sum, &
+      & sb_spinup_accelerator_f_n_demand_sum, &
+      & sb_spinup_accelerator_f_p_demand_sum, &
+      & sb_spinup_accelerator_nhx_deposition_sum, &
+      & sb_spinup_accelerator_noy_deposition_sum, &
+      & sb_spinup_accelerator_nhx_n15_deposition_sum, &
+      & sb_spinup_accelerator_noy_n15_deposition_sum, &
+      & sb_spinup_accelerator_p_deposition_sum, &
+      & sb_spinup_accelerator_growth_p_limit_sum, &
+      & sb_spinup_accelerator_root_fraction_sum, &
+      & sb_spinup_accelerator_wtr_down_sum, &
+      & sb_spinup_accelerator_wtr_lat_loss_sum, &
+      & sb_spinup_accelerator_t_soil_sum, &
+      & sb_spinup_accelerator_wtr_soil_sum, &
+      & sb_spinup_accelerator_ice_soil_sum, &
+      & sb_spinup_accelerator_wtr_pot_sum
+
     ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) ::       &
       & total_som_c_gsum, &                   !< global sum of all soil biogeochemistry carbon pools [Pg]
@@ -486,6 +509,9 @@ CONTAINS
     TYPE(t_jsb_vgrid),               POINTER :: surface                     !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_soil_w                !< Vertical grid
     TYPE(t_jsb_vgrid),               POINTER :: vgrid_month                 !< Vertical grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_forcing     !< Monthly forcing-bin grid
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_litter      !< Monthly litter forcing entries
+    TYPE(t_jsb_vgrid),               POINTER :: vgrid_sb_spinup_profile     !< Monthly soil-profile forcing entries
     INTEGER                                  :: elem_idx_map(LAST_ELEM_ID)  !< element mapper ID -> IND
     INTEGER                                  :: table                       !< ...
     INTEGER                                  :: output_level_local          !< add var to BASIC output_level, model specific (ssm/jsm)
@@ -501,6 +527,9 @@ CONTAINS
     surface       => Get_vgrid('surface')
     vgrid_soil_w  => Get_vgrid('soil_depth_water')
     vgrid_month   => Get_vgrid('time_months')
+    vgrid_sb_spinup_forcing => Get_vgrid('sb_accel_forcing')
+    vgrid_sb_spinup_litter  => Get_vgrid('sb_accel_litter')
+    vgrid_sb_spinup_profile => Get_vgrid('sb_accel_profile')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
 
@@ -552,6 +581,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! add memory only for PFT tiles
     IF (lib_id > 0) THEN
+
+      IF (dsl4jsb_Config(SB_)%flag_sb_model_spinup_accelerator) THEN
+        CALL Add_monthly_spinup_forcing_memory(mem, hgrid, vgrid_sb_spinup_forcing, vgrid_sb_spinup_litter, &
+          & vgrid_sb_spinup_profile, table, prefix, suffix)
+      END IF
 
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
@@ -2646,6 +2680,32 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_lp)
 
+      CALL mem%Add_var('surface_burial_frac', mem%surface_burial_frac, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('surface_burial_frac', unitless, &
+        & 'fraction of non-associated surface SOM buried into the first mineral soil layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = output_switch_local, &
+        & lrestart = .TRUE., &
+        & initval_r = 1.0_lp, &
+        & l_aggregate_all = .TRUE.)
+
+      CALL mem%Add_var('bulk_carbon_max', mem%bulk_carbon_max, &
+        & hgrid, vgrid_soil_w, &
+        & t_cf('bulk_carbon_max', 'mol m-3', &
+        & 'maximum bulk carbon allowed by the mineral-volume constraint'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = output_level_local, &
+        & loutput = .FALSE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_lp, &
+        & l_aggregate_all = .TRUE.)
+
       CALL mem%Add_var('qmax_po4', mem%qmax_po4, &
         & hgrid, vgrid_soil_w, &
         & t_cf('qmax_po4', 'mol P m-3 soil', 'sorption capacity of po4 of mineral soil'), &
@@ -3532,6 +3592,134 @@ CONTAINS
       & lrestart=.FALSE., initval_r=0.0_lp )
 
   END SUBROUTINE Init_sb_memory
+
+  ! ===================================================================================================== !
+  !> Allocate restart-safe monthly forcing accumulators on PFT tiles.
+  SUBROUTINE Add_monthly_spinup_forcing_memory(mem, hgrid, vgrid_forcing, vgrid_litter, vgrid_profile, &
+      & table, prefix, suffix)
+
+    USE mo_jsb_varlist,    ONLY: FULL
+    USE mo_jsb_io,         ONLY: grib_bits, t_cf, t_grib1, t_grib2
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid, t_jsb_vgrid
+
+    CLASS(t_sb_memory), INTENT(inout) :: mem
+    TYPE(t_jsb_grid), POINTER, INTENT(in) :: hgrid
+    TYPE(t_jsb_vgrid), POINTER, INTENT(in) :: vgrid_forcing, vgrid_litter, vgrid_profile
+    INTEGER, INTENT(in) :: table
+    CHARACTER(len=*), INTENT(in) :: prefix, suffix
+
+    CALL mem%Add_var('sb_accel_forcing_time', mem%sb_spinup_accelerator_forcing_time, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_forcing_time', 's', 'elapsed sampling time in each monthly forcing bin'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_litterfall_sum', mem%sb_spinup_accelerator_litterfall_sum, &
+      & hgrid, vgrid_litter, &
+      & t_cf('sb_accel_litterfall_sum', 'mol m-2', 'summed litterfall by month, source, and element'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_fine_root_c_sum', mem%sb_spinup_accelerator_fine_root_c_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_fine_root_c_sum', 'mol C s m-2', 'time-weighted fine-root carbon by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_f_n_demand_sum', mem%sb_spinup_accelerator_f_n_demand_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_f_n_demand_sum', 's', 'time-weighted plant nitrogen demand by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_f_p_demand_sum', mem%sb_spinup_accelerator_f_p_demand_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_f_p_demand_sum', 's', 'time-weighted plant phosphorus demand by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_nhx_dep_sum', mem%sb_spinup_accelerator_nhx_deposition_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_nhx_dep_sum', 'micro-mol m-2', 'integrated reduced nitrogen deposition by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_noy_dep_sum', mem%sb_spinup_accelerator_noy_deposition_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_noy_dep_sum', 'micro-mol m-2', 'integrated oxidized nitrogen deposition by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_nhx_n15_dep_sum', mem%sb_spinup_accelerator_nhx_n15_deposition_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_nhx_n15_dep_sum', 'micro-mol m-2', &
+      &   'integrated reduced nitrogen-15 deposition by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_noy_n15_dep_sum', mem%sb_spinup_accelerator_noy_n15_deposition_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_noy_n15_dep_sum', 'micro-mol m-2', &
+      &   'integrated oxidized nitrogen-15 deposition by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_p_dep_sum', mem%sb_spinup_accelerator_p_deposition_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_p_dep_sum', 'micro-mol m-2', 'integrated phosphorus deposition by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_growth_p_lim_sum', mem%sb_spinup_accelerator_growth_p_limit_sum, &
+      & hgrid, vgrid_forcing, &
+      & t_cf('sb_accel_growth_p_lim_sum', 's', 'time-weighted plant phosphorus limitation by month'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_root_frac_sum', mem%sb_spinup_accelerator_root_fraction_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_root_frac_sum', 's', 'time-weighted root fraction by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_wtr_down_sum', mem%sb_spinup_accelerator_wtr_down_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_wtr_down_sum', 's', 'time-weighted downward water transfer by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_wtr_lat_loss_sum', mem%sb_spinup_accelerator_wtr_lat_loss_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_wtr_lat_loss_sum', 's', 'time-weighted lateral water loss by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_t_soil_sum', mem%sb_spinup_accelerator_t_soil_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_t_soil_sum', 'K s', 'time-weighted soil temperature by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_wtr_soil_sum', mem%sb_spinup_accelerator_wtr_soil_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_wtr_soil_sum', 'm s', 'time-weighted liquid soil water by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_ice_soil_sum', mem%sb_spinup_accelerator_ice_soil_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_ice_soil_sum', 'm s', 'time-weighted soil ice by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+    CALL mem%Add_var('sb_accel_wtr_pot_sum', mem%sb_spinup_accelerator_wtr_pot_sum, &
+      & hgrid, vgrid_profile, &
+      & t_cf('sb_accel_wtr_pot_sum', 'MPa s', 'time-weighted soil water potential by month and soil layer'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), prefix, suffix, &
+      & output_level = FULL, loutput = .FALSE., lrestart = .TRUE., initval_r = 0.0_lp)
+
+  END SUBROUTINE Add_monthly_spinup_forcing_memory
+
 
   ! ======================================================================================================= !
   !>

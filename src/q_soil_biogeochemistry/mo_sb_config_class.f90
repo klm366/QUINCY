@@ -27,6 +27,7 @@ MODULE mo_sb_config_class
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_sb_config, get_number_of_sb_compartments, simple_1d_compartments
+  PUBLIC :: sb_spinup_accelerator_n_forcing_bins
   PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
     &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
   PUBLIC :: SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
@@ -71,6 +72,7 @@ MODULE mo_sb_config_class
     LOGICAL               :: flag_sb_jsm_transport
     LOGICAL               :: flag_sb_jsm_litter_input
     LOGICAL               :: flag_sb_jsm_OM_sorption
+    LOGICAL               :: flag_sb_model_spinup_accelerator !< collect monthly coupled forcing for SB replay and QSOIL
     ! P sorption
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
@@ -84,6 +86,8 @@ MODULE mo_sb_config_class
     REAL(lp)              :: soil_p_occluded
     REAL(lp)              :: soil_p_primary
     REAL(lp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+    REAL(lp)              :: min_mineral_volume_fraction_surface !< minimum mineral volume fraction in the first soil layer
+    REAL(lp)              :: min_mineral_volume_fraction_gradient !< increase of minimum mineral volume fraction with depth [m-1]
 
     CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
     CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
@@ -131,6 +135,7 @@ MODULE mo_sb_config_class
 
   INTEGER, PARAMETER :: simple_1d_compartments(6) = [ SB_PART_SOLUBLE_LITTER_IDX, SB_PART_POLYMERIC_LITTER_IDX, &
     & SB_PART_WOODY_LITTER_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX ]
+  INTEGER, PARAMETER :: sb_spinup_accelerator_n_forcing_bins = 12
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
@@ -145,8 +150,10 @@ CONTAINS
     USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_util,                  ONLY: tolower
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+    USE mo_veg_config_class,      ONLY: Get_number_of_veg_compartments
+    USE mo_lnd_bgcm_class,        ONLY: LAST_ELEM_ID
 
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_config), INTENT(inout) :: config    !< config type for sb
@@ -176,6 +183,7 @@ CONTAINS
     LOGICAL                     :: flag_sb_jsm_transport
     LOGICAL                     :: flag_sb_jsm_litter_input
     LOGICAL                     :: flag_sb_jsm_OM_sorption
+    LOGICAL                     :: flag_sb_model_spinup_accelerator
     LOGICAL                     :: flag_sb_double_langmuir
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
@@ -186,6 +194,8 @@ CONTAINS
                                    soil_p_occluded,     &
                                    soil_p_primary
     REAL(lp)                    :: qmax_org_fine_particle
+    REAL(lp)                    :: min_mineral_volume_fraction_surface
+    REAL(lp)                    :: min_mineral_volume_fraction_gradient
     LOGICAL                     :: flag_apply_nml_parameters
     REAL(lp)                    :: nml_temp_freeze_thres_bio
     REAL(lp)                    :: nml_temp_freeze_window_bio
@@ -223,6 +233,7 @@ CONTAINS
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
+                      flag_sb_model_spinup_accelerator, &
                       flag_sb_double_langmuir   , &
                       usda_taxonomy_class       , &
                       nwrb_taxonomy_class       , &
@@ -233,6 +244,8 @@ CONTAINS
                       soil_p_occluded           , &
                       soil_p_primary            , &
                       qmax_org_fine_particle, &
+      &               min_mineral_volume_fraction_surface, &
+      &               min_mineral_volume_fraction_gradient, &
       &   flag_apply_nml_parameters, &
       &   nml_temp_freeze_thres_bio, &
       &   nml_temp_freeze_window_bio, &
@@ -247,7 +260,12 @@ CONTAINS
       &   nml_ed_decomposition
 
     TYPE(t_jsb_vgrid), POINTER  :: time_months_vgrid
-    INTEGER :: i_month
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_forcing_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_litter_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: sb_spinup_accelerator_profile_vgrid
+    TYPE(t_jsb_vgrid), POINTER  :: soil_water_vgrid
+    INTEGER :: i_month, i_entry
+    INTEGER :: n_litter_entries, n_profile_entries
     INTEGER :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
@@ -277,6 +295,7 @@ CONTAINS
     flag_sb_jsm_transport       = .FALSE.
     flag_sb_jsm_litter_input    = .FALSE.
     flag_sb_jsm_OM_sorption     = .FALSE.
+    flag_sb_model_spinup_accelerator = .FALSE.
     flag_sb_double_langmuir     = .FALSE.
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
@@ -287,6 +306,8 @@ CONTAINS
     soil_p_occluded             = 150._lp
     soil_p_primary              = 100._lp
     qmax_org_fine_particle      = 6.5537_lp
+    min_mineral_volume_fraction_surface = 0.05_lp
+    min_mineral_volume_fraction_gradient = 0.01_lp
     flag_apply_nml_parameters   = .FALSE.
     nml_temp_freeze_thres_bio   = def_parameters
     nml_temp_freeze_window_bio  = def_parameters
@@ -330,6 +351,7 @@ CONTAINS
     config%flag_sb_jsm_transport           = flag_sb_jsm_transport
     config%flag_sb_jsm_litter_input        = flag_sb_jsm_litter_input
     config%flag_sb_jsm_OM_sorption         = flag_sb_jsm_OM_sorption
+    config%flag_sb_model_spinup_accelerator = flag_sb_model_spinup_accelerator
     config%flag_sb_double_langmuir         = flag_sb_double_langmuir
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
@@ -340,6 +362,8 @@ CONTAINS
     config%soil_p_occluded                 = soil_p_occluded
     config%soil_p_primary                  = soil_p_primary
     config%qmax_org_fine_particle          = qmax_org_fine_particle
+    config%min_mineral_volume_fraction_surface = min_mineral_volume_fraction_surface
+    config%min_mineral_volume_fraction_gradient = min_mineral_volume_fraction_gradient
     config%flag_apply_nml_parameters       = flag_apply_nml_parameters
     config%nml_temp_freeze_thres_bio       = nml_temp_freeze_thres_bio
     config%nml_temp_freeze_window_bio      = nml_temp_freeze_window_bio
@@ -363,6 +387,14 @@ CONTAINS
       CALL finish(TRIM(routine),  'No such soil model available: '//TRIM(sb_model_scheme))
     END SELECT
 
+    IF (min_mineral_volume_fraction_surface < 0.0_lp .OR. &
+        & min_mineral_volume_fraction_surface >= 1.0_lp) THEN
+      CALL finish(TRIM(routine), 'min_mineral_volume_fraction_surface must be in the range [0, 1).')
+    END IF
+    IF (min_mineral_volume_fraction_gradient < 0.0_lp) THEN
+      CALL finish(TRIM(routine), 'min_mineral_volume_fraction_gradient must not be negative.')
+    END IF
+
     ! Set deposition scheme
     SELECT CASE (tolower(TRIM(deposition_scheme)))
     CASE ("constant")
@@ -383,6 +415,23 @@ CONTAINS
     time_months_vgrid => new_vgrid('time_months', ZAXIS_GENERIC, 12, &
       & levels=(/ (REAL(i_month, kind=lp), i_month = 1,12) /), units='')
     CALL register_vgrid(time_months_vgrid)
+
+    sb_spinup_accelerator_forcing_vgrid => new_vgrid('sb_accel_forcing', ZAXIS_GENERIC, &
+      & sb_spinup_accelerator_n_forcing_bins, &
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, sb_spinup_accelerator_n_forcing_bins) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_forcing_vgrid)
+
+    n_litter_entries = sb_spinup_accelerator_n_forcing_bins * &
+      & (Get_number_of_veg_compartments() + 1) * LAST_ELEM_ID
+    sb_spinup_accelerator_litter_vgrid => new_vgrid('sb_accel_litter', ZAXIS_GENERIC, n_litter_entries, &
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, n_litter_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_litter_vgrid)
+
+    soil_water_vgrid => Get_vgrid('soil_depth_water')
+    n_profile_entries = sb_spinup_accelerator_n_forcing_bins * soil_water_vgrid%n_levels
+    sb_spinup_accelerator_profile_vgrid => new_vgrid('sb_accel_profile', ZAXIS_GENERIC, n_profile_entries, &
+      & levels=(/ (REAL(i_entry, kind=lp), i_entry = 1, n_profile_entries) /), units='')
+    CALL register_vgrid(sb_spinup_accelerator_profile_vgrid)
 
   END SUBROUTINE Init_sb_config
 

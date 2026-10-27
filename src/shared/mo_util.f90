@@ -30,7 +30,7 @@ MODULE mo_util
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 
 #ifndef __QUINCY_STANDALONE__
-  PUBLIC :: read_2D_var, read_3D_var
+  PUBLIC :: read_2D_var, read_3D_var, read_2D_time, read_3D_time
 #endif
 
   INTERFACE one_of
@@ -438,6 +438,52 @@ CONTAINS
     END DO
 
   END SUBROUTINE read_3D_var
+
+  ! ====================================================================================================== !
+  !
+  !> Small helper to read given timestep of 3D var from given netcdf file and return a 2D var
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE read_2D_time(input_file, ptr2D, var_name, dt_step)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_input_file),      INTENT(INOUT) :: input_file !< file to read passed var from
+    REAL(lp), POINTER,       INTENT(IN)    :: ptr2D(:,:) !< var pointer
+    CHARACTER(*),            INTENT(IN)    :: var_name   !< name of the variable in the file
+    INTEGER,                 INTENT(IN)    :: dt_step    !< timestep information for file with time dimension
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp), POINTER :: ptr3D(:,:,:)   !< temporary pointer used to "call" the netcdf reading routine
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ptr3D => input_file%Read_2d_time(                  &
+      & variable_name=var_name,            &
+      & start_time_step=dt_step, end_time_step=dt_step)
+    ptr2D = ptr3D(:,:,1)
+
+  END SUBROUTINE read_2D_time
+
+  ! ====================================================================================================== !
+  !
+  !> Small helper to read given timestep of 4D var from given netcdf file and return a 3D var
+  !
+  ! ======================================================================================================= !
+  SUBROUTINE read_3D_time(input_file, ptr3D, var_name, dt_step)
+    USE mo_jsb_io_netcdf,           ONLY: t_input_file
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_input_file),      INTENT(INOUT) :: input_file   !< file to read passed var from
+    REAL(lp), POINTER,       INTENT(IN)    :: ptr3D(:,:,:) !< var pointer
+    CHARACTER(*),            INTENT(IN)    :: var_name     !< name of the variable in the file
+    INTEGER,                 INTENT(IN)    :: dt_step      !< timestep information for file with time dimension
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp), POINTER :: ptr4D(:,:,:,:)   !< temporary pointer used to "call" the netcdf reading routine
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ptr4D => input_file%Read_3d_time(                  &
+      & variable_name=var_name,            &
+      & start_time_step=dt_step, end_time_step=dt_step)
+    ptr3D = ptr4D(:,:,:,1)
+
+  END SUBROUTINE read_3D_time
 #endif
 
 #endif

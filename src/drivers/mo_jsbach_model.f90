@@ -799,7 +799,7 @@ CONTAINS
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
     USE mo_iq_atm2land_process,       ONLY: update_local_time_and_daytime_counter
-    USE mo_quincy_model_config,       ONLY: QCANOPY
+    USE mo_quincy_model_config,       ONLY: QCANOPY, QSOIL
     USE mo_isotope_util,              ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     dsl4jsb_Use_processes A2L_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -1012,32 +1012,35 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, press_srf)                                    &
           & )
       CASE (MODEL_QUINCY)
-        CALL get_standalone_driver( &
-          ! in
-          & model_id,                                                                  &
-          & model%config%model_scheme,                                                 &
-          & flag_snow,                                                                 &
-          & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
-          & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
-          & sinlat, coslat, lon, evapo_act2pot,                                        &
-          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-          ! out
-          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-          & co2_air_dc13,                                                              &
-          & co2_air_Dc14                                                               &
-          & )
+        IF (model%config%qmodel_id /= QSOIL) THEN
+          ! QLAND, QPLANT, QCANOPY
+          CALL get_standalone_driver( &
+            ! in
+            & model_id,                                                                  &
+            & model%config%model_scheme,                                                 &
+            & flag_snow,                                                                 &
+            & startblk, endblk, startidx, endidx, datetime_old, datetime_new,            &
+            & dsl4jsb_var2D_onDomain(HYDRO_, elevation),                                 &
+            & sinlat, coslat, lon, evapo_act2pot,                                        &
+            & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+            ! out
+            & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+            & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+            & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+            & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+            & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+            & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+            & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+            & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+            & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+            & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+            & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+            & co2_air_dc13,                                                              &
+            & co2_air_Dc14                                                               &
+            & )
+        END IF
       END SELECT
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
@@ -1058,35 +1061,37 @@ CONTAINS
       CASE (MODEL_QUINCY)
 
 #ifdef _OPENACC
-        IF (model%config%qmodel_id /= QCANOPY) &
+        IF (model%config%qmodel_id /= QCANOPY .OR. model%config%qmodel_id /= QSOIL) &
           & CALL finish(routine, 'QUINCY is currently only ported to GPU for the CANOPY mode. '//model%config%quincy_model)
 #endif
 
-        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
-        dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-            co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._lp
+        IF (model%config%qmodel_id /= QSOIL) THEN
+          ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+          dsl4jsb_Get_var2d_onDomain(A2L_, co2_mixing_ratio)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              co2_mixing_ratio(ic, iblk) = co2_air_mol(ic, iblk) * 1000000._lp
+            ENDDO
           ENDDO
-        ENDDO
-        !$ACC END PARALLEL LOOP
-        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
-        dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
-        DO iblk = 1, nblks
-          DO ic = 1, nproma
-            hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
-            CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._lp + 1._lp / hlp1)
-            hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
-            CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+          !$ACC END PARALLEL LOOP
+          dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c13)
+          dsl4jsb_Get_var2d_onDomain(A2L_, CO2_mixing_ratio_c14)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(1) PRIVATE(hlp1)
+          DO iblk = 1, nblks
+            DO ic = 1, nproma
+              hlp1 = calc_mixing_ratio_C13C12(co2_air_dc13(ic, iblk))
+              CO2_mixing_ratio_c13(ic, iblk)  = co2_mixing_ratio(ic, iblk) / (1._lp + 1._lp / hlp1)
+              hlp1 = calc_mixing_ratio_C14C(co2_air_dc13(ic, iblk), co2_air_Dc14(ic, iblk))
+              CO2_mixing_ratio_c14(ic, iblk) = co2_mixing_ratio(ic, iblk) * hlp1
+            END DO
           END DO
-        END DO
-        !$ACC END PARALLEL LOOP
+          !$ACC END PARALLEL LOOP
 
-        !$ACC WAIT(1)
-        !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
-        DEALLOCATE(co2_air_dc13, co2_air_Dc14)
+          !$ACC WAIT(1)
+          !$ACC EXIT DATA DELETE(co2_air_dc13, co2_air_Dc14)
+          DEALLOCATE(co2_air_dc13, co2_air_Dc14)
+        END IF
 
         ! Update local time and daytime counter
         dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
