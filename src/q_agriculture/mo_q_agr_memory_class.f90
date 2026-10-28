@@ -230,11 +230,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-<<<<<<< HEAD
-        & initval_r = 30.0_wp)
-=======
-        & initval_r = 150.0_lp)
->>>>>>> land4icon-mpim
+        & initval_r = 30.0_lp)
 
       CALL mem%Add_var('crop_season_per_year', mem%crop_season_per_year, &
         & hgrid, surface, &
