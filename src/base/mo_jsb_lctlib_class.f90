@@ -228,6 +228,37 @@ MODULE mo_jsb_lctlib_class
       & k_root_dist                   , &
       & k_som_fast_init               , &
       & k_som_slow_init
+
+    ! --- Parameters used in Quincy SPITFIRE (mo_q_dfire_sf_dynamics.f90) -------------------------------------------------------------
+    REAL(lp) :: q_emissions_co2_mol          , &
+                q_emissions_co_mol           , &
+                q_emissions_ch4_mol          , &
+                !q_emissions_voc             , &
+                !q_emissions_tpm             , &
+                !q_emissions_nox             , &
+                q_emissions_nh3_mol          , &
+                q_emissions_n2o_mol          , &
+                q_emissions_n2_mol
+    ! Fire disturbance
+    REAL(lp) :: q_crown_damage_r_ck          , &
+                q_crown_damage_p             , &
+                q_crown_length               , &
+                q_bark_thickness_par1        , &
+                q_bark_thickness_par2        , &
+                q_scorch_height_f            , &
+                q_fuel_bulk_density          , &
+                q_fwd_wind_factor            , &
+                q_moisture_extinction_thon   , &
+                q_moisture_extinction_ober
+
+    ! Oberhagemann et al. (2025)
+    ! GSI phenology parameters (for live grass moisture calculation)
+    REAL(lp) :: q_tmin_slope, q_tmin_base, q_tmin_tau, &
+                q_tmax_slope, q_tmax_base, q_tmax_tau, &
+                q_light_slope, q_light_base, q_light_tau, &
+                q_water_slope, q_water_base, q_water_tau
+    !< Live grass moisture parameters, Oberhagemann et al. (2025)
+    REAL(lp) :: q_lfmc_min, q_lfmc_max, q_lfmc_b, q_lfmc_c
     ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
 
   END TYPE t_lctlib_element
@@ -440,6 +471,39 @@ CONTAINS
     LOGICAL            :: exists_VegRoughness = .FALSE.
     LOGICAL            :: exists_MinVegRoughness = .FALSE.
     LOGICAL            :: exists_MaxVegRoughness = .FALSE.
+    LOGICAL            :: exists_q_fuel_bulk_density = .FALSE.
+    LOGICAL            :: exists_q_moisture_extinction_thon = .FALSE.
+    LOGICAL            :: exists_q_moisture_extinction_ober = .FALSE.
+    LOGICAL            :: exists_q_fwd_wind_factor = .FALSE.
+    LOGICAL            :: exists_q_crown_damage_r_ck = .FALSE.
+    LOGICAL            :: exists_q_crown_damage_p = .FALSE.
+    LOGICAL            :: exists_q_crown_length = .FALSE.
+    LOGICAL            :: exists_q_bark_thickness_par1 = .FALSE.
+    LOGICAL            :: exists_q_bark_thickness_par2 = .FALSE.
+    LOGICAL            :: exists_q_scorch_height_f = .FALSE.
+    LOGICAL            :: exists_q_emissions_co2_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_co_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_ch4_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_nh3_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_n2o_mol = .FALSE.
+    LOGICAL            :: exists_q_emissions_n2_mol = .FALSE.
+    LOGICAL            :: exists_q_tmin_slope = .FALSE.
+    LOGICAL            :: exists_q_tmin_base = .FALSE.
+    LOGICAL            :: exists_q_tmin_tau = .FALSE.
+    LOGICAL            :: exists_q_tmax_slope = .FALSE.
+    LOGICAL            :: exists_q_tmax_base = .FALSE.
+    LOGICAL            :: exists_q_tmax_tau = .FALSE.
+    LOGICAL            :: exists_q_light_slope = .FALSE.
+    LOGICAL            :: exists_q_light_base = .FALSE.
+    LOGICAL            :: exists_q_light_tau = .FALSE.
+    LOGICAL            :: exists_q_water_slope = .FALSE.
+    LOGICAL            :: exists_q_water_base = .FALSE.
+    LOGICAL            :: exists_q_water_tau = .FALSE.
+
+    LOGICAL            :: exists_q_lfmc_min = .FALSE.
+    LOGICAL            :: exists_q_lfmc_max = .FALSE.
+    LOGICAL            :: exists_q_lfmc_b = .FALSE.
+    LOGICAL            :: exists_q_lfmc_c = .FALSE.
     ! quincy model - end
 
     !> Read lctlib data and eventually allocate also memory for lctlib data on io-processor
@@ -1026,6 +1090,104 @@ CONTAINS
           CASE ('maxvegroughness')
             READ(line(pos:length),*) lctlib(1:nlct)%MaxVegRoughness
             exists_MaxVegRoughness = .TRUE.
+          ! Quincy disturbance: spitfire
+          CASE ('q_fuel_bulk_density')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_fuel_bulk_density
+            exists_q_fuel_bulk_density = .TRUE.
+          CASE ('q_moisture_extinction_thon')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction_thon
+            exists_q_moisture_extinction_thon = .TRUE.
+          CASE ('q_moisture_extinction_ober')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_moisture_extinction_ober
+            exists_q_moisture_extinction_ober = .TRUE.
+          CASE ('q_fwd_wind_factor')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_fwd_wind_factor
+            exists_q_fwd_wind_factor = .TRUE.
+          CASE ('q_crown_damage_r_ck')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_crown_damage_r_ck
+            exists_q_crown_damage_r_ck = .TRUE.
+          CASE ('q_crown_damage_p')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_crown_damage_p
+            exists_q_crown_damage_p = .TRUE.
+          CASE ('q_crown_length')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_crown_length
+            exists_q_crown_length = .TRUE.
+          CASE ('q_bark_thickness_par1')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par1
+            exists_q_bark_thickness_par1 = .TRUE.
+          CASE ('q_bark_thickness_par2')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_bark_thickness_par2
+            exists_q_bark_thickness_par2 = .TRUE.
+          CASE ('q_scorch_height_f')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_scorch_height_f
+            exists_q_scorch_height_f = .TRUE.
+          CASE ('q_emissions_co2_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_co2_mol
+            exists_q_emissions_co2_mol = .TRUE.
+          CASE ('q_emissions_co_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_co_mol
+            exists_q_emissions_co_mol = .TRUE.
+          CASE ('q_emissions_ch4_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_ch4_mol
+            exists_q_emissions_ch4_mol = .TRUE.
+          CASE ('q_emissions_nh3_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_nh3_mol
+            exists_q_emissions_nh3_mol = .TRUE.
+          CASE ('q_emissions_n2o_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_n2o_mol
+            exists_q_emissions_n2o_mol = .TRUE.
+          CASE ('q_emissions_n2_mol')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_emissions_n2_mol
+            exists_q_emissions_n2_mol = .TRUE.
+          CASE ('q_tmin_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_slope
+            exists_q_tmin_slope = .TRUE.
+          CASE ('q_tmin_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_base
+            exists_q_tmin_base = .TRUE.
+          CASE ('q_tmin_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmin_tau
+            exists_q_tmin_tau = .TRUE.
+          CASE ('q_tmax_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_slope
+            exists_q_tmax_slope = .TRUE.
+          CASE ('q_tmax_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_base
+            exists_q_tmax_base = .TRUE.
+          CASE ('q_tmax_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_tmax_tau
+            exists_q_tmax_tau = .TRUE.
+          CASE ('q_light_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_slope
+            exists_q_light_slope = .TRUE.
+          CASE ('q_light_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_base
+            exists_q_light_base = .TRUE.
+          CASE ('q_light_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_light_tau
+            exists_q_light_tau = .TRUE.
+          CASE ('q_water_slope')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_slope
+            exists_q_water_slope = .TRUE.
+          CASE ('q_water_base')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_base
+            exists_q_water_base = .TRUE.
+          CASE ('q_water_tau')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_water_tau
+            exists_q_water_tau = .TRUE.
+
+          CASE ('q_lfmc_min')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_min
+            exists_q_lfmc_min = .TRUE.
+          CASE ('q_lfmc_max')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_max
+            exists_q_lfmc_max = .TRUE.
+          CASE ('q_lfmc_b')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_b
+            exists_q_lfmc_b = .TRUE.
+          CASE ('q_lfmc_c')
+            READ(line(pos:length),*) lctlib(1:nlct)%q_lfmc_c
+            exists_q_lfmc_c = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1332,16 +1494,76 @@ CONTAINS
           CALL finish('init_lctlib','No data for k_som_fast_init found in '//TRIM(lctlib_file_name))
         IF(.NOT. exists_k_som_slow_init) &
           CALL finish('init_lctlib','No data for k_som_slow_init found in '//TRIM(lctlib_file_name))
-        IF (.NOT. exists_AlbedoLitterVIS) &
-          & CALL finish('init_lctlib','No data for AlbedoLitterVIS found in '//TRIM(lctlib_file_name))
-        IF (.NOT. exists_AlbedoLitterNIR) &
-          & CALL finish('init_lctlib','No data for AlbedoLitterNIR found in '//TRIM(lctlib_file_name))
         IF (.NOT. exists_VegRoughness) &
-          & CALL finish('init_lctlib','No data for VegRoughness found in '//TRIM(lctlib_file_name))
+          CALL finish('init_lctlib','No data for VegRoughness found in '//TRIM(lctlib_file_name))
         IF (.NOT. exists_MinVegRoughness) &
-          & CALL finish('init_lctlib','No data for MinVegRoughness found in '//TRIM(lctlib_file_name))
+          CALL finish('init_lctlib','No data for MinVegRoughness found in '//TRIM(lctlib_file_name))
         IF (.NOT. exists_MaxVegRoughness) &
-          & CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
+          CALL finish('init_lctlib','No data for MaxVegRoughness found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_fuel_bulk_density) &
+            CALL finish('init_lctlib','No data for q_fuel_bulk_density found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_moisture_extinction_thon) &
+            CALL finish('init_lctlib','No data for q_moisture_extinction_thon found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_moisture_extinction_ober) &
+            CALL finish('init_lctlib','No data for q_moisture_extinction_ober found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_fwd_wind_factor) &
+            CALL finish('init_lctlib','No data for q_fwd_wind_factor found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_damage_r_ck) &
+            CALL finish('init_lctlib','No data for q_crown_damage_r_ck found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_damage_p) &
+            CALL finish('init_lctlib','No data for q_crown_damage_p found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_crown_length) &
+            CALL finish('init_lctlib','No data for q_crown_lenght found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_bark_thickness_par1) &
+            CALL finish('init_lctlib','No data for q_bark_thickness_par1 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_bark_thickness_par2) &
+            CALL finish('init_lctlib','No data for q_bark_thickness_par2 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_scorch_height_f) &
+            CALL finish('init_lctlib','No data for q_scorch_height_f found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_co2_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_co2_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_co_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_co_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_ch4_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_ch4_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_nh3_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_nh3_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_n2o_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_n2o_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_emissions_n2_mol) &
+            CALL finish('init_lctlib','No data for q_emissions_n2_mol found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_slope) &
+            CALL finish('init_lctlib','No data for q_tmin_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_base) &
+            CALL finish('init_lctlib','No data for q_tmin_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmin_tau) &
+            CALL finish('init_lctlib','No data for q_tmin_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_slope) &
+            CALL finish('init_lctlib','No data for q_tmax_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_base) &
+            CALL finish('init_lctlib','No data for q_tmax_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_tmax_tau) &
+            CALL finish('init_lctlib','No data for q_tmax_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_slope) &
+            CALL finish('init_lctlib','No data for q_light_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_base) &
+            CALL finish('init_lctlib','No data for q_light_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_light_tau) &
+            CALL finish('init_lctlib','No data for q_light_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_slope) &
+            CALL finish('init_lctlib','No data for q_water_slope found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_base) &
+            CALL finish('init_lctlib','No data for q_water_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_water_tau) &
+            CALL finish('init_lctlib','No data for q_water_tau found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_min) &
+            CALL finish('init_lctlib','No data for q_lfmc_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_max) &
+            CALL finish('init_lctlib','No data for q_lfmc_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_b) &
+            CALL finish('init_lctlib','No data for q_lfmc_b found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_q_lfmc_c) &
+            CALL finish('init_lctlib','No data for q_lfmc_c found in '//TRIM(lctlib_file_name))
        END IF
        ! quincy end
 
@@ -1700,6 +1922,39 @@ CONTAINS
         CALL p_bcast(lctlib(:)%VegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%MinVegRoughness, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%MaxVegRoughness, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_fuel_bulk_density, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_moisture_extinction_thon, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_moisture_extinction_ober, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_fwd_wind_factor, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_damage_r_ck, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_damage_p, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_crown_length, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_bark_thickness_par1, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_bark_thickness_par2, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_scorch_height_f, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_co2_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_co_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_ch4_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_nh3_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_n2o_mol, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_emissions_n2_mol, p_io, mpi_comm)
+
+        CALL p_bcast(lctlib(:)%q_tmin_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmin_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmin_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_tmax_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_light_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_slope, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_water_tau, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_b, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%q_lfmc_c, p_io, mpi_comm)
       END IF
     END IF
 

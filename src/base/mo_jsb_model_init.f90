@@ -18,7 +18,7 @@ MODULE mo_jsb_model_init
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_, Q_DFIRE_SF_, Q_DFIRE_FUEL_SF_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
@@ -28,6 +28,8 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
+  dsl4jsb_Use_config(Q_DFIRE_SF_)
+  dsl4jsb_Use_config(Q_DFIRE_FUEL_SF_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -169,6 +171,8 @@ CONTAINS
     USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
+    USE mo_q_dfire_sf_init,     ONLY: q_dfire_sf_init
+    USE mo_q_dfire_fuel_sf_init, ONLY: q_dfire_fuel_sf_init
     USE mo_fage_init,           ONLY: fage_init
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
@@ -197,6 +201,8 @@ CONTAINS
     dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
+    dsl4jsb_Def_config(Q_DFIRE_FUEL_SF_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -385,6 +391,8 @@ CONTAINS
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
+      dsl4jsb_Get_config(Q_DFIRE_SF_)
+      dsl4jsb_Get_config(Q_DFIRE_FUEL_SF_)
 
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
       IF (.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
@@ -448,6 +456,16 @@ CONTAINS
         END IF
       END IF
 
+      IF (model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+          CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_fuel")       ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_SF_,      "q_dfire_sf_dynamics")   ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_impacts")    ! LAND ONLY
+          CALL model%Queue_task(Q_DFIRE_FUEL_SF_, "q_dfire_sf_update")     ! LAND ONLY, update pools, update fractions, ...
+          CALL model%Queue_task(VEG_,             "plant_characteristics") ! LAND ONLY, ensure consistency after update
+        ENDIF
+      ENDIF
+
       CALL model%Queue_task(RAD_,       "surface_radiation")
       CALL model%Queue_task(Q_PHENO_,   "q_phenology")
       CALL model%Queue_task(HYDRO_,     "snow_and_wet_fraction")
@@ -500,6 +518,13 @@ CONTAINS
       CALL model%Queue_task(SEB_,     "energy_balance")           ! 't' is used here, and 't' is updated in the 'asselin_filter'
 
       !-- averaging variables in time ------------------------------------------------------------------- !
+      IF(model%config%qmodel_id == QLAND) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+          !            WRITE(*,*) "jsb_model_init.f90:: registering tavrg_q_dist_fire (new soil phys)..."
+          CALL model%Queue_task(Q_DFIRE_SF_, "tavrg_q_dist_fire")    ! LAND ONLY
+        ENDIF
+      ENDIF
+
       CALL model%Queue_task(RAD_, "rad_time_average")             ! ALL
       CALL model%Queue_task(Q_ASSIMI_, "tavrg_assimilation")      ! ALL
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
@@ -629,6 +654,14 @@ CONTAINS
         IF (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT .OR. model%config%qmodel_id == QCANOPY) THEN
           IF (tile%Is_process_active(Q_AGR_)) THEN
             CALL q_agr_init(tile)
+          END IF
+        ENDIF
+        IF(model%config%qmodel_id == QLAND) THEN
+          IF (tile%Is_process_active(Q_DFIRE_FUEL_SF_)) THEN
+            CALL q_dfire_fuel_sf_init(tile)
+          END IF
+          IF (tile%Is_process_active(Q_DFIRE_SF_)) THEN
+            CALL q_dfire_sf_init(tile)
           END IF
         END IF
       END SELECT

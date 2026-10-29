@@ -40,7 +40,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_physical_constants, ONLY: cvdifts
   USE mo_jsb_time_iface,      ONLY: cache_time_interpolation_weights
 
-  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_
+  dsl4jsb_Use_processes CARBON_, ALCC_, SB_, Q_SYL_, Q_AGR_, VEG_, SEB_, HYDRO_, PHENO_, PPLCC_, Q_DFIRE_SF_
 
   IMPLICIT NONE
   PRIVATE
@@ -609,6 +609,7 @@ CONTAINS
 
     USE mo_alcc_init,           ONLY : read_land_use_data
     USE mo_sb_init,             ONLY : provide_n_and_p_deposition
+    USE mo_q_dfire_sf_init,     ONLY : provide_lightning_events
     USE mo_q_syl_init,          ONLY : read_harvest_fraction
     USE mo_q_agr_init,          ONLY : read_fertiliser_input
     USE mo_jsb_math_constants,  ONLY : eps1
@@ -666,6 +667,10 @@ CONTAINS
         IF ((is_newmonth(current_datetime,dtime_lp) .OR. is_time_experiment_start(current_datetime)) &
             & .AND. model%processes(SB_)%p%config%active) THEN
           CALL provide_n_and_p_deposition(model_id, current_datetime, dtime_lp)
+        END IF
+        ! For the Q_DFIRE process, data on lightning events is read at the start of the simulation and updated monthly
+        IF (model%processes(Q_DFIRE_SF_)%p%config%active) THEN
+          CALL provide_lightning_events(model_id, current_datetime, dtime)
         END IF
 
         ! For the SB process also check if the SB_ slow-pool spinup-accelerator has been or should be executed

@@ -53,6 +53,7 @@ CONTAINS
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
+    USE mo_q_dfire_sf_constants, ONLY: init_q_dfire_sf_constants
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
     !>
@@ -65,7 +66,8 @@ CONTAINS
     !>
 
     dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
-      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
+      &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_, &
+      &                   Q_DFIRE_SF_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -187,6 +189,7 @@ CONTAINS
            CALL init_veg_constants
            CALL init_turb_constants
            CALL init_sb_constants
+           CALL init_q_dfire_sf_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
         CASE (MODEL_JSBACH)

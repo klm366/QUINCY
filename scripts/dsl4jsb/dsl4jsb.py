@@ -282,6 +282,12 @@ macros = {
         ),
         r"CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)",
     ],
+    "aggregate_onchunk_masked": [
+        re.compile(
+            r"dsl4jsb_Aggregate_onChunk_masked *\((.*?)_ *, *(.*?) *, *(.*?), *(.*?), *(.*?)\)", re.IGNORECASE
+        ),
+        r"CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine,\4,\5)",
+    ],
 }
 
 help_text = """
@@ -349,20 +355,20 @@ def process_file(
         ) as outfile:
             if header:
                 outfile.write(
-                    u"!\n"
-                    u"! This file was automatically generated from JSBACH source file:"
-                    u"\n"
+                    "!\n"
+                    "! This file was automatically generated from JSBACH source file:"
+                    "\n"
                 )
                 outfile.write(
-                    u"!    "
+                    "!    "
                     + re.sub(
                         r".*/src", "src", os.path.realpath(os.path.abspath(inputfile))
                     )
                     + "\n"
                 )
-                outfile.write(u"! with md5 hash: " + hasher.hexdigest() + "\n!\n")
+                outfile.write("! with md5 hash: " + hasher.hexdigest() + "\n!\n")
                 outfile.write(
-                    u'#line 1 "{}"\n'.format(
+                    '#line 1 "{}"\n'.format(
                         os.path.realpath(os.path.abspath(inputfile))
                     )
                 )
@@ -391,9 +397,7 @@ def process_file(
                         outfile.write("! " + line.encode("utf-8"))
                 matches = re.finditer(re_function, line)
                 if matches:
-                    for (
-                        match
-                    ) in (
+                    for match in (
                         matches
                     ):  # match.group(1) contains the macro name without "dsl4jsb_"
                         try:

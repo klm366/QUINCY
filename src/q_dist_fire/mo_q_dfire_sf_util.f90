@@ -1,0 +1,600 @@
+!>
+!> ICON-Land
+!>
+!> ---------------------------------------
+!> Copyright (C) 2013-2026, MPI-M, MPI-BGC
+!>
+!> Contact: icon-model.org
+!> Authors: AUTHORS.md
+!> See LICENSES/ for license information
+!> SPDX-License-Identifier: BSD-3-Clause
+!> ---------------------------------------
+!>
+MODULE mo_q_dfire_sf_util
+#ifndef __NO_JSBACH__
+
+  USE mo_kind,                  ONLY: lp
+  USE mo_jsb_control,           ONLY: debug_on
+  USE mo_exception,             ONLY: message, finish
+  USE mo_jsb_math_constants,    ONLY: eps8, eps1
+  USE mo_jsb_model_class,       ONLY: t_jsb_model
+  USE mo_lnd_bgcm_idx
+
+  IMPLICIT NONE
+
+  PRIVATE
+  PUBLIC :: calculate_time_average_q_dist_fire, calculate_daily_weather, calculate_pure_moving_averages
+  PUBLIC :: utils_linspace
+  PUBLIC :: dfire_sf_sb_update_pools, dfire_sf_veg_update_pools
+
+  PUBLIC :: logical2real, real2logical
+
+  !< Rate of spread related methods
+  PUBLIC :: calc_ros_opt_react_velocity, calc_ros_prop_flux_ratio, calc_ros_wind_factor, calc_ros_fbd
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_dfire_sf_util'
+
+CONTAINS
+
+  ! ======================================================================================================= !
+  !> calculate time moving averages and daytime averages for Q_DFIRE_SF_
+  !>
+  SUBROUTINE calculate_time_average_q_dist_fire(tile, options)
+
+    USE mo_jsb_impl_constants,      ONLY: test_false_true
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_lnd_time_averages,       ONLY: mavg_period_dfire, calc_time_mavg
+    !------------------------------------------------------------------------------------------------------ !
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
+    INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
+    REAL(lp)                                :: dtime                !< timestep
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_q_dist_fire'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: rain
+    dsl4jsb_Real2D_onChunk      :: snow
+    ! Q_DFIRE_SF_
+    dsl4jsb_Real2D_onChunk      :: precip_qc_mavg
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(Q_DFIRE_SF_)) RETURN
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model         => Get_model(tile%owner_model_id)
+    vgrid_canopy  => Get_vgrid('q_canopy_layer')
+    ncanopy       =  vgrid_canopy%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! A2L_
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    ! Q_DFIRE_SF_
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_qc_mavg)
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    precip_qc_mavg(:) = calc_time_mavg(dtime, precip_qc_mavg(:), (rain(:)+snow(:)), mavg_period_dfire)
+
+  END SUBROUTINE calculate_time_average_q_dist_fire
+
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Subtask to estimate daily weather variables: precipitation, t_air_max and t_air_min
+  !>
+  !> A day is defined from the lowest point of the sun of the previous day to the current one.
+  !> The lowest point of the sun of the current day is estimated from the zenith.
+  !>
+  SUBROUTINE calculate_daily_weather(tile, options)
+
+    USE mo_kind,                    ONLY: lp
+    USE mo_jsb_math_constants,      ONLY: one_day
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+
+    ! Use of process memories
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options            !< model options
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER         :: model              !< instance of the model
+    INTEGER                                 :: iblk, ics, ice, nc, ic
+    REAL(lp)                                :: dtime              !< timestep
+    LOGICAL                                 :: is_midnight(options%nc) !< is peak of the day
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_daily_weather'
+    ! ---------------------------
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
+    ! Declare pointers to variables in memory
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: t_air
+    dsl4jsb_Real2D_onChunk      :: rain
+    dsl4jsb_Real2D_onChunk      :: snow
+    dsl4jsb_Real2D_onChunk      :: local_time_day_seconds
+    ! Q_DFIRE_SF_ 2D
+    dsl4jsb_Real2D_onChunk      :: precip_daytime         !<
+    dsl4jsb_Real2D_onChunk      :: t_air_max              !<
+    dsl4jsb_Real2D_onChunk      :: t_air_min              !<
+    dsl4jsb_Real2D_onChunk      :: precip_daytime_old
+    dsl4jsb_Real2D_onChunk      :: t_air_max_old
+    dsl4jsb_Real2D_onChunk      :: t_air_min_old
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_SF_)) RETURN   ! ask for all processes considered here ?
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model         => Get_model(tile%owner_model_id)
+    ! Get process config
+    !..
+    ! Get process memories
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
+    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_daytime)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_max)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_min)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_daytime_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_max_old)
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, t_air_min_old)
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+    !> 1.0 init
+    !!
+    is_midnight(:) = .FALSE.
+
+    ! 1.1 update min/max values
+    t_air_max_old(:) = max(t_air_max_old(:), t_air(:))
+    t_air_min_old(:) = min(t_air_min_old(:), t_air(:))
+    ! 1.2 update accumulation values
+    precip_daytime_old(:) = precip_daytime_old(:) + ((rain(:) + snow(:)) / (one_day / dtime))
+
+    !> 2.0 at the timestep after local midnight (1st timestep of the new day) calc daytime averages
+    !> 2.1 1D variables
+    is_midnight = (ABS(local_time_day_seconds - dtime) < eps1)
+
+    DO ic=1, nc
+      IF (is_midnight(ic)) THEN
+        ! check if at least one value had been assigned at the current day, avoiding division by zero
+        ! calculate the average over the previous day and pass it to the according *_daytime variable;
+        t_air_max(ic)            = t_air_max_old(ic)
+        t_air_min(ic)            = t_air_min_old(ic)
+        precip_daytime(ic)       = precip_daytime_old(ic)
+        ! init variables after min/max daily value
+        t_air_max_old(ic)        = t_air(ic)  !< current temperature
+        t_air_min_old(ic)        = t_air(ic)
+        precip_daytime_old(ic)   = 0._lp      !< no precipitation
+      END IF
+    END DO
+
+    !    IF (debug_on() .AND. iblk == 1) THEN
+    IF (is_midnight(1)) THEN
+      ! check if at least one value had been assigned at the current day, avoiding division by zero
+      ! calculate the average over the previous day and pass it to the according *_daytime variable;
+      IF (t_air_max(1) < t_air_min(1))  THEN
+        write(*,*) "error: calc_daily_weather:: t_air_min, t_air_max =", t_air_min, t_air_max
+        CALL finish("calc_daily_weather", "t_air_min cant be higher than t_air_max")
+      ENDIF
+    ENDIF
+
+  END SUBROUTINE calculate_daily_weather
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Subtask to calculate pure moving average
+  !>
+  !>
+  SUBROUTINE calculate_pure_moving_averages(tile, options)
+
+    USE mo_kind,                    ONLY: lp
+    USE mo_jsb_math_constants,      ONLY: eps8
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
+    USE mo_jsb_task_class,          ONLY: t_jsb_task_options
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_quincy_mavg_class,       ONLY: t_mavg
+
+    ! Use of process memories
+    dsl4jsb_Use_processes A2L_, Q_DFIRE_SF_
+    dsl4jsb_Use_memory(A2L_)
+    dsl4jsb_Use_memory(Q_DFIRE_SF_)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile               !< one tile with data structure for one lct
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options            !< model options
+    ! ---------------------------
+    ! 0.2 Local
+    TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
+    INTEGER                                 :: iblk, ics, ice, nc, ic
+    REAL(lp)                                :: dtime                !< timestep
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calculate_pure_moving_averages'
+    TYPE(t_mavg), SAVE, ALLOCATABLE :: precip_mavg_type(:)
+    ! ---------------------------
+    !$omp threadprivate( precip_mavg_type)
+    ! 0.3 Declare Memory
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(Q_DFIRE_SF_)
+    ! Declare pointers to variables in memory
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: rain
+    dsl4jsb_Real2D_onChunk      :: snow
+    ! Q_DFIRE_SF_ 2D
+    dsl4jsb_Real2D_onChunk      :: precip_mavg
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (.NOT. tile%Is_process_active(Q_DFIRE_SF_)) RETURN   ! ask for all processes considered here ?
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ---------------------------
+    ! 0.5 Get Memory
+    model         => Get_model(tile%owner_model_id)
+    ! Get process config
+    !..
+    ! Get process memories
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(Q_DFIRE_SF_)
+    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_var2D_onChunk(A2L_, rain)
+    dsl4jsb_Get_var2D_onChunk(A2L_, snow)
+    ! ---------------------------
+    dsl4jsb_Get_var2D_onChunk(Q_DFIRE_SF_, precip_mavg)
+    IF (.NOT. ALLOCATED(precip_mavg_type)) THEN
+      ALLOCATE(precip_mavg_type(nc))
+      precip_mavg_type = t_mavg(dtime, 1) !< 1=to daily
+    ENDIF
+
+    ! ------------------------------------------------------------------------------------------------------------
+    ! Go science
+    ! ------------------------------------------------------------------------------------------------------------
+
+    DO ic = 1, nc
+      CALL precip_mavg_type(ic)%add((snow(ic) + rain(ic)))
+      precip_mavg(ic) = precip_mavg_type(ic)%get()
+    END DO
+
+  END SUBROUTINE calculate_pure_moving_averages
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Same method as numpy linspace.
+  !> https://gist.github.com/ivan-pi/f4b4741d7ed54ceff787c85d6ba22a5a
+  !>
+  FUNCTION utils_linspace(start,end,num,endpoint,step) RESULT (samples)
+
+    ! PARAMETERS
+    REAL(lp), INTENT(in) :: start
+    !! The starting value of the sequence.
+    REAL(lp), INTENT(in) :: end
+    !! The end value of the sequence, unless `endpoint` is set to `.false.`.
+    !! In that case, the sequence consists of all but the last of `num + 1`
+    !! evenly spaced samples, so that `end` is excluded. Note that the
+    !! step size changes when `endpoint` is `.false.`.
+    INTEGER, INTENT(in), OPTIONAL :: num
+    !! Number of samples to generate. Default value is 50.
+    LOGICAL, INTENT(in), OPTIONAL :: endpoint
+    !! If `.true.`, `end` is the last sample. Otherwise, it is not included. Default is `.true.`.
+    REAL(lp), INTENT(out), OPTIONAL :: step
+    !! If present, `step` is the size of spacing between samples.
+
+    ! RETURNS
+    REAL(lp), ALLOCATABLE :: samples(:)
+    !! There are `num` equally spaced samples in the closed interval `[start, stop]` or
+    !! the half-open interval `[start, stop)` (depending on whether `endpoint` is `.true.` or `.false.`).
+
+    INTEGER :: num_, i
+    LOGICAL :: endpoint_
+    REAL(lp) :: step_
+
+    num_ = 50
+    IF (present(num)) num_ = num
+
+    endpoint_ = .TRUE.
+    IF (present(endpoint)) endpoint_ = endpoint
+
+    ! find step size
+    IF (endpoint_) then
+      step_ = (end - start)/REAL(num_-1,lp)
+    ELSE
+      step_ = (end - start)/REAL(num_,lp)
+    END IF
+
+    IF (present(step)) step = step_
+
+    ALLOCATE(samples(num_))
+    DO i = 1, num_
+      samples(i) = start + (i-1)*step_
+    END DO
+  END FUNCTION utils_linspace
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Convert logical into real(lp)
+  !> TRUE=1._lp, FALSE=0._lp
+  !>
+  ELEMENTAL PURE REAL(lp) FUNCTION logical2real(val)
+    LOGICAL, INTENT(in) :: val
+
+    IF (val) THEN
+      logical2real = 1._lp
+    ELSE
+      logical2real = 0._lp
+    ENDIF
+
+  END FUNCTION logical2real
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Convert real to logical:
+  !> TRUE=1._lp, FALSE=0._lp
+  !>
+  PURE ELEMENTAL LOGICAL FUNCTION real2logical(val)
+    REAL(lp), INTENT(in) :: val
+
+    IF (val == 1._lp) THEN
+      real2logical = .TRUE.
+    ELSE ! (val == 0._lp)
+      real2logical = .FALSE.
+    ENDIF
+  END FUNCTION real2logical
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Update SB pools
+  !> 1. Remove fire emissions from sb_pool
+  !> 2. Transfer litter pools (residue) into polymeric litter
+  !>
+  SUBROUTINE dfire_sf_sb_update_pools(sb_fire_emissions, sb_fire_litter_ash, sb_pool)
+    USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ix_polymeric_litter, ix_soluable_litter, &
+                               ix_residue, ix_residue_assoc, ix_dom, ix_dom_assoc
+
+    REAL(lp), INTENT(in) :: sb_fire_emissions(:,:,:)
+    REAL(lp), INTENT(in) :: sb_fire_litter_ash(:,:,:)
+    REAL(lp), INTENT(inout) :: sb_pool(:,:,:)
+
+    !> 1. Remove fire emissions from sb_pool_mt
+    sb_pool = sb_pool - sb_fire_emissions
+
+    !> Does it make sense? not really, to keep as purely informative.
+    !CALL pool_transfer(sb_fire_litter_ash_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+    !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+    !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+
+    !> 2. Woody litter residue is transformed into polymeric
+    CALL pool_transfer(sb_fire_litter_ash(ix_woody_litter,:,:), & ! amount (IN)
+                        sb_pool(ix_woody_litter,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_soluable_litter,:,:), & ! amount (IN)
+                        sb_pool(ix_soluable_litter,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_residue,:,:), & ! amount (IN)
+                        sb_pool(ix_residue,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_residue_assoc,:,:), & ! amount (IN)
+                        sb_pool(ix_residue_assoc,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_dom,:,:), & ! amount (IN)
+                        sb_pool(ix_dom,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+    CALL pool_transfer(sb_fire_litter_ash(ix_dom_assoc,:,:), & ! amount (IN)
+                        sb_pool(ix_dom_assoc,:,:), & ! pool from (INOUT)
+                        sb_pool(ix_polymeric_litter,:,:)) ! pool to (INOUT)
+  END SUBROUTINE dfire_sf_sb_update_pools
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Update VEG_ pools
+  !>
+  SUBROUTINE dfire_sf_veg_update_pools(nc, model, &
+                                       veg_fire_emissions_mt, veg_fire_litterfall_mt, & ! in
+                                       veg_pool_mt, veg_litterfall_mt) ! inout
+
+    INTEGER, INTENT(IN)              :: nc
+    TYPE(t_jsb_model), POINTER       :: model
+    REAL(lp), INTENT(IN)             :: veg_fire_emissions_mt(:,:,:)
+    REAL(lp), INTENT(IN)             :: veg_fire_litterfall_mt(:,:,:)
+    REAL(lp), INTENT(INOUT)          :: veg_pool_mt(:,:,:)
+    REAL(lp), INTENT(INOUT)          :: veg_litterfall_mt(:,:,:)
+
+    INTEGER                          :: nr_of_veg_bgcm_comp
+    INTEGER                          :: ic, ielem, ix_elem, ix_comp
+
+    nr_of_veg_bgcm_comp = SIZE(veg_pool_mt,1)
+
+    !< Update VEG pools
+    !> 3.0 add fire disturbance into litterfall
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+            IF (model%config%is_element_used(ielem)) THEN
+                ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+                DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_litterfall_mt(ix_comp, ix_elem, ic) = veg_litterfall_mt(ix_comp, ix_elem, ic) + &
+                                                            veg_fire_litterfall_mt(ix_comp, ix_elem, ic)
+                END DO ! ix_comp = 1, n_veg_bgcm_comp
+            END IF ! model%config%is_element_used(ielem)) THEN
+        END DO ! ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+    END DO ! ic = 1, nc
+
+    !> update veg fire emissions
+    DO ic = 1, nc
+        DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
+        IF (model%config%is_element_used(ielem)) THEN
+            ix_elem = model%config%elements_index_map(ielem)    ! get element index in bgcm
+            DO ix_comp = 1, nr_of_veg_bgcm_comp
+                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+            END DO ! ix_comp
+        END IF ! is_element_used(ielem)
+        END DO ! ielem
+    END DO ! ic = 1, nc
+
+  END SUBROUTINE dfire_sf_veg_update_pools
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Small helper routine to transfer matter between pools
+  !>
+  SUBROUTINE pool_transfer(amount, from, to)
+    REAL(lp), INTENT(in) :: amount(:,:)
+    REAL(lp), INTENT(inout) :: from(:,:)
+    REAL(lp), INTENT(inout) :: to(:,:)
+
+    from = from - amount
+    to = to + amount
+  END SUBROUTINE pool_transfer
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate wind factor (Eq. A5 from Thonicke et al. (2010)), used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_wind_factor(u_f_wind, sigma, beta, beta_op) RESULT (wind_factor)
+    REAL(lp), INTENT(in)        :: u_f_wind     !< Forward wind [m min-1]
+    REAL(lp), INTENT(in)        :: sigma        !< Surface area to volume ratio of the fuel [cm-1]
+    REAL(lp), INTENT(in)        :: beta         !< Packing ratio [-]
+    REAL(lp), INTENT(in)        :: beta_op      !< Optimum packing ratio [-]
+    REAL(lp)                    :: wind_factor  !< Output [-]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp)                    :: C_var, B_var, E_var
+    REAL(lp)                    :: beta_ratio
+    ! ----------------------------------------------------------------------------------------------------- !
+    C_var = 7.47_lp * exp(-0.8711_lp * (sigma**0.55_lp)) !< Eq. A8
+    B_var = 0.15988_lp * (sigma ** 0.54_lp) !< Eq. A7
+    E_var = 0.7515_lp * exp(-0.01094_lp * sigma) !< Eq. A9
+    beta_ratio = beta / beta_op
+    wind_factor = C_var * ((3.281_lp * u_f_wind) ** B_var) * (beta_ratio ** (-E_var))
+  END FUNCTION calc_ros_wind_factor
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate propagation flux ratio (Eq. A2 from Thonicke et al. (2010))
+  !>
+  !> Used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_prop_flux_ratio(sigma, beta) RESULT (prop_flux_ratio)
+    REAL(lp), INTENT(in) :: sigma           !< surface-area to volume ratio of the fuel [cm-1]
+    REAL(lp), INTENT(in) :: beta            !< packing ratio [-]
+    REAL(lp)             :: prop_flux_ratio !< output [-]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp) :: e_calc
+    ! ----------------------------------------------------------------------------------------------------- !
+    e_calc = (0.792_lp + 3.7597_lp * sqrt(sigma)) * (beta + 0.1_lp)
+    prop_flux_ratio = exp(e_calc) / (192._lp + 7.9095_lp * sigma)
+  END FUNCTION calc_ros_prop_flux_ratio
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate The optimum reaction velocity (Table A1, 1st from Thonicke et al. (2010))
+  !>
+  !> Used to calculate rate of spread
+  !>
+  ELEMENTAL PURE FUNCTION calc_ros_opt_react_velocity(max_react_vel, beta, beta_op, A_var) RESULT (opt_react_vel)
+    REAL(lp), INTENT(in)        :: max_react_vel   !< Maximum reaction velocity [min-1]
+    REAL(lp), INTENT(in)        :: beta            !< packing ratio [kg m-3]
+    REAL(lp), INTENT(in)        :: beta_op         !< Eq. A6 [-]
+    REAL(lp), INTENT(in)        :: A_var           !< [-]
+    REAL(lp)                    :: opt_react_vel   !< output [min-1]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp) :: beta_ratio
+    ! ----------------------------------------------------------------------------------------------------- !
+    beta_ratio = beta / beta_op
+    opt_react_vel = max_react_vel * (beta_ratio ** A_var) * exp(A_var * (1 - beta_ratio))
+  END FUNCTION calc_ros_opt_react_velocity
+
+
+  ! ======================================================================================================= !
+  !>
+  !> Calculate the weighted average of the Fuel bulk density for the current PFT.
+  !> Using the Pfeiffer et al. (2013) paper, equation A17. Remaining equations should be implemented
+  !> when accounting for the other pfts.
+  !> Thonicke's et al. (2010) is not used as the equation does not seems correct when accounting for
+  !> 10 and 100 hours fuel bulk densities (slightly more).
+  !>
+  !> Used to calculate rate of spread
+  !>
+  FUNCTION calc_ros_fbd(nfclasses, fuel_bulk_density, dead_fuel) RESULT (fbd)
+    USE mo_q_dfire_sf_constants, ONLY: df_sf_fuel_class_factors
+
+    INTEGER, INTENT(in)         :: nfclasses !< The number of used fuel classes
+    REAL(lp), INTENT(in)        :: fuel_bulk_density !< [kg m-3]
+    REAL(lp), INTENT(in)        :: dead_fuel(nfclasses) !< 1, 10, 100 hours [gDM m-2]
+    REAL(lp)                    :: fbd !< output [kg m-3]
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(lp)                    :: total_dead_fuel
+    REAL(lp)                    :: fbd_accounting_fc
+    ! ----------------------------------------------------------------------------------------------------- !
+    total_dead_fuel = sum(dead_fuel)
+    fbd_accounting_fc = fuel_bulk_density * SUM(dead_fuel * df_sf_fuel_class_factors)
+    fbd = fbd_accounting_fc / total_dead_fuel
+  END FUNCTION calc_ros_fbd
+#endif
+END MODULE mo_q_dfire_sf_util

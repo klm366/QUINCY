@@ -29,8 +29,10 @@ MODULE mo_q_sb_update_pools
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
-    &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
+    &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID, &
+    &                                   SB_BGCM_FIRE_EMISSIONS_ID, SB_BGCM_FIRE_LITTER_ASH_ID
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID
+  USE mo_q_dfire_sf_constants,    ONLY: df_sf_spq_layer_top_sl !< Top soil layer used by spitfire
 
   IMPLICIT NONE
 
@@ -59,7 +61,8 @@ CONTAINS
     USE mo_quincy_model_config,    ONLY: QLAND, QSOIL
     USE mo_jsb_lctlib_class,       ONLY: t_lctlib_element
     USE mo_jsb_task_class,         ONLY: t_jsb_task_options
-    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_
+    USE mo_jsb_process_class,      ONLY: A2L_, SEB_, TURB_, HYDRO_, HYDRO_, VEG_, SSE_, Q_ASSIMI_, Q_PHENO_, SB_, &
+                                         Q_DFIRE_SF_
     USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
     USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_jsb_time,               ONLY: execute_quincy_sb_accelerator_this_timestep
@@ -73,6 +76,7 @@ CONTAINS
     USE mo_sb_util,                ONLY: calc_qmax_texture
     ! Use of process configurations (t_PROC_config)
     dsl4jsb_Use_config(SB_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
 
     ! Use of process memory
     dsl4jsb_Use_memory(SB_)
@@ -122,10 +126,13 @@ CONTAINS
     dsl4jsb_Def_mt2L3D :: sb_transport_mt
     dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     dsl4jsb_Def_mt1L3D :: sb_delta_pools_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_litter_ash_mt
+    dsl4jsb_Def_mt2L3D :: sb_fire_emissions_mt
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -372,6 +379,7 @@ CONTAINS
     ! ---------------------------
     ! Get process config
     dsl4jsb_Get_config(SB_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     ! Get process memories
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -395,6 +403,8 @@ CONTAINS
     dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     dsl4jsb_Get_mt1L3D(SB_BGCM_DELTA_POOLS_ID, sb_delta_pools_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_LITTER_ASH_ID, sb_fire_litter_ash_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FIRE_EMISSIONS_ID, sb_fire_emissions_mt)
 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)
     ALLOCATE(p_deposition_sl(nc, nsoil_w))
@@ -738,6 +748,12 @@ CONTAINS
     !!
     IF (TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_1d") THEN
       sb_pool_mt = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
+
+!      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+!        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+!      END IF
     END IF
 
     !> 6.0 JSM:
@@ -754,7 +770,27 @@ CONTAINS
       !>
       sb_pool_prev_timestep_hlp_mt = sb_pool_mt
       sb_pool_mt                   = sb_pool_mt + sb_formation_mt - sb_loss_mt + sb_transport_mt
-      !>  6.2 particle transport
+
+      !> 6.2 update fire disturbance flux pools
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+!        CALL dfire_update_pools(sb_fire_emissions_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_fire_litter_ash_mt(:,:,:,df_sf_spq_layer_top_sl), &
+!            sb_pool_mt(:,:,:,df_sf_spq_layer_top_sl))
+        !sb_pool_mt = sb_pool_mt - sb_fire_emissions_mt
+
+        !> 6.2.1 burned polymeric litter into polymeric
+        !> Does it make sense? not really, to keep as purely informative.
+        !CALL pool_transfer(sb_fire_litter_ash_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+        !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+        !                   sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+
+        !> 6.2.2 burned woody litter is transformed into polymeric
+        !CALL pool_transfer(sb_fire_litter_ash_mt(ix_woody_litter,:,:,df_sf_spq_layer_top_sl), & ! amount (IN)
+        !sb_pool_mt(ix_woody_litter,:,:,df_sf_spq_layer_top_sl), & ! pool from (INOUT)
+        !sb_pool_mt(ix_polymeric_litter,:,:,df_sf_spq_layer_top_sl)) ! pool to (INOUT)
+      END IF ! flag_dfire
+
+      !>  6.3 particle transport
       !>
       sb_particle_transport_hlp_mt = sb_transport_mt * 0._lp
       particle_fluxrate(:,:) = calc_particle_fluxrate(nc, nsoil_w, ixC, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), &
@@ -1200,6 +1236,19 @@ CONTAINS
     net_biosphere_production_c14(:) = net_biosphere_production_c14(:) &
       &          - SUM((het_respiration_c14(:,:) + lateral_loss_dom_carbon14_sl(:,:)) * soil_depth_sl(:,:), DIM = 2) &
       &          - leaching_dom_carbon14(:)
+
+    ! subtract fire emissions from net biosphere production when Spitfire dead feedback is enabled
+    IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_dead_feedback) THEN
+        net_biosphere_production(:) = net_biosphere_production(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
+        net_biosphere_production_c13(:) = net_biosphere_production_c13(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC13,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
+        net_biosphere_production_c14(:) = net_biosphere_production_c14(:) - &
+          SUM((SUM(sb_fire_emissions_mt(:,ixC14,:,:),DIM=1) * soil_depth_sl(:,:)), DIM=2) / dtime * 1000000._lp
+      ENDIF
+    ENDIF
+
     ! biological N fixation (VEG_ and SB_ processes)
     biological_n_fixation(:)    = biological_n_fixation(:) &
       &                                     + SUM(asymb_n_fixation(:,:) * soil_depth_sl(:,:), DIM = 2)

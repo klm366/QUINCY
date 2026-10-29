@@ -33,7 +33,8 @@ MODULE mo_veg_util
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
     &                                   VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID, &
     &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID, &
-    &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID
+    &                                   VEG_BGCM_HARVEST_LITTER_ID, VEG_BGCM_HARVEST_TO_PROD_ID, &
+    &                                   VEG_BGCM_FIRE_LITTERFALL_ID, VEG_BGCM_FIRE_EMISSIONS_ID
 
   IMPLICIT NONE
   PRIVATE
@@ -126,7 +127,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
     dsl4jsb_Def_mt1L2D :: veg_exudation_mt
@@ -164,7 +167,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_LITTERFALL_ID, veg_fire_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_EMISSIONS_ID, veg_fire_emissions_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
@@ -194,6 +199,8 @@ CONTAINS
           DO ic = 1, nc
             veg_growth_mt(ix_comp,ix_elem,ic)     = zero
             veg_litterfall_mt(ix_comp,ix_elem,ic) = zero
+            veg_fire_litterfall_mt(ix_comp,ix_elem,ic) = zero
+            veg_fire_emissions_mt(ix_comp,ix_elem,ic)  = zero
             IF (config_qmodel_id == QLAND .OR. config_qmodel_id == QPLANT) THEN
               IF (is_active_harvest_process) THEN
                 veg_litter_flux_harvest_mt(ix_comp,ix_elem,ic) = zero

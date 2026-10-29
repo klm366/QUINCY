@@ -26,9 +26,11 @@ MODULE mo_q_veg_update_pools
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
     &                                   VEG_BGCM_SEED_BED_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
+    &                                   VEG_BGCM_FIRE_LITTERFALL_ID, &
     &                                   VEG_BGCM_RESERVE_USE_ID, VEG_BGCM_PP_FUEL_ID, VEG_BGCM_PP_PAPER_ID, &
     &                                   VEG_BGCM_PP_FIBERBOARD_ID, VEG_BGCM_PP_OIRW_ID, VEG_BGCM_PP_PV_ID,  &
-    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_PP_CROP_ID
+    &                                   VEG_BGCM_PP_SAWNWOOD_ID, VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_PP_CROP_ID, &
+    &                                   VEG_BGCM_FIRE_EMISSIONS_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_MYCO_EXPORT_ID
 
   IMPLICIT NONE
@@ -50,7 +52,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_quincy_model_config,             ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_
+    USE mo_jsb_process_class,               ONLY: HYDRO_, VEG_, Q_ASSIMI_, Q_PHENO_, Q_AGR_, Q_SYL_, ALCC_, Q_DFIRE_SF_, Q_DFIRE_FUEL_SF_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid, t_jsb_grid
     USE mo_jsb_grid,                        ONLY: Get_vgrid, Get_grid
     USE mo_jsb_physical_constants,          ONLY: lambda_C14
@@ -59,6 +61,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: eta_nfixation, max_leaf_shedding_rate
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
+    dsl4jsb_Use_config(Q_DFIRE_SF_)
     dsl4jsb_Use_config(ALCC_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -66,6 +69,7 @@ CONTAINS
     dsl4jsb_Use_memory(Q_PHENO_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
@@ -90,7 +94,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
     dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_litterfall_mt
     dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: veg_fire_emissions_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_pool_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_litterfall_mt
     dsl4jsb_Def_mt1L2D :: seed_bed_growth_mt
@@ -109,6 +115,7 @@ CONTAINS
     dsl4jsb_Def_mt1L2D :: prod_decay_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_config(Q_DFIRE_SF_)
     dsl4jsb_Def_config(ALCC_)
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(Q_AGR_)
@@ -116,6 +123,7 @@ CONTAINS
     dsl4jsb_Def_memory(Q_PHENO_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! Q_ASSIMI_ 2D
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -225,6 +233,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
+    dsl4jsb_Get_config(Q_DFIRE_SF_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_SYL_)
     dsl4jsb_Get_config(Q_AGR_)
@@ -232,6 +241,7 @@ CONTAINS
     dsl4jsb_Get_memory(Q_PHENO_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(Q_DFIRE_FUEL_SF_)
     ! ----------------------------------------------------------------------------------------------------- !
     config_flag_log_negative_vegpool = dsl4jsb_Config(VEG_)%flag_log_negative_vegpool
     config_l_use_product_pools = dsl4jsb_Config(VEG_)%l_use_product_pools
@@ -251,7 +261,9 @@ CONTAINS
     bgcm_store => tile%bgcm_store
     dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_LITTERFALL_ID, veg_fire_litterfall_mt)
     dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FIRE_EMISSIONS_ID, veg_fire_emissions_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_POOL_ID, seed_bed_pool_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_LITTERFALL_ID, seed_bed_litterfall_mt)
     dsl4jsb_Get_mt1L2D(VEG_BGCM_SEED_BED_GROWTH_ID, seed_bed_growth_mt)
@@ -513,6 +525,20 @@ CONTAINS
           END IF
         END DO
       END DO
+
+!      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+!        DO ic = 1, nc
+!          DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
+!            IF (model%config%is_element_used(id_elem)) THEN
+!              ix_elem = model%config%elements_index_map(id_elem)    ! get element index in bgcm
+!              DO ix_comp = 1, nr_of_veg_bgcm_comp
+!                veg_pool_mt(ix_comp,ix_elem,ic) = veg_pool_mt(ix_comp,ix_elem,ic) - &
+!                    veg_fire_emissions_mt(ix_comp,ix_elem,ic) ! dist_fire
+!              END DO ! ix_comp
+!            END IF ! is_element_used(id_elem)
+!          END DO ! id_elem
+!        END DO ! ic
+!      END IF ! flag_dfire
 
       !>    1.8.1 ensure veg_pool does not become negative - quick-fix and debug
       !>
@@ -823,6 +849,18 @@ CONTAINS
         & + gross_assimilation_C14(ic) &
         & - maint_respiration_c14(ic)   - growth_respiration_c14(ic) - n_processing_respiration_c14(ic) &
         & - herbivory_leaf_resp_c14(ic) - herbivory_fruit_resp_c14(ic)
+
+      ! subtract fire emissions from net biosphere production when spitfire live feedback is enabled
+      IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_dfire) THEN
+        IF (dsl4jsb_Config(Q_DFIRE_SF_)%flag_has_live_feedback) THEN
+          net_biosphere_production(ic) = net_biosphere_production(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC,ic)) / dtime * 1000000._lp )
+          net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC13,ic)) / dtime * 1000000._lp )
+          net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - &
+            SUM((veg_fire_emissions_mt(:,ixC14,ic)) / dtime * 1000000._lp )
+        ENDIF
+      ENDIF
 
       ! biological N fixation (VEG_ and SB_ processes)
       biological_n_fixation(ic)    = biological_n_fixation(ic) + n_fixation(ic)
