@@ -11,6 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!> ICON-Land wrapper of the var_list routines provided by the host model (via `mo_jsb_varlist_iface`)
+!>
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
 
@@ -57,10 +59,16 @@ MODULE mo_jsb_varlist
 
 CONTAINS
 
+  ! ====================================================================================================== !
+  !
+  !> Get a pointer to the var_list `name` of the host model
+  !>
+  !> If the var_list does not exist yet, a new one is created on host grid `patch_id`.
+  !
   FUNCTION Get_varlist(name, patch_id) RESULT(return_ptr)
 
-    CHARACTER(LEN=*), INTENT(in) :: name
-    INTEGER,          INTENT(in) :: patch_id
+    CHARACTER(LEN=*), INTENT(in) :: name        !< Name of the var_list
+    INTEGER,          INTENT(in) :: patch_id    !< ID of the host model grid (patch)
     TYPE(t_jsb_varlist), POINTER :: return_ptr
 
     CALL jsb_get_var_list(return_ptr, TRIM(name))
@@ -117,18 +125,23 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
+    ! Set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    ! Set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    ! Set CF and GRIB2 meta data
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
+    ! ldims: local dimensions (nproma, number of blocks)
+    ! gdims: global dimensions of the field in the output file
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
@@ -141,6 +154,7 @@ CONTAINS
       n_groups = 2
     END IF
     ALLOCATE(groups_loc(n_groups))
+    ! All variables are put into these two catch-all groups
     groups_loc(1) = 'ALL'
     groups_loc(2) = 'jsb_all'
     IF (PRESENT(groups)) THEN

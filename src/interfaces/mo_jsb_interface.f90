@@ -66,7 +66,8 @@ CONTAINS
   !> Called by the host model (i.e. ICON) in simulations with atmosphere
   !>
   !> @NOTE In standalone simulations 'mo_jsbach_model:jsbach_model' is called
-  !>       and variables are provided via 'mo_jsbach_model:jsbach_model:get_standalone_driver'
+  !>       and the forcing variables are provided in 'mo_jsbach_model:run_one_timestep'
+  !>       via 'mo_jsb4_forcing:get_standalone_driver'
   !>
   SUBROUTINE interface_full( &
     & model_id,         &
@@ -603,7 +604,7 @@ CONTAINS
   !>
   !>   is called by both:
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
-  !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
+  !>      host model (ICON):    'src/atm_phy_aes/mo_interface_iconam_aes.f90', 'src/atm_phy_nwp/mo_nwp_vdiff_interface.f90'
   !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
@@ -718,11 +719,11 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Finish ICON-land timestep
+  !> Finish ICON-Land timestep
   !>
   !>   is called by both:
   !>      ICON-Land standalone: 'mo_jsbach_model:run_one_timestep'
-  !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
+  !>      host model (ICON):    'src/atm_phy_aes/mo_interface_iconam_aes.f90', 'src/atm_phy_nwp/mo_nwp_vdiff_interface.f90'
   !>
   SUBROUTINE jsbach_finish_timestep(model_id, current_datetime, dtime, init)
     USE mo_util,        ONLY: report_memory_usage
