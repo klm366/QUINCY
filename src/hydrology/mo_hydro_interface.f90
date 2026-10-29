@@ -2571,7 +2571,8 @@ CONTAINS
       & qsat_lwtr, &            !< Saturation specific humidity over lake water []
       & qsat_lice, &            !< Saturation specific humidity over lake ice []
       & fact_qsat_srf, &        !< Factor for surface saturation specific energy []
-      & fact_qsat_trans_srf, &  !< Factor to calculate transpiration from evaporation []
+      & fact_qsat_trans_srf, &  !< Factor to calculate transpiration from potential evaporation []; from TURB_ task
+                                !< humidity_scaling, depends on canopy conductance and on snow and wet fractions
       & fact_q_air, &           !< Factor to calculate air moisture accounting for partially wet surfaces []
       & fract_lice, &           !< Lake ice fraction []
       & evapotrans_lnd, &       !< Evapotranspiration from land [kg m-2 s-1]

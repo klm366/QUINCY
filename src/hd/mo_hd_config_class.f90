@@ -29,7 +29,13 @@ MODULE mo_hd_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
      LOGICAL                     :: debug_hd                !< additional printing for debugging
      LOGICAL                     :: diag_water_budget       !< prints to diagnose global water budget
-     INTEGER                     :: enforce_water_budget    !< descriptor for water balance 'ignore', 'logging', or 'error'
+     INTEGER                     :: enforce_water_budget    !< Handling of global water balance violations of the HD process
+                                                            !< (checked if `diag_water_budget`=true); overwrites
+                                                            !< [[t_jsb_model_config:enforce_water_budget]].
+                                                            !< Namelist values:</br>
+                                                            !< 'unset' (default): use setting from namelist 'jsb_model_nml',</br>
+                                                            !< 'ignore' or 'logging': message,</br>
+                                                            !< 'error': message and model stop
      CHARACTER(len=32)           :: routing_scheme          !< river_routing_scheme: full / weighted_to_coast / zero
      CHARACTER(len=filename_max) :: fract_filename          !< file name with fractions (land, ocean, etc)
      LOGICAL                     :: read_initial_reservoirs !< whether to read initial reservoir fillings from file

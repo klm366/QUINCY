@@ -66,8 +66,9 @@ MODULE mo_jsb_config_class
                                                           !< 'ignore' (0):  short, one-line warning,</br>
                                                           !< 'logging' (1): detailed debugging output,</br>
                                                           !< 'error' (2):   debugging output and model stop.
-                                                          !< Note: HYDRO parameter [[t_hydro_config:enforce_water_budget]]
-                                                          !< can override this setting for the HYDRO process.
+                                                          !< Note: HYDRO and HD parameters [[t_hydro_config:enforce_water_budget]]
+                                                          !< and [[t_hd_config:enforce_water_budget]] can override this setting
+                                                          !< for the HYDRO and HD processes.
     CHARACTER(len=10)              :: quincy_model        !< Quincy model configuration: 'canopy', 'plant'
                                                           !< or 'land'
     INTEGER                        :: qmodel_id           !< Identifier for the quincy model configuration
