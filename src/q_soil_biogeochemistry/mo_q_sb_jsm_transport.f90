@@ -1037,7 +1037,7 @@ CONTAINS
   !>
   !>  corresponds to the diffusion via bioturbation term in Ahrens et al. 2015, eq. 4, 6 and 7
   !>
-  SUBROUTINE calc_bioturbation_transport( &
+  PURE SUBROUTINE calc_bioturbation_transport( &
     & nc, &
     & nsoil_w, &
     & dtime, &
@@ -1045,7 +1045,7 @@ CONTAINS
     & k_bioturb, &
     & soil_depth_sl, &
     & pool, &
-    & transport)
+    & transport, interface_exchange)
 
     INTEGER,                            INTENT(in)    :: nc                   !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w             !< number of soil layers
@@ -1054,20 +1054,19 @@ CONTAINS
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: k_bioturb            !< diffusion factor for bioturbation [m2/s]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl        !< depth of each soil layer [m]
     REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: pool                 !< bgcm pool: current state of pool to be transported
-    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: transport            !< bgcm flux: transport between layers per timestep [mol/m2/timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w), INTENT(inout) :: transport !< accumulated volumetric increment [mol/m3]
+    REAL(lp), OPTIONAL, INTENT(out) :: interface_exchange(nc,0:nsoil_w) !< downward exchange [mol/m2]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp), DIMENSION(nc)     :: hlp1
     REAL(lp), DIMENSION(nc)     :: hlp2
     INTEGER                     :: ic, is
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_bioturbation_transport'
     ! ----------------------------------------------------------------------------------------------------- !
 
     !> 1.0 diffusion transport in the vertical axis of the soil (i.e. down)
     !>
-    !! we can do 1,n-1 here, because by definition, there cannot be any upward transport from the uppermost layer
-    !!
-    !! we don't need soil_layer (nsoil_w) here, because the assumption is made that the gradient at the bottom of the
-    !! soil column is zero
+    ! Interface 0 is the surface; interface n_active is the closed bottom.
+    ! Inactive interfaces remain zero. Optional diagnostics do not alter accumulation order.
+    IF (PRESENT(interface_exchange)) interface_exchange = 0._lp
     DO ic = 1,nc
       DO is = 1,(NINT(num_sl_above_bedrock(ic)) - 1)
         ! distance between the centres of the soil layers
@@ -1078,6 +1077,7 @@ CONTAINS
         ELSE
           hlp2(ic) = 0.0_lp
         ENDIF
+        IF (PRESENT(interface_exchange)) interface_exchange(ic,is) = hlp2(ic)
         transport(ic,is)     = transport(ic,is)     - hlp2(ic) / soil_depth_sl(ic,is)
         transport(ic,is + 1) = transport(ic,is + 1) + hlp2(ic) / soil_depth_sl(ic,is + 1)
       ENDDO

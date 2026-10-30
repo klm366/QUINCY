@@ -1042,6 +1042,10 @@ CONTAINS
       ! it from live physics before preparing the seed; replay steps subsequently
       ! recompute all modifiers from each loaded climatology bin as before.
       CALL update_sb_rate_modifier(tile,options)
+      ! Restart fields have now replaced cold-start geometry. Validate before preparing any
+      ! analytical target, including per-PFT events; refresh never rescales inventories.
+      IF (conf%sb_model_scheme == 'jsm') &
+        & CALL calibrate_sb_pore_volume(tile,options,0,l_refresh_only=.TRUE.)
       IF (model%config%flag_spinup_debug) CALL write_sb_replay_entry_debug(tile,options,event)
       IF (model%config%flag_spinup_debug) CALL snapshot_sb_spinup_pools(tile,options,context(it)%before)
       CALL prepare_sb_spinup_accelerator(tile,options,context(it)%forcing,context(it)%live)
@@ -1188,6 +1192,7 @@ CONTAINS
   !> A normal rejection restores the checkpoint; the caller can replay per PFT.
   SUBROUTINE try_combined_sb_replay(model,options,context,forcing,checkpoint,event, &
       & stocks,previous,relative,years,converged,accepted,reason)
+    USE mo_sb_constants, ONLY: min_fine_mineral_volume
     USE mo_sb_combined_state, ONLY: t_sb_combined_state, read_sb_combined_state, &
       & write_sb_combined_state, reconstruct_sb_combined_state, &
       & redistribute_sb_combined_state, valid_sb_combined_inventory
@@ -1276,6 +1281,7 @@ CONTAINS
         sse => mem
       END SELECT
       depth(:,j)=hydro%soil_depth_sl%ptr(c,1:ns,b)
+      ! Each owner's geometry was validated at event entry, before the snapshots were constructed.
       bulk(:,j)=sse%bulk_dens_sl%ptr(c,1:ns,b)
       fraction(j)=model%tiles(it)%p%fract(c,b)
       reason='Combined replay requires common soil-physics properties.'
@@ -1337,7 +1343,7 @@ CONTAINS
     ! restores PFT forcing, independent chemistry and shared physics exactly.
     CALL restore_sb_replay_state(checkpoint)
     lower=0._lp
-    upper=NEAREST(1._lp,-1._lp)
+    upper=1._lp-min_fine_mineral_volume
     CALL redistribute_sb_combined_state(fraction,depth,before,target,lower,upper,after,valid)
     reason='Combined redistribution rejected: parent shares, isotopes or mineral structure.'
     IF (.NOT. valid) RETURN
@@ -1482,8 +1488,8 @@ CONTAINS
     USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
     USE mo_lnd_bgcm_idx
     USE mo_sb_analytical_accelerator, ONLY: t_sb_analytical_inputs, t_sb_local_target, &
-      & build_sb_analytical_inputs, diagnose_local_carbon_targets, solve_simple_carbon_target, &
-      & reconstruct_analytical_column
+      & build_sb_analytical_inputs, solve_simple_carbon_target, reconstruct_analytical_column, &
+      & t_sb_column_solution, prepare_analytical_bioturbation_inputs, diagnose_full_profile_carbon_targets
     USE mo_sb_constants, ONLY: tau_metabolic_litter, tau_structural_litter, tau_woody_litter, &
       & tau_fast, tau_slow, frac_woody2dec_litter, frac_litter2fast_som, frac_fast2slow_som, &
       & frac_slow2fast_som, fc_soluable_max, k_fc_soluable, lc_woody_litter
@@ -1498,6 +1504,7 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER :: lctlib
     TYPE(t_sb_analytical_inputs) :: inputs
     TYPE(t_sb_local_target), ALLOCATABLE :: targets(:,:)
+    TYPE(t_sb_column_solution), ALLOCATABLE :: solutions(:) !< Scratch full-column solver diagnostics
     REAL(lp), ALLOCATABLE :: candidate(:,:,:), increments(:)
     REAL(lp), ALLOCATABLE :: partitioned_litter(:,:,:,:,:) !< One-cell shared litter rates [mol m-3 s-1]
     INTEGER, ALLOCATABLE :: pool_indices(:)
@@ -1505,6 +1512,7 @@ CONTAINS
     INTEGER :: failed_pool !< Local analytical pool index; zero if rejection is not pool-specific [-]
     INTEGER :: e, element_indices(6) !< Optional element indices for diagnostic increments [-]
     REAL(lp) :: dt, woody_fraction, woody_c, woody_n, rate(5), transfer(4)
+    REAL(lp) :: analytical_cpu_start, analytical_cpu_end !< Local process CPU time, not MPI wall time [s]
     REAL(lp) :: increment_total(6) !< Chunk sum for log only, NOT area-weighted global inventory [mol m-2]
     LOGICAL :: accepted, is_jsm
     CHARACTER(len=192) :: reason, first_rejection
@@ -1593,8 +1601,36 @@ CONTAINS
       IF (is_jsm) THEN
         inputs%pore_volume = sb__mem%volume_pore_total_sl%ptr(ics+c-1:ics+c-1,:,iblk)
         inputs%qmax_org = sb__mem%qmax_org%ptr(ics+c-1:ics+c-1,:,iblk)
-        CALL diagnose_local_carbon_targets(inputs,num_sl_above_bedrock(c:c),targets, &
-          & dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction)
+        inputs%bulk_density = sb__mem%bulk_dens_corr_sl%ptr(ics+c-1:ics+c-1,:,iblk)
+        CALL prepare_analytical_bioturbation_inputs(1,ns,forcing%n_forcing_bins, &
+          & num_sl_above_bedrock(c:c),forcing%root_fraction(c:c,:),inputs,reason)
+        IF (.NOT. inputs%bioturbation_ready) THEN
+          rejected_count = rejected_count+1
+          IF (LEN_TRIM(first_rejection) == 0) first_rejection = reason
+          CYCLE
+        END IF
+        ! Always include analytical bioturbation for JSM's available-pore target.
+        ! Monthly nonlinear fluxes retain annual CUE/AP. A failed stage never changes
+        ! live state; the existing whole-column CNP/isotope reconstruction below is atomic.
+        CALL CPU_TIME(analytical_cpu_start)
+        CALL diagnose_full_profile_carbon_targets(inputs,sb_pool_mt(pool_indices,ixC,c:c,:), &
+          & dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction,targets,solutions)
+        CALL CPU_TIME(analytical_cpu_end)
+        IF (model%config%flag_spinup_debug .OR. .NOT. solutions(1)%admissible) THEN
+          WRITE(report,*) 'Analytical profile tile/block/cell=',TRIM(tile%name),iblk,ics+c-1, &
+            & '; converged/admissible=',solutions(1)%converged,solutions(1)%admissible, &
+            & '; monthly/bioturbation fraction=',solutions(1)%monthly_fraction,solutions(1)%bioturbation_fraction, &
+            & '; iterations/evaluations=',solutions(1)%total_iterations,solutions(1)%evaluations, &
+            & '; worst layer/equation=',solutions(1)%worst_layer,solutions(1)%worst_equation, &
+            & '; local CPU seconds=',analytical_cpu_end-analytical_cpu_start, &
+            & '; ',TRIM(solutions(1)%reason)
+          CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+          IF (solutions(1)%diagnostics%valid) THEN
+            WRITE(report,*) 'Analytical profile input/respiration/export/storage/closure [mol C m-2 s-1]=', &
+              & solutions(1)%diagnostics%column_budget(:,1)
+            CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+          END IF
+        END IF
       ELSE
         IF (ALLOCATED(targets)) DEALLOCATE(targets)
         ALLOCATE(targets(1,ns))
@@ -1738,6 +1774,8 @@ CONTAINS
     sb__mem%total_soil_n%ptr(ics:ice,:,iblk) = sb__mem%sb_pool_total_bg_soil_n%ptr(ics:ice,:,iblk) + &
       & sb__mem%nh4_solute%ptr(ics:ice,:,iblk)+sb__mem%nh4_assoc%ptr(ics:ice,:,iblk) + &
       & sb__mem%no3_solute%ptr(ics:ice,:,iblk)
+    sb__mem%total_soil_inorg_n%ptr(ics:ice,:,iblk) = sb__mem%nh4_solute%ptr(ics:ice,:,iblk) + &
+      & sb__mem%nh4_assoc%ptr(ics:ice,:,iblk)+sb__mem%no3_solute%ptr(ics:ice,:,iblk)
   END SUBROUTINE refresh_seed_pool_diagnostics
 
 
@@ -2030,7 +2068,8 @@ CONTAINS
 
   ! ===================================================================================================== !
   !> One bounded correction after 300 completed coupled experiment years, without replay.
-  !> The experiment start survives job restarts. Pools and the host clock are unchanged.
+  !> The experiment start survives job restarts. Organic pools and the host clock are unchanged;
+  !! mineral-associated inorganic inventories follow the imposed mineral-mass change.
   !> Completion is SB-tile/chunk restart state, never a process-global latch.
   SUBROUTINE apply_sb_coupled_pore_calibration(tile, options)
     USE mo_jsb_process_class, ONLY: SB_
@@ -2076,7 +2115,7 @@ CONTAINS
     IF (my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1) THEN
       WRITE(text,*) 'Completed one-off coupled pore calibration: tile, spinup age, calendar year = ', &
         & TRIM(tile%name), spinup_age, get_year(options%current_datetime), &
-        & '; bounded full correction, pools unchanged; completion saved in restart.'
+        & '; bounded correction with mineral-inventory adjustment; completion saved in restart.'
       CALL message(routine, TRIM(text))
     END IF
   END SUBROUTINE apply_sb_coupled_pore_calibration
@@ -2094,9 +2133,10 @@ CONTAINS
     USE mo_q_sb_jsm_processes, ONLY: solve_pore_volume_for_bulk_density, &
       & calc_available_pore_carbon_components, calc_bulk_soil_carbon_available_pore_volume, &
       & calc_bulk_density_correction_available_pore_volume, calc_qmax_bulk_density_correction, &
-      & calc_Psorption_parameter, &
+      & calc_Psorption_parameter, check_available_pore_geometry, &
       & sb_density_solution_found, sb_density_target_above_maximum, sb_density_target_below_minimum
-    USE mo_sb_constants, ONLY: rho_particle_mineral, km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4
+    USE mo_sb_constants, ONLY: rho_particle_mineral, km_adsorpt_OM_nh4, km_adsorpt_mineral_nh4, &
+      & min_fine_mineral_volume
     USE mo_lnd_bgcm_idx, ONLY: ix_woody_litter, ixC
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
@@ -2120,10 +2160,17 @@ CONTAINS
     REAL(lp) :: lower, upper, solved, old_pore !< pore fractions per total soil volume [-]
     REAL(lp) :: density, residual, max_residual, max_change !< density [kg m-3]; normalized residual/fraction [-]
     REAL(lp) :: correction_fraction !< fraction of bounded structural correction applied [-]
+    REAL(lp) :: mineral_mass_ratio, new_pore !< new/old mineral mass [-], bounded pore fraction [-]
+    REAL(lp) :: old_bound_n, old_bound_p !< pre-calibration mineral-associated inventories [mol m-3]
+    REAL(lp) :: inventory_delta_n, inventory_delta_p !< sum of cell-column imposed increments [mol m-2]
+    INTEGER :: floor_hold_count !< layers held against further mineral removal [-]
     LOGICAL :: l_report !< sparse replay diagnostics or compulsory one-off summary
     CHARACTER(len=1024) :: calibration_message
     dsl4jsb_Real2D_onChunk :: num_sl_above_bedrock
     dsl4jsb_Real3D_onChunk :: clay_sl, silt_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: nh4_assoc, nh4_n15_assoc
+    dsl4jsb_Real3D_onChunk :: po4_assoc_fast, po4_assoc_slow, po4_primary, po4_occluded
     dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
     dsl4jsb_Real3D_onChunk :: qmax_nh4
     dsl4jsb_Real3D_onChunk :: km_adsorpt_nh4_sl
@@ -2176,6 +2223,13 @@ CONTAINS
     sb_pool_mt => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)
     dsl4jsb_Get_var3D_onChunk(SSE_, bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_, nh4_n15_assoc)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_fast)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_assoc_slow)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_primary)
+    dsl4jsb_Get_var3D_onChunk(SB_, po4_occluded)
     dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_total_sl)
     dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_maoc_sl)
     dsl4jsb_Get_var3D_onChunk(SB_, volume_pore_poc_sl)
@@ -2208,8 +2262,13 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, km_slow_po4)
     dsl4jsb_Get_var3D_onChunk(SB_, Qmax_AlFe_cor)
     nsoil_w = SIZE(sb_pool_mt, 4)
+    ! Includes refresh-only calls after restart/reconstruction. Never divide by an invalid old mineral mass.
+    CALL check_available_pore_geometry(nc,num_sl_above_bedrock,volume_pore_total_sl,tile%name)
     max_change = 0._lp
     bounded_count = 0
+    floor_hold_count = 0
+    inventory_delta_n = 0._lp
+    inventory_delta_p = 0._lp
     DO ic = 1, nc
       DO is = 1, MIN(nsoil_w, NINT(num_sl_above_bedrock(ic)))
         IF (PRESENT(l_refresh_only)) THEN
@@ -2223,8 +2282,27 @@ CONTAINS
         CASE (sb_density_solution_found, sb_density_target_above_maximum, sb_density_target_below_minimum)
           IF (status /= sb_density_solution_found) bounded_count = bounded_count + 1
           old_pore = volume_pore_total_sl(ic,is)
-          volume_pore_total_sl(ic,is) = MIN(upper, MAX(lower, old_pore + &
-            & correction_fraction * (solved - old_pore)))
+          new_pore = MIN(upper, MAX(lower, old_pore + correction_fraction * (solved - old_pore)))
+          ! No permanent latch: a future target may restore mineral mass (decrease V_pore).
+          IF (1._lp-old_pore <= min_fine_mineral_volume+1.e-10_lp .AND. new_pore >= old_pore) THEN
+            new_pore = old_pore
+            floor_hold_count = floor_hold_count + 1
+          END IF
+          ! At fixed layer thickness, mineral mass is rho_min*(1-V_pore). Preserve nutrient
+          ! concentration per kg mineral during this artificial structure adjustment. This is
+          ! NOT weathering/occlusion or biological turnover; solutes and organic pools are unchanged.
+          mineral_mass_ratio = (1._lp-new_pore)/(1._lp-old_pore)
+          old_bound_n = nh4_assoc(ic,is)
+          old_bound_p = po4_assoc_fast(ic,is)+po4_assoc_slow(ic,is)+po4_primary(ic,is)+po4_occluded(ic,is)
+          nh4_assoc(ic,is) = nh4_assoc(ic,is)*mineral_mass_ratio
+          nh4_n15_assoc(ic,is) = nh4_n15_assoc(ic,is)*mineral_mass_ratio
+          po4_assoc_fast(ic,is) = po4_assoc_fast(ic,is)*mineral_mass_ratio
+          po4_assoc_slow(ic,is) = po4_assoc_slow(ic,is)*mineral_mass_ratio
+          po4_primary(ic,is) = po4_primary(ic,is)*mineral_mass_ratio
+          po4_occluded(ic,is) = po4_occluded(ic,is)*mineral_mass_ratio
+          inventory_delta_n = inventory_delta_n+old_bound_n*(mineral_mass_ratio-1._lp)*soil_depth_sl(ic,is)
+          inventory_delta_p = inventory_delta_p+old_bound_p*(mineral_mass_ratio-1._lp)*soil_depth_sl(ic,is)
+          volume_pore_total_sl(ic,is) = new_pore
           max_change = MAX(max_change, ABS(volume_pore_total_sl(ic,is) - old_pore))
         CASE DEFAULT
           WRITE(calibration_message,*) 'Pore calibration has no admissible state: block/cell/layer/status=', &
@@ -2267,9 +2345,15 @@ CONTAINS
         max_residual = MAX(max_residual, ABS(bulk_dens_corr_sl(ic,is) - density) / MAX(1._lp, density))
       END DO
     END DO
+    ! Keep output/convergence diagnostics consistent with the artificial mineral-inventory change.
+    ! This does not update lagged nutrient status or advance the moving averages.
+    CALL refresh_seed_pool_diagnostics(tile,options)
     IF (l_report .AND. my_process_is_stdio() .AND. iblk == 1 .AND. ics == 1) THEN
       WRITE(calibration_message,*) 'Pore calibration tile/block/year=', TRIM(tile%name), iblk, represented_year, &
         & '; local max pore change, density relative residual, bounded layers=', max_change, max_residual, bounded_count
+      CALL message(modname//':calibrate_sb_pore_volume', TRIM(calibration_message))
+      WRITE(calibration_message,*) 'Calibration imposed inventory increments (sum of local columns, mol m-2): N/P=', &
+        & inventory_delta_n,inventory_delta_p,'; mineral-floor holds=',floor_hold_count
       CALL message(modname//':calibrate_sb_pore_volume', TRIM(calibration_message))
     END IF
   END SUBROUTINE calibrate_sb_pore_volume
@@ -2416,7 +2500,7 @@ CONTAINS
           CALL update_sb_jsm(tile, replay_options, l_soil_model_forcing=.TRUE., &
             & combined_uptake=combined_uptake, combined_litter=combined_litter)
         CASE ('simple_1d')
-          CALL update_sb_simple_model(tile, replay_options, l_balance_weathering=.TRUE., &
+          CALL update_sb_simple_model(tile, replay_options, l_balance_weathering=.FALSE., &
             & combined_uptake=combined_uptake, combined_litter=combined_litter)
         CASE DEFAULT
           CALL finish(TRIM(routine), 'Unsupported soil-biogeochemistry model scheme.')

@@ -16,6 +16,7 @@ MODULE mo_sb_analytical_accelerator
 
   USE mo_kind,               ONLY: lp
   USE mo_lnd_bgcm_idx
+  USE mo_sb_constants, ONLY: min_fine_mineral_volume
 
   IMPLICIT NONE
 
@@ -26,6 +27,11 @@ MODULE mo_sb_analytical_accelerator
   PUBLIC :: t_sb_analytical_inputs, build_sb_analytical_inputs, diagnose_local_carbon_targets
   PUBLIC :: solve_density_dependent_microbial_target
   PUBLIC :: solve_simple_carbon_target
+  PUBLIC :: t_sb_monthly_coefficients, t_sb_column_residual, t_sb_column_solution
+  PUBLIC :: evaluate_analytical_bioturbation, prepare_analytical_bioturbation_inputs
+  PUBLIC :: evaluate_analytical_column_residual, evaluate_analytical_monthly_residual
+  PUBLIC :: solve_analytical_carbon_column, solve_analytical_carbon_profile
+  PUBLIC :: diagnose_full_profile_carbon_targets
 
   !> Local pool order is S,W,L,B,R,D,AD,AR; concentrations refer to TOTAL soil volume.
   !> Coefficients are prescribed, not additional fitted parameters or nutrient-equilibrium closures.
@@ -49,6 +55,11 @@ MODULE mo_sb_analytical_accelerator
     REAL(lp) :: volume_per_carbon_maoc = 0.0_lp, volume_per_carbon_poc = 0.0_lp !< Solid volume per C concentration [m3 mol C-1]
     LOGICAL :: l_surface_layer = .FALSE. !< Surface excess POC can remain above the mineral soil [-]
   END TYPE t_sb_local_coefficients
+
+  TYPE :: t_sb_monthly_coefficients
+    REAL(lp), ALLOCATABLE :: weight(:) !< Fractions of replay year, nonnegative and summing to one [-]
+    TYPE(t_sb_local_coefficients), ALLOCATABLE :: layer(:,:) !< Layer/bin conditional coefficients
+  END TYPE t_sb_monthly_coefficients
 
   !> A valid carbon result still requires column-wide organic element reconstruction before a jump.
   TYPE :: t_sb_local_target
@@ -76,15 +87,1049 @@ MODULE mo_sb_analytical_accelerator
     REAL(lp) :: timestep = 0.0_lp !< Replay timestep used to partition litter [s]
     REAL(lp), ALLOCATABLE :: month_weight(:) !< Replay day-count weights, sum equals one [-]
     REAL(lp), ALLOCATABLE :: litter_mean(:,:,:,:) !< pool/element/cell/layer mean input [mol m-3 s-1]
+    REAL(lp), ALLOCATABLE :: litter_month(:,:,:,:,:) !< pool/element/cell/layer/month input [mol m-3 s-1]
+    REAL(lp), ALLOCATABLE :: modifier_month(:,:,:,:) !< cell/layer/modifier/month kinetics [-]
     REAL(lp), ALLOCATABLE :: rate_product_mean(:,:,:) !< depoly/uptake/sorption/desorption/HSC/SSM rt*rm [-]
     REAL(lp), ALLOCATABLE :: cue(:,:), alpha_poly(:,:), alpha_ap(:,:) !< Coupled-window means [-]
     REAL(lp), ALLOCATABLE :: water_rate_mean(:,:,:) !< Downward/lateral hydrological export rates [s-1]
     REAL(lp), ALLOCATABLE :: litter_budget_residual(:,:) !< Partitioned minus source element rate [mol m-2 s-1]
     REAL(lp), ALLOCATABLE :: depth(:,:), pore_volume(:,:) !< Thickness [m], fixed pore fraction [-]
     REAL(lp), ALLOCATABLE :: qmax_org(:,:) !< Chemical sorption capacity [mol C m-3 soil]
+    LOGICAL :: bioturbation_ready = .FALSE. !< Validated roots and geometry, not permission to commit [-]
+    REAL(lp), ALLOCATABLE :: nactive(:) !< Active-layer count including partial bottom layer [-]
+    REAL(lp), ALLOCATABLE :: root_fraction_mean(:,:) !< Annual mean root fractions, not renormalized [-]
+    REAL(lp), ALLOCATABLE :: bulk_density(:,:) !< Entry bulk density, diagnostic only [kg m-3]
+    REAL(lp), ALLOCATABLE :: bioturbation_entry(:,:) !< Entry diffusivity, not frozen target K [m2 s-1]
+    REAL(lp), ALLOCATABLE :: interface_distance(:,:) !< Layer-centre spacing [m]
   END TYPE t_sb_analytical_inputs
 
+  TYPE :: t_sb_column_residual
+    LOGICAL :: valid = .FALSE. !< All active candidates evaluated [-]
+    CHARACTER(len=192) :: reason = 'Not evaluated' !< Failure or approximation description [-]
+    REAL(lp), ALLOCATABLE :: reaction(:,:,:), bioturbation(:,:,:), total(:,:,:) !< pool/cell/layer [mol C/m3/s]
+    REAL(lp), ALLOCATABLE :: dom_transport(:,:), dom_interface(:,:) !< [mol C/m3/s], cell/interface [mol C/m2/s]
+    REAL(lp), ALLOCATABLE :: bio_interface(:,:,:) !< pool/cell/interface, positive downward [mol C/m2/s]
+    REAL(lp), ALLOCATABLE :: density(:,:), diffusivity(:,:), burial(:,:), poc_excess(:,:) !< [kg/m3], [m2/s], [-], [-]
+    REAL(lp), ALLOCATABLE :: allocation_residual(:,:) !< alpha minus carbon allocation update [-]
+    REAL(lp), ALLOCATABLE :: process_rate(:,:,:) !< M,U,dL,dR,JD,JR / cell / layer [mol C/m3/s]
+    REAL(lp), ALLOCATABLE :: throughput(:,:,:) !< Gross per-pool source+sink for unchanged tolerances [mol C/m3/s]
+    REAL(lp), ALLOCATABLE :: process_month(:,:,:), reaction_month(:,:,:) !< Process or pool/layer/bin [mol C/m3/s]
+    REAL(lp), ALLOCATABLE :: allocation_month(:,:) !< Monthly carbon allocation residual [layer/bin, -]
+    LOGICAL, ALLOCATABLE :: allocation_active_month(:,:) !< Monthly carbon allocation closure active [-]
+    LOGICAL, ALLOCATABLE :: caps_month(:,:,:) !< layer/bin/warning category [-]
+    REAL(lp), ALLOCATABLE :: mean_process(:,:,:), mean_total(:,:,:) !< Annual-coefficient counterfactual rates
+    LOGICAL, ALLOCATABLE :: allocation_defined(:,:), geometry_admissible(:,:) !< Closure active; no deep overflow [-]
+    LOGICAL, ALLOCATABLE :: timestep_warning(:,:,:) !< cell/layer: mortality, DOC uptake, other donor limits [-]
+    REAL(lp), ALLOCATABLE :: column_budget(:,:) !< input, respiration, export, storage, closure error [mol C/m2/s]
+  END TYPE t_sb_column_residual
+
+  !> One attempted continuation stage; failed trials never replace the last successful seed.
+  TYPE :: t_sb_continuation_stage
+    REAL(lp) :: fraction = 0._lp, increment = 0._lp !< Bioturbation multiplier and attempted increment [-]
+    REAL(lp) :: monthly_fraction = 0._lp !< Annual-coefficient to monthly-flux continuation multiplier [-]
+    LOGICAL :: converged = .FALSE., admissible = .FALSE. !< Equation and physical checks [-]
+    INTEGER :: iterations = 0, evaluations = 0 !< Accepted updates and residual calls [-]
+    INTEGER :: worst_layer = 0, worst_equation = 0 !< Equation index S,W,L,B,R,D,AD,AR,alpha [-]
+    REAL(lp), ALLOCATABLE :: norm_history(:), step_history(:) !< Normalized residual and accepted step [-]
+    CHARACTER(len=192) :: reason = 'Not attempted' !< Stage outcome [-]
+  END TYPE t_sb_continuation_stage
+
+  !> Conditional stationary profile; no caller may infer permission to commit from finite pools alone.
+  TYPE :: t_sb_column_solution
+    LOGICAL :: converged = .FALSE. !< All pool and allocation equations passed numerical tolerances [-]
+    LOGICAL :: admissible = .FALSE. !< Converged, geometry and selected finite-step guards passed [-]
+    CHARACTER(len=192) :: reason = 'Not solved' !< Outcome; failed candidates remain diagnostic only [-]
+    INTEGER :: iterations = 0, evaluations = 0 !< Accepted updates and residual calls [-]
+    REAL(lp), ALLOCATABLE :: carbon(:,:), alpha_poly(:) !< Last candidate [mol C/m3], allocation [-]
+    REAL(lp), ALLOCATABLE :: norm_history(:), step_history(:) !< Max normalized residual, accepted step [-]
+    INTEGER :: worst_layer = 0, worst_equation = 0 !< Largest final normalized equation [-]
+    REAL(lp) :: bioturbation_fraction = 0._lp !< Multiplier of diagnostic candidate; one required when enabled [-]
+    REAL(lp) :: monthly_fraction = 0._lp !< Monthly nonlinear evaluation must reach one when supplied [-]
+    INTEGER :: total_iterations = 0 !< Accepted updates across all continuation attempts [-]
+    REAL(lp), ALLOCATABLE :: seed_carbon(:,:), seed_alpha(:) !< Previous analytical seed [mol C/m3], [-]
+    INTEGER, ALLOCATABLE :: seed_status(:) !< Original local-solver status, not final acceptance [-]
+    TYPE(t_sb_continuation_stage), ALLOCATABLE :: continuation(:) !< All attempted stages, including failures
+    TYPE(t_sb_column_residual) :: diagnostics !< Final residual, fluxes, geometry and cap warnings
+  END TYPE t_sb_column_solution
+
 CONTAINS
+
+  !> Solve nine equations per active layer: eight carbon balances and enzyme allocation closure.
+  !! Newton steps use scaled finite differences, bounded line searches and QR fallback.
+  !! Trial states are scratch only. Pools are mol C/m3 TOTAL soil; rates are mol C/m3/s.
+  !! Residual tolerance is 1e-18 + 1e-8*gross throughput, allocation tolerance 1e-8.
+  !! Candidate density changes diffusivity at every residual evaluation. Finite-step
+  !! mortality/other-donor caps and deep pore overflow reject the final target;
+  !! the DOC uptake cap is diagnostic. CUE and AP are prescribed annual means.
+  SUBROUTINE solve_analytical_carbon_column(ns, thickness, root_fraction_mean, water_rate, lateral_return, &
+    & coefficients, initial_carbon, initial_alpha, solution, max_iterations, include_bioturbation, &
+    & bioturbation_fraction, monthly, monthly_fraction)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    INTEGER, INTENT(in) :: ns !< Number of active layers, including partial bottom layer [-]
+    REAL(lp), INTENT(in) :: thickness(ns), root_fraction_mean(ns), water_rate(ns,2), lateral_return
+    !< Thickness [m], root fractions [-], effective water export [s-1], return fraction [-]
+    TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients(ns) !< Fixed conditional kinetics/geometry
+    REAL(lp), INTENT(in) :: initial_carbon(8,ns), initial_alpha(ns) !< [mol C/m3 total soil], [-]
+    TYPE(t_sb_column_solution), INTENT(out) :: solution !< Diagnostic candidate; no live-state transaction
+    INTEGER, OPTIONAL, INTENT(in) :: max_iterations !< Default 80 accepted iterations; zero evaluates seed only [-]
+    LOGICAL, OPTIONAL, INTENT(in) :: include_bioturbation !< Default true; analytical transport only [-]
+    REAL(lp), OPTIONAL, INTENT(in) :: bioturbation_fraction !< Continuation lambda in [0,1], default one [-]
+    TYPE(t_sb_monthly_coefficients), OPTIONAL, INTENT(in) :: monthly !< Monthly nonlinear rate coefficients
+    REAL(lp), OPTIONAL, INTENT(in) :: monthly_fraction !< Monthly-flux continuation in [0,1] [-]
+    TYPE(t_sb_column_residual) :: current, trial !< Scratch residual evaluations
+    REAL(lp), ALLOCATABLE :: x(:), trial_x(:), variable_scale(:), lower(:), upper(:)
+    REAL(lp), ALLOCATABLE :: residual(:), trial_residual(:), jacobian(:,:), direction(:)
+    REAL(lp), ALLOCATABLE :: matrix(:,:), rhs(:), equation_scale(:)
+    REAL(lp) :: delta, step, merit, trial_merit, damping, max_norm !< Dimensionless solve quantities
+    INTEGER :: limit, size_system, iteration, i, j, s, offset, attempt, backtrack, worst
+    LOGICAL :: valid, linear_ok, improved !< Evaluation, linear solve and line-search status [-]
+
+    solution%reason = 'Invalid full-profile initial state or iteration budget'
+    IF (PRESENT(monthly)) solution%monthly_fraction = 1._lp
+    IF (PRESENT(monthly_fraction)) solution%monthly_fraction = monthly_fraction
+    IF (.NOT. ieee_is_finite(solution%monthly_fraction)) RETURN
+    IF (solution%monthly_fraction < 0._lp .OR. solution%monthly_fraction > 1._lp) RETURN
+    IF (solution%monthly_fraction > 0._lp .AND. .NOT. PRESENT(monthly)) RETURN
+    solution%bioturbation_fraction = 1._lp
+    IF (PRESENT(bioturbation_fraction)) solution%bioturbation_fraction = bioturbation_fraction
+    IF (PRESENT(include_bioturbation)) THEN
+      IF (.NOT. include_bioturbation) solution%bioturbation_fraction = 0._lp
+    END IF
+    IF (.NOT. ieee_is_finite(solution%bioturbation_fraction)) RETURN
+    IF (solution%bioturbation_fraction < 0._lp .OR. solution%bioturbation_fraction > 1._lp) RETURN
+    limit = 80
+    IF (PRESENT(max_iterations)) limit = max_iterations
+    IF (ns <= 0 .OR. limit < 0) RETURN
+    IF (.NOT. ALL(ieee_is_finite(initial_carbon)) .OR. .NOT. ALL(ieee_is_finite(initial_alpha))) RETURN
+    IF (ANY(initial_carbon < 0._lp)) RETURN
+    IF (ANY(initial_alpha < min_enzyme_fraction) .OR. ANY(initial_alpha > 1._lp-min_enzyme_fraction)) RETURN
+    DO s = 1,ns
+      IF (.NOT. ieee_is_finite(coefficients(s)%minimum_microbial_carbon)) RETURN
+      IF (initial_carbon(4,s) < coefficients(s)%minimum_microbial_carbon) RETURN
+    END DO
+    size_system = 9*ns
+    ALLOCATE(x(size_system), trial_x(size_system), variable_scale(size_system), &
+      & lower(size_system), upper(size_system), residual(size_system), trial_residual(size_system), &
+      & jacobian(size_system,size_system), direction(size_system), matrix(size_system,size_system), &
+      & rhs(size_system), equation_scale(size_system))
+    ALLOCATE(solution%norm_history(0:limit), SOURCE=-1._lp)
+    ALLOCATE(solution%step_history(limit), SOURCE=0._lp)
+    DO s = 1,ns
+      offset = 9*(s-1)
+      ! Scale to the supplied profile without raising the microbial floor or altering any pool.
+      variable_scale(offset+1:offset+8) = MAX(initial_carbon(:,s),1.e-12_lp)
+      variable_scale(offset+9) = 1._lp
+      x(offset+1:offset+8) = initial_carbon(:,s)/variable_scale(offset+1:offset+8)
+      x(offset+9) = initial_alpha(s)
+      lower(offset+1:offset+8) = 0._lp
+      lower(offset+4) = coefficients(s)%minimum_microbial_carbon/variable_scale(offset+4)
+      lower(offset+9) = min_enzyme_fraction
+      ! Only a floating-point safety bound, not an ecological maximum pool size.
+      upper(offset+1:offset+8) = SQRT(HUGE(1._lp))/MAX(1._lp,variable_scale(offset+1:offset+8))
+      upper(offset+9) = 1._lp-min_enzyme_fraction
+    END DO
+    CALL evaluate(x,current,residual,valid,natural_scale=equation_scale)
+    IF (.NOT. valid) THEN
+      solution%reason = 'Invalid initial column residual: '//TRIM(current%reason)
+      RETURN
+    END IF
+    DO iteration = 0,limit
+      max_norm = MAXVAL(ABS(residual))
+      solution%norm_history(iteration) = max_norm
+      solution%iterations = iteration
+      solution%total_iterations = iteration
+      worst = MAXLOC(ABS(residual),DIM=1)
+      solution%worst_layer = (worst-1)/9+1
+      solution%worst_equation = MOD(worst-1,9)+1
+      IF (max_norm <= 1._lp) THEN
+        solution%converged = .TRUE.
+        EXIT
+      END IF
+      IF (iteration == limit) THEN
+        solution%reason = 'Full-profile iteration limit; no jump'
+        EXIT
+      END IF
+      merit = SUM(residual**2)/REAL(size_system,lp)
+      ! One-sided perturbation, reversed at an upper bound; the original iterate is never modified.
+      DO j = 1,size_system
+        delta = 1.e-5_lp*MAX(ABS(x(j)),1.e-4_lp)
+        IF (x(j)+delta > upper(j)) delta = -delta
+        delta = MAX(lower(j)-x(j),MIN(upper(j)-x(j),delta))
+        IF (delta == 0._lp) EXIT
+        trial_x = x
+        trial_x(j) = x(j)+delta
+        CALL evaluate(trial_x,trial,trial_residual,valid,fixed_scale=equation_scale)
+        IF (.NOT. valid) EXIT
+        jacobian(:,j) = (trial_residual-residual)/delta
+      END DO
+      IF (j <= size_system) THEN
+        solution%reason = 'Invalid finite-difference Jacobian; no jump'
+        EXIT
+      END IF
+      IF (.NOT. ALL(ieee_is_finite(jacobian))) THEN
+        solution%reason = 'Nonfinite finite-difference Jacobian; no jump'
+        EXIT
+      END IF
+      improved = .FALSE.
+      DO attempt = 0,7
+        IF (attempt == 0) THEN
+          matrix = jacobian
+          rhs = -residual
+        ELSE
+          ! Solve the augmented least-squares system by QR; J^T J would square its condition number.
+          damping = 10._lp**(attempt-4)
+          CALL solve_column_regularized_step(jacobian,residual,damping,direction,linear_ok)
+        END IF
+        IF (attempt == 0) CALL solve_column_linear_system(matrix,rhs,direction,linear_ok)
+        IF (.NOT. linear_ok) CYCLE
+        ! Project directions at active bounds; do not project a whole candidate onto a different root.
+        WHERE (x <= lower .AND. direction < 0._lp) direction = 0._lp
+        WHERE (x >= upper .AND. direction > 0._lp) direction = 0._lp
+        ! Bound/trust-limit each coordinate BEFORE backtracking. A near-floor deep pool must not
+        ! multiply every upper-layer update by its tiny distance to a bound. The merit test below
+        ! still decides whether the modified direction improves the unmodified scientific equations.
+        DO i = 1,size_system
+          direction(i) = MAX(-2._lp*MAX(ABS(x(i)),1._lp), &
+            & MIN(2._lp*MAX(ABS(x(i)),1._lp),direction(i)))
+          IF (direction(i) < 0._lp) direction(i) = MAX(direction(i),0.995_lp*(lower(i)-x(i)))
+          IF (direction(i) > 0._lp) direction(i) = MIN(direction(i),0.995_lp*(upper(i)-x(i)))
+        END DO
+        step = 1._lp
+        DO backtrack = 1,24
+          trial_x = MAX(lower,MIN(upper,x+step*direction)) ! Roundoff at a feasible endpoint only.
+          CALL evaluate(trial_x,trial,trial_residual,valid,fixed_scale=equation_scale)
+          IF (valid) THEN
+            trial_merit = SUM(trial_residual**2)/REAL(size_system,lp)
+            IF (trial_merit < merit*(1._lp-1.e-4_lp*step)) THEN
+              improved = .TRUE.
+              EXIT
+            END IF
+          END IF
+          step = step*0.5_lp
+        END DO
+        IF (improved) EXIT
+      END DO
+      IF (.NOT. improved) THEN
+        solution%reason = 'Full-profile line search stalled; no jump'
+        EXIT
+      END IF
+      x = trial_x
+      ! Acceptance always uses the original candidate-dependent throughput tolerances.
+      ! Freeze denominators only within one Jacobian/line search, not across accepted iterations.
+      CALL evaluate(x,current,residual,valid,natural_scale=equation_scale)
+      IF (.NOT. valid) THEN
+        solution%reason = 'Invalid accepted column residual; no jump'
+        EXIT
+      END IF
+      solution%step_history(iteration+1) = step
+    END DO
+    ALLOCATE(solution%carbon(8,ns),solution%alpha_poly(ns))
+    DO s = 1,ns
+      offset = 9*(s-1)
+      solution%carbon(:,s) = x(offset+1:offset+8)*variable_scale(offset+1:offset+8)
+      solution%alpha_poly(s) = x(offset+9)
+    END DO
+    solution%diagnostics = current
+    IF (.NOT. solution%converged) RETURN
+    solution%admissible = ALL(current%geometry_admissible) .AND. &
+      & .NOT. ANY(current%timestep_warning(:,:,1)) .AND. .NOT. ANY(current%timestep_warning(:,:,3))
+    solution%admissible = solution%admissible .AND. ABS(current%column_budget(5,1)) <= &
+      & 1.e-18_lp+1.e-10_lp*SUM(ABS(current%column_budget(1:3,1)))
+    solution%reason = 'Conditional full-profile root; CUE/AP prescribed; DOC cap warnings remain diagnostic'
+    IF (.NOT. ALL(current%allocation_defined)) &
+      & solution%reason = 'Conditional root with inactive allocation retained from initial history'
+    IF (.NOT. solution%admissible) &
+      & solution%reason = 'Residual converged but geometry, finite-step or column-closure guards failed; no jump'
+
+  CONTAINS
+    !> All coefficients/densities/fluxes are reevaluated, including during Jacobian perturbations.
+    SUBROUTINE evaluate(candidate, diagnostics, normalized, ok, fixed_scale, natural_scale)
+      REAL(lp), INTENT(in) :: candidate(size_system) !< Scaled unknowns [-]
+      TYPE(t_sb_column_residual), INTENT(out) :: diagnostics
+      REAL(lp), INTENT(out) :: normalized(size_system) !< Residual divided by numerical allowance [-]
+      LOGICAL, INTENT(out) :: ok
+      REAL(lp), OPTIONAL, INTENT(in) :: fixed_scale(size_system) !< Frozen search denominators, not tolerances
+      REAL(lp), OPTIONAL, INTENT(out) :: natural_scale(size_system) !< Original candidate-based allowances
+      REAL(lp) :: pools(8,1,ns), alpha(1,ns), allowance(8)
+      INTEGER :: layer, base
+      DO layer = 1,ns
+        base = 9*(layer-1)
+        pools(:,1,layer) = candidate(base+1:base+8)*variable_scale(base+1:base+8)
+        alpha(1,layer) = candidate(base+9)
+      END DO
+      IF (PRESENT(monthly)) THEN
+        CALL evaluate_analytical_monthly_residual(ns,thickness,root_fraction_mean,water_rate,lateral_return, &
+          & coefficients,pools,alpha,monthly,solution%monthly_fraction,solution%bioturbation_fraction,diagnostics)
+      ELSE
+        CALL evaluate_analytical_column_residual(1,ns,[REAL(ns,lp)],RESHAPE(thickness,[1,ns]), &
+          & RESHAPE(root_fraction_mean,[1,ns]),RESHAPE(water_rate,[1,ns,2]),lateral_return, &
+          & RESHAPE(coefficients,[1,ns]),pools,alpha,diagnostics,include_bioturbation, &
+          & solution%bioturbation_fraction)
+      END IF
+      solution%evaluations = solution%evaluations+1
+      ok = diagnostics%valid
+      normalized = 0._lp
+      IF (.NOT. ok) RETURN
+      DO layer = 1,ns
+        base = 9*(layer-1)
+        allowance = 1.e-18_lp+1.e-8_lp*diagnostics%throughput(:,1,layer)
+        IF (PRESENT(natural_scale)) THEN
+          natural_scale(base+1:base+8) = allowance
+          natural_scale(base+9) = 1.e-8_lp
+        END IF
+        IF (PRESENT(fixed_scale)) allowance = fixed_scale(base+1:base+8)
+        normalized(base+1:base+8) = diagnostics%total(:,1,layer)/allowance
+        IF (diagnostics%allocation_defined(1,layer)) THEN
+          normalized(base+9) = diagnostics%allocation_residual(1,layer)/1.e-8_lp
+        ELSE
+          normalized(base+9) = (alpha(1,layer)-initial_alpha(layer))/1.e-8_lp
+        END IF
+      END DO
+      ok = ALL(ieee_is_finite(normalized))
+    END SUBROUTINE evaluate
+  END SUBROUTINE solve_analytical_carbon_column
+
+  !> Pivoted dense linear solve on the scaled Newton system; singular systems return failure.
+  SUBROUTINE solve_column_linear_system(matrix, rhs, solution, ok)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(inout) :: matrix(:,:), rhs(:) !< Scaled Jacobian/system and right hand side [-]
+    REAL(lp), INTENT(out) :: solution(:) !< Newton or regularized least-squares direction [-]
+    LOGICAL, INTENT(out) :: ok !< Finite nonsingular solve [-]
+    REAL(lp) :: row(SIZE(rhs)), value, factor, row_scale !< Elimination scratch [-]
+    INTEGER :: n, i, j, pivot
+    ok = .FALSE.
+    solution = 0._lp
+    n = SIZE(rhs)
+    ! Row scaling improves pivot detection when different equations have different units/scales.
+    DO i = 1,n
+      row_scale = MAXVAL(ABS(matrix(i,:)))
+      IF (row_scale <= TINY(1._lp)) RETURN
+      matrix(i,:) = matrix(i,:)/row_scale
+      rhs(i) = rhs(i)/row_scale
+    END DO
+    DO j = 1,n
+      pivot = j-1+MAXLOC(ABS(matrix(j:n,j)),DIM=1)
+      IF (ABS(matrix(pivot,j)) < 1.e-14_lp) RETURN
+      row = matrix(j,:); matrix(j,:) = matrix(pivot,:); matrix(pivot,:) = row
+      value = rhs(j); rhs(j) = rhs(pivot); rhs(pivot) = value
+      DO i = j+1,n
+        factor = matrix(i,j)/matrix(j,j)
+        matrix(i,j:n) = matrix(i,j:n)-factor*matrix(j,j:n)
+        rhs(i) = rhs(i)-factor*rhs(j)
+      END DO
+    END DO
+    DO i = n,1,-1
+      solution(i) = (rhs(i)-SUM(matrix(i,i+1:n)*solution(i+1:n)))/matrix(i,i)
+    END DO
+    ok = ALL(ieee_is_finite(solution))
+  END SUBROUTINE solve_column_linear_system
+
+  !> Regularized least-squares direction using QR, avoiding the squared conditioning of J-transpose-J.
+  SUBROUTINE solve_column_regularized_step(jacobian, residual, damping, direction, ok)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: jacobian(:,:), residual(:), damping !< Scaled J, residual and damping [-]
+    REAL(lp), INTENT(out) :: direction(:) !< Regularized search direction [-]
+    LOGICAL, INTENT(out) :: ok !< Finite QR solve [-]
+    REAL(lp) :: augmented(2*SIZE(residual),SIZE(residual)), rhs(2*SIZE(residual))
+    REAL(lp) :: reflector(2*SIZE(residual)), length, diagonal, projection
+    INTEGER :: n, j, k
+    n = SIZE(residual)
+    ok = .FALSE.
+    direction = 0._lp
+    augmented = 0._lp
+    augmented(1:n,:) = jacobian
+    rhs = 0._lp
+    rhs(1:n) = -residual
+    DO j = 1,n
+      augmented(n+j,j) = SQRT(damping)*MAX(NORM2(jacobian(:,j)),1.e-12_lp)
+    END DO
+    DO j = 1,n
+      length = NORM2(augmented(j:2*n,j))
+      IF (length <= TINY(1._lp)) RETURN
+      diagonal = -SIGN(length,augmented(j,j))
+      reflector(j:2*n) = augmented(j:2*n,j)
+      reflector(j) = reflector(j)-diagonal
+      length = NORM2(reflector(j:2*n))
+      IF (length <= TINY(1._lp)) RETURN
+      reflector(j:2*n) = reflector(j:2*n)/length
+      DO k = j,n
+        projection = 2._lp*DOT_PRODUCT(reflector(j:2*n),augmented(j:2*n,k))
+        augmented(j:2*n,k) = augmented(j:2*n,k)-projection*reflector(j:2*n)
+      END DO
+      projection = 2._lp*DOT_PRODUCT(reflector(j:2*n),rhs(j:2*n))
+      rhs(j:2*n) = rhs(j:2*n)-projection*reflector(j:2*n)
+      augmented(j,j) = diagonal
+      augmented(j+1:2*n,j) = 0._lp
+    END DO
+    DO j = n,1,-1
+      direction(j) = (rhs(j)-DOT_PRODUCT(augmented(j,j+1:n),direction(j+1:n)))/augmented(j,j)
+    END DO
+    ok = ALL(ieee_is_finite(direction))
+  END SUBROUTINE solve_column_regularized_step
+
+  !> Continue from the local analytical seed to monthly kinetics, then to full bioturbation.
+  !! Each successful intermediate is the next seed. Failed stages halve the increment;
+  !! no intermediate is accepted as the final target. Both requested fractions must reach one.
+  SUBROUTINE solve_analytical_carbon_profile(ns, thickness, root_fraction_mean, water_rate, lateral_return, &
+    & coefficients, solution, include_bioturbation, max_iterations, monthly)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    INTEGER, INTENT(in) :: ns !< Complete active profile [-]
+    REAL(lp), INTENT(in) :: thickness(ns), root_fraction_mean(ns), water_rate(ns,2), lateral_return
+    !< Layer thickness [m], annual root fraction [-], water rates [s-1], return fraction [-]
+    TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients(ns) !< Fixed conditional kinetics and geometry
+    TYPE(t_sb_column_solution), INTENT(out) :: solution !< Final candidate, seed and all stage traces
+    LOGICAL, OPTIONAL, INTENT(in) :: include_bioturbation !< Default true; final lambda one or zero [-]
+    INTEGER, OPTIONAL, INTENT(in) :: max_iterations !< Per-stage accepted-update budget; default 80 [-]
+    TYPE(t_sb_monthly_coefficients), OPTIONAL, INTENT(in) :: monthly !< Required final monthly-flux problem
+    INTEGER, PARAMETER :: max_stages = 64 !< Bounded numerical work, including retries [-]
+    REAL(lp), PARAMETER :: minimum_increment = 1.e-4_lp !< Abort continuation below this step [-]
+    TYPE(t_sb_local_coefficients) :: local_coefficients
+    TYPE(t_sb_local_target) :: local_target
+    TYPE(t_sb_column_solution) :: stage
+    TYPE(t_sb_continuation_stage) :: trace(max_stages)
+    REAL(lp) :: seed(8,ns), alpha(ns), original_seed(8,ns), original_alpha(ns)
+    REAL(lp) :: inflow, fraction, requested_fraction, trial_fraction, increment
+    REAL(lp) :: seasonal_fraction, trial_monthly, requested_monthly
+    INTEGER :: seed_status(ns), layer, count, evaluations, iterations
+    LOGICAL :: completed_monthly !< Reset the step when switching from monthly to bioturbation continuation
+
+    solution%reason = 'Invalid analytical continuation inputs'
+    IF (ns <= 0) RETURN
+    IF (.NOT. ALL(ieee_is_finite(thickness)) .OR. ANY(thickness <= 0._lp)) RETURN
+    IF (.NOT. ALL(ieee_is_finite(water_rate)) .OR. ANY(water_rate < 0._lp)) RETURN
+    IF (.NOT. ieee_is_finite(lateral_return)) RETURN
+    IF (lateral_return < 0._lp .OR. lateral_return > 1._lp) RETURN
+    seed = 0._lp
+    alpha = min_enzyme_fraction
+    seed_status = -1
+    inflow = 0._lp
+    DO layer = 1,ns
+      local_coefficients = coefficients(layer)
+      local_coefficients%transport_dom_inflow = inflow/thickness(layer)
+      local_coefficients%dom_export_rate = water_rate(layer,1)+(1._lp-lateral_return)*water_rate(layer,2)
+      CALL solve_local_carbon_target(local_coefficients,local_target)
+      seed_status(layer) = local_target%status
+      ! Local status 3/4/5 may contain a complete algebraic candidate rejected by a local guard.
+      ! It is only a numerical seed. Stage zero rechecks every equation; the final stage rechecks
+      ! all existing physical guards. Invalid/incomplete local results do not fall back to live pools.
+      IF (local_target%status <= 2 .AND. local_target%status /= 0) THEN
+        WRITE(solution%reason,'(A,I0,2A)') 'Analytical seed failed at layer ',layer,': ',TRIM(local_target%reason)
+        EXIT
+      END IF
+      IF (.NOT. ALL(ieee_is_finite(local_target%carbon))) EXIT
+      IF (ANY(local_target%carbon < 0._lp)) EXIT
+      IF (local_target%carbon(4) < coefficients(layer)%minimum_microbial_carbon) EXIT
+      IF (.NOT. ieee_is_finite(local_target%alpha_poly)) EXIT
+      IF (local_target%alpha_poly < min_enzyme_fraction .OR. &
+        & local_target%alpha_poly > 1._lp-min_enzyme_fraction) EXIT
+      seed(:,layer) = local_target%carbon
+      alpha(layer) = local_target%alpha_poly
+      inflow = thickness(layer)*water_rate(layer,1)*seed(6,layer)
+    END DO
+    IF (layer <= ns) THEN
+      solution%seed_carbon = seed
+      solution%seed_alpha = alpha
+      solution%seed_status = seed_status
+      RETURN
+    END IF
+    original_seed = seed
+    original_alpha = alpha
+    requested_fraction = 1._lp
+    IF (PRESENT(include_bioturbation)) THEN
+      IF (.NOT. include_bioturbation) requested_fraction = 0._lp
+    END IF
+    fraction = 0._lp
+    trial_fraction = 0._lp
+    seasonal_fraction = 0._lp
+    trial_monthly = 0._lp
+    requested_monthly = 0._lp
+    IF (PRESENT(monthly)) requested_monthly = 1._lp
+    increment = 0.1_lp
+    evaluations = 0
+    iterations = 0
+    DO count = 1,max_stages
+      CALL solve_analytical_carbon_column(ns,thickness,root_fraction_mean,water_rate,lateral_return, &
+        & coefficients,seed,alpha,stage,max_iterations=max_iterations,bioturbation_fraction=trial_fraction, &
+        & monthly=monthly,monthly_fraction=trial_monthly)
+      evaluations = evaluations+stage%evaluations
+      iterations = iterations+stage%iterations
+      trace(count)%fraction = trial_fraction
+      trace(count)%increment = trial_fraction-fraction
+      IF (seasonal_fraction < requested_monthly) trace(count)%increment = trial_monthly-seasonal_fraction
+      trace(count)%monthly_fraction = trial_monthly
+      trace(count)%converged = stage%converged
+      trace(count)%admissible = stage%admissible
+      trace(count)%iterations = stage%iterations
+      trace(count)%evaluations = stage%evaluations
+      trace(count)%worst_layer = stage%worst_layer
+      trace(count)%worst_equation = stage%worst_equation
+      trace(count)%reason = stage%reason
+      IF (ALLOCATED(stage%norm_history)) trace(count)%norm_history = stage%norm_history
+      IF (ALLOCATED(stage%step_history)) trace(count)%step_history = stage%step_history
+      solution = stage
+      IF (stage%converged) THEN
+        completed_monthly = seasonal_fraction < requested_monthly .AND. trial_monthly == requested_monthly
+        fraction = trial_fraction
+        seasonal_fraction = trial_monthly
+        seed = stage%carbon
+        alpha = stage%alpha_poly
+        IF (fraction == requested_fraction .AND. seasonal_fraction == requested_monthly) EXIT
+        IF (completed_monthly) THEN
+          increment = 0.1_lp
+        ELSE IF (stage%iterations <= 8 .AND. count > 1) THEN
+          increment = MIN(0.25_lp,1.5_lp*increment)
+        END IF
+      ELSE
+        IF (count == 1) THEN
+          solution%reason = 'Zero-bioturbation seed validation failed: '//TRIM(stage%reason)
+          EXIT
+        END IF
+        increment = 0.5_lp*increment
+        IF (increment < minimum_increment) THEN
+          solution%reason = 'Analytical continuation minimum step reached: '//TRIM(stage%reason)
+          EXIT
+        END IF
+      END IF
+      IF (seasonal_fraction < requested_monthly) THEN
+        trial_monthly = MIN(requested_monthly,seasonal_fraction+increment)
+        trial_fraction = fraction
+      ELSE
+        trial_monthly = seasonal_fraction
+        trial_fraction = MIN(requested_fraction,fraction+increment)
+      END IF
+    END DO
+    IF (count > max_stages) THEN
+      count = max_stages
+      solution%reason = 'Analytical continuation attempt limit; no jump'
+    END IF
+    ! A converged intermediate is never substituted for the requested transport operator.
+    IF (fraction /= requested_fraction .OR. seasonal_fraction /= requested_monthly .OR. .NOT. stage%converged) THEN
+      solution%converged = .FALSE.
+      solution%admissible = .FALSE.
+    END IF
+    solution%continuation = trace(1:count)
+    solution%seed_carbon = original_seed
+    solution%seed_alpha = original_alpha
+    solution%seed_status = seed_status
+    solution%evaluations = evaluations
+    solution%total_iterations = iterations
+  END SUBROUTINE solve_analytical_carbon_profile
+
+  !> Evaluate closed-boundary particulate diffusion and carbon reactions on one candidate profile.
+  !! Interface flux uses unequal-layer centre spacing; divergence divides by each receiving
+  !! layer thickness. Only polymeric litter, microbes and residue diffuse in the fixed-pore
+  !! scheme. DOC follows prescribed water export; MAOC remains fixed to the mineral matrix.
+  !! Density includes mineral solids and occupied organic pore volume, not unburied surface POC.
+  SUBROUTINE evaluate_analytical_column_residual(nc, ns, nactive, thickness, root_fraction_mean, &
+    & water_rate, lateral_return, coefficients, carbon, alpha_poly, result, include_bioturbation, &
+    & bioturbation_fraction)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_sb_constants, ONLY: min_enzyme_fraction, min_dom_uptake_concentration
+    USE mo_q_sb_jsm_processes, ONLY: calc_bulk_density_correction_available_pore_volume, &
+      & calc_microbial_mortality_fraction, calc_enzyme_allocation
+    USE mo_q_sb_jsm_transport, ONLY: calc_bioturbation_rate
+    INTEGER, INTENT(in) :: nc, ns !< Cells and layers [-]
+    REAL(lp), INTENT(in) :: nactive(nc), thickness(nc,ns), root_fraction_mean(nc,ns) !< [-], [m], [-]
+    REAL(lp), INTENT(in) :: water_rate(nc,ns,2), lateral_return !< Down/lateral effective [s-1], returned fraction [-]
+    TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients(nc,ns) !< Effective layer kinetics; local DOM terms ignored
+    REAL(lp), INTENT(in) :: carbon(8,nc,ns), alpha_poly(nc,ns) !< Candidate pools [mol C/m3], allocation [-]
+    TYPE(t_sb_column_residual), INTENT(out) :: result !< Fresh scratch diagnostics and residuals
+    LOGICAL, OPTIONAL, INTENT(in) :: include_bioturbation !< Default true; never changes forward transport [-]
+    REAL(lp), OPTIONAL, INTENT(in) :: bioturbation_fraction !< Scratch continuation multiplier in [0,1] [-]
+    TYPE(t_sb_local_coefficients) :: k !< Current layer coefficients
+    REAL(lp) :: pools(8), dt, mortality, uptake, enzyme, enzyme_floor, enzymes(2), depoly(2)
+    REAL(lp) :: maoc_volume, poc_volume, occupied_poc, free_pore, chemical_free, physical_free
+    REAL(lp) :: adsorption(2), desorption(2), net_sorption(2), scale, turnover(2), respiration, lateral
+    REAL(lp) :: allocation, log_mortality, forward_mortality !< Allocation [-], logarithm of rate, rate [mol C/m3/s]
+    INTEGER :: c, s, p, n !< Cell, layer, pool and active count [-]
+
+    result%reason = 'Invalid column geometry, forcing, coefficients or candidate.'
+    IF (MIN(nc,ns) <= 0) RETURN
+    IF (.NOT. ALL(ieee_is_finite(nactive))) RETURN
+    IF (ANY(nactive < 1._lp) .OR. ANY(nactive > REAL(ns,lp))) RETURN
+    IF (ANY(nactive /= REAL(NINT(nactive),lp))) RETURN
+    IF (.NOT. ieee_is_finite(lateral_return)) RETURN
+    IF (lateral_return < 0._lp .OR. lateral_return > 1._lp) RETURN
+    IF (PRESENT(bioturbation_fraction)) THEN
+      IF (.NOT. ieee_is_finite(bioturbation_fraction)) RETURN
+      IF (bioturbation_fraction < 0._lp .OR. bioturbation_fraction > 1._lp) RETURN
+    END IF
+    ALLOCATE(result%reaction(8,nc,ns), result%bioturbation(8,nc,ns), result%total(8,nc,ns), SOURCE=0._lp)
+    ALLOCATE(result%dom_transport(nc,ns), result%dom_interface(nc,0:ns), SOURCE=0._lp)
+    ALLOCATE(result%bio_interface(8,nc,0:ns), result%column_budget(5,nc), SOURCE=0._lp)
+    ALLOCATE(result%density(nc,ns), result%diffusivity(nc,ns), result%poc_excess(nc,ns), SOURCE=0._lp)
+    ALLOCATE(result%burial(nc,ns), SOURCE=1._lp)
+    ALLOCATE(result%allocation_residual(nc,ns), SOURCE=0._lp)
+    ALLOCATE(result%process_rate(6,nc,ns), result%throughput(8,nc,ns), SOURCE=0._lp)
+    ALLOCATE(result%allocation_defined(nc,ns), result%geometry_admissible(nc,ns), SOURCE=.FALSE.)
+    ALLOCATE(result%timestep_warning(nc,ns,3), SOURCE=.FALSE.)
+    DO c = 1,nc
+      n = NINT(nactive(c))
+      DO s = 1,n
+        k = coefficients(c,s)
+        pools = carbon(:,c,s)
+        dt = k%dtime
+        IF (.NOT. ALL(ieee_is_finite([pools,alpha_poly(c,s),thickness(c,s),root_fraction_mean(c,s), &
+          & water_rate(c,s,:),dt,k%litter_input_carbon,k%litter_turnover_rate,k%carbon_transfer_fraction, &
+          & k%microbial_decay_rate,k%minimum_microbial_carbon,k%mortality_exponent,k%mortality_reference, &
+          & k%microbial_cue,k%enzyme_frac_ap_layer,k%vmax_uptake_eff,k%km_uptake_eff,k%vmax_depoly_eff, &
+          & k%km_depoly_eff,k%enzyme_frac_total_local,k%persistent_enzyme_carbon,k%adsorption_rate, &
+          & k%desorption_rate,k%qmax_org_layer,k%volume_pore_total,k%volume_per_carbon_maoc, &
+          & k%volume_per_carbon_poc]))) RETURN
+        IF (MINVAL([pools,root_fraction_mean(c,s),water_rate(c,s,:),k%litter_input_carbon, &
+          & k%litter_turnover_rate,k%carbon_transfer_fraction,k%microbial_decay_rate,k%minimum_microbial_carbon, &
+          & k%microbial_cue,k%enzyme_frac_ap_layer,k%vmax_uptake_eff,k%vmax_depoly_eff, &
+          & k%enzyme_frac_total_local,k%persistent_enzyme_carbon,k%adsorption_rate,k%desorption_rate, &
+          & k%qmax_org_layer,k%volume_pore_total]) < 0._lp) RETURN
+        IF (MINVAL([dt,thickness(c,s),k%mortality_reference,k%km_uptake_eff,k%km_depoly_eff, &
+          & k%volume_per_carbon_maoc,k%volume_per_carbon_poc]) <= 0._lp) RETURN
+        IF (k%mortality_exponent < 1._lp .OR. &
+          & MAXVAL([k%carbon_transfer_fraction,k%microbial_cue,k%enzyme_frac_ap_layer, &
+          & k%enzyme_frac_total_local,k%volume_pore_total]) > 1._lp) RETURN
+        IF (k%volume_pore_total > 1._lp-min_fine_mineral_volume+1.e-10_lp) RETURN
+        IF (alpha_poly(c,s) < min_enzyme_fraction .OR. alpha_poly(c,s) > 1._lp-min_enzyme_fraction) RETURN
+
+        maoc_volume = k%volume_per_carbon_maoc*SUM(pools(7:8))
+        poc_volume = k%volume_per_carbon_poc*SUM(pools([1,3,4,5]))
+        free_pore = MAX(0._lp,k%volume_pore_total-maoc_volume)
+        occupied_poc = MIN(poc_volume,free_pore)
+        result%poc_excess(c,s) = MAX(0._lp,poc_volume-free_pore)
+        result%geometry_admissible(c,s) = maoc_volume <= k%volume_pore_total+1.e-12_lp .AND. &
+          & (s == 1 .OR. result%poc_excess(c,s) <= 1.e-12_lp)
+        IF (s == 1 .AND. poc_volume > eps8) result%burial(c,s) = MIN(1._lp,free_pore/poc_volume)
+        result%density(c,s) = calc_bulk_density_correction_available_pore_volume( &
+          & k%volume_pore_total,maoc_volume,occupied_poc)
+
+        ! Floor biomass remains capable of uptake and depolymerization; it is not a dormant closed layer.
+        mortality = 0._lp
+        IF (pools(4) > k%minimum_microbial_carbon .AND. k%microbial_decay_rate > 0._lp) THEN
+          log_mortality = LOG(k%microbial_decay_rate)+LOG(pools(4)) + &
+            & (k%mortality_exponent-1._lp)*(LOG(pools(4))-LOG(k%mortality_reference))
+          IF (log_mortality >= LOG(HUGE(1._lp))) RETURN
+          mortality = EXP(log_mortality)
+        END IF
+        forward_mortality = pools(4)*calc_microbial_mortality_fraction(pools(4),k%microbial_decay_rate, &
+          & k%mortality_reference,k%mortality_exponent,dt,k%minimum_microbial_carbon)/dt
+        result%timestep_warning(c,s,1) = ABS(mortality-forward_mortality) > &
+          & 1.e-12_lp*MAX(mortality,forward_mortality,TINY(1._lp))
+        uptake = 0._lp
+        IF (pools(6) > min_dom_uptake_concentration) &
+          & uptake = k%vmax_uptake_eff*pools(4)*pools(6)/(k%km_uptake_eff+pools(6))
+        result%timestep_warning(c,s,2) = uptake*dt > pools(6)
+        enzyme_floor = 0._lp
+        IF (k%mortality_exponent == 1._lp) enzyme_floor = k%persistent_enzyme_carbon
+        enzyme = MAX(k%enzyme_frac_total_local*(1._lp-k%enzyme_frac_ap_layer)*pools(4),enzyme_floor)
+        enzymes = [alpha_poly(c,s)*enzyme,MAX((1._lp-alpha_poly(c,s))*enzyme,enzyme_floor)]
+        depoly = k%vmax_depoly_eff*enzymes/(k%km_depoly_eff+enzymes)*pools([3,5])
+        ! Match ICON forward SESAM: the eps8 substrate cutoff belongs to beta=1 only.
+        IF (k%mortality_exponent == 1._lp) THEN
+          WHERE (pools([3,5]) <= eps8) depoly = 0._lp
+        END IF
+        ! Forward SESAM updates carbon allocation only when both substrate removal rates are positive.
+        ! An inactive branch is underdetermined, not proof of a unique allocation equilibrium.
+        result%allocation_defined(c,s) = ALL(depoly > 0._lp)
+        IF (result%allocation_defined(c,s)) THEN
+          allocation = calc_enzyme_allocation(depoly(1),depoly(2),k%km_depoly_eff,enzyme)
+          allocation = MIN(1._lp-min_enzyme_fraction,MAX(min_enzyme_fraction,allocation))
+          result%allocation_residual(c,s) = alpha_poly(c,s)-allocation
+        END IF
+
+        ! Evaluate exchange at the candidate AD/AR, never solve/reassign these pools inside a residual.
+        chemical_free = MAX(0._lp,k%qmax_org_layer-SUM(pools(7:8)))
+        physical_free = MAX(0._lp,k%volume_pore_total/k%volume_per_carbon_maoc-SUM(pools(7:8)))
+        adsorption = pools([6,5])*MIN(1._lp,k%adsorption_rate*chemical_free*dt)
+        scale = 1._lp
+        IF (SUM(adsorption) > 0._lp) scale = MIN(1._lp,chemical_free/SUM(adsorption), &
+          & physical_free/SUM(adsorption))
+        adsorption = scale*adsorption
+        desorption = MIN(1._lp,k%desorption_rate*dt)*pools(7:8)
+        net_sorption = (adsorption-desorption)/dt
+        result%process_rate(:,c,s) = [mortality,uptake,depoly,net_sorption]
+        turnover = k%litter_turnover_rate*pools(1:2)
+        result%timestep_warning(c,s,3) = ANY(turnover*dt > pools(1:2)) .OR. &
+          & depoly(1)*dt > pools(3) .OR. depoly(2)*dt+adsorption(2) > pools(5) .OR. &
+          & SUM(water_rate(c,s,:)*[1._lp,1._lp-lateral_return])*dt > 1._lp
+        result%reaction(1:2,c,s) = k%litter_input_carbon(1:2)-turnover
+        result%reaction(3,c,s) = k%litter_input_carbon(3)+k%carbon_transfer_fraction(2)*turnover(2)-depoly(1)
+        result%reaction(4,c,s) = k%microbial_cue*uptake-mortality
+        result%reaction(5,c,s) = (1._lp-k%carbon_transfer_fraction(3))*mortality-depoly(2)-net_sorption(2)
+        result%reaction(6,c,s) = k%carbon_transfer_fraction(1)*turnover(1)+SUM(depoly) + &
+          & k%carbon_transfer_fraction(3)*mortality-uptake-net_sorption(1)
+        result%reaction(7:8,c,s) = net_sorption
+        result%dom_interface(c,s) = thickness(c,s)*water_rate(c,s,1)*pools(6)
+        lateral = (1._lp-lateral_return)*water_rate(c,s,2)*pools(6)
+        result%dom_transport(c,s) = (result%dom_interface(c,s-1)-result%dom_interface(c,s))/thickness(c,s)-lateral
+        ! Gross source+sink, not net exchange: preserve the original acceptance allowances.
+        ! Store it with each monthly evaluation so nonlinear/capped sorption is averaged correctly.
+        result%throughput(1:2,c,s) = k%litter_input_carbon(1:2)+turnover
+        result%throughput(3,c,s) = k%litter_input_carbon(3)+k%carbon_transfer_fraction(2)*turnover(2)+depoly(1)
+        result%throughput(4,c,s) = k%microbial_cue*uptake+mortality
+        result%throughput(5,c,s) = (1._lp-k%carbon_transfer_fraction(3))*mortality+depoly(2) + &
+          & (adsorption(2)+desorption(2))/dt
+        result%throughput(6,c,s) = k%carbon_transfer_fraction(1)*turnover(1)+SUM(depoly) + &
+          & k%carbon_transfer_fraction(3)*mortality+uptake+(adsorption(1)+desorption(1))/dt + &
+          & (result%dom_interface(c,s-1)+result%dom_interface(c,s))/thickness(c,s)+lateral
+        result%throughput(7:8,c,s) = (adsorption+desorption)/dt
+        respiration = SUM((1._lp-k%carbon_transfer_fraction(1:2))*turnover)+(1._lp-k%microbial_cue)*uptake
+        result%column_budget(1,c) = result%column_budget(1,c)+thickness(c,s)*SUM(k%litter_input_carbon)
+        result%column_budget(2,c) = result%column_budget(2,c)+thickness(c,s)*respiration
+        result%column_budget(3,c) = result%column_budget(3,c)+thickness(c,s)*lateral
+      END DO
+      result%column_budget(3,c) = result%column_budget(3,c)+result%dom_interface(c,n)
+    END DO
+    result%diffusivity = calc_bioturbation_rate(nc,ns,nactive,thickness,result%density,root_fraction_mean)
+    IF (PRESENT(bioturbation_fraction)) result%diffusivity = bioturbation_fraction*result%diffusivity
+    ! Controlled experiment: omit only analytical particulate exchange, retaining density and DOM transport.
+    IF (PRESENT(include_bioturbation)) THEN
+      IF (.NOT. include_bioturbation) result%diffusivity = 0._lp
+    END IF
+    DO p = 3,5
+      CALL evaluate_analytical_bioturbation(nc,ns,nactive,thickness,result%diffusivity,carbon(p,:,:), &
+        & result%bioturbation(p,:,:),result%bio_interface(p,:,:))
+    END DO
+    result%total = result%reaction+result%bioturbation
+    result%total(6,:,:) = result%total(6,:,:)+result%dom_transport
+    DO c = 1,nc
+      DO s = 1,NINT(nactive(c))
+        DO p = 3,5
+          result%throughput(p,c,s) = result%throughput(p,c,s) + &
+            & (ABS(result%bio_interface(p,c,s-1))+ABS(result%bio_interface(p,c,s)))/thickness(c,s)
+        END DO
+        result%column_budget(4,c) = result%column_budget(4,c)+thickness(c,s)*SUM(result%total(:,c,s))
+      END DO
+      result%column_budget(5,c) = result%column_budget(4,c) - &
+        & (result%column_budget(1,c)-result%column_budget(2,c)-result%column_budget(3,c))
+    END DO
+    IF (.NOT. ALL(ieee_is_finite(result%total)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%column_budget)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%density)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%diffusivity)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%process_rate)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%throughput)) .OR. &
+      & .NOT. ALL(ieee_is_finite(result%allocation_residual))) RETURN
+    result%valid = .TRUE.
+    result%reason = 'Conditional carbon residual evaluated; inspect geometry, allocation and timestep warnings.'
+  END SUBROUTINE evaluate_analytical_column_residual
+
+  !> Average monthly nonlinear fluxes at one candidate, with annual CUE/AP and root fractions.
+  !! This is not evaluation at mean kinetics. Monthly biology experiments are not used.
+  !! Closure averages allocation updates only over months where both substrates are active.
+  SUBROUTINE evaluate_analytical_monthly_residual(ns, thickness, roots, water_rate, lateral_return, &
+    & coefficients, carbon, alpha, monthly, monthly_fraction, bioturbation_fraction, result)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    INTEGER, INTENT(in) :: ns !< Active layers [-]
+    REAL(lp), INTENT(in) :: thickness(ns), roots(ns), water_rate(ns,2), lateral_return
+    !< Thickness [m], annual fractions [-], mean water rates [s-1], lateral return [-]
+    TYPE(t_sb_local_coefficients), INTENT(in) :: coefficients(ns) !< Former annual-coefficient problem
+    REAL(lp), INTENT(in) :: carbon(8,1,ns), alpha(1,ns) !< Frozen candidate [mol C/m3], [-]
+    TYPE(t_sb_monthly_coefficients), INTENT(in) :: monthly !< Monthly coefficients and replay-day weights
+    REAL(lp), INTENT(in) :: monthly_fraction, bioturbation_fraction !< Continuation parameters in [0,1] [-]
+    TYPE(t_sb_column_residual), INTENT(out) :: result !< Weighted residual and per-month diagnostics
+    TYPE(t_sb_column_residual) :: baseline, average, bin
+    REAL(lp) :: weight, active_weight(ns), fraction
+    INTEGER :: nbin, b, s
+
+    result%reason = 'Invalid monthly analytical forcing or continuation fraction'
+    IF (.NOT. ieee_is_finite(monthly_fraction)) RETURN
+    IF (monthly_fraction < 0._lp .OR. monthly_fraction > 1._lp) RETURN
+    IF (.NOT. ALLOCATED(monthly%weight) .OR. .NOT. ALLOCATED(monthly%layer)) RETURN
+    nbin = SIZE(monthly%weight)
+    IF (nbin < 1) RETURN
+    IF (SIZE(monthly%layer,1) /= ns .OR. SIZE(monthly%layer,2) /= nbin) RETURN
+    IF (.NOT. ALL(ieee_is_finite(monthly%weight)) .OR. ANY(monthly%weight < 0._lp)) RETURN
+    IF (ABS(SUM(monthly%weight)-1._lp) > 1.e-12_lp) RETURN
+    DO b = 1,nbin
+      DO s = 1,ns
+        ! Only environmental kinetics/litter vary by month. Biology, dt and geometry stay fixed.
+        IF (monthly%layer(s,b)%microbial_cue /= coefficients(s)%microbial_cue .OR. &
+          & monthly%layer(s,b)%enzyme_frac_ap_layer /= coefficients(s)%enzyme_frac_ap_layer .OR. &
+          & monthly%layer(s,b)%dtime /= coefficients(s)%dtime .OR. &
+          & monthly%layer(s,b)%volume_pore_total /= coefficients(s)%volume_pore_total .OR. &
+          & monthly%layer(s,b)%qmax_org_layer /= coefficients(s)%qmax_org_layer) RETURN
+      END DO
+    END DO
+    CALL evaluate_analytical_column_residual(1,ns,[REAL(ns,lp)],RESHAPE(thickness,[1,ns]), &
+      & RESHAPE(roots,[1,ns]),RESHAPE(water_rate,[1,ns,2]),lateral_return, &
+      & RESHAPE(coefficients,[1,ns]),carbon,alpha,baseline,bioturbation_fraction=bioturbation_fraction)
+    IF (.NOT. baseline%valid) THEN
+      result%reason = baseline%reason
+      RETURN
+    END IF
+    IF (monthly_fraction == 0._lp) THEN
+      result = baseline
+      RETURN
+    END IF
+    average = baseline
+    average%reaction = 0._lp
+    average%process_rate = 0._lp
+    average%throughput = 0._lp
+    average%column_budget = 0._lp
+    average%allocation_residual = 0._lp
+    average%allocation_defined = .FALSE.
+    average%timestep_warning = .FALSE.
+    active_weight = 0._lp
+    ALLOCATE(average%process_month(6,ns,nbin),average%reaction_month(8,ns,nbin),SOURCE=0._lp)
+    ALLOCATE(average%allocation_month(ns,nbin),SOURCE=0._lp)
+    ALLOCATE(average%allocation_active_month(ns,nbin),SOURCE=.FALSE.)
+    ALLOCATE(average%caps_month(ns,nbin,3),SOURCE=.FALSE.)
+    DO b = 1,nbin
+      weight = monthly%weight(b)
+      IF (weight == 0._lp) CYCLE
+      CALL evaluate_analytical_column_residual(1,ns,[REAL(ns,lp)],RESHAPE(thickness,[1,ns]), &
+        & RESHAPE(roots,[1,ns]),RESHAPE(water_rate,[1,ns,2]),lateral_return, &
+        & RESHAPE(monthly%layer(:,b),[1,ns]),carbon,alpha,bin, &
+        & bioturbation_fraction=bioturbation_fraction)
+      IF (.NOT. bin%valid) THEN
+        WRITE(result%reason,'(A,I0,2A)') 'Invalid monthly analytical residual, bin ',b,': ',TRIM(bin%reason)
+        RETURN
+      END IF
+      average%process_month(:,:,b) = bin%process_rate(:,1,:)
+      average%reaction_month(:,:,b) = bin%reaction(:,1,:)
+      average%allocation_month(:,b) = bin%allocation_residual(1,:)
+      average%allocation_active_month(:,b) = bin%allocation_defined(1,:)
+      average%caps_month(:,b,:) = bin%timestep_warning(1,:,:)
+      average%reaction = average%reaction+weight*bin%reaction
+      average%process_rate = average%process_rate+weight*bin%process_rate
+      average%throughput = average%throughput+weight*bin%throughput
+      average%column_budget(1:3,:) = average%column_budget(1:3,:)+weight*bin%column_budget(1:3,:)
+      average%timestep_warning = average%timestep_warning .OR. bin%timestep_warning
+      DO s = 1,ns
+        IF (.NOT. bin%allocation_defined(1,s)) CYCLE
+        active_weight(s) = active_weight(s)+weight
+        average%allocation_residual(1,s) = average%allocation_residual(1,s)+weight*bin%allocation_residual(1,s)
+      END DO
+    END DO
+    DO s = 1,ns
+      IF (active_weight(s) > 0._lp) THEN
+        average%allocation_defined(1,s) = .TRUE.
+        average%allocation_residual(1,s) = average%allocation_residual(1,s)/active_weight(s)
+      END IF
+    END DO
+    ! Geometry, annual-root bioturbation and fixed-DOC water transport are identical in all bins.
+    ! Apply them once, rather than introducing a fictitious monthly timestep or extra transport.
+    average%total = average%reaction+baseline%bioturbation
+    average%total(6,:,:) = average%total(6,:,:)+baseline%dom_transport
+    DO s = 1,ns
+      average%column_budget(4,1) = average%column_budget(4,1)+thickness(s)*SUM(average%total(:,1,s))
+    END DO
+    average%column_budget(5,:) = average%column_budget(4,:) - &
+      & (average%column_budget(1,:)-average%column_budget(2,:)-average%column_budget(3,:))
+    average%mean_process = baseline%process_rate
+    average%mean_total = baseline%total
+    result = average
+    fraction = monthly_fraction
+    IF (fraction < 1._lp) THEN
+      result%reaction = (1._lp-fraction)*baseline%reaction+fraction*average%reaction
+      result%total = (1._lp-fraction)*baseline%total+fraction*average%total
+      result%process_rate = (1._lp-fraction)*baseline%process_rate+fraction*average%process_rate
+      result%throughput = (1._lp-fraction)*baseline%throughput+fraction*average%throughput
+      result%column_budget = (1._lp-fraction)*baseline%column_budget+fraction*average%column_budget
+      result%timestep_warning = baseline%timestep_warning .OR. average%timestep_warning
+      result%allocation_defined = baseline%allocation_defined .OR. average%allocation_defined
+      result%allocation_residual = (1._lp-fraction)*baseline%allocation_residual+fraction*average%allocation_residual
+    END IF
+    result%valid = ALL(ieee_is_finite(result%total)) .AND. ALL(ieee_is_finite(result%throughput)) .AND. &
+      & ALL(ieee_is_finite(result%column_budget)) .AND. ALL(ieee_is_finite(result%allocation_residual))
+    result%reason = 'Monthly nonlinear carbon fluxes at frozen pools; annual CUE/AP and roots prescribed'
+  END SUBROUTINE evaluate_analytical_monthly_residual
+
+  !> Reuse the forward conservative operator with a one-second interval to obtain tendencies.
+  PURE SUBROUTINE evaluate_analytical_bioturbation(nc, ns, nactive, thickness, diffusivity, carbon, &
+    & tendency, interface_flux)
+    USE mo_q_sb_jsm_transport, ONLY: calc_bioturbation_transport
+    INTEGER, INTENT(in) :: nc, ns !< Cells and soil layers [-]
+    REAL(lp), INTENT(in) :: nactive(nc) !< Active-layer counts, as in forward memory [-]
+    REAL(lp), INTENT(in) :: thickness(nc,ns), diffusivity(nc,ns) !< Thickness [m], K [m2/s]
+    REAL(lp), INTENT(in) :: carbon(nc,ns) !< One transported carbon pool [mol C/m3 total soil]
+    REAL(lp), INTENT(out) :: tendency(nc,ns) !< Net bioturbation rate [mol C/m3/s]
+    REAL(lp), INTENT(out) :: interface_flux(nc,0:ns) !< Downward interface rate [mol C/m2/s]
+
+    tendency = 0._lp
+    CALL calc_bioturbation_transport(nc,ns,1._lp,nactive,diffusivity,thickness,carbon, &
+      & tendency,interface_flux)
+  END SUBROUTINE evaluate_analytical_bioturbation
+
+  !> Prepare annual root fractions using replay-day weights, without depth renormalization.
+  !! Entry density is diagnostic only; the nonlinear solver recomputes density and K.
+  SUBROUTINE prepare_analytical_bioturbation_inputs(nc, ns, nbin, nactive, roots, inputs, reason)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_q_sb_jsm_transport, ONLY: calc_bioturbation_rate
+    INTEGER, INTENT(in) :: nc, ns, nbin !< Cells, layers, replay bins [-]
+    REAL(lp), INTENT(in) :: nactive(nc), roots(nc,nbin*ns) !< Active counts and monthly fractions [-]
+    TYPE(t_sb_analytical_inputs), INTENT(inout) :: inputs !< Prepared forcing and entry geometry
+    CHARACTER(len=*), INTENT(out) :: reason !< Preparation status [-]
+    INTEGER :: c, s, b !< Cell, layer, bin [-]
+
+    inputs%bioturbation_ready = .FALSE.
+    reason = 'Bioturbation inputs rejected: invalid roots, weights or entry geometry.'
+    IF (.NOT. inputs%ready .OR. MIN(nc,ns,nbin) <= 0) RETURN
+    IF (.NOT. ALLOCATED(inputs%depth) .OR. .NOT. ALLOCATED(inputs%bulk_density) .OR. &
+      & .NOT. ALLOCATED(inputs%month_weight)) RETURN
+    IF (ANY(SHAPE(inputs%depth) /= [nc,ns]) .OR. &
+      & ANY(SHAPE(inputs%bulk_density) /= [nc,ns]) .OR. SIZE(inputs%month_weight) /= nbin) RETURN
+    IF (.NOT. ALL(ieee_is_finite(nactive)) .OR. .NOT. ALL(ieee_is_finite(roots))) RETURN
+    IF (ANY(roots < 0._lp) .OR. ANY(nactive < 1._lp) .OR. ANY(nactive > REAL(ns,lp))) RETURN
+    IF (ANY(nactive /= REAL(NINT(nactive),lp))) RETURN
+    IF (.NOT. ALL(ieee_is_finite(inputs%month_weight))) RETURN
+    IF (ANY(inputs%month_weight < 0._lp) .OR. ABS(SUM(inputs%month_weight)-1._lp) > 1.e-12_lp) RETURN
+    DO c = 1,nc
+      DO s = 1,NINT(nactive(c))
+        IF (.NOT. ieee_is_finite(inputs%depth(c,s)) .OR. &
+          & .NOT. ieee_is_finite(inputs%bulk_density(c,s))) RETURN
+        IF (inputs%depth(c,s) <= 0._lp .OR. inputs%bulk_density(c,s) < 0._lp) RETURN
+      END DO
+    END DO
+    inputs%nactive = nactive
+    IF (ALLOCATED(inputs%root_fraction_mean)) DEALLOCATE(inputs%root_fraction_mean)
+    IF (ALLOCATED(inputs%interface_distance)) DEALLOCATE(inputs%interface_distance)
+    ALLOCATE(inputs%root_fraction_mean(nc,ns), SOURCE=0._lp)
+    ALLOCATE(inputs%interface_distance(nc,0:ns), SOURCE=0._lp)
+    DO c = 1,nc
+      DO s = 1,NINT(nactive(c))
+        DO b = 1,nbin
+          inputs%root_fraction_mean(c,s) = inputs%root_fraction_mean(c,s) + &
+            & inputs%month_weight(b)*roots(c,b+nbin*(s-1))
+        END DO
+      END DO
+      DO s = 1,NINT(nactive(c))-1
+        inputs%interface_distance(c,s) = inputs%depth(c,s)/2._lp + inputs%depth(c,s+1)/2._lp
+      END DO
+    END DO
+    inputs%bioturbation_entry = calc_bioturbation_rate(nc,ns,nactive,inputs%depth, &
+      & inputs%bulk_density,inputs%root_fraction_mean)
+    IF (.NOT. ALL(ieee_is_finite(inputs%bioturbation_entry))) RETURN
+    inputs%bioturbation_ready = .TRUE.
+    reason = 'Annual-root bioturbation inputs prepared; no live pools modified.'
+  END SUBROUTINE prepare_analytical_bioturbation_inputs
+
+  !> Build monthly conditional kinetics and solve each complete active soil column.
+  !! All layers share acceptance; non-carbon reconstruction is a separate atomic transaction.
+  SUBROUTINE diagnose_full_profile_carbon_targets(inputs, carbon_before, lateral_return, targets, solutions, &
+    & include_bioturbation)
+    USE mo_lnd_bgcm_idx, ONLY: ixC, ix_soluable_litter, ix_woody_litter, ix_polymeric_litter
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants, ONLY: tau_soluable_litter, tau_woody_litter, fc_soluable2dom, &
+      & fc_woody2polymeric, f_soluable_residue, k_mort_microbial, min_mic_biomass, &
+      & microbial_mortality_exponent, microbial_mortality_reference, calc_persistent_enzyme_floor, &
+      & vmax_mic_uptake, km_mic_uptake, vmax_depolymerisation_litter, vmax_depolymerisation_residue, &
+      & km_depolymerisation, enzyme_frac_total, min_persistent_enzyme, min_enzyme_fraction, &
+      & k_adsorpt_dom, k_adsorpt_det, k_desorpt_dom, k_desorpt_det, carbon_per_dryweight_SOM, &
+      & rho_solid_maoc, rho_bulk_org
+    TYPE(t_sb_analytical_inputs), INTENT(in) :: inputs !< Validated forcing and fixed geometry
+    REAL(lp), INTENT(in) :: carbon_before(:,:,:), lateral_return !< S,W,L,B,R,D,AD,AR/cell/layer [mol C/m3], [-]
+    TYPE(t_sb_local_target), ALLOCATABLE, INTENT(out) :: targets(:,:) !< Mapped full-column targets, including failures
+    TYPE(t_sb_column_solution), ALLOCATABLE, INTENT(out) :: solutions(:) !< Detailed solver outcomes per cell
+    LOGICAL, OPTIONAL, INTENT(in) :: include_bioturbation !< Default true; analytical residual only [-]
+    TYPE(t_sb_local_coefficients), ALLOCATABLE :: coefficients(:) !< Conditional layer kinetics
+    TYPE(t_sb_monthly_coefficients) :: monthly !< Annual biology with monthly nonlinear kinetics
+    REAL(lp), ALLOCATABLE :: alpha(:) !< Historical allocation for local coefficient validation [-]
+    REAL(lp) :: products(5) !< Monthly rt*rm for depoly/uptake/sorption/desorption/HSC [-]
+    REAL(lp) :: floor_enzyme !< Persistent enzyme C, linear mortality only [mol C/m3]
+    INTEGER :: c, s, n, nc, ns, b, nbin !< Cell/layer/bin dimensions [-]
+
+    nc = SIZE(carbon_before,2)
+    ns = SIZE(carbon_before,3)
+    ALLOCATE(targets(nc,ns),solutions(nc))
+    solutions%reason = 'Incomplete or invalid monthly analytical input arrays'
+    IF (.NOT. inputs%ready .OR. .NOT. inputs%bioturbation_ready .OR. SIZE(carbon_before,1) /= 8) RETURN
+    IF (.NOT. ALLOCATED(inputs%month_weight) .OR. .NOT. ALLOCATED(inputs%modifier_month) .OR. &
+      & .NOT. ALLOCATED(inputs%litter_month)) RETURN
+    nbin = SIZE(inputs%month_weight)
+    IF (nbin < 1) RETURN
+    IF (SIZE(inputs%modifier_month,1) /= nc .OR. SIZE(inputs%modifier_month,2) /= ns .OR. &
+      & SIZE(inputs%modifier_month,3) /= 10 .OR. SIZE(inputs%modifier_month,4) /= nbin) RETURN
+    IF (SIZE(inputs%litter_month,1) < MAX(ix_soluable_litter,ix_woody_litter,ix_polymeric_litter) .OR. &
+      & SIZE(inputs%litter_month,2) < ixC .OR. SIZE(inputs%litter_month,3) /= nc .OR. &
+      & SIZE(inputs%litter_month,4) /= ns .OR. SIZE(inputs%litter_month,5) /= nbin) RETURN
+    floor_enzyme = calc_persistent_enzyme_floor(microbial_mortality_exponent,min_persistent_enzyme)
+    DO c = 1,nc
+      n = NINT(inputs%nactive(c))
+      ALLOCATE(coefficients(n),alpha(n))
+      alpha = MIN(1._lp-min_enzyme_fraction,MAX(min_enzyme_fraction,inputs%alpha_poly(c,1:n)))
+      DO s = 1,n
+        coefficients(s)%dtime = inputs%timestep
+        coefficients(s)%litter_input_carbon = &
+          & inputs%litter_mean([ix_soluable_litter,ix_woody_litter,ix_polymeric_litter],ixC,c,s)
+        coefficients(s)%litter_turnover_rate = inputs%rate_product_mean(c,s,1)/ &
+          & [tau_soluable_litter,tau_woody_litter]
+        coefficients(s)%carbon_transfer_fraction = [fc_soluable2dom,fc_woody2polymeric,f_soluable_residue]
+        coefficients(s)%microbial_decay_rate = k_mort_microbial
+        coefficients(s)%minimum_microbial_carbon = min_mic_biomass
+        coefficients(s)%mortality_exponent = microbial_mortality_exponent
+        coefficients(s)%mortality_reference = microbial_mortality_reference
+        coefficients(s)%microbial_cue = inputs%cue(c,s)
+        coefficients(s)%alpha_poly = alpha(s)
+        coefficients(s)%enzyme_frac_ap_layer = inputs%alpha_ap(c,s)
+        ! Uptake converts the forward micromolar coefficient to molar units; products are mean(rt*rm).
+        coefficients(s)%vmax_uptake_eff = 1.e-6_lp*vmax_mic_uptake*inputs%rate_product_mean(c,s,2)
+        coefficients(s)%km_uptake_eff = km_mic_uptake*inputs%rate_product_mean(c,s,5)
+        coefficients(s)%vmax_depoly_eff = [vmax_depolymerisation_litter,vmax_depolymerisation_residue]* &
+          & inputs%rate_product_mean(c,s,1)
+        coefficients(s)%km_depoly_eff = km_depolymerisation*inputs%rate_product_mean(c,s,5)
+        coefficients(s)%enzyme_frac_total_local = enzyme_frac_total
+        coefficients(s)%persistent_enzyme_carbon = floor_enzyme
+        coefficients(s)%adsorption_rate = [k_adsorpt_dom,k_adsorpt_det]*inputs%rate_product_mean(c,s,3)
+        coefficients(s)%desorption_rate = [k_desorpt_dom,k_desorpt_det]*inputs%rate_product_mean(c,s,4)
+        coefficients(s)%qmax_org_layer = inputs%qmax_org(c,s)
+        coefficients(s)%volume_pore_total = inputs%pore_volume(c,s)
+        coefficients(s)%volume_per_carbon_maoc = molar_mass_C/1000._lp/carbon_per_dryweight_SOM/rho_solid_maoc
+        coefficients(s)%volume_per_carbon_poc = molar_mass_C/1000._lp/carbon_per_dryweight_SOM/rho_bulk_org
+        coefficients(s)%l_surface_layer = s == 1
+      END DO
+      monthly%weight = inputs%month_weight
+      ALLOCATE(monthly%layer(n,nbin))
+      DO b = 1,nbin
+        DO s = 1,n
+          ! Preserve annual CUE/AP and fixed geometry/mortality; only kinetic rates/litter vary.
+          monthly%layer(s,b) = coefficients(s)
+          products = inputs%modifier_month(c,s,1:5,b)*inputs%modifier_month(c,s,6:10,b)
+          monthly%layer(s,b)%litter_input_carbon = &
+            & inputs%litter_month([ix_soluable_litter,ix_woody_litter,ix_polymeric_litter],ixC,c,s,b)
+          monthly%layer(s,b)%litter_turnover_rate = products(1)/[tau_soluable_litter,tau_woody_litter]
+          monthly%layer(s,b)%vmax_uptake_eff = 1.e-6_lp*vmax_mic_uptake*products(2)
+          monthly%layer(s,b)%km_uptake_eff = km_mic_uptake*products(5)
+          monthly%layer(s,b)%vmax_depoly_eff = &
+            & [vmax_depolymerisation_litter,vmax_depolymerisation_residue]*products(1)
+          monthly%layer(s,b)%km_depoly_eff = km_depolymerisation*products(5)
+          monthly%layer(s,b)%adsorption_rate = [k_adsorpt_dom,k_adsorpt_det]*products(3)
+          monthly%layer(s,b)%desorption_rate = [k_desorpt_dom,k_desorpt_det]*products(4)
+        END DO
+      END DO
+      CALL solve_analytical_carbon_profile(n,inputs%depth(c,1:n),inputs%root_fraction_mean(c,1:n), &
+        & inputs%water_rate_mean(c,1:n,:),lateral_return,coefficients,solutions(c), &
+        & include_bioturbation=include_bioturbation,monthly=monthly)
+      DO s = 1,n
+        targets(c,s)%status = 5
+        targets(c,s)%reason = solutions(c)%reason
+        ! Status zero is granted only to the whole converged/admissible column, never to isolated layers.
+        IF (solutions(c)%converged .AND. solutions(c)%admissible) targets(c,s)%status = 0
+        IF (.NOT. ALLOCATED(solutions(c)%carbon)) CYCLE
+        targets(c,s)%carbon = solutions(c)%carbon(:,s)
+        targets(c,s)%alpha_poly = solutions(c)%alpha_poly(s)
+        targets(c,s)%alpha_residue = 1._lp-targets(c,s)%alpha_poly
+        targets(c,s)%enzyme_depoly = MAX(enzyme_frac_total*(1._lp-inputs%alpha_ap(c,s))* &
+          & targets(c,s)%carbon(4),floor_enzyme)
+        targets(c,s)%enzyme_poly = targets(c,s)%alpha_poly*targets(c,s)%enzyme_depoly
+        targets(c,s)%enzyme_residue = MAX(targets(c,s)%alpha_residue*targets(c,s)%enzyme_depoly,floor_enzyme)
+        targets(c,s)%maoc_volume = coefficients(s)%volume_per_carbon_maoc*SUM(targets(c,s)%carbon(7:8))
+        targets(c,s)%poc_volume = coefficients(s)%volume_per_carbon_poc*SUM(targets(c,s)%carbon([1,3,4,5]))
+        IF (.NOT. solutions(c)%diagnostics%valid) CYCLE
+        targets(c,s)%residual = solutions(c)%diagnostics%total(:,1,s)
+        targets(c,s)%burial = solutions(c)%diagnostics%burial(1,s)
+        targets(c,s)%poc_excess = solutions(c)%diagnostics%poc_excess(1,s)
+        targets(c,s)%microbial_mortality = solutions(c)%diagnostics%process_rate(1,1,s)
+        targets(c,s)%uptake_step = solutions(c)%diagnostics%process_rate(2,1,s)*inputs%timestep
+        targets(c,s)%transport = [solutions(c)%diagnostics%dom_interface(1,s-1)/inputs%depth(c,s), &
+          & solutions(c)%diagnostics%dom_interface(1,s)/inputs%depth(c,s), &
+          & (1._lp-lateral_return)*inputs%water_rate_mean(c,s,2)*targets(c,s)%carbon(6)]
+        targets(c,s)%l_minimum_microbial_seed = targets(c,s)%carbon(4) <= min_mic_biomass
+      END DO
+      DEALLOCATE(coefficients,alpha,monthly%layer)
+    END DO
+  END SUBROUTINE diagnose_full_profile_carbon_targets
 
   !> Conditional five-pool SSM carbon target, without nutrient or solid-transport equilibrium.
   !> S,W,L,F,R are concentrations per TOTAL soil volume. Fluxes are mol C m-3 s-1.
@@ -219,6 +1264,11 @@ CONTAINS
       inputs%month_weight(b) = inputs%month_weight(b) + 1.0_lp / REAL(nday,lp)
     END DO
     ALLOCATE(inputs%litter_mean(npool,nelem,nc,ns), SOURCE=0.0_lp)
+    IF (scheme == 'jsm') THEN
+      ! Scratch arrays for the current column only; no new forcing cache or restart fields.
+      ALLOCATE(inputs%litter_month(npool,nelem,nc,ns,nbin), SOURCE=0._lp)
+      ALLOCATE(inputs%modifier_month(nc,ns,10,nbin), SOURCE=0._lp)
+    END IF
     ALLOCATE(inputs%rate_product_mean(nc,ns,6), SOURCE=0.0_lp)
     ALLOCATE(inputs%cue(nc,ns), inputs%alpha_poly(nc,ns), inputs%alpha_ap(nc,ns))
     ALLOCATE(inputs%water_rate_mean(nc,ns,2), SOURCE=0.0_lp)
@@ -279,6 +1329,10 @@ CONTAINS
         CALL calc_litter_partitioning(nc,ns,nactive,sla,growthform,scheme,depth,root,veg,seed,formation)
       END IF
       inputs%litter_mean = inputs%litter_mean + inputs%month_weight(b)*formation/dt
+      IF (scheme == 'jsm') THEN
+        inputs%litter_month(:,:,:,:,b) = formation/dt
+        inputs%modifier_month(:,:,:,b) = modifiers
+      END IF
       DO k = 1,5
         inputs%rate_product_mean(:,:,k) = inputs%rate_product_mean(:,:,k) + inputs%month_weight(b) * &
           & modifiers(:,:,k)*modifiers(:,:,k+5)
@@ -502,6 +1556,10 @@ CONTAINS
     IF (MINVAL([coefficients%carbon_transfer_fraction,coefficients%alpha_poly, &
       & coefficients%enzyme_frac_ap_layer]) < 0.0_lp .OR. MAXVAL([coefficients%carbon_transfer_fraction, &
       & coefficients%alpha_poly,coefficients%enzyme_frac_ap_layer]) > 1.0_lp) RETURN
+    IF (coefficients%volume_pore_total > 1._lp-min_fine_mineral_volume+1.e-10_lp) THEN
+      target%reason = 'Fixed geometry violates minimum fine-mineral solid volume'
+      RETURN
+    END IF
     IF (coefficients%volume_pore_total > 1.0_lp .OR. MIN(coefficients%volume_per_carbon_maoc, &
       & coefficients%volume_per_carbon_poc,coefficients%km_uptake_eff,coefficients%km_depoly_eff) <= 0.0_lp) RETURN
     target%status = 2

@@ -38,6 +38,7 @@ MODULE mo_q_sb_jsm_processes
     &       calc_Psorption_parameter, calc_enzyme_allocation
 
   PUBLIC :: init_available_pore_volume, calc_bulk_soil_carbon_available_pore_volume
+  PUBLIC :: check_available_pore_geometry
   PUBLIC :: calc_available_pore_carbon_components, calc_available_pore_volume
   PUBLIC :: calc_bulk_density_correction_available_pore_volume, solve_pore_volume_for_bulk_density
   INTEGER, PARAMETER, PUBLIC :: sb_density_solution_found = 0
@@ -150,6 +151,7 @@ CONTAINS
     & dtime, &
     & num_sl_above_bedrock, &
     & flag_sb_interactive_p, &
+    & microbial_pue_eff, &
     & microbial_carbon, &
     & microbial_nitrogen, &
     & microbial_po4, &
@@ -202,6 +204,7 @@ CONTAINS
     REAL(lp),                                    INTENT(in)        :: dtime                        !< timestep length
     REAL(lp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     LOGICAL,                                     INTENT(in)        :: flag_sb_interactive_p        !< FALSE: biochem_min_po4 being zero
+    REAL(lp), INTENT(in) :: microbial_pue_eff(nc,nsoil_w) !< preceding-step realized PUE [-]
     REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon             !< microbial carbon density (mol / m3)
     REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_nitrogen           !< nitrogen in the microbial biomass pool (mol / m3)
     REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_po4                !< PO4 in the microbial biomass pool [mol/m3]
@@ -292,7 +295,10 @@ CONTAINS
 
         !> 1.1 calculate the potential microbial N, P uptake
         !>
-        mic_upt_po4(ic,is) = MAX(0._lp, uptake_c * microbial_cue_max / microbial_cn / microbial_np - uptake_p * microbial_pue)
+        ! Sourcing precedes turnover: retain the preceding realized PUE here.
+        ! Turnover then supplies a new P-status ceiling, reconciled by growth below.
+        mic_upt_po4(ic,is) = MAX(0._lp, uptake_c * microbial_cue_max / microbial_cn / microbial_np &
+          & - uptake_p * MERGE(microbial_pue_eff(ic,is), microbial_pue, flag_sb_interactive_p))
         mic_upt_n          = MAX(0._lp, uptake_c * microbial_cue_max / microbial_cn - uptake_n * microbial_nue)
         hlp1               = vmax_mic_uptake_nh4 * microbial_carbon(ic,is) * solute_nh4(ic,is) / (solute_nh4(ic,is) &
           &                  + km_mic_uptake_nh4)
@@ -938,19 +944,30 @@ CONTAINS
   !> Inputs must be finite and efficiency bounds ordered.
   PURE ELEMENTAL SUBROUTINE calc_microbial_nutrient_regulation(flag_sb_interactive_n, flag_sb_interactive_p, &
     & status_n, status_p, &
-    & recycling_n_max, recycling_p_max, recycling_min, half_response, nue_max, cue_min, cue_max, &
-    & recycling_n, recycling_p, nue_provisional, cue_cap)
+    & recycling_n_max, recycling_p_max, recycling_min, half_response, nue_max, pue_max, cue_min, cue_max, &
+    & recycling_n, recycling_p, nue_provisional, pue_provisional, cue_cap)
+    USE mo_sb_constants, ONLY: microbial_pue_min, km_microbial_pue_status
     LOGICAL, INTENT(in) :: flag_sb_interactive_n, flag_sb_interactive_p !< enable nutrient feedback on C [-]
     REAL(lp), INTENT(in) :: status_n, status_p !< nutrient-supported/C-supported growth [-]
     REAL(lp), INTENT(in) :: recycling_n_max, recycling_p_max, recycling_min !< recycling bounds [-]
     REAL(lp), INTENT(in) :: half_response !< recycling half-response status increment [-]
-    REAL(lp), INTENT(in) :: nue_max, cue_min, cue_max !< configured efficiency limits [-]
+    REAL(lp), INTENT(in) :: nue_max, pue_max, cue_min, cue_max !< configured efficiency limits [-]
     REAL(lp), INTENT(out) :: recycling_n, recycling_p !< selective turnover recycling [-]
-    REAL(lp), INTENT(out) :: nue_provisional, cue_cap !< growth retention and CUE ceiling [-]
+    REAL(lp), INTENT(out) :: nue_provisional, pue_provisional, cue_cap !< growth retention and CUE ceiling [-]
+    REAL(lp) :: p_status_response !< normalized P shortage response [-]
 
     recycling_n = calc_microbial_nutrient_recycling(status_n, recycling_n_max, recycling_min, half_response)
     recycling_p = calc_microbial_nutrient_recycling(status_p, recycling_p_max, recycling_min, half_response)
     nue_provisional = calc_recycling_limited_nue(status_n, nue_max, recycling_n_max, recycling_min, half_response)
+    !> Same status-response shape as NUE, independent of actual P recycling and AP allocation.
+    !> w=1/(1+(max(status_P-s0,0)/K)**h); PUE=PUE_max-(PUE_max-PUE_low)*w.
+    !> PUE uses its own K=km_microbial_pue_status, sharing only plateau and exponent with NUE.
+    !> Status is retained from preceding growth; no new process ordering or moving average.
+    pue_provisional = pue_max
+    IF (flag_sb_interactive_p) THEN
+      p_status_response = calc_microbial_nutrient_recycling(status_p, 1._lp, 0._lp, km_microbial_pue_status)
+      pue_provisional = pue_max - (pue_max - MIN(microbial_pue_min, pue_max)) * p_status_response
+    END IF
     cue_cap = cue_max
     IF (flag_sb_interactive_n) THEN
       IF (status_n < 1._lp) cue_cap = 0.5_lp * (cue_max + cue_min)
@@ -973,14 +990,15 @@ CONTAINS
     & sb_pool_mt_microbial, &
     & sb_loss_mt_microbial, &
     & sb_formation_mt, &
-    & microbial_nue_eff, microbial_cue_eff)
+    & microbial_nue_eff, microbial_pue_eff, microbial_cue_eff)
 
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_sb_constants,          ONLY: k_mort_microbial, min_mic_biomass, f_soluable_residue, &
       &                                 fc_p_res2dom_max, fc_n_res2dom_max, &
       &                                 microbial_mortality_exponent, microbial_mortality_reference, &
       &                                 km_microbial_nutrient_recycling, min_fraction_default_sb, &
-      &                                 microbial_nue, microbial_cue_min, microbial_cue_max
+      &                                 microbial_nue, microbial_pue, microbial_pue_min, km_microbial_pue_status, &
+      &                                 microbial_cue_min, microbial_cue_max
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                     !< number of soil layers
@@ -992,6 +1010,7 @@ CONTAINS
     REAL(lp),                          INTENT(in)    :: sb_pool_mt_microbial(:,:,:) !< bgcm sb_pool: microbial biomass [mol/m3]
     ! Provisional values here; growth replaces them with realized efficiency diagnostics.
     REAL(lp), DIMENSION(nc, nsoil_w), INTENT(out) :: microbial_nue_eff !< turnover-regulated NUE [-]
+    REAL(lp), DIMENSION(nc, nsoil_w), INTENT(out) :: microbial_pue_eff !< P-status-regulated PUE ceiling [-]
     REAL(lp), DIMENSION(nc, nsoil_w), INTENT(out) :: microbial_cue_eff !< nutrient-stress CUE ceiling [-]
     REAL(lp),                          INTENT(inout) :: sb_loss_mt_microbial(:,:,:) !< bgcm sb_loss flux: microbial death [mol/m3/timestep]
     REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)    !< bgcm sb_formation: DOM formation from microbial death [mol/m3/timestep]
@@ -1024,6 +1043,12 @@ CONTAINS
     IF (microbial_nue < 0._lp .OR. microbial_nue > 1._lp .OR. microbial_cue_min < 0._lp .OR. &
         & microbial_cue_max > 1._lp .OR. microbial_cue_min > microbial_cue_max) &
       & CALL finish(routine, 'Microbial efficiencies require 0<=NUE<=1 and 0<=CUE_min<=CUE_max<=1.')
+    IF (.NOT. ALL(ieee_is_finite([microbial_pue, microbial_pue_min, km_microbial_pue_status]))) &
+      & CALL finish(routine, 'Nonfinite PUE response parameter.')
+    IF (MIN(microbial_pue, microbial_pue_min) < 0._lp .OR. &
+        & MAX(microbial_pue, microbial_pue_min) > 1._lp .OR. km_microbial_pue_status <= 0._lp) &
+      & CALL finish(routine, 'PUE bounds must be in [0,1] and its status response scale positive.')
+    microbial_pue_eff(:,:) = microbial_pue
     microbial_nue_eff(:,:) = microbial_nue
     microbial_cue_eff(:,:) = microbial_cue_max
 
@@ -1043,9 +1068,9 @@ CONTAINS
         CALL calc_microbial_nutrient_regulation(flag_sb_interactive_n, flag_sb_interactive_p, &
           & fact_n_status_mic_c_growth(ic,is), &
           & fact_p_status_mic_c_growth(ic,is), fc_n_res2dom_max, fc_p_res2dom_max, &
-          & min_fraction_default_sb, km_microbial_nutrient_recycling, microbial_nue, &
+          & min_fraction_default_sb, km_microbial_nutrient_recycling, microbial_nue, microbial_pue, &
           & microbial_cue_min, microbial_cue_max, n_res2dom(ic,is), p_res2dom(ic,is), &
-          & microbial_nue_eff(ic,is), microbial_cue_eff(ic,is))
+          & microbial_nue_eff(ic,is), microbial_pue_eff(ic,is), microbial_cue_eff(ic,is))
 
         !>1.0 calculate microbial mortality rate, limited to minimum microbial biomass density (-> dormant microbes)
         !>
@@ -1372,7 +1397,7 @@ CONTAINS
         IF (.NOT. flag_sb_interactive_p) THEN
           microbial_uptake_po4_sl(ic,is) = &
             & MAX(microbial_uptake_po4_sl(ic,is), microbial_cue_max * uptake_c(ic,is) &
-            & / microbial_cn / microbial_np - microbial_pue &
+            & / microbial_cn / microbial_np - microbial_pue_eff(ic,is) &
             & * f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is))
         END IF
 
@@ -1383,7 +1408,7 @@ CONTAINS
         growth_c(ic,is) = microbial_cue_max * uptake_c(ic,is)
         growth_n(ic,is) = (microbial_nue_eff(ic,is) * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
           &               microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
-        growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
+        growth_p(ic,is) = (microbial_pue_eff(ic,is) * uptake_p(ic,is) + &
           &               microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
 
         IF (growth_c(ic,is) > eps8 .AND. sb_pool_mt(ix_microbial, ixC, ic, is) > (min_mic_biomass + eps8)) THEN
@@ -1442,14 +1467,14 @@ CONTAINS
             &   (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
             &    microbial_nue_eff(ic,is) * sb_pool_mt(ix_dom, ixN, ic, is) * microbial_cn)))
         ELSE IF (growth_p(ic,is) < growth_c(ic,is) .AND. growth_p(ic,is) < growth_n(ic,is) .AND. &
-                 (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_pue &
+                 (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - microbial_pue_eff(ic,is) &
                  * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn) > eps8) THEN
           ! phosphorus uptake is limiting
           ! calculate uptake rate that satisfies P constraint and CUE
           f_uptake(ic,is) = MAX(0.0_lp,MIN(f_uptake(ic,is), &
             &             (microbial_uptake_po4_sl(ic,is) * microbial_np * microbial_cn) / &
             &             (microbial_cue_eff_tmic_mavg(ic,is) * sb_pool_mt(ix_dom, ixC, ic, is) - &
-            &              microbial_pue * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn)))
+            &              microbial_pue_eff(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is) * microbial_np * microbial_cn)))
         ELSE
           f_uptake(ic,is) = 0.0_lp
         END IF
@@ -1459,7 +1484,7 @@ CONTAINS
         uptake_p(ic,is) = f_uptake(ic,is) * sb_pool_mt(ix_dom, ixP, ic, is)
         growth_n(ic,is) = (microbial_nue_eff(ic,is) * uptake_n(ic,is) + asymb_n_fixation(ic,is) + &
                          microbial_uptake_nh4_sl(ic,is) + microbial_uptake_no3_sl(ic,is)) * microbial_cn
-        growth_p(ic,is) = (microbial_pue * uptake_p(ic,is) + &
+        growth_p(ic,is) = (microbial_pue_eff(ic,is) * uptake_p(ic,is) + &
                          microbial_uptake_po4_sl(ic,is)) * microbial_np * microbial_cn
 
         !>  2.2 Adjust nitrogen-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
@@ -1495,15 +1520,15 @@ CONTAINS
         !>  2.3 Adjust phosphorus-use efficiency and immobilisation flux such that the growth is stoichiometrically balanced
         !>     and calculate gross mineralisation rate
         !>
-        microbial_pue_eff(ic,is) = microbial_pue
+        ! Retain turnover's P-status-regulated ceiling; growth may reduce realized PUE further.
         IF (growth_c(ic,is) < growth_p(ic,is)) THEN
           ! inorganic P immobilisation flux, in agreement with C and N uptake
           microbial_uptake_po4_sl(ic,is) = MAX(growth_c(ic,is) / microbial_cn / microbial_np &
-                                           - microbial_pue * uptake_p(ic,is),0.0_lp)
+                                           - microbial_pue_eff(ic,is) * uptake_p(ic,is),0.0_lp)
           ! In the case that the source C:N:P is too tight for microbes, cause gross mineralisation
           IF (uptake_p(ic,is) > eps8) THEN
-            microbial_pue_eff(ic,is) = ( growth_c(ic,is) / microbial_cn / microbial_np - microbial_uptake_po4_sl(ic,is) ) &
-                                       / uptake_p(ic,is)
+            microbial_pue_eff(ic,is) = MIN(microbial_pue_eff(ic,is), MAX(0._lp, &
+              & (growth_c(ic,is) / microbial_cn / microbial_np - microbial_uptake_po4_sl(ic,is)) / uptake_p(ic,is)))
           END IF
         END IF
         gross_mineralisation_po4(ic,is) = gross_mineralisation_po4(ic,is) + (1._lp - microbial_pue_eff(ic,is)) * uptake_p(ic,is)
@@ -2200,7 +2225,7 @@ CONTAINS
   SUBROUTINE init_available_pore_volume( &
     & nc, nsoil_w, num_sl_above_bedrock, bulk_dens_sl, volume_pore_total_sl)
 
-    USE mo_sb_constants, ONLY: rho_particle_mineral
+    USE mo_sb_constants, ONLY: rho_particle_mineral, min_fine_mineral_volume
 
     INTEGER,  INTENT(in)  :: nc, nsoil_w
     REAL(lp), INTENT(in)  :: num_sl_above_bedrock(:), bulk_dens_sl(:,:)
@@ -2212,11 +2237,35 @@ CONTAINS
     DO ic = 1, nc
       DO isoil = 1, NINT(num_sl_above_bedrock(ic))
         initial_mineral_density = bulk_dens_sl(ic,isoil)
-        volume_pore_total_sl(ic,isoil) = MAX(0.0_lp, MIN(1.0_lp, &
+        volume_pore_total_sl(ic,isoil) = MAX(0.0_lp, MIN(1.0_lp - min_fine_mineral_volume, &
           & 1.0_lp - initial_mineral_density / rho_particle_mineral))
       END DO
     END DO
   END SUBROUTINE init_available_pore_volume
+
+  !> Reject invalid restored geometry before any flux or mineral-inventory rescaling.
+  !! Only active layers are checked. Do not repair an old restart by clipping: that would change
+  !! mineral mass without accounting for its nutrient inventory. Tolerance matches calibration.
+  SUBROUTINE check_available_pore_geometry(nc, num_sl_above_bedrock, pore, context)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_sb_constants, ONLY: min_fine_mineral_volume
+    INTEGER, INTENT(in) :: nc !< cells in chunk [-]
+    REAL(lp), INTENT(in) :: num_sl_above_bedrock(:), pore(:,:) !< layer count [-], pore [m3 m-3]
+    CHARACTER(len=*), INTENT(in) :: context !< caller/tile identifier
+    INTEGER :: ic, is
+    CHARACTER(len=512) :: diagnostic
+    DO ic = 1, nc
+      DO is = 1, NINT(num_sl_above_bedrock(ic))
+        IF (.NOT. ieee_is_finite(pore(ic,is)) .OR. pore(ic,is) < 0._lp .OR. &
+            & pore(ic,is) > 1._lp - min_fine_mineral_volume + 1.e-10_lp) THEN
+          WRITE(diagnostic,*) TRIM(context), ': invalid pore geometry at cell/layer=', ic,is, &
+            & '; pore/minimum mineral=',pore(ic,is),min_fine_mineral_volume, &
+            & '. Reinitialize incompatible geometry; no inventory rescaling applied.'
+          CALL finish('check_available_pore_geometry',TRIM(diagnostic))
+        END IF
+      END DO
+    END DO
+  END SUBROUTINE check_available_pore_geometry
 
 
   !> Return MAOC and displaceable POC [mol C m-3 TOTAL soil].
@@ -2343,7 +2392,7 @@ CONTAINS
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_jsb_physical_constants, ONLY: molar_mass_C
     USE mo_sb_constants, ONLY: rho_particle_mineral, rho_solid_maoc, rho_bulk_org, &
-      & carbon_per_dryweight_SOM
+      & carbon_per_dryweight_SOM, min_fine_mineral_volume
 
     REAL(lp), INTENT(in)  :: maoc_carbon            !< current MAOC concentration [mol C m-3]
     REAL(lp), INTENT(in)  :: poc_carbon             !< current POC concentration [mol C m-3]
@@ -2403,6 +2452,9 @@ CONTAINS
       admissible_pore_upper = 1.0_lp
     END IF
 
+    ! Reserve mineral solids independently of the chemical MAOC bound. A low target density
+    ! may be unattainable; return a bounded state rather than remove the remaining mineral.
+    admissible_pore_upper = MIN(admissible_pore_upper, 1._lp - min_fine_mineral_volume)
     IF (admissible_pore_lower > 1.0_lp + pore_volume_abs_tol .OR. &
         & admissible_pore_upper < -pore_volume_abs_tol .OR. &
         & admissible_pore_lower > admissible_pore_upper + pore_volume_abs_tol) THEN

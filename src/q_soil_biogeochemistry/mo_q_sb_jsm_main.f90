@@ -56,7 +56,7 @@ CONTAINS
     USE mo_q_sb_jsm_processes,    ONLY: calc_sinking_flux, calc_litter_turnover, &
       &                                 calc_microbial_growth, calc_sourcing_flux, &
       &                                 calc_microbial_turnover, calc_sorption_desorption_of_org_material, &
-      &                                 calc_depolymerisation_SESAM, &
+      &                                 calc_depolymerisation_SESAM, check_available_pore_geometry, &
       &                                 calc_nitri_denitri_partitioning_rate, calc_asymb_bnf_fraction
     USE mo_q_sb_jsm_transport,    ONLY: calc_liquid_phase_transport_wrapper, &
       &                                 calc_bioturbation_transport_wrapper_jsm, &
@@ -526,6 +526,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,    fact_p_status_mic_c_growth)       ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    enzyme_frac_AP)                   ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_pore_total_sl)
+    IF (dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume) &
+      & CALL check_available_pore_geometry(nc, num_sl_above_bedrock, volume_pore_total_sl, tile%name)
     dsl4jsb_Get_var3D_onChunk(SB_,    volume_min_sl)                    ! in
     dsl4jsb_Get_var3D_onChunk(SB_,    growth_p_limit_smoothed_sl)
     l_replay_forcing = .FALSE.
@@ -574,6 +576,7 @@ CONTAINS
       & dtime, &
       & num_sl_above_bedrock(:), &
       & dsl4jsb_Config(SB_)%flag_sb_interactive_p, &  ! in
+      & microbial_pue_eff(:,:), &                   ! preceding-step realized PUE
       & sb_pool_mt(ix_microbial, ixC, :, :), &
       & sb_pool_mt(ix_microbial, ixN, :, :), &
       & sb_pool_mt(ix_microbial, ixP, :, :), &
@@ -619,16 +622,9 @@ CONTAINS
       & occlusion_po4(:,:), &
       & slow_exchange_po4(:,:) )                      ! out
 
-    ! Replay with fixed primary/occluded P must not impose a net mineral P source.
-    ! Both rates are micro-mol P m-3 s-1. Match weathering to the diagnosed
-    ! occlusion before subsequent flux limitation and pool updates. This closes
-    ! only this exchange; deposition, uptake and transport retain their budgets.
-    ! Ordinary coupled and file-driven QSOIL calls retain their existing rates.
-    IF (PRESENT(l_soil_model_forcing)) THEN
-      IF (l_soil_model_forcing .AND. dsl4jsb_Config(SB_)%l_exclude_weathering) THEN
-        weathering_po4(:,:) = occlusion_po4(:,:)
-      END IF
-    END IF
+    ! Weathering and occlusion retain their independent realized rates in replay too.
+    ! Freezing the geological reservoirs in the pool update does not require W=O:
+    ! W-O is an imposed source/sink for active P, not internal closed-system exchange.
 
     !>3.0 Litter-related fluxes
     !>
@@ -1085,6 +1081,7 @@ CONTAINS
       & sb_loss_mt(ix_microbial,:,:,:), &     ! inout
       & sb_formation_mt(:,:,:,:), &           ! inout
       & microbial_nue_eff(:,:), &             ! out: provisional NUE for growth below
+      & microbial_pue_eff(:,:), &             ! out: provisional PUE from retained microbial P status
       & microbial_cue_eff(:,:) )              ! out: instantaneous CUE ceiling, not its moving average
 
     !>10.0 mineral stabilisation

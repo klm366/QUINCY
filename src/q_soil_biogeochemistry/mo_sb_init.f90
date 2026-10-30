@@ -192,6 +192,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onDomain :: microbial_nue_eff_tmic_mavg
     dsl4jsb_Real3D_onDomain :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_pue_eff
     dsl4jsb_Real3D_onDomain :: vmax_weath_mineral_sl
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly
     dsl4jsb_Real3D_onDomain :: enzyme_frac_residue
@@ -301,6 +302,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_,    microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_,    microbial_nue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_,    microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_,    microbial_pue_eff)
     dsl4jsb_Get_var3D_onDomain(SB_,    vmax_weath_mineral_sl)
     dsl4jsb_Get_var3D_onDomain(SB_,    enzyme_frac_poly)
     dsl4jsb_Get_var3D_onDomain(SB_,    enzyme_frac_residue)
@@ -459,6 +461,8 @@ CONTAINS
     microbial_cue_eff_tmic_mavg(:,:,:)  = microbial_cue_max
     microbial_nue_eff_tmic_mavg(:,:,:)  = microbial_nue
     microbial_pue_eff_tmic_mavg(:,:,:)  = microbial_pue
+    ! First sourcing step needs a defined preceding PUE; restart loading restores its saved value.
+    microbial_pue_eff(:,:,:) = microbial_pue
     vmax_weath_mineral_sl(:,:,:)        = k_weath_mineral
     dom_cn(:,:,:)                       = microbial_cn
     dom_cp(:,:,:)                       = microbial_cn * microbial_np
@@ -486,6 +490,7 @@ CONTAINS
         & sb_init_vars%soil_p_occluded(:,:,:), &
         & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
+        & dsl4jsb_Config(SB_)%soil_p_input_units, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
         & soil_lay_depth_ubound_sl(:,:,:), &
@@ -550,6 +555,7 @@ CONTAINS
         & sb_init_vars%soil_p_occluded(:,:,:), &
         & sb_init_vars%soil_p_primary(:,:,:), &
         & dsl4jsb_Config(SB_)%soil_p_depth, &
+        & dsl4jsb_Config(SB_)%soil_p_input_units, &
         & soil_depth_sl(:,:,:), &
         & soil_lay_width_sl(:,:,:), &
         & soil_lay_depth_ubound_sl(:,:,:), &
@@ -646,6 +652,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(po4_assoc_fast(:,:,:), po4_assoc_slow(:,:,:), po4_occluded(:,:,:), ph_sl(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(Qmax_AlFe_cor(:,:,:), po4_primary(:,:,:), microbial_cue_eff_tmic_mavg(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(microbial_nue_eff_tmic_mavg(:,:,:), microbial_pue_eff_tmic_mavg(:,:,:)) ASYNC(1)
+    !$ACC UPDATE DEVICE(microbial_pue_eff(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(vmax_weath_mineral_sl(:,:,:), enzyme_frac_poly(:,:,:), enzyme_frac_residue(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(enzyme_frac_poly_c(:,:,:), enzyme_frac_poly_n(:,:,:), enzyme_frac_poly_p(:,:,:)) ASYNC(1)
     !$ACC UPDATE DEVICE(dom_cn(:,:,:), dom_cp(:,:,:), fact_n_status_mic_c_growth(:,:,:)) ASYNC(1)
@@ -781,6 +788,7 @@ CONTAINS
     INTEGER                     :: nblks
     INTEGER                     :: nsoil_w
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_read_init_vars'
+    REAL(lp) :: p_default(4) !< legacy g_m2 fallbacks; -1 marks invalid/missing g_kg inputs
 
     IF (debug_on()) CALL message(routine, 'Reading/setting SB_ init vars')
 
@@ -847,26 +855,31 @@ CONTAINS
 
     !> QUINCY soil biogeochemistry inputs
     !>  In the default workflow, soil pH and inorganic P maps are read as 2D fields and expanded to all soil layers.
+    ! Explicit units apply to all four P fields. Never reinterpret legacy g_m2 defaults as g/kg.
+    ! Invalid values remain negative for an active-layer check at initialization; ocean/below-bedrock
+    ! missing values need not invalidate the complete global file.
+    p_default = [50._lp,70._lp,150._lp,100._lp]
+    IF (dsl4jsb_Config(SB_)%soil_p_input_units == 'g_kg') p_default = -1._lp
     !>  If l_read_quincy_soil_3d is enabled, soil pH and inorganic P pools are read layer-wise from the optional 3D file.
     !>
     IF (model%config%l_read_quincy_soil_3d) THEN
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename_3d), model%grid_id)
 
       CALL read_quincy_soil_input_3d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_lp, scale=0.1_lp)
-      CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._lp)
-      CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._lp)
-      CALL read_quincy_soil_input_3d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._lp)
-      CALL read_quincy_soil_input_3d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._lp)
+      CALL read_quincy_soil_input_3d(input_file, 'Labile_Inorganic_P',  sb_init_vars%soil_p_labile,   p_default(1))
+      CALL read_quincy_soil_input_3d(input_file, 'Seconday_Mineral__P', sb_init_vars%soil_p_slow,     p_default(2))
+      CALL read_quincy_soil_input_3d(input_file, 'Occluded_P',          sb_init_vars%soil_p_occluded, p_default(3))
+      CALL read_quincy_soil_input_3d(input_file, 'Apatite_P',           sb_init_vars%soil_p_primary,  p_default(4))
 
       CALL input_file%Close()
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SB_)%bc_quincy_soil_filename), model%grid_id)
 
       CALL read_quincy_soil_input_2d(input_file, 'PHIHOX',               sb_init_vars%soil_ph,                65.0_lp, scale=0.1_lp)
-      CALL read_quincy_soil_input_2d(input_file, 'Labile_Inorganic_P',   sb_init_vars%soil_p_labile,          50._lp)
-      CALL read_quincy_soil_input_2d(input_file, 'Seconday_Mineral__P',  sb_init_vars%soil_p_slow,            70._lp)
-      CALL read_quincy_soil_input_2d(input_file, 'Occluded_P',           sb_init_vars%soil_p_occluded,        150._lp)
-      CALL read_quincy_soil_input_2d(input_file, 'Apatite_P',            sb_init_vars%soil_p_primary,         100._lp)
+      CALL read_quincy_soil_input_2d(input_file, 'Labile_Inorganic_P',  sb_init_vars%soil_p_labile,   p_default(1))
+      CALL read_quincy_soil_input_2d(input_file, 'Seconday_Mineral__P', sb_init_vars%soil_p_slow,     p_default(2))
+      CALL read_quincy_soil_input_2d(input_file, 'Occluded_P',          sb_init_vars%soil_p_occluded, p_default(3))
+      CALL read_quincy_soil_input_2d(input_file, 'Apatite_P',           sb_init_vars%soil_p_primary,  p_default(4))
 
       CALL input_file%Close()
     END IF
@@ -891,7 +904,12 @@ CONTAINS
     ALLOCATE(field_2d(SIZE(field,1), SIZE(field,3)))
 
     ptr_2D => input_file%Read_2d(variable_name=variable_name, fill_array=field_2d)
-    field_2d(:,:) = MERGE(ptr_2D, default, ptr_2D > 0.0_lp)
+    IF (default < 0._lp) THEN
+      ! Required mass-based P maps: zero is a valid inventory, negative remains invalid.
+      field_2d(:,:) = MERGE(ptr_2D, default, ptr_2D >= 0.0_lp)
+    ELSE
+      field_2d(:,:) = MERGE(ptr_2D, default, ptr_2D > 0.0_lp)
+    END IF
     IF (PRESENT(scale)) field_2d(:,:) = field_2d(:,:) * scale
 
     DO is = 1, SIZE(field, 2)
@@ -987,6 +1005,7 @@ CONTAINS
     & soil_p_occluded, &
     & soil_p_primary, &
     & soil_p_depth, &
+    & soil_p_input_units, &
     & soil_depth_sl, &
     & soil_lay_width_sl, &
     & soil_lay_depth_ubound_sl, &
@@ -1066,6 +1085,7 @@ CONTAINS
     REAL(lp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
+    CHARACTER(len=*),           INTENT(in)    :: soil_p_input_units !< g_m2 or g_kg; cold-start P maps
     REAL(lp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
@@ -1385,7 +1405,7 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      IF (l_read_quincy_soil_3d) THEN
+      IF (l_read_quincy_soil_3d .OR. soil_p_input_units == 'g_kg') THEN
         !> Use the layer-wise inorganic P pools directly
         !>  These maps are expected to already contain the desired vertical distribution.
         !>  No extrapolation from the shallow soil P data is applied.
@@ -1407,7 +1427,8 @@ CONTAINS
           & qmax_po4(:,:,iblk), &
           & km_adsorpt_po4_sl(:,:,iblk), &
           & qmax_fast_po4(:,:,iblk), &
-          & km_fast_po4(:,:,iblk) )           ! inout
+          & km_fast_po4(:,:,iblk), &
+          & bulk_dens_sl(:,:,iblk), soil_p_input_units ) ! input density and concentration units
       ELSE
         !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
         !>
@@ -1462,6 +1483,7 @@ CONTAINS
     & soil_p_occluded, &
     & soil_p_primary, &
     & soil_p_depth, &
+    & soil_p_input_units, &
     & soil_depth_sl, &
     & soil_lay_width_sl, &
     & soil_lay_depth_ubound_sl, &
@@ -1555,6 +1577,7 @@ CONTAINS
     REAL(lp),                   INTENT(in)    :: soil_p_occluded(:,:,:)           !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_primary(:,:,:)            !< bc_quincy_soil input file
     REAL(lp),                   INTENT(in)    :: soil_p_depth                     !< SB_ config
+    CHARACTER(len=*),           INTENT(in)    :: soil_p_input_units !< g_m2 or g_kg; cold-start P maps
     REAL(lp),                   INTENT(in)    :: soil_depth_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: soil_lay_width_sl(:,:,:)
     REAL(lp),                   INTENT(in)    :: soil_lay_depth_ubound_sl(:,:,:)
@@ -1988,7 +2011,7 @@ CONTAINS
     !>
     ! initialise mineral soil P pools
     DO iblk = 1,nblks
-      IF (l_read_quincy_soil_3d) THEN
+      IF (l_read_quincy_soil_3d .OR. soil_p_input_units == 'g_kg') THEN
         !> Use the layer-wise inorganic P pools directly
         !>  These maps are expected to already contain the desired vertical distribution.
         !>  No extrapolation from the shallow soil P data is applied.
@@ -2010,7 +2033,8 @@ CONTAINS
           & qmax_po4(:,:,iblk), &
           & km_adsorpt_po4_sl(:,:,iblk), &
           & qmax_fast_po4(:,:,iblk), &
-          & km_fast_po4(:,:,iblk) )                 ! inout
+          & km_fast_po4(:,:,iblk), &
+          & bulk_dens_sl(:,:,iblk), soil_p_input_units ) ! input density and concentration units
       ELSE
         !> Use the original 2D soil P workflow and extrapolate the soil P maps over the soil profile
         !>
@@ -2133,9 +2157,10 @@ CONTAINS
 
 
   ! ======================================================================================================= !
-  !>Intialize soil P pools directly from layer-wise soil P maps
+  !> Initialize soil P pools directly from layer-wise inventories or dry-soil concentrations.
   !>  In contrast to init_soil_p_pools, this routine does not extrapolate shallow soil P maps over depth.
-  !>  The input file is expected to provide the full vertical distribution for each inorganic P pool.
+  !>  g_m2 describes each layer inventory; g_kg describes concentration per kg dry soil. A 2D g_kg
+  !>  map is broadcast over layers before this call. Input density, not corrected density, sets its mass basis.
   !>
   SUBROUTINE init_soil_p_pools_from_3d_input(nc, &
                                              nsoil_w, &
@@ -2144,8 +2169,10 @@ CONTAINS
                                              soil_depth_sl, &
                                              soil_p_labile, soil_p_slow, soil_p_occluded, soil_p_primary, &
                                              po4_solute, po4_assoc_fast, po4_assoc_slow, po4_occluded, po4_primary, &
-                                             qmax_po4, km_po4, qmax_fast_po4, km_fast_po4)
+                                             qmax_po4, km_po4, qmax_fast_po4, km_fast_po4, &
+                                             bulk_dens_sl, soil_p_input_units)
 
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_jsb_physical_constants, ONLY: molar_mass_P
     USE mo_q_sb_jsm_processes,     ONLY: calc_fast_po4
 
@@ -2154,10 +2181,10 @@ CONTAINS
     REAL(lp), DIMENSION(nc)         , INTENT(in)     :: num_sl_above_bedrock      !< number of soil layers with thickness > eps8
     LOGICAL                         , INTENT(in)     :: flag_sb_double_langmuir   !< T: double Langmuir; F: traditional Langmuir
     REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_depth_sl             !< soil depth per soil layer, [m]
-    REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &          !< labile P per soil layer, [g m-2]
-                                                        soil_p_slow, &            !< slow P per soil layer, [g m-2]
-                                                        soil_p_occluded, &        !< occluded P per soil layer, [g m-2]
-                                                        soil_p_primary            !< primary P per soil layer, [g m-2]
+    REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(in)     :: soil_p_labile, &          !< labile P [g m-2 or g kg-1]
+                                                        soil_p_slow, &            !< slow P [g m-2 or g kg-1]
+                                                        soil_p_occluded, &        !< occluded P [g m-2 or g kg-1]
+                                                        soil_p_primary            !< primary P [g m-2 or g kg-1]
     REAL(lp), DIMENSION(nc,nsoil_w) , INTENT(inout)  :: po4_solute, &             !< soluble Pi pool per soil layer, [mol m-3]
                                                         po4_assoc_fast, &         !< fast associated PO4 pool, [mol m-3]
                                                         po4_assoc_slow, &         !< slow associated PO4 pool, [mol m-3]
@@ -2170,6 +2197,9 @@ CONTAINS
     INTEGER                                          :: ic, is
     REAL(lp)                                         :: labile_p_sl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_soil_p_pools_from_3d_input'
+    CHARACTER(len=*), INTENT(in) :: soil_p_input_units !< g_m2 layer inventory or g_kg dry-soil concentration
+    REAL(lp), INTENT(in) :: bulk_dens_sl(nc,nsoil_w) !< uncorrected input density [kg dry soil m-3]
+    REAL(lp) :: conversion !< converts supplied P to mol P per m3 TOTAL layer volume
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting ...')
 
@@ -2179,18 +2209,36 @@ CONTAINS
     po4_occluded(:,:)   = 0._lp
     po4_primary(:,:)    = 0._lp
 
-    !> Convert each layer inventory [g P m-2] to concentration [mol P m-3]
-    !> using its active thickness [m] and molar_mass_P [g mol-1]. Labile P is
+    !> Convert each layer inventory [g P m-2] using active thickness [m], or mass-based
+    !> concentration [g P kg-1] using input density [kg m-3], then divide by M_P [g mol-1]. Labile P is
     !> partitioned conservatively into solution and fast sorption; the other
     !> inventories are copied without the 2D workflow's depth extrapolation.
     !>
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (soil_depth_sl(ic,is) > eps8) THEN
-          labile_p_sl        = soil_p_labile(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
-          po4_assoc_slow(ic,is) = soil_p_slow(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
-          po4_occluded(ic,is)   = soil_p_occluded(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
-          po4_primary(ic,is)    = soil_p_primary(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          IF (soil_p_input_units == 'g_kg') THEN
+            ! Match QS: c[g/kg]*rho_input[kg/m3]/M_P[g/mol]. No depth extrapolation,
+            ! no calibrated-density factor and no stone correction. A 2D concentration
+            ! map is constant across layers; density still varies by layer where supplied.
+            IF (.NOT. ALL(ieee_is_finite([bulk_dens_sl(ic,is), soil_p_labile(ic,is), &
+                & soil_p_slow(ic,is), soil_p_occluded(ic,is), soil_p_primary(ic,is)]))) &
+              & CALL finish(routine, 'Non-finite density or mass-based P input.')
+            IF (bulk_dens_sl(ic,is) <= 0._lp .OR. MIN(soil_p_labile(ic,is),soil_p_slow(ic,is), &
+                & soil_p_occluded(ic,is),soil_p_primary(ic,is)) < 0._lp) &
+              & CALL finish(routine, 'g_kg requires positive input density and all four nonnegative P maps.')
+            conversion = bulk_dens_sl(ic,is)/molar_mass_P
+            labile_p_sl = soil_p_labile(ic,is)*conversion
+            po4_assoc_slow(ic,is) = soil_p_slow(ic,is)*conversion
+            po4_occluded(ic,is) = soil_p_occluded(ic,is)*conversion
+            po4_primary(ic,is) = soil_p_primary(ic,is)*conversion
+          ELSE
+            ! Keep the existing arithmetic order for g_m2 regression compatibility.
+            labile_p_sl          = soil_p_labile(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+            po4_assoc_slow(ic,is) = soil_p_slow(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+            po4_occluded(ic,is)  = soil_p_occluded(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+            po4_primary(ic,is)   = soil_p_primary(ic,is) / soil_depth_sl(ic,is) / molar_mass_P
+          END IF
 
           IF (flag_sb_double_langmuir) THEN
             po4_assoc_fast(ic,is) = calc_fast_po4(labile_p_sl, qmax_fast_po4(ic,is), km_fast_po4(ic,is))
@@ -2383,6 +2431,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: microbial_cue_eff_tmic_mavg
     dsl4jsb_Real3D_onDomain :: microbial_nue_eff_tmic_mavg
     dsl4jsb_Real3D_onDomain :: microbial_pue_eff_tmic_mavg
+    dsl4jsb_Real3D_onDomain :: microbial_pue_eff
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_c_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_n_mavg
     dsl4jsb_Real3D_onDomain :: enzyme_frac_poly_p_mavg
@@ -2399,6 +2448,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_cue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_nue_eff_tmic_mavg)
     dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff_tmic_mavg)
+    dsl4jsb_Get_var3D_onDomain(SB_, microbial_pue_eff)
     dsl4jsb_Get_var3D_onDomain(SB_, nh4_assoc)
     dsl4jsb_Get_var3D_onDomain(SB_, po4_assoc_slow)
     dsl4jsb_Get_var3D_onDomain(SB_, po4_primary)
@@ -2420,6 +2470,8 @@ CONTAINS
     CALL read_3D_var(input_file, microbial_cue_eff_tmic_mavg, 'sb_microbial_cue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_nue_eff_tmic_mavg, 'sb_microbial_nue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, microbial_pue_eff_tmic_mavg, 'sb_microbial_pue_eff_tmic_mavg_'//tile%name, 'soillev', nsoil_w)
+    ! External cold-start soil-state files carry the mean, unlike full ICON restart files.
+    microbial_pue_eff(:,:,:) = microbial_pue_eff_tmic_mavg(:,:,:)
 
     CALL read_3D_var(input_file, nh4_assoc, 'sb_nh4_assoc_'//tile%name, 'soillev', nsoil_w)
     CALL read_3D_var(input_file, po4_assoc_slow, 'sb_po4_primary_'//tile%name, 'soillev', nsoil_w)

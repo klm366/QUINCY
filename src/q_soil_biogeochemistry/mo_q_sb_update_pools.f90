@@ -1110,6 +1110,9 @@ CONTAINS
                                        slow_exchange_po4(:,:), &
                                        fast_exchange_po4(:,:))
 
+      ! Keep weathering and occlusion independent, including replay: do not reset weathering
+      ! to realized occlusion here. Frozen reservoirs impose W-O on active P. The separate
+      ! pore calibration may rescale mineral-associated inventories, including these reservoirs.
       ! DO not update the primary and the occlusion pool during model-spinup
       !  -> not balancing the delta pool P and total flux P as we keep the primary P pool constant
       !     despite a non-zero weathering flux from primary to solute P

@@ -101,6 +101,7 @@ MODULE mo_sb_config_class
     INTEGER               :: nwrb_taxonomy_class
     REAL(lp)              :: soil_ph                  !< soil pH - site specific from forcing info file
     REAL(lp)              :: soil_p_depth
+    CHARACTER(len=4)      :: soil_p_input_units !< P maps: g_m2 (default) or g_kg of dry soil
     REAL(lp)              :: soil_p_labile
     REAL(lp)              :: soil_p_slow
     REAL(lp)              :: soil_p_occluded
@@ -224,6 +225,7 @@ CONTAINS
     INTEGER                     :: usda_taxonomy_class
     INTEGER                     :: nwrb_taxonomy_class
     REAL(lp)                    :: soil_ph
+    CHARACTER(len=4)             :: soil_p_input_units
     REAL(lp)                    :: soil_p_depth,        &
                                    soil_p_labile,       &
                                    soil_p_slow,         &
@@ -295,6 +297,7 @@ CONTAINS
                       nwrb_taxonomy_class       , &
                       soil_ph                   , &
                       soil_p_depth              , &
+                      soil_p_input_units        , &
                       soil_p_labile             , &
                       soil_p_slow               , &
                       soil_p_occluded           , &
@@ -374,6 +377,7 @@ CONTAINS
     soil_p_slow                 = 70._lp
     soil_p_occluded             = 150._lp
     soil_p_primary              = 100._lp
+    soil_p_input_units          = 'g_m2' ! Preserve existing areal-map interpretation.
     qmax_org_fine_particle      = 6.5537_lp
     flag_apply_nml_parameters   = .FALSE.
     nml_temp_freeze_thres_bio   = def_parameters
@@ -477,6 +481,9 @@ CONTAINS
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
     config%soil_ph                         = soil_ph
     config%soil_p_depth                    = soil_p_depth
+    IF (soil_p_input_units /= 'g_m2' .AND. soil_p_input_units /= 'g_kg') &
+      & CALL finish(TRIM(routine), 'soil_p_input_units must be g_m2 or g_kg.')
+    config%soil_p_input_units = soil_p_input_units
     config%soil_p_labile                   = soil_p_labile
     config%soil_p_slow                     = soil_p_slow
     config%soil_p_occluded                 = soil_p_occluded

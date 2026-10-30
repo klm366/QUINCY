@@ -26,6 +26,10 @@ MODULE mo_sb_constants
   ! Numerical activation/division cutoff, not a prescribed pool minimum (QS transfer).
   REAL(lp), PARAMETER :: min_dom_uptake_concentration = 1.e-16_lp !< DOM cutoff [mol element m-3]
 
+  ! Provisional structural bound transferred from QS pore-volume tests, not a universal observed minimum.
+  ! Fine-mineral SOLIDS per TOTAL layer volume; ICON does not include the QS stone geometry.
+  REAL(lp), PARAMETER :: min_fine_mineral_volume = 0.02_lp !< minimum mineral solids [m3 m-3]
+
   ! turnover times (mostly for simple_1d model)
   REAL(lp), SAVE :: &
       tau_soluable_litter, &    !< turnover time of soluable litter [s]
@@ -89,6 +93,8 @@ MODULE mo_sb_constants
       microbial_np, &            !< molar ratio of N:P in microbes (testing only!)
       microbial_nue, &           !< microbial nitrogen use efficiency
       microbial_pue, &           !< microbial phosphorus use efficiency
+      microbial_pue_min, &       !< provisional PUE lower target [-]
+      km_microbial_pue_status, & !< half-response P-status increment [-]
       microbial_cue, &           !< microbial carbon-use efficiency
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min          !< minimum microbial carbon-use efficiency
@@ -427,6 +433,10 @@ CONTAINS
     microbial_np            = 5.6_lp * molar_mass_P / molar_mass_N   ! textbook knowledge
     microbial_nue           = 0.8_lp                                 ! Manzoni et al. 2008
     microbial_pue           = 0.8_lp                                 ! Manzoni et al. 2008
+    ! Provisional QS response, approved for this feature branch; not independently calibrated globally.
+    ! With the shared status plateau 0.1 and exponent 3, PUE(10)=NUE(30) at default efficiency bounds.
+    microbial_pue_min       = 0.3_lp
+    km_microbial_pue_status = 2.4862575250836123_lp ! 7.509*(10-0.1)/(30-0.1) [-]
     microbial_cue           = 0.392_lp                               ! COMISSION paper
     microbial_cue_max       = 0.6_lp                                 ! Manzoni et al. 2008
     microbial_cue_min       = 0.3_lp                                 ! Manzoni et al. 2008
