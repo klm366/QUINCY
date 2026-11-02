@@ -965,7 +965,8 @@ CONTAINS
       & veg_reserve_use_mt(:,:)                , &
       & veg_pool_mt(:,:,:)                     , & ! in
       & dsl4jsb_Config(Q_DINSECT_)%dinsect_online , & ! in
-      & defoliated_state(:)                    , & ! in
+      & dsl4jsb_Config(Q_DINSECT_)%dinsect_df_leaf_growth_during_defoliation , & ! in
+      & defoliated_state(:)                    , & ! inout
       & n_processing_respiration(:)            , & ! inout
       & maint_respiration_c13(:)               , &
       & maint_respiration_c14(:)               , &
@@ -3041,6 +3042,7 @@ CONTAINS
                                 veg_reserve_use_mt            , &
                                 veg_pool_mt                   , &
                                 dinsect_online                , &
+                                df_leaf_growth_mode           , &
                                 defoliated_state              , &
                                 n_processing_respiration      , &
                                 maint_respiration_c13         , &
@@ -3057,6 +3059,7 @@ CONTAINS
     USE mo_kind,                  ONLY: wp
     USE mo_jsb_math_constants,    ONLY: one_day, eps8
     USE mo_veg_constants,         ONLY: knut_labile, tau_labile, fresp_growth
+    USE mo_q_dinsect_config_class, ONLY: DF_LEAF_GROWTH_RETAIN_LABILE, DF_LEAF_GROWTH_REDISTRIBUTE
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,                  INTENT(in)    :: nc                               !< dimensions
     REAL(wp),                 INTENT(in)    :: dtime                            !< timestep length
@@ -3070,6 +3073,7 @@ CONTAINS
     REAL(wp),                 INTENT(in)    :: veg_reserve_use_mt(:,:)
     REAL(wp),                 INTENT(in)    :: veg_pool_mt(:,:,:)               !< labile pool size of the plant
     LOGICAL,                  INTENT(in)    :: dinsect_online                    !< a flag to indicate if dinsect is online or not
+    INTEGER,                  INTENT(in)    :: df_leaf_growth_mode              !< leaf growth during defoliation (DF_LEAF_GROWTH_*)
     REAL(wp),                 INTENT(inout) :: defoliated_state(:)              !< a flag to indicate if the plant is in defoliation stage
     REAL(wp), DIMENSION(nc),  INTENT(inout) :: n_processing_respiration     , & !< respiration associated with N processing
                                                maint_respiration_c13        , & !< maintenance respiration
@@ -3086,7 +3090,10 @@ CONTAINS
     REAL(wp), DIMENSION(nc)     :: hlp1
     REAL(wp)                    :: hlp2
     REAL(wp)                    :: f_leaf_alloc, renorm_alloc
-    INTEGER :: ic
+    !> allocation fractions used in step 5
+    REAL(wp)                    :: frac_alloc(SIZE(veg_frac_alloc_mt,1), SIZE(veg_frac_alloc_mt,2), nc)
+    LOGICAL                     :: retain_leaf_growth_in_labile(nc)  !< defoliated and mode 'retain_labile'
+    INTEGER :: ic, ie
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning'
     !------------------------------------------------------------------------------------------------------ !
 
@@ -3137,6 +3144,23 @@ CONTAINS
         veg_growth_mt(ix_labile, ixC, :) = veg_growth_mt(ix_labile, ixN, :) / growth_req_n(:)
       END WHERE
     END WHERE
+
+    !> 2.3 Defoliation with mode 'retain_labile': no leaf growth, the leaf share of growth stays in the labile pool
+    !! Growth of each element is reduced by that element's leaf allocation fraction. In step 5 the remaining growth
+    !! is split among the other tissues, which then get the same flux as without defoliation.
+    !! Done before growth respiration, exudation and isotopes, so these follow the reduced growth.
+    retain_leaf_growth_in_labile(:) = .FALSE.
+    IF (dinsect_online .AND. df_leaf_growth_mode == DF_LEAF_GROWTH_RETAIN_LABILE) THEN
+      retain_leaf_growth_in_labile(:) = defoliated_state(:) > eps8
+      DO ic = 1, nc
+        IF (retain_leaf_growth_in_labile(ic)) THEN
+          veg_growth_mt(ix_labile, ixC, ic) = veg_growth_mt(ix_labile, ixC, ic) * (1.0_wp - veg_frac_alloc_mt(ix_leaf, ixC, ic))
+          veg_growth_mt(ix_labile, ixN, ic) = veg_growth_mt(ix_labile, ixN, ic) * (1.0_wp - veg_frac_alloc_mt(ix_leaf, ixN, ic))
+          veg_growth_mt(ix_labile, ixP, ic) = veg_growth_mt(ix_labile, ixP, ic) * (1.0_wp - veg_frac_alloc_mt(ix_leaf, ixP, ic))
+        END IF
+      END DO
+    END IF
+
     ! Diagnose growth respiration (micro-mol C / m2 / s)
     growth_respiration(:) = fresp_growth * veg_growth_mt(ix_labile, ixC, :) * 1.e6_wp / dtime
 
@@ -3185,41 +3209,71 @@ CONTAINS
     !> 5.0 partition growth to tissue types
     !! A reminder from yma: please check the writing style of code block above, all with "WHERE" statement, I will delete this line afterwards
     !!
-    !> If it's in defoliation stage, the allocation fraction of leaves is set to 0.
+    !> Leaf growth during defoliation (namelist dinsect_df_leaf_growth_during_defoliation)
+    !!   'allow'         : allocation is not changed
+    !!   'retain_labile' : no leaf growth; growth was already reduced by the leaf share in step 2.3, so the leaf
+    !!                     fraction is set to 0 and the other fractions are scaled up (per element) to take all of
+    !!                     the reduced growth. Uses a local copy, the stored allocation fractions are not changed.
+    !!   'redistribute'  : original behaviour (default): no leaf growth, the leaf share goes to the other
+    !!                     pools in proportion to their fractions (in practice mostly to the fruit pool).
+    !!                     Changes the stored allocation fractions and scales N and P with the C leaf fraction.
+    frac_alloc(:,:,:) = veg_frac_alloc_mt(:,:,:)
+
     IF (dinsect_online) THEN
 
+      SELECT CASE (df_leaf_growth_mode)
+      CASE (DF_LEAF_GROWTH_RETAIN_LABILE)
         DO ic = 1, nc
-            IF (defoliated_state(ic) > eps8) THEN
-                f_leaf_alloc = veg_frac_alloc_mt(ix_leaf, ixC, ic)
-                veg_frac_alloc_mt(ix_leaf, :, ic) = 0.0_wp
-                ! Renormalize non-leaf fractions so labile outflow (-G) matches structural influx (+G)
-                IF (f_leaf_alloc > eps8 .AND. f_leaf_alloc < 1.0_wp - eps8) THEN
-                    renorm_alloc = 1.0_wp / (1.0_wp - f_leaf_alloc)
-                    veg_frac_alloc_mt(ix_fine_root, :, ic)   = veg_frac_alloc_mt(ix_fine_root, :, ic)   * renorm_alloc
-                    veg_frac_alloc_mt(ix_coarse_root, :, ic) = veg_frac_alloc_mt(ix_coarse_root, :, ic) * renorm_alloc
-                    veg_frac_alloc_mt(ix_sap_wood, :, ic)    = veg_frac_alloc_mt(ix_sap_wood, :, ic)    * renorm_alloc
-                    veg_frac_alloc_mt(ix_fruit, :, ic)       = veg_frac_alloc_mt(ix_fruit, :, ic)       * renorm_alloc
-                END IF
-            END IF
+          IF (retain_leaf_growth_in_labile(ic)) THEN
+            DO ie = 1, SIZE(frac_alloc, 2)
+              f_leaf_alloc = frac_alloc(ix_leaf, ie, ic)
+              frac_alloc(ix_leaf, ie, ic) = 0.0_wp
+              IF (1.0_wp - f_leaf_alloc > eps8) THEN
+                renorm_alloc = 1.0_wp / (1.0_wp - f_leaf_alloc)
+                frac_alloc(ix_fine_root, ie, ic)   = frac_alloc(ix_fine_root, ie, ic)   * renorm_alloc
+                frac_alloc(ix_coarse_root, ie, ic) = frac_alloc(ix_coarse_root, ie, ic) * renorm_alloc
+                frac_alloc(ix_sap_wood, ie, ic)    = frac_alloc(ix_sap_wood, ie, ic)    * renorm_alloc
+                frac_alloc(ix_fruit, ie, ic)       = frac_alloc(ix_fruit, ie, ic)       * renorm_alloc
+              END IF
+            END DO
+          END IF
         END DO
 
-        !> Stop the growth of leaves (for deciduous trees: only during the outbreak stage,
-        !> for needleleaf trees: also for the rest time of the year)
-        defoliated_state(:) = 0.0_wp  ! Reset until next time dinsect reactivates it.
+      CASE (DF_LEAF_GROWTH_REDISTRIBUTE)
+        DO ic = 1, nc
+          IF (defoliated_state(ic) > eps8) THEN
+            f_leaf_alloc = veg_frac_alloc_mt(ix_leaf, ixC, ic)
+            veg_frac_alloc_mt(ix_leaf, :, ic) = 0.0_wp
+            ! Renormalize non-leaf fractions so labile outflow (-G) matches structural influx (+G)
+            IF (f_leaf_alloc > eps8 .AND. f_leaf_alloc < 1.0_wp - eps8) THEN
+              renorm_alloc = 1.0_wp / (1.0_wp - f_leaf_alloc)
+              veg_frac_alloc_mt(ix_fine_root, :, ic)   = veg_frac_alloc_mt(ix_fine_root, :, ic)   * renorm_alloc
+              veg_frac_alloc_mt(ix_coarse_root, :, ic) = veg_frac_alloc_mt(ix_coarse_root, :, ic) * renorm_alloc
+              veg_frac_alloc_mt(ix_sap_wood, :, ic)    = veg_frac_alloc_mt(ix_sap_wood, :, ic)    * renorm_alloc
+              veg_frac_alloc_mt(ix_fruit, :, ic)       = veg_frac_alloc_mt(ix_fruit, :, ic)       * renorm_alloc
+            END IF
+            frac_alloc(:, :, ic) = veg_frac_alloc_mt(:, :, ic)
+          END IF
+        END DO
+      END SELECT
+
+      !> Stop the growth of leaves (for deciduous trees: only during the outbreak stage,
+      !> for needleleaf trees: also for the rest time of the year)
+      defoliated_state(:) = 0.0_wp  ! Reset until next time dinsect reactivates it.
 
     END IF
 
 
     veg_growth_mt(ix_leaf, :, :)        = veg_growth_mt(ix_leaf, :, :)        &
-      &                                   + veg_frac_alloc_mt(ix_leaf, :, :)        * veg_growth_mt(ix_labile, :, :)
+      &                                   + frac_alloc(ix_leaf, :, :)        * veg_growth_mt(ix_labile, :, :)
     veg_growth_mt(ix_fine_root, :, :)   = veg_growth_mt(ix_fine_root, :, :)   &
-      &                                   + veg_frac_alloc_mt(ix_fine_root, :, :)   * veg_growth_mt(ix_labile, :, :)
+      &                                   + frac_alloc(ix_fine_root, :, :)   * veg_growth_mt(ix_labile, :, :)
     veg_growth_mt(ix_coarse_root, :, :) = veg_growth_mt(ix_coarse_root, :, :) &
-      &                                   + veg_frac_alloc_mt(ix_coarse_root, :, :) * veg_growth_mt(ix_labile, :, :)
+      &                                   + frac_alloc(ix_coarse_root, :, :) * veg_growth_mt(ix_labile, :, :)
     veg_growth_mt(ix_sap_wood, :, :)    = veg_growth_mt(ix_sap_wood, :, :)    &
-      &                                   + veg_frac_alloc_mt(ix_sap_wood, :, :)    * veg_growth_mt(ix_labile, :, :)
+      &                                   + frac_alloc(ix_sap_wood, :, :)    * veg_growth_mt(ix_labile, :, :)
     veg_growth_mt(ix_fruit, :, :)       = veg_growth_mt(ix_fruit, :, :)       &
-      &                                   + veg_frac_alloc_mt(ix_fruit, :, :)       * veg_growth_mt(ix_labile, :, :)
+      &                                   + frac_alloc(ix_fruit, :, :)       * veg_growth_mt(ix_labile, :, :)
 
     !> 5.1 invert flux of labile to be out of the labile pool
     !!

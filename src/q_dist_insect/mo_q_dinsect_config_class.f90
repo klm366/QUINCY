@@ -32,6 +32,16 @@ MODULE mo_q_dinsect_config_class
   PRIVATE
 
   PUBLIC :: t_q_dinsect_config
+  PUBLIC :: DF_LEAF_GROWTH_ALLOW, DF_LEAF_GROWTH_RETAIN_LABILE, DF_LEAF_GROWTH_REDISTRIBUTE
+
+  ENUM, BIND(C)
+    !> How leaf growth is handled while a plant is defoliated (namelist: dinsect_df_leaf_growth_during_defoliation)
+    ENUMERATOR :: &
+      DF_LEAF_GROWTH_ALLOW = 1,     & ! 'allow': leaves keep growing as without defoliation
+      DF_LEAF_GROWTH_RETAIN_LABILE, & ! 'retain_labile': no leaf growth, the leaf share of growth stays in the labile pool
+      DF_LEAF_GROWTH_REDISTRIBUTE     ! 'redistribute': no leaf growth, the leaf share goes to the other pools
+                                      !                 (original behaviour, default)
+  END ENUM
 
   !-----------------------------------------------------------------------------------------------------
   !> Configuration of the insect disturbance process, derived from t_jsb_config
@@ -45,6 +55,7 @@ MODULE mo_q_dinsect_config_class
 
     LOGICAL :: dinsect_flag_bb_from_namelist         !< Flag to indicate if disturbance BB fraction is read from namelist [logical]
     LOGICAL :: dinsect_flag_df_from_namelist         !< Flag to indicate if disturbance DF fraction is read from namelist [logical]
+    INTEGER :: dinsect_df_leaf_growth_during_defoliation = DF_LEAF_GROWTH_REDISTRIBUTE !< Leaf growth during defoliation [DF_LEAF_GROWTH_*]
     !< Format:
     !< dinsect_bb_filename_prefix_XXXX.nc, where XXXX is the year
     CHARACTER(len=filename_max) :: dinsect_bb_filename_prefix !< Prefix for insect bb input file [string]
@@ -88,6 +99,8 @@ CONTAINS
 
     LOGICAL                       :: dinsect_flag_bb_from_namelist !< on/off reading bark beetle data from namelist [boolean]
     LOGICAL                       :: dinsect_flag_df_from_namelist !< on/off reading defoliator data from namelist [boolean]
+    !< Leaf growth while defoliated: 'allow' | 'retain_labile' | 'redistribute' [string]
+    CHARACTER(len=32)             :: dinsect_df_leaf_growth_during_defoliation
 
     !< Used when dinsect_flag_bb_from_namelist or dinsect_flag_df_from_namelist is FALSE
     CHARACTER(len=filename_max)   :: dinsect_bb_filename_prefix !< prefix for bark beetle data filename [string]
@@ -111,6 +124,7 @@ CONTAINS
       dinsect_online,                &
       dinsect_flag_bb_from_namelist, &
       dinsect_flag_df_from_namelist, &
+      dinsect_df_leaf_growth_during_defoliation, &
       dinsect_bb_filename_prefix,    &
       dinsect_df_filename_prefix,    &
       dinsect_bb_path,               &
@@ -133,6 +147,7 @@ CONTAINS
 
     dinsect_flag_bb_from_namelist = .FALSE.
     dinsect_flag_df_from_namelist = .FALSE.
+    dinsect_df_leaf_growth_during_defoliation = 'redistribute'
     dinsect_bb_filename_prefix    = 'bb_dist_frac_daily_'
     dinsect_df_filename_prefix    = 'df_dist_frac_daily_'
     dinsect_bb_path               = ''
@@ -156,6 +171,18 @@ CONTAINS
 
     config%dinsect_flag_bb_from_namelist = dinsect_flag_bb_from_namelist
     config%dinsect_flag_df_from_namelist = dinsect_flag_df_from_namelist
+    SELECT CASE (tolower(TRIM(dinsect_df_leaf_growth_during_defoliation)))
+    CASE ('allow')
+      config%dinsect_df_leaf_growth_during_defoliation = DF_LEAF_GROWTH_ALLOW
+    CASE ('retain_labile')
+      config%dinsect_df_leaf_growth_during_defoliation = DF_LEAF_GROWTH_RETAIN_LABILE
+    CASE ('redistribute')
+      config%dinsect_df_leaf_growth_during_defoliation = DF_LEAF_GROWTH_REDISTRIBUTE
+    CASE DEFAULT
+      CALL finish(TRIM(routine), 'Invalid dinsect_df_leaf_growth_during_defoliation: ' // &
+        &         TRIM(dinsect_df_leaf_growth_during_defoliation) // ' (allowed: allow, retain_labile, redistribute)')
+    END SELECT
+    CALL message(TRIM(routine), 'Leaf growth during defoliation: ' // TRIM(dinsect_df_leaf_growth_during_defoliation))
     config%dinsect_bb_filename_prefix    = dinsect_bb_filename_prefix
     config%dinsect_df_filename_prefix    = dinsect_df_filename_prefix
     config%dinsect_bb_path               = dinsect_bb_path
