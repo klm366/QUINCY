@@ -216,7 +216,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   !>
 
   !<  ------------------  2.1 get defoliation_dt ----------------------------------
-  IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_bb_from_namelist) THEN
+  IF (dsl4jsb_Config(Q_DINSECT_)%dinsect_flag_df_from_namelist) THEN
     dinsect_df_mort_dt = dsl4jsb_Config(Q_DINSECT_)%dinsect_dev_df_forcing_dist_frac(doy) / (one_day / dtime) ! distribute DF outbreak accross the whole day
   ELSE
     dinsect_df_mort_dt = dinsect_df_dist_fraction_read(:,doy) / (one_day / dtime)
