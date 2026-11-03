@@ -90,7 +90,6 @@ MODULE mo_carbon_memory_class
       GPP_sum,                    & ! used to accumulated GPP-Rate over a day
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
       soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
-                                    ! Without N limitation!
       NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(canopy) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -101,7 +100,7 @@ MODULE mo_carbon_memory_class
       LAI_yyDayMean,              & ! previous previous day mean
       LAI_yDayMean,               & ! previous day mean
       NPP_pot_yDayMean,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(canopy) s)]
-      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after N-limitation and excess carbon drop.
+      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after excess carbon is removed.
                                     ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
@@ -175,7 +174,6 @@ MODULE mo_carbon_memory_class
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
 !      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
       soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
-                                       ! Without N limitation!
       NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(tile area) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
@@ -186,8 +184,7 @@ MODULE mo_carbon_memory_class
 !      LAI_yyDayMean_ta,              & ! previous previous day mean
 !      LAI_yDayMean_ta,               & ! previous day mean
       NPP_pot_yDayMean_ta,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(tile area) s)]
-      NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
-                                       ! Actual NPP (after N-limitation and) excess carbon drop.
+      NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday after excess carbon is removed.
                                        ! [mol(CO2)/(m^2(tile area) s)]
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]

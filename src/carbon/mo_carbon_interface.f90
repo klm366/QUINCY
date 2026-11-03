@@ -298,8 +298,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean       ! mean value of NPP-Rate yesterday (from NPP_pot_sum())
                                                       ! [mol(CO2)/(m^2(canopy) s)]
                                                       ! = cbalance%NPP_pot_sum(...)/time_steps_per_day
-    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean       ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation
-                                                      ! Actual NPP after N-limitation and excess carbon drop.
+    dsl4jsb_Real2D_onChunk ::  NPP_act_yDayMean       ! mean value of actual NPP-Rate yesterday after excess carbon is removed.
                                                       ! [mol(CO2)/(m^2(canopy) s)]
     dsl4jsb_Real2D_onChunk ::  GPP_yDayMean
 

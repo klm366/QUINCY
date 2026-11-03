@@ -133,14 +133,11 @@ CONTAINS
     REAL(lp) :: c_excess
     REAL(lp) :: leaf_shedding
 
-    REAL(lp) :: c_green_pot, c_woods_pot         !! Potential pool values used during NPP allocation
+    REAL(lp) :: c_green_pot, c_woods_pot         !! Candidate pool values during carbon allocation
     REAL(lp) :: c_reserve_pot
 
-    REAL(lp) :: cflx_npp_to_green_potential_step, cflx_npp_to_wood_potential_step
-    REAL(lp) :: cflx_npp_to_reserve_potential_step, cflx_to_crop_harvest_step
+    REAL(lp) :: cflx_to_crop_harvest_step
     REAL(lp) :: cflx_faeces_to_litter_step, cflx_faeces_to_atmosphere_step
-    REAL(lp) :: cflx_npp_to_green_via_mobile_n_step, cflx_npp_to_wood_via_mobile_n_step
-    REAL(lp) :: redFact_Nlimitation
 
     IF (pheno_type == 5) THEN
       is_crop = .TRUE.
@@ -205,7 +202,7 @@ CONTAINS
     c_woods_pot   = c_woods
     c_reserve_pot = c_reserve
 
-    !! Determine carbon allocation; mobile-N adjustments below are currently zero.
+    !! Determine carbon allocation.
 
     cflx_npp_correction = 0.0_lp
     IF (cflx_npp_pot_yday_mean <= 0.0_lp) THEN
@@ -284,38 +281,19 @@ CONTAINS
 
     END IF
 
-    !! ============== APPLY POTENTIAL NPP ALLOCATION ==========================================================
-
-    !! Mobile-N adjustments are retained as zero-valued terms; this routine currently applies no N limitation.
-
-    cflx_npp_to_green_potential_step = cflx_npp_to_green_step
-    cflx_npp_to_wood_potential_step  = cflx_npp_to_wood_step
-
-    cflx_npp_to_green_via_mobile_n_step = 0.0_lp
-    cflx_npp_to_wood_via_mobile_n_step  = 0.0_lp
-
-    cflx_npp_to_green_potential_step = &
-      & cflx_npp_to_green_potential_step - cflx_npp_to_green_via_mobile_n_step
-    cflx_npp_to_wood_potential_step = &
-      & cflx_npp_to_wood_potential_step - cflx_npp_to_wood_via_mobile_n_step
-
-    cflx_npp_to_reserve_potential_step = cflx_npp_to_reserve_step
-    redFact_Nlimitation = 1.0_lp
+    !! ============== APPLY NPP ALLOCATION ====================================================================
 
     !! ============== UPDATE PLANT CARBON POOLS ===============================================================
 
-    c_green   = c_green   + cflx_npp_to_green_potential_step * redFact_Nlimitation
-    c_woods   = c_woods   + cflx_npp_to_wood_potential_step  * redFact_Nlimitation
-    c_reserve = c_reserve + cflx_npp_to_reserve_potential_step
+    c_green   = c_green   + cflx_npp_to_green_step
+    c_woods   = c_woods   + cflx_npp_to_wood_step
+    c_reserve = c_reserve + cflx_npp_to_reserve_step
 
     !! ============== COMPUTE ACTUAL NPP RATE =================================================================
 
     IF (cflx_npp_pot_yday_mean > 0.0_lp) THEN
-      cflx_npp_actual = (cflx_npp_to_green_via_mobile_n_step + cflx_npp_to_wood_via_mobile_n_step + &
-        & cflx_npp_to_root_exudates_step + &
-        & redFact_Nlimitation * (cflx_npp_to_green_potential_step + cflx_npp_to_wood_potential_step) + &
-        & cflx_npp_to_reserve_potential_step &
-        & ) / delta_time_C
+      cflx_npp_actual = (cflx_npp_to_root_exudates_step + &
+        & (cflx_npp_to_green_step + cflx_npp_to_wood_step) + cflx_npp_to_reserve_step) / delta_time_C
     ELSE
       cflx_npp_actual = cflx_npp_pot_yday_mean + cflx_npp_correction
     END IF
