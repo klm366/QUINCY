@@ -14,22 +14,20 @@
 !>#### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
 !>
 MODULE mo_jsb_model_init
-
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                   FUEL_, PPLCC_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_,        &
-    &                   Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
+    &                   CLIMBUF_, Q_PHENO_, Q_SYL_, Q_AGR_, Q_ASSIMI_
 
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_config(NLCC_)
   dsl4jsb_Use_config(HYDRO_)
-#ifndef __NO_QUINCY__
+  dsl4jsb_Use_config(CLIMBUF_)
   dsl4jsb_Use_config(VEG_)
   dsl4jsb_Use_config(SB_)
-#endif
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -37,9 +35,9 @@ MODULE mo_jsb_model_init
   USE mo_jsb_grid,         ONLY: Get_grid
   USE mo_jsb_grid_class,   ONLY: t_jsb_grid
 
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: lp
   USE mo_exception,        ONLY: message, finish
-  USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
+  USE mo_jsb_parallel,     ONLY: Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
   IMPLICIT NONE
@@ -130,7 +128,7 @@ CONTAINS
       grid%sinlat(:,:) = SIN(deg2rad * grid%lat(:,:))
       grid%coslon(:,:) = COS(deg2rad * grid%lon(:,:))
       grid%sinlon(:,:) = SIN(deg2rad * grid%lon(:,:))
-      grid%area(:,:) = 1._wp
+      grid%area(:,:) = 1._lp
     END IF
 
     CALL Register_grid(grid)
@@ -164,7 +162,6 @@ CONTAINS
     USE mo_pheno_init,          ONLY: pheno_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_carbon_init,         ONLY: carbon_init
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY, QSOIL
     USE mo_q_assimi_init,       ONLY: q_assimi_init
     USE mo_q_pheno_init,        ONLY: q_pheno_init
@@ -172,9 +169,7 @@ CONTAINS
     USE mo_q_agr_init,          ONLY: q_agr_init
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
-#endif
     USE mo_fage_init,           ONLY: fage_init
-
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
@@ -193,22 +188,18 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
     INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
-    INTEGER                             :: no_omp_thread
+    REAL(lp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
+    INTEGER                             :: itile
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_config(FAGE_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-#endif
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
-
-    no_omp_thread = Get_omp_thread()
 
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
@@ -227,7 +218,7 @@ CONTAINS
     !>
     !>     @todo Should be in separate subroutine
     !>
-    !>     Three Queues: MODEL_JSBACH / MODEL_QUINCY
+    !>     Two Queues: MODEL_JSBACH / MODEL_QUINCY
     !>
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
@@ -240,6 +231,9 @@ CONTAINS
 
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+      IF (model%processes(CLIMBUF_)%p%config%active) THEN
+        CALL model%Queue_task(CLIMBUF_, "climbuf")
       END IF
 
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
@@ -254,7 +248,7 @@ CONTAINS
       ! if any process that changes area (e.g. NLCC_, ALCC_) is active.
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
-        ! Prepare LCC tasks
+        ! Do the pre-processing for all area changing lcc process tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
@@ -282,7 +276,7 @@ CONTAINS
           CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
-        ! Do postprocessing after all LCC tasks were executed
+        ! Do the post-processing after all area changing lcc process tasks have been executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
@@ -368,7 +362,6 @@ CONTAINS
         CALL model%Queue_task(FUEL_, "fuel")
       END IF
 
-#ifndef __NO_QUINCY__
     ! ----------------------------------------------------------------------------------------------------- !
     !
     ! MODEL_QUINCY
@@ -423,15 +416,16 @@ CONTAINS
           CALL model%Queue_task(ALCC_, "alcc_delta_cover_fractions")
         END IF
 
-        ! Prepare LCC tasks
+        ! Do the pre-processing for all area changing lcc process tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-        ! Here all lcc tasks need to be called: for Quincy this is currently only alcc
 
+        ! Here all tasks, of all lcc process, that change area fractions need to be called:
+        ! (For Quincy this is currently only ALCC)
         IF (model%processes(ALCC_)%p%config%active) THEN
           CALL model%Queue_task(ALCC_, "alcc_translocation")
         END IF
 
-        ! Do postprocessing after all LCC tasks were executed
+        ! Do the post-processing after all area changing lcc process tasks have been executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
 
         IF (model%Do_fractions_change() .AND. (.NOT. model%config%qmodel_id == QCANOPY)) THEN
@@ -513,7 +507,6 @@ CONTAINS
         CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")   ! LAND or PLANT
       END IF
 
-#endif
     END SELECT  ! MODEL_JSBACH / MODEL_QUINCY
     ! Task Queue created
     !-------------------------------------------------------------------------------------------- !
@@ -521,7 +514,6 @@ CONTAINS
     ! Debug message after creating task queue
     IF (debug_on()) THEN
       CALL print_model(model)
-      CALL model%Print_actions()
     END IF
 
     ! At this point, the model configuration and tile structure is set up.
@@ -539,17 +531,11 @@ CONTAINS
       CALL message(routine, 'Tile fractions vary over time')
     END IF
 
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
+    IF (.NOT. ALLOCATED(model%tiles)) CALL finish(TRIM(routine), 'Tile tree not set up')
 
-    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    ! Loop over the tiles in pre-order, i.e. parent tiles are initialized before their children
+    DO itile=1,SIZE(model%tiles)
+      tile => model%tiles(itile)%p
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -560,11 +546,11 @@ CONTAINS
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-#ifndef __NO_QUINCY__
-      ! setup bgc material store (if running with processes that have bgcms)
-      CALL tile%Count_and_classify_bgc_materials()
-      CALL tile%Collect_bgc_materials()
-#endif
+      ! setup bgc material store for Quincy (if running with processes that have bgcms)
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        CALL tile%Count_and_classify_bgc_materials()
+        CALL tile%Collect_bgc_materials()
+      END IF
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -603,12 +589,10 @@ CONTAINS
         IF (tile%Is_process_active(PHENO_)) THEN
           CALL pheno_init(tile)
         END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(Q_PHENO_)) THEN
           CALL q_pheno_init(tile)
         END IF
-#endif
       END SELECT
 
       ! SSE_ and HYDRO_
@@ -628,8 +612,6 @@ CONTAINS
         IF (tile%Is_process_active(SSE_)) THEN
           CALL init_soil_properties(tile)
         END IF
-
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
@@ -649,7 +631,6 @@ CONTAINS
             CALL q_agr_init(tile)
           END IF
         END IF
-#endif
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
@@ -657,12 +638,10 @@ CONTAINS
         !IF (tile%Is_process_active(ASSIMI_)) THEN
         !  CALL assimi_init(tile)
         !END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(Q_ASSIMI_)) THEN
           CALL q_assimi_init(tile)
         END IF
-#endif
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
@@ -685,18 +664,18 @@ CONTAINS
       END SELECT
 #endif
 
-      CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !
     END DO
 
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
-#ifndef __NO_QUINCY__
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
       ! Write back all values from the matrices to the bgcm variables that have been set
       ! in the init routines -- this is required when writing the init values to the output
       ! before the time-loop is started
       CALL model%Write_back_to_bgcms()
-#endif
+    END SELECT
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -710,32 +689,25 @@ CONTAINS
     !>
     ! It is important to only do this after all tile fractions have been set above
     !
-    CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
-
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
     ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
     ALLOCATE(tile_lct_fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
 
-    ! Loop over the tiles, starting from the top tile (i.e. box)
-    DO WHILE (ASSOCIATED(tile))
+    ! If demanded, check (and correct) the cover fractions of the direct children of each tile,
+    ! starting from the top tile (i.e. box)
+    IF (model%config%check_child_cf) THEN
+      DO itile=1,SIZE(model%tiles)
+        tile => model%tiles(itile)%p
+        IF (tile%Has_children()) CALL tile%Check_child_cover_fractions()
+      END DO
+    END IF
 
-      ! First only handle the leaves: skip the tile in case it has children
-      ! (but, if demanded, correct child cover fractons first)
-      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        ! If demanded, check the cover fractions of the direct children
-        IF (model%config%check_child_cf) THEN
-          CALL tile%Check_child_cover_fractions()
-        END IF
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    ! Loop over the tiles in post-order, i.e. the children of a tile are handled before the tile itself
+    DO itile=1,SIZE(model%tiles_postorder)
+      tile => model%tiles_postorder(itile)%p
 
       ! Set initial tile fractions for 'weighted_by_fract' aggregator
       IF (tile%Has_children()) THEN
-        ! Tile has children, the tile thus had been visited before and we're on the way up
         weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
         SELECT TYPE (weighted_by_fract)
         TYPE IS (t_jsb_aggregator_weighted_by_fract)
@@ -748,7 +720,7 @@ CONTAINS
       ! The rel. fraction of the primary LCT is 1: The tile is fully covered by this LCT.
       ! Todo: Are these arrays (i.e. fract_glac_glac, fract_veg_veg, ...) of any interest, or
       ! should we remove the definition here and also remove the corresponding Add_var calls?
-      tile%lcts(1)%fract(:,:) = 1._wp
+      tile%lcts(1)%fract(:,:) = 1._lp
 
       ! We start with second LCT, as the tile's primary LCT fraction has just been set.
       lct_start=2
@@ -759,9 +731,9 @@ CONTAINS
         ! Leaf tiles should have only the primary LCT and should not enter this loop.
         IF (.NOT. tile%Has_children()) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
 
-        ! Tile has children. The tile thus had been visited before (s.above) and we're on the way up.
+        ! Tile has children, which have already been handled.
         ! Loop over the children and add their contributions to the specific LCT fraction.
-        tile_lct_fract_tmp(:,:) = 0._wp
+        tile_lct_fract_tmp(:,:) = 0._lp
         no_children = tile%Get_no_of_children()
         child => tile%Get_first_child_tile()
         DO i=1,no_children
@@ -785,20 +757,18 @@ CONTAINS
             ! Get the (absolute) fraction of the current tile
             CALL tile%Get_fraction(fract=fract_tmp(:,:))
             ! Calculate the (relative) LCT fraction of the tile
-            WHERE (tile_lct_fract_tmp(:,:) == 0._wp)
-              tile%lcts(ilct)%fract(:,:) = 0._wp
-            ELSE WHERE (fract_tmp(:,:) > 0._wp)
+            WHERE (tile_lct_fract_tmp(:,:) == 0._lp)
+              tile%lcts(ilct)%fract(:,:) = 0._lp
+            ELSE WHERE (fract_tmp(:,:) > 0._lp)
               tile%lcts(ilct)%fract(:,:) = tile_lct_fract_tmp(:,:) / fract_tmp(:,:)
             ELSE WHERE
-              tile%lcts(ilct)%fract(:,:) = 1._wp
+              tile%lcts(ilct)%fract(:,:) = 1._lp
             END WHERE
           END IF
           child => child%Get_next_sibling_tile()
         END DO
         !$ACC UPDATE DEVICE(tile%lcts(ilct)%fract) ASYNC(1)
       END DO
-
-      CALL model%Goto_next_tile(tile)
 
     END DO
 
@@ -808,40 +778,22 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
-    !> 4. Iterate over tiles again and initialize hierarchical structure for memories, variables, cq and lcc
+    !> 4. Iterate over tiles again and initialize hierarchical structure for memories, variables and
+    !>    conserved quantities (CQ). In addition, for land cover change (lcc) processes with active and/or
+    !>    passive matter relocation lcc structures are initialised.
     !>
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) CALL finish(TRIM(routine), 'Top tile not set')
+    ! Loop over the non-leaf tiles in post-order
+    DO itile=1,SIZE(model%tiles_postorder)
+      tile => model%tiles_postorder(itile)%p
+      IF (.NOT. tile%Has_children()) CYCLE
 
-    DO WHILE (ASSOCIATED(tile))
-
-      ! IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-      IF (.NOT. tile%visited(no_omp_thread)) THEN
-          CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
-
-      ! tile is not a leaf and we're on the way up
       CALL tile%Init_vars()
       CALL tile%Cache_GPU_pointers()
-
-      CALL model%Goto_next_tile(tile)
-
     END DO
 
     ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(model%tiles)
+      tile => model%tiles(itile)%p
 
       IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
@@ -852,25 +804,17 @@ CONTAINS
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
 
+      ! Identify all conserved quantity types (CQTs) used on this tile, and count the varaibels that need to
+      ! be conserved (the conserved quantities - CQs) of each CQT
       CALL tile%Count_conserved_quantities()
+      ! Subsequently the pointer to the CQs in the process memories are collected
       CALL tile%Collect_conserved_variables()
-
-      CALL model%Goto_next_tile(tile)
 
     END DO
 
     ! Iterate over tiles, init lcc structures
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        CALL model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(model%tiles)
+      tile => model%tiles(itile)%p
 
       IF (tile%Is_process_active(ALCC_)) THEN
         CALL alcc_init_lcc(tile)
@@ -891,7 +835,6 @@ CONTAINS
         END IF
       END SELECT
 
-      CALL model%Goto_next_tile(tile)
     END DO
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -899,26 +842,17 @@ CONTAINS
     !> 5. Iterate over tiles again and print tile information (if debug is ON)
     !>
     IF (debug_on()) THEN
-      CALL model%Reset_tiles()
-
-      CALL model%Get_top_tile(tile)
-
-      IF (.NOT. ASSOCIATED(tile)) &
-        & CALL finish(TRIM(routine), 'Top tile not set')
-
-      DO WHILE (ASSOCIATED(tile))
-
-        IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-          CALL model%Goto_next_tile(tile)
-          CYCLE
-        END IF
-
-        CALL tile%Print()
-
-        CALL model%Goto_next_tile(tile)
-
+      DO itile=1,SIZE(model%tiles)
+        CALL model%tiles(itile)%p%Print()
       END DO
     END IF
+
+    ! -------------------------------------------------------------------------------------------------- !
+    !>
+    !> 6. Build the schedule of the tasks on the tile tree, which is used in each time step.
+    !>    This needs to be done after the tile initialization above, since it changes the process actions.
+    !>
+    CALL model%Build_task_schedule()
 
 ! #ifdef _OPENACC
 !     IF (.NOT. is_time_restart(get_time_start())) CALL model%cpu_to_gpu()
@@ -939,31 +873,23 @@ CONTAINS
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_hydro_init,          ONLY: hydro_sanitize_state
     USE mo_util,                ONLY: one_of
-#ifndef __NO_QUINCY__
     USE mo_veg_init,            ONLY: veg_read_states
     USE mo_sb_init,             ONLY: sb_read_states
-#endif
-
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id !< ID of model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    INTEGER                             :: no_omp_thread, blks, blke, blk, jcs, jce
+    INTEGER                             :: itile, blks, blke, blk, jcs, jce
 
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(HYDRO_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(SB_)
-#endif
-
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
     ! -------------------------------------------------------------------------------------------------- !
-
-    no_omp_thread = Get_omp_thread()
 
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
@@ -978,25 +904,14 @@ CONTAINS
     CASE (MODEL_JSBACH)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(HYDRO_)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_config(VEG_)
       dsl4jsb_Get_config(SB_)
-#endif
     END SELECT
 
     ! Iterate over tiles and call initialization if necessary
-    CALL model%Reset_tiles()
-    CALL model%Get_top_tile(tile)
-    IF (.NOT. ASSOCIATED(tile)) &
-      & CALL finish(TRIM(routine), 'Top tile not set')
-
-    DO WHILE (ASSOCIATED(tile))
-
-      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
-        call model%Goto_next_tile(tile)
-        CYCLE
-      END IF
+    DO itile=1,SIZE(model%tiles)
+      tile => model%tiles(itile)%p
 
       ! Indicate to the weighted average aggregator that tile fractions might have changed after restart
       tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
@@ -1005,13 +920,17 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(CARBON_)) THEN
+          ! In some cases, it is necessary to read the carbon pools (again) from a file instead of
+          ! using the values from the restart file, e.g. during a spinup run where the humus pools
+          ! are equilibrated with an external script. In this case, `read_cpools` can be set to
+          ! true in a restarted run and the carbon pools will be read from the file after the
+          ! restart file has been read, thus overwriting the values from the restart file.
           IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
         END IF
         IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &
           & tile%Is_process_active(HYDRO_)) THEN
           CALL hydro_sanitize_state(tile)
         END IF
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_calculated(VEG_)) THEN
           IF (dsl4jsb_Config(VEG_)%read_veg_state) CALL veg_read_states(tile)
@@ -1026,10 +945,7 @@ CONTAINS
             CALL tile%bgcm_store%Store_bgcm_vars_in_matrices(tile%name, jcs, jce, blk)
           ENDDO
         END IF
-#endif
       END SELECT
-
-      CALL model%Goto_next_tile(tile)
 
     END DO
 

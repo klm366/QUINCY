@@ -16,9 +16,9 @@
 !>#### declare and define agriculture constants
 !>
 MODULE mo_q_agr_constants
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
@@ -62,7 +62,7 @@ MODULE mo_q_agr_constants
   INTEGER, PARAMETER :: ix_harvest      = AGR_HARVEST_IDX
 
   ! generic parameters for agriculture model
-  REAL(wp), SAVE :: &
+  REAL(lp), SAVE :: &
     & qs_def_n_fertiliser             = def_parameters, &  !< QS-only default rate of fertiliser application for crops per year (mol / m2 / year)
     & iq_background_n_fertiliser_rate = def_parameters, &  !< IQ-only minimum entry from natural fertilisation sources (manure etc.)
                                                            !< in extensive agriculture lacking mineral N input (mol / m2 / year)
@@ -81,12 +81,12 @@ MODULE mo_q_agr_constants
     & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
 
   ! phenology parameters for all crop types
-  REAL(wp), SAVE :: &
+  REAL(lp), SAVE :: &
     & mavg_period_cropseason            = def_parameters, &      !< averaging period for long-term cropseason length (years)
     & gdd_t_thres_dormseason            = def_parameters         !< GDD temperature threshold for C3/C4 crops in dormant season (degC days)
 
   !< phenology parameters for crop types
-  REAL(wp), DIMENSION(ncroptype), SAVE :: &
+  REAL(lp), DIMENSION(ncroptype), SAVE :: &
     & cttab_t_thres_planting, &                                  !< weekly air temperature threshold for planting (K)
     & cttab_t_thres_gdd_gs, &                                    !< reference temperature for GDD calculation during growing season (K)
     & cttab_fgdd_mat, &                                          !< fraction of GDD_X needed to reach maturity (unitless)
@@ -100,12 +100,12 @@ MODULE mo_q_agr_constants
     & cttab_crop_season_max                                      !< maximum permitted number of crop seasons per year (# yr-1)
 
   ! allometry parameters for all crop types
-  REAL(wp), SAVE :: &
+  REAL(lp), SAVE :: &
     & k_heatindex, &                                             !< factor in the sensitivity of allometry to GDD (unitless)
     & leaf2sapwood_min_ratio                                     !< minimum leaf to stem mass ration (unitless)
 
   !< allometry and allocation parameters for crop types
-  REAL(wp), DIMENSION(ncroptype), SAVE :: &
+  REAL(lp), DIMENSION(ncroptype), SAVE :: &
     & cttab_k_hi_leaf, &                                         !< shape parameter for leaf allocation response to heat index (unitless)
     & cttab_k_hi_stem, &                                         !< shape parameter for stem allocation response to heat index (unitless)
     & cttab_leaf2root_mass_init, &                               !< initial ratio of leaf to fine root mass at planting (unitless)
@@ -143,71 +143,71 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_agr_constants'
 
     ! general crop parameters
-    qs_def_n_fertiliser               = 100._wp / 10._wp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
-    iq_background_n_fertiliser_rate   = 20._wp / 10._wp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
-    crop_planting_mass                = 4.5_wp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
-    fstore_seed_min                   = 2.0_wp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
-    fstore_seed_max                   = 20.0_wp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
-    max_harvesting_rate               = 0.1_wp                      !< harvesting season takes 1/par days
-    fract_crop_to_slash               = 0.08_wp                     !< from IPCC bookkeeping model
-    fcs_fertappl_day1                 = 0.0_wp                      !< at planting
-    fcs_fertappl_day2                 = 0.10_wp                     !< intermediate
-    fcs_fertappl_day3                 = 0.35_wp                     !< intermediate
-    fcs_fertappl_day4                 = 0.55_wp                     !< during grainfilling
-    frac_fertil_nh4                   = 7._wp / 8._wp               !< an global average value
-    frac_fertil_po4                   = 0.5_wp * 0.4366197_wp * &   !< FAO statistic global N:P2O5 application
+    qs_def_n_fertiliser               = 100._lp / 10._lp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
+    iq_background_n_fertiliser_rate   = 20._lp / 10._lp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
+    crop_planting_mass                = 4.5_lp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
+    fstore_seed_min                   = 2.0_lp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
+    fstore_seed_max                   = 20.0_lp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
+    max_harvesting_rate               = 0.1_lp                      !< harvesting season takes 1/par days
+    fract_crop_to_slash               = 0.08_lp                     !< from IPCC bookkeeping model
+    fcs_fertappl_day1                 = 0.0_lp                      !< at planting
+    fcs_fertappl_day2                 = 0.10_lp                     !< intermediate
+    fcs_fertappl_day3                 = 0.35_lp                     !< intermediate
+    fcs_fertappl_day4                 = 0.55_lp                     !< during grainfilling
+    frac_fertil_nh4                   = 7._lp / 8._lp               !< an global average value
+    frac_fertil_po4                   = 0.5_lp * 0.4366197_lp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
-    canopy_mode_correction_factor     = 0.8_wp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
-    eta_fertiliser                    = 0._wp                       !< not clear how to design this now
+    canopy_mode_correction_factor     = 0.8_lp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
+    eta_fertiliser                    = 0._lp                       !< not clear how to design this now
 
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
-    mavg_period_cropseason            = 20.0_wp                     !< AgroIBIS/CLM5
-    gdd_t_thres_dormseason            = 8.0_wp + Tzero              !< AgroIBIS/CLM5
+    mavg_period_cropseason            = 20.0_lp                     !< AgroIBIS/CLM5
+    gdd_t_thres_dormseason            = 8.0_lp + Tzero              !< AgroIBIS/CLM5
     cttab_t_thres_planting = &
-      & (/ 7._wp, 10._wp, 13._wp, 21._wp, 21._wp, 21._wp, 21._wp, 21._wp /) + TZero
+      & (/ 7._lp, 10._lp, 13._lp, 21._lp, 21._lp, 21._lp, 21._lp, 21._lp /) + TZero
     cttab_t_thres_gdd_gs = &
-      & (/ 5._wp, 8._wp, 10._wp, 5._wp, 5._wp, 8._wp, 10._wp, 10._wp /) + TZero
+      & (/ 5._lp, 8._lp, 10._lp, 5._lp, 5._lp, 8._lp, 10._lp, 10._lp /) + TZero
     cttab_fgdd_mat = &
-      & (/ 1._wp, 0.85_wp, 1._wp, 0.85_wp, 1._wp, 1._wp, 1._wp, 1._wp /)
+      & (/ 1._lp, 0.85_lp, 1._lp, 0.85_lp, 1._lp, 1._lp, 1._lp, 1._lp /)
     cttab_gdd_mat_min = &
-      & (/ 0._wp, 950._wp, 0._wp , 0._wp, 0._wp, 950._wp, 950._wp, 0._wp /)
+      & (/ 0._lp, 950._lp, 0._lp , 0._lp, 0._lp, 950._lp, 950._lp, 0._lp /)
     cttab_gdd_mat_max = &
-      & (/ 1700._wp, 1850._wp, 1900._wp, 1700._wp, 2100._wp, 1850._wp, 1850._wp, 2100._wp/)
+      & (/ 1700._lp, 1850._lp, 1900._lp, 1700._lp, 2100._lp, 1850._lp, 1850._lp, 2100._lp/)
     cttab_gdd_max = &
-      & (/ 26._wp, 30._wp, 30._wp, 26._wp, 26._wp, 30._wp, 30._wp, 30._wp/)
+      & (/ 26._lp, 30._lp, 30._lp, 26._lp, 26._lp, 30._lp, 30._lp, 30._lp/)
     cttab_nd_gs_max = &
-      & (/ 150._wp, 165._wp, 150._wp, 160._wp, 150._wp, 300._wp, 160._wp, 150._wp /)
+      & (/ 150._lp, 165._lp, 150._lp, 160._lp, 150._lp, 300._lp, 160._lp, 150._lp /)
     cttab_nd_dorm_max = &
-      & (/ 100._wp, 100._wp, 100._wp, 50._wp, 50._wp, 50._wp, 30._wp, 30._wp /)
+      & (/ 100._lp, 100._lp, 100._lp, 50._lp, 50._lp, 50._lp, 30._lp, 30._lp /)
     cttab_min_daylength = &
-      & (/ 12._wp, 12._wp, 12._wp, 8._wp, 6._wp, 8._wp, 8._wp, 8._wp /) * 3600._wp
+      & (/ 12._lp, 12._lp, 12._lp, 8._lp, 6._lp, 8._lp, 8._lp, 8._lp /) * 3600._lp
     cttab_fract_gdd_mat_gp2to3 = &
-      & (/ 0.6_wp, 0.65_wp, 0.5_wp, 0.5_wp, 0.4_wp, 0.65_wp, 0.5_wp, 0.5_wp /)
+      & (/ 0.6_lp, 0.65_lp, 0.5_lp, 0.5_lp, 0.4_lp, 0.65_lp, 0.5_lp, 0.5_lp /)
     cttab_crop_season_max = &
-      & (/ 1._wp, 1._wp, 1._wp, 1._wp, 2._wp, 2._wp, 2._wp, 2._wp /)
+      & (/ 1._lp, 1._lp, 1._lp, 1._lp, 2._lp, 2._lp, 2._lp, 2._lp /)
 
     ! allocation parameters per crop type
-    k_heatindex                             = 0.1_wp      ! AgroIBIS/CLM5 parameter b
-    leaf2sapwood_min_ratio                  = 3.0_wp      ! calibrated
+    k_heatindex                             = 0.1_lp      ! AgroIBIS/CLM5 parameter b
+    leaf2sapwood_min_ratio                  = 3.0_lp      ! calibrated
 
     cttab_k_hi_leaf = &
-      & (/ 3._wp, 5._wp, 2._wp, 2._wp, 3._wp, 5._wp, 5._wp, 2._wp /)
+      & (/ 3._lp, 5._lp, 2._lp, 2._lp, 3._lp, 5._lp, 5._lp, 2._lp /)
     cttab_k_hi_stem = &
-      & (/ 1._wp, 2._wp, 5._wp, 5._wp, 1._wp, 2._wp, 2._wp, 5._wp /)
+      & (/ 1._lp, 2._lp, 5._lp, 5._lp, 1._lp, 2._lp, 2._lp, 5._lp /)
     cttab_leaf2root_mass_init = &
-      & (/ 2.0_wp, 1.5_wp, 1.5_wp, 2.0_wp, 1.7_wp, 1.5_wp, 1.5_wp, 1.5_wp /)
+      & (/ 2.0_lp, 1.5_lp, 1.5_lp, 2.0_lp, 1.7_lp, 1.5_lp, 1.5_lp, 1.5_lp /)
     cttab_leaf2root_mass_fin = &
-      & (/ 1.2_wp, 1.0_wp, 1.0_wp, 1.25_wp, 1.2_wp, 1.0_wp, 1.0_wp, 1.2_wp /)
+      & (/ 1.2_lp, 1.0_lp, 1.0_lp, 1.25_lp, 1.2_lp, 1.0_lp, 1.0_lp, 1.2_lp /)
     cttab_sapwood2leaf_mass_init = &
-      & (/ 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp, 0.01_wp /)
+      & (/ 0.01_lp, 0.01_lp, 0.01_lp, 0.01_lp, 0.01_lp, 0.01_lp, 0.01_lp, 0.01_lp /)
     cttab_sapwood2leaf_mass_fin = &
-      & (/ 0.1_wp, 0.1_wp, 0.3_wp, 0.3_wp, 0.1_wp, 0.1_wp, 0.1_wp, 0.3_wp /)
+      & (/ 0.1_lp, 0.1_lp, 0.3_lp, 0.3_lp, 0.1_lp, 0.1_lp, 0.1_lp, 0.3_lp /)
     cttab_falloc_fruit_max = &
-      & (/ 0.8_wp, 0.7_wp, 0.6_wp, 0.6_wp, 0.7_wp, 0.8_wp, 0.6_wp, 0.6_wp /)
+      & (/ 0.8_lp, 0.7_lp, 0.6_lp, 0.6_lp, 0.7_lp, 0.8_lp, 0.6_lp, 0.6_lp /)
     cttab_active_n_fixation = &
-      & (/ 0._wp, 0._wp, 1._wp, 0._wp, 0._wp, 0._wp, 0._wp, 1._wp /)
+      & (/ 0._lp, 0._lp, 1._lp, 0._lp, 0._lp, 0._lp, 0._lp, 1._lp /)
     cttab_lai_max = &
-      & (/ 7._wp, 5._wp, 6._wp, 6._wp, 7._wp, 5._wp, 5._wp, 6._wp /)
+      & (/ 7._lp, 5._lp, 6._lp, 6._lp, 7._lp, 5._lp, 5._lp, 6._lp /)
 
     !$ACC UPDATE DEVICE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate) ASYNC(1)
     !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max) ASYNC(1)

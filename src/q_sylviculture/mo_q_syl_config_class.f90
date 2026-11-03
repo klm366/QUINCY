@@ -16,11 +16,11 @@
 !>#### define sylviculture config structure, read sylviculture namelist and init configuration parameters
 !>
 MODULE mo_q_syl_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_jsb_math_constants,ONLY: eps4
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -38,7 +38,7 @@ MODULE mo_q_syl_config_class
     LOGICAL   :: l_daily_harvest   !< determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
     INTEGER   :: harvest_scheme    !< one of: CONST_HARV=1, REF_HARV=2, TRANS_HARV=3
                                    !< - in case of REF_HARV and TRANS_HARV the data is read from an external file (IQ only)
-    REAL(wp)  :: harvest_fraction  !< default fraction used if not read from a map (annual change, relative to whole gridcell)
+    REAL(lp)  :: harvest_fraction  !< default fraction used if not read from a map (annual change, relative to whole gridcell)
       !< for stand replacing harvest events, in QS, this is ignored and will be set to 1.0 instead
 
     ! QS specific configurations
@@ -83,7 +83,7 @@ CONTAINS
     CHARACTER(9)                :: harvest_scheme           !< one of constant, reference, transient
 
     LOGICAL   :: l_daily_harvest          !< determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
-    REAL(wp)  :: harvest_fraction         !< default fraction used if not read from a map (annual change, relative to whole gridcell)
+    REAL(lp)  :: harvest_fraction         !< default fraction used if not read from a map (annual change, relative to whole gridcell)
       !< for stand replacing harvest events, in QS, this is ignored and will be set to 1.0 instead
 
     ! QS specific configurations
@@ -121,7 +121,7 @@ CONTAINS
     harvest_scheme                = 'none'  ! possible values: none, constant, reference or transient
     l_daily_harvest               = .TRUE.  ! determines if harvest is to be applied on a daily (TRUE) or annual (FALSE) basis
     ! for now arbitrary default fraction used if not read from a map (annual change, relative to whole gridcell)
-    harvest_fraction              = 0.05_wp
+    harvest_fraction              = 0.05_lp
 
     ! QS specific configurations
     harvest_active_in_qs          = .FALSE. ! (required for QS run script environment)
@@ -155,7 +155,7 @@ CONTAINS
     SELECT CASE (tolower(TRIM(harvest_scheme)))
     CASE ("none")
       CALL message(TRIM(routine), 'Running with process active but no global harvest.')
-      config%harvest_scheme = 0.0_wp
+      config%harvest_scheme = 0.0_lp
     CASE ("constant")
       CALL message(TRIM(routine), 'Running with constant global harvest.')
       config%harvest_scheme = CONST_HARV

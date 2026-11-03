@@ -20,7 +20,7 @@ MODULE mo_alcc_config_class
   USE mo_io_units,           ONLY: filename_max
   USE mo_util,               ONLY: tolower
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_config_class,   ONLY: t_jsb_config
 
   IMPLICIT NONE
@@ -197,7 +197,7 @@ CONTAINS
         END IF
 
         trans_layer  => new_vgrid('transitions', ZAXIS_GENERIC, SIZE(trans_names), &
-          & levels=(/ (REAL(i,kind=wp),i=1,SIZE(trans_names)) /), units='')
+          & levels=(/ (REAL(i,kind=lp),i=1,SIZE(trans_names)) /), units='')
         CALL register_vgrid(trans_layer)
 
       CASE DEFAULT

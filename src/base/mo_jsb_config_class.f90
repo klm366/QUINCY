@@ -22,7 +22,7 @@ MODULE mo_jsb_config_class
   !> @TODO `filename_max` and explicit string length definitions should not be needed with
   !>       `CHARACTER(len=:), ALLOCATABLE :: ` syntax.
   !>
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message, finish, message_text
@@ -40,8 +40,6 @@ MODULE mo_jsb_config_class
   !>
   !> @TODO Check if `grid_filename` and `grid_name` variables are needed at all.
   !>
-  !> @TODO State machine will be removed, this will affect `hsm_mode` variable.
-  !>
   !> @TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
   !>      fractions are used elsewhere in the code.
   !>
@@ -49,7 +47,6 @@ MODULE mo_jsb_config_class
   !> `elements_index_map(:)`, and `is_element_used(:)` variables needed
   !> in the model config? They are not configurable!
   !>
-  !> @TODO `l_transient_spinup` is a temporary solution for `model%config%options`.
   !>
   TYPE t_jsb_model_config
 
@@ -76,9 +73,6 @@ MODULE mo_jsb_config_class
     INTEGER                        :: qmodel_id           !< Identifier for the quincy model configuration
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< Switch for Terraplanet setup: Handling of water
                                                           !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode            !< State machine mode
-                                                          ! TODO State machine will be removed, this
-                                                          ! will affect `hsm_mode` variable
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  !< List of the tiles for which output will
                                                                    !< be generated (default: 'box')
     LOGICAL                        :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
@@ -87,7 +81,6 @@ MODULE mo_jsb_config_class
     ! TODO remove `relative_fractions_in_file` function. We agreed to always use relative fractions in the initial file, although absolute (grid box)
     !      fractions are used elsewhere in the code.
 
-#ifndef __NO_QUINCY__
     ! Characteristics of biogeochemical (bgc) material in quincy: flags specifying the elements used and
     ! corresponding bookkeeping vectors.
     ! Note: No logical for carbon because we presuppose that it is always used.
@@ -97,7 +90,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: include_carbon13      !< bgc materials contain C13
     LOGICAL                        :: include_carbon14      !< bgc materials contain C14
     LOGICAL                        :: include_nitrogen15    !< bgc materials contain N15
-
+    LOGICAL                        :: l_spinup              !< Running a spin-up simulation
     ! TODO: Are the `nr_of_elements`, `nr_of_used_elements`,
     ! `elements_index_map(:)`, and `is_element_used(:)` variables needed
     ! in the model config? They are not configurable!
@@ -107,16 +100,11 @@ MODULE mo_jsb_config_class
     LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< Vector(ID) == .TRUE. if "element with ID" is used
 
     ! Spinup accelerator for the slow soil biogeorchemical (sb) pools
-    LOGICAL ::  flag_slow_sb_pool_spinup_accelerator           !< Accelerate slow pool turnover (for spinup)
+    LOGICAL ::  flag_slow_sb_pool_spinup_accelerator           !< Accelerate slow pool turnover (for spin-up)
     INTEGER ::  slow_sb_pool_spinup_accelerator_frequency      !< Frequency of spin-up accelerator runs [years]
     INTEGER ::  slow_sb_pool_spinup_accelerator_length         !< Number of time loops in spin-up accelerator
     INTEGER ::  slow_sb_pool_spinup_accelerator_start_year     !< Year of the first spin-up accelerator runs
     INTEGER ::  slow_sb_pool_spinup_accelerator_max_executions !< Maximum number of spin-up accelerator runs
-#endif
-
-    ! Option only used with quincy standalone:
-    ! TODO `l_transient_spinup` is a temporary solution for `model%config%options`
-    LOGICAL           :: l_transient_spinup            !< true: we are in quincy standalone spinup
 
     ! Initialization from ECMWF Integrated Forecast System (IFS) analysis data
     LOGICAL                        :: init_from_ifs            !< Initialize from IFS analysis
@@ -127,7 +115,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: is_single_site        !< Single site model
     CHARACTER(len=:), ALLOCATABLE  :: single_site_name      !< Single site name
     CHARACTER(len=:), ALLOCATABLE  :: single_site_shortname !< Single site short name
-    REAL(wp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
+    REAL(lp)                       :: single_site_lonlat(2) !< Lon/lat of site in degrees
 
   END TYPE t_jsb_model_config
 
@@ -187,10 +175,7 @@ CONTAINS
     USE mo_jsb_impl_constants,  ONLY: WB_IGNORE, WB_LOGGING, WB_ERROR    ! handling of water balance errors
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
     USE mo_util,                ONLY: tolower
-
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
-#endif
 
     CHARACTER(len=*),         INTENT(in) :: namelist_filename     !< File containing the model namelist
     TYPE(t_jsb_model_config), POINTER    :: model_config          !< Model configuration: structure
@@ -220,30 +205,28 @@ CONTAINS
     INTEGER                       :: npft                         !< Number of PFTs
     CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme                   !< Terraplanet setup: Handling of water
                                                                   !< cycle: 'open' or 'closed'
-    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode                     !< State machine mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)             !< List of the output tiles
     LOGICAL                       :: relative_fractions_in_file   !< Tile fractions in [[t_jsb_model_config:fract_filename]]
                                                                   !< are relative to the parent tiles.
-#ifndef __NO_QUINCY__
     LOGICAL :: force_c_isotopes                                   !< Read carbon isotopes forcing
     LOGICAL :: include_nitrogen                                   !< Nitrogen is element in bgc_material
     LOGICAL :: include_phosphorus                                 !< Phosphorus is element in bgc_material
     LOGICAL :: include_carbon13                                   !< C13 is element in bgc_material
     LOGICAL :: include_carbon14                                   !< C14 is element in bgc_material
     LOGICAL :: include_nitrogen15                                 !< N15 is element in bgc_material
+    LOGICAL :: l_spinup                                           !< Running a spin-up simulation
     LOGICAL :: flag_slow_sb_pool_spinup_accelerator               !< Accelerate slow pool turnover during spin-up
     INTEGER :: slow_sb_pool_spinup_accelerator_frequency          !< Frequency of spin-up accelerator runs [years]
     INTEGER :: slow_sb_pool_spinup_accelerator_length             !< The length (loop times) of spin-up accelerator
     INTEGER :: slow_sb_pool_spinup_accelerator_start_year         !< Year in which spin-up accelerator is
                                                                   !< executed for the first time
     INTEGER :: slow_sb_pool_spinup_accelerator_max_executions     !< Maximum number of spin-up accelerator runs
-#endif
     LOGICAL                       :: init_from_ifs                !< Initialize ICON-Land from IFS data
     CHARACTER(len=filename_max)   :: ifs_filename                 !< File containing IFS data
     LOGICAL                       :: is_single_site
     CHARACTER(len=filename_max)   :: single_site_name
     CHARACTER(len=SHORT_NAME_LEN) :: single_site_shortname
-    REAL(wp)                      :: single_site_lonlat(2)
+    REAL(lp)                      :: single_site_lonlat(2)
 
     ! Definition of the namelist
     NAMELIST /jsb_model_nml/  &
@@ -257,23 +240,21 @@ CONTAINS
       usecase, &
       npft, &
       tpe_scheme, &
-      hsm_mode, &
       fract_filename, &
       output_tiles, &
       relative_fractions_in_file, &
-#ifndef __NO_QUINCY__
       force_c_isotopes, &
       include_nitrogen, &
       include_phosphorus, &
       include_carbon13, &
       include_carbon14, &
       include_nitrogen15, &
+      l_spinup, &
       flag_slow_sb_pool_spinup_accelerator, &
       slow_sb_pool_spinup_accelerator_frequency, &
       slow_sb_pool_spinup_accelerator_length, &
       slow_sb_pool_spinup_accelerator_start_year, &
       slow_sb_pool_spinup_accelerator_max_executions, &
-#endif
       init_from_ifs, &
       ifs_filename, &
       is_single_site, &
@@ -310,37 +291,33 @@ CONTAINS
     check_child_cf             = .FALSE.
     enforce_water_budget       = 'ignore'
     quincy_model               = 'land'
-#ifndef __NO_QUINCY__
     qmodel_id                  = QLAND
-#endif
     grid_filename              = ''
     grid_name                  = ''
     usecase                    = ''
     npft                       = 0
     tpe_scheme                 = ''
-    hsm_mode                   = 'simple'
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
-#ifndef __NO_QUINCY__
     force_c_isotopes           = .TRUE.
     include_nitrogen           = .TRUE.
     include_phosphorus         = .TRUE.
     include_carbon13           = .TRUE.
     include_carbon14           = .TRUE.
     include_nitrogen15         = .TRUE.
+    l_spinup                   = .FALSE.
     flag_slow_sb_pool_spinup_accelerator    = .FALSE.
     slow_sb_pool_spinup_accelerator_frequency = 100
     slow_sb_pool_spinup_accelerator_length = 1000
     slow_sb_pool_spinup_accelerator_start_year = 300
     slow_sb_pool_spinup_accelerator_max_executions = 4
-#endif
     init_from_ifs              = .FALSE.
     ifs_filename               = 'ifs2icon.nc'
     is_single_site             = .FALSE.
     single_site_name           = ''
     single_site_shortname      = ''
-    single_site_lonlat         = [0._wp, 0._wp]
+    single_site_lonlat         = [0._lp, 0._lp]
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -393,16 +370,15 @@ CONTAINS
     model_config%usecase                    = usecase
     model_config%npft                       = npft
     model_config%tpe_scheme                 = tpe_scheme
-    model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
-#ifndef __NO_QUINCY__
     model_config%force_c_isotopes           = force_c_isotopes
-    ! organise elements
+    ! organise bgcm elements
     model_config%include_nitrogen           = include_nitrogen
     model_config%include_phosphorus         = include_phosphorus
     model_config%include_carbon13           = include_carbon13
     model_config%include_carbon14           = include_carbon14
     model_config%include_nitrogen15         = include_nitrogen15
+    model_config%l_spinup                   = l_spinup
     ! The logicals are used to set up a bookkeeping list for the elements
     CALL setup_element_index_map_in_config(model_config, routine)
     model_config%flag_slow_sb_pool_spinup_accelerator   = flag_slow_sb_pool_spinup_accelerator
@@ -410,7 +386,6 @@ CONTAINS
     model_config%slow_sb_pool_spinup_accelerator_length = slow_sb_pool_spinup_accelerator_length
     model_config%slow_sb_pool_spinup_accelerator_start_year = slow_sb_pool_spinup_accelerator_start_year
     model_config%slow_sb_pool_spinup_accelerator_max_executions = slow_sb_pool_spinup_accelerator_max_executions
-#endif
 
     !>
     !> @TODO To be deleted `relative_fractions_in_file` (clean up task).
@@ -438,24 +413,11 @@ CONTAINS
       CALL finish(TRIM(routine), 'enforce_water_budget == '//tolower(TRIM(enforce_water_budget))//' not available.')
     END SELECT
 
-    !>
-    !> @TODO Check if the `__NO_QUINCY__` check for setting the model configuration ID is still required - clean up task.
-    !>
-#ifndef __NO_QUINCY__
-    ! Set the model configuration id
-#ifdef __QUINCY_STANDALONE__
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
-#else
-    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)
-#endif
-#endif
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)  ! QLAND, QPLANT, ...
 
     !>
-    !> @TODO Find a final solution of the quincy standalone assignement of `model_config%l_transient_spinup`,
     !> `model_config%init_from_ifs`, and `model_config%ifs_filename`.
     !>
-    model_config%l_transient_spinup           = .FALSE.
-
     model_config%init_from_ifs              = init_from_ifs
     model_config%ifs_filename               = TRIM(ifs_filename)
     model_config%is_single_site             = is_single_site
@@ -484,10 +446,9 @@ CONTAINS
 
   END FUNCTION new_model_config
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
-  !> The logicals that indicate which chemical elements are to be included are used to set up
+  !> The logicals that indicate which bgcm elements are to be included are used to set up
   !> a bookkeeping list for the elements and to determine the number of elements actually in use.
   !> The bookkeeping list contains the IDs of the elements in use.
   !>
@@ -549,7 +510,6 @@ CONTAINS
     CALL message(TRIM(short_name), TRIM(message_text))
 
   END SUBROUTINE setup_element
-#endif
 
 #endif
 END MODULE mo_jsb_config_class

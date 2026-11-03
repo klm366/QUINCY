@@ -14,19 +14,17 @@
 MODULE mo_rad_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,             ONLY: wp
+  USE mo_kind,             ONLY: lp
   USE mo_util,             ONLY: One_of
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
   USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
-#ifndef __NO_QUINCY__
-  USE mo_jsb_process_class,ONLY: VEG_, Q_ASSIMI_
-  dsl4jsb_Use_config(VEG_)
-  dsl4jsb_Use_config(Q_ASSIMI_)
-#endif
-  dsl4jsb_Use_processes SEB_, HYDRO_
+
+  dsl4jsb_Use_processes SEB_, HYDRO_, VEG_, Q_ASSIMI_
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(VEG_)
+  dsl4jsb_Use_config(Q_ASSIMI_)
 
   IMPLICIT NONE
   PRIVATE
@@ -167,9 +165,7 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_QUINCY, MODEL_JSBACH
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_rad_constants,     ONLY: AlbedoLakeWater, AlbedoLakeIceMin
-#ifndef __NO_QUINCY__
     USE mo_quincy_output_class, ONLY: unitless
-#endif
 
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
@@ -180,10 +176,8 @@ CONTAINS
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(HYDRO_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_config(Q_ASSIMI_)
-#endif
 
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
@@ -203,10 +197,8 @@ CONTAINS
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-#ifndef __NO_QUINCY__
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_config(Q_ASSIMI_)
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! determine which variables are required in the restart
     restart_veg_optimal = .FALSE.
@@ -217,7 +209,6 @@ CONTAINS
     CASE (MODEL_JSBACH)
       canopy_layer => Get_vgrid('canopy_layer')
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       canopy_layer   => Get_vgrid('q_canopy_layer')
       IF (dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction) THEN
@@ -228,7 +219,6 @@ CONTAINS
         restart_veg_optimal = .TRUE.
         restart_veg_optimal_stoichiometry = .TRUE.
       END IF
-#endif
     END SELECT
 #ifdef __QUINCY_STANDALONE__
     vgrid_spectral => Get_vgrid('spectral_bands')
@@ -245,7 +235,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'swvis_srf_net', mem%swvis_srf_net,                    &
       & hgrid, surface,                                                      &
@@ -254,7 +244,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM,                                                 &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'swnir_srf_net', mem%swnir_srf_net,                    &
       & hgrid, surface,                                                      &
@@ -263,7 +253,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM,                                                 &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'lw_srf_net', mem%lw_srf_net,                        &
       & hgrid, surface,                                                    &
@@ -272,7 +262,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'rad_srf_net', mem%rad_srf_net,                      &
       & hgrid, surface,                                                    &
@@ -281,7 +271,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'alb_background', mem%alb_background,                &
       & hgrid, surface,                                                    &
@@ -290,7 +280,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
       & output_level=MEDIUM,                                               &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      & initval_r=0.0_lp, isteptype=TSTEP_CONSTANT )
 
     CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
       & hgrid, surface,                                                    &
@@ -299,7 +289,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'alb_nir', mem%alb_nir,                              &
       & hgrid, surface,                                                    &
@@ -308,7 +298,7 @@ CONTAINS
       & prefix, suffix,                                                    &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,                    &
       & hgrid, surface,                                                    &
@@ -316,7 +306,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
     CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,                    &
       & hgrid, surface,                                                    &
@@ -324,7 +314,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
     ! Additional variables for land tiles
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0           &
@@ -338,7 +328,7 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_nir_lnd', mem%alb_nir_lnd,                             &
         & hgrid, surface,                                                           &
@@ -347,7 +337,7 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
     END IF ! land
 
@@ -362,7 +352,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,                    &
         & hgrid, surface,                                                    &
@@ -370,7 +360,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,      &
         & hgrid, surface,                                                    &
@@ -378,7 +368,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil,      &
         & hgrid, surface,                                                    &
@@ -386,7 +376,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
       CALL mem%Add_var( 'alb_vis_pond', mem%alb_vis_pond,                    &
         & hgrid, surface,                                                    &
@@ -394,7 +384,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=l_ponds, lrestart_cont=.TRUE.,                            &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_nir_pond', mem%alb_nir_pond,                    &
         & hgrid, surface,                                                    &
@@ -402,7 +392,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=l_ponds, lrestart_cont=.TRUE.,                            &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
     END IF
 
     ! Additional variables for vegetation
@@ -416,7 +406,7 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
         & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
         & hgrid, surface,                                                    &
@@ -425,7 +415,7 @@ CONTAINS
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
         & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
@@ -433,7 +423,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp )
 
       IF (model%config%model_scheme == MODEL_JSBACH) THEN
         CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
@@ -441,14 +431,14 @@ CONTAINS
           & t_cf('sky_view_fract', '', ''),                                    &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
         CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem,      &
           & hgrid, surface,                                                    &
           & t_cf('sky_view_fract_stem', '', ''),                               &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp)
 
         CALL mem%Add_var( 'par', mem%par,                                      &
           & hgrid, surface,                                                    &
@@ -456,7 +446,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & output_level=MEDIUM,                                               &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & lrestart=.FALSE., initval_r=0.0_lp )
 
         CALL mem%Add_var( 'par_down_mol', mem%par_down_mol,                    &
           & hgrid, surface,                                                    &
@@ -464,7 +454,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & output_level=MEDIUM,                                               &
-          & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+          & lrestart=.FALSE., initval_r=0.0_lp ) ! R: initval =0
 
         CALL mem%Add_var( 'fapar', mem%faPAR,                                  &
           & hgrid, surface,                                                    &
@@ -472,77 +462,77 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & output_level=BASIC,                                                &
-          & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+          & lrestart=.FALSE., initval_r=0.0_lp ) ! initval taken from JSBACH3
 
         ! CALL mem%Add_var( 'par_down_mol_nacc', mem%par_down_mol_nacc,          &
         !   & hgrid, surface,                                                    &
         !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         !   & prefix, suffix,                                                    &
-        !   & lrestart=.TRUE., initval_r=0.0_wp )
+        !   & lrestart=.TRUE., initval_r=0.0_lp )
 
         ! CALL mem%Add_var( 'par_down_mol_tavg', mem%par_down_mol_tavg,          &
         !   & hgrid, surface,                                                    &
         !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         !   & prefix, suffix,                                                    &
-        !   & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+        !   & lrestart=.FALSE., initval_r=0.0_lp ) ! R: initval =0
 
         CALL mem%Add_var( 'soil_reflectivity_par', mem%soil_reflectivity_par,      &
           & hgrid, surface,                                                        &
           & t_cf('Soil reflectivity in the PAR region', '', ''),                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
           & prefix, suffix,                                                        &
-          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_lp )
 
         CALL mem%Add_var( 'fract_par_direct', mem%fract_par_direct,            &
           & hgrid, surface,                                                    &
           & t_cf('Fraction of direct PAR', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
+          & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_lp )
 
         CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
           & hgrid, canopy_layer,                                               &
           & t_cf('LAI for each canopy layer', '', ''),                         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & lrestart=.FALSE., initval_r=0.0_lp )
 
         CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
           & hgrid, canopy_layer,                                                    &
           & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
           & prefix, suffix,                                                         &
-          & lrestart=.FALSE., initval_r=0.0_wp )
+          & lrestart=.FALSE., initval_r=0.0_lp )
 
         CALL mem%Add_var('apar_per_lai_cl', mem%apar_per_lai_cl,               &
           & hgrid, canopy_layer,                                               &
           & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
+          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_lp )
 
         !  CALL mem%Add_var('apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,                 &
         !    & hgrid, canopy_layer,                                                           &
         !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
         !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         !    & prefix, suffix,                                                                &
-        !    & lrestart=.TRUE., initval_r=0.0_wp )
+        !    & lrestart=.TRUE., initval_r=0.0_lp )
 
         !  CALL mem%Add_var('apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,                &
         !    & hgrid, canopy_layer,                                                          &
         !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
         !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         !    & prefix, suffix,                                                               &
-        !    & lrestart=.FALSE., initval_r=0.0_wp )
+        !    & lrestart=.FALSE., initval_r=0.0_lp )
 
         !  CALL mem%Add_var('apar_nacc', mem%apar_nacc,                                       &
         !    & hgrid, surface,                                                                &
         !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
         !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         !    & prefix, suffix,                                                                &
-        !    & lrestart=.TRUE., initval_r=0.0_wp )
+        !    & lrestart=.TRUE., initval_r=0.0_lp )
       END IF ! IF (model%config%model_scheme == MODEL_JSBACH)
     END IF ! IF containes VEG or LAND
 
@@ -556,7 +546,7 @@ CONTAINS
         & prefix, suffix,                                                     &
         & lrestart=.FALSE.,                                                   &
         & output_level=MEDIUM,                                                &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'albedo_lwtr', mem%albedo_lwtr,                       &
         & hgrid, surface,                                                     &
@@ -574,7 +564,7 @@ CONTAINS
           & prefix, suffix,                                                     &
           & lrestart=.FALSE.,                                                   &
           & output_level=MEDIUM,                                                &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_lp )
 
         CALL mem%Add_var( 'albedo_lice', mem%albedo_lice,                       &
           & hgrid, surface,                                                     &
@@ -587,7 +577,6 @@ CONTAINS
       END IF ! l_ice_on_lakes
     END IF ! lakes
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
 
@@ -598,7 +587,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=FULL,                                                 &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       CALL mem%Add_var( 'alb_nir_noon', mem%alb_nir_noon,                    &
         & hgrid, surface,                                                    &
@@ -606,7 +595,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=FULL,                                                 &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_lp )
 
       ! Additional variables for soil
       IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
@@ -619,7 +608,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & output_level=NONE,                                               &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_lp )
 
         CALL mem%Add_var( 'alb_nir_soil_and_snow', mem%alb_nir_soil_and_snow,  &
           & hgrid, surface,                                                    &
@@ -627,7 +616,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & output_level=NONE,                                               &
-          & initval_r=0.0_wp )
+          & initval_r=0.0_lp )
       END IF
 
       ! Additional variables for QUINCY
@@ -639,7 +628,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fapar_noon', mem%fapar_noon, &
         & hgrid, surface, &
@@ -649,7 +638,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
         & ) THEN
@@ -662,7 +651,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_shaded_cl', mem%ppfd_shaded_cl, &
           & hgrid, canopy_layer, &
@@ -672,7 +661,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
           & hgrid, canopy_layer, &
@@ -682,7 +671,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
           & hgrid, canopy_layer, &
@@ -692,7 +681,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
           & hgrid, canopy_layer, &
@@ -702,7 +691,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
           & hgrid, canopy_layer, &
@@ -713,7 +702,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
           & hgrid, canopy_layer, &
@@ -723,7 +712,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal_n_fractions, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
           & hgrid, canopy_layer, &
@@ -733,7 +722,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal_n_fractions, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
           & hgrid, canopy_layer, &
@@ -743,7 +732,7 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal_stoichiometry, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
         CALL mem%Add_var('ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
           & hgrid, canopy_layer, &
@@ -753,11 +742,10 @@ CONTAINS
           & prefix, suffix, &
           & output_level = NONE, &
           & lrestart = restart_veg_optimal_stoichiometry, &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
 
       END IF   ! land/vegetation var (for quincy)
     END SELECT
-#endif
 
 #ifdef __QUINCY_STANDALONE__
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
@@ -770,7 +758,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
     END IF
 #endif
 

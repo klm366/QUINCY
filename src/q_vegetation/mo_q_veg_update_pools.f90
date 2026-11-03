@@ -16,7 +16,7 @@
 !>#### routines for calculating the vegetation pools using the fluxes that have been calculated
 !>
 MODULE mo_q_veg_update_pools
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish, message_text
@@ -43,7 +43,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_veg_pools(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: lp
     USE mo_jsb_impl_constants,              ONLY: test_false_true
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
@@ -75,14 +75,14 @@ CONTAINS
     TYPE(t_jsb_grid),         POINTER :: grid                   !< horizontal grid
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: nsoil_w                !< number of soil layers (water)
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(lp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
     INTEGER                           :: id_elem, ix_elem       !< id and index of bgcm elements
     INTEGER                           :: ix_comp                !< currently id and index of bgcm compartments
     INTEGER                           :: nr_of_veg_bgcm_comp    !< number of compartments in veg bgcms
-    REAL(wp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
-    REAL(wp) :: hlp
+    REAL(lp) :: lctlib_sla, lctlib_tau_leaf, lctlib_cn_leaf, lctlib_np_leaf
+    REAL(lp) :: hlp
     INTEGER  :: lctlib_phenology_type
     LOGICAL  :: config_flag_log_negative_vegpool                !< debug option of veg config
     LOGICAL  :: config_l_use_product_pools, is_active_SYL_or_ALCC, is_active_AGR_or_ALCC
@@ -402,19 +402,19 @@ CONTAINS
                         growth_respiration_c14(ic) - maint_respiration_c14(ic) - n_processing_respiration_c14(ic)
        net_growth(ic) = net_growth(ic) + npp(ic)
 
-       veg_growth_mt(ix_labile, ixC, ic)   = veg_growth_mt(ix_labile, ixC, ic)   + npp(ic)     * dtime / 1000000.0_wp
-       veg_growth_mt(ix_labile, ixC13, ic) = veg_growth_mt(ix_labile, ixC13, ic) + npp_c13(ic) * dtime / 1000000.0_wp
-       veg_growth_mt(ix_labile, ixC14, ic) = veg_growth_mt(ix_labile, ixC14, ic) + npp_c14(ic) * dtime / 1000000.0_wp
+       veg_growth_mt(ix_labile, ixC, ic)   = veg_growth_mt(ix_labile, ixC, ic)   + npp(ic)     * dtime / 1000000.0_lp
+       veg_growth_mt(ix_labile, ixC13, ic) = veg_growth_mt(ix_labile, ixC13, ic) + npp_c13(ic) * dtime / 1000000.0_lp
+       veg_growth_mt(ix_labile, ixC14, ic) = veg_growth_mt(ix_labile, ixC14, ic) + npp_c14(ic) * dtime / 1000000.0_lp
 
        !>  1.2 Add nutrients from uptake calculations
        !>
-       n_fixation_n15(ic)                  = n_fixation(ic) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
+       n_fixation_n15(ic)                  = n_fixation(ic) / ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(-eta_nfixation))
        veg_growth_mt(ix_labile, ixN, ic)   = veg_growth_mt(ix_labile, ixN, ic) + &
-                                             ( uptake_nh4(ic) + uptake_no3(ic) + n_fixation(ic)) * dtime / 1000000.0_wp
+                                             ( uptake_nh4(ic) + uptake_no3(ic) + n_fixation(ic)) * dtime / 1000000.0_lp
        veg_growth_mt(ix_labile, ixN15, ic) = veg_growth_mt(ix_labile, ixN15, ic) + &
-                                             ( uptake_nh4_n15(ic) + uptake_no3_n15(ic) + n_fixation_n15(ic)) * dtime / 1000000.0_wp
+                                             ( uptake_nh4_n15(ic) + uptake_no3_n15(ic) + n_fixation_n15(ic)) * dtime / 1000000.0_lp
        veg_growth_mt(ix_labile, ixP, ic)   = veg_growth_mt(ix_labile, ixP, ic) + &
-                                             uptake_po4(ic) * dtime / 1000000.0_wp
+                                             uptake_po4(ic) * dtime / 1000000.0_lp
 
        !>  1.3 Add mycorrhiza export
        !>
@@ -445,17 +445,17 @@ CONTAINS
         !>      the remaining matter is already included in litter flux
         !>
         veg_pool_mt(ix_leaf, ixC, ic)    = veg_pool_mt(ix_leaf, ixC, ic)    &
-          &                                - herbivory_leaf_resp(ic)      * dtime / 1.e6_wp
+          &                                - herbivory_leaf_resp(ic)      * dtime / 1.e6_lp
         veg_pool_mt(ix_leaf, ixC13, ic)  = veg_pool_mt(ix_leaf, ixC13, ic)  &
-          &                                - herbivory_leaf_resp_c13(ic)  * dtime / 1.e6_wp
+          &                                - herbivory_leaf_resp_c13(ic)  * dtime / 1.e6_lp
         veg_pool_mt(ix_leaf, ixC14, ic)  = veg_pool_mt(ix_leaf, ixC14, ic)  &
-          &                                - herbivory_leaf_resp_c14(ic)  * dtime / 1.e6_wp
+          &                                - herbivory_leaf_resp_c14(ic)  * dtime / 1.e6_lp
         veg_pool_mt(ix_fruit, ixC, ic)   = veg_pool_mt(ix_fruit, ixC, ic)   &
-          &                                - herbivory_fruit_resp(ic)     * dtime / 1.e6_wp
+          &                                - herbivory_fruit_resp(ic)     * dtime / 1.e6_lp
         veg_pool_mt(ix_fruit, ixC13, ic) = veg_pool_mt(ix_fruit, ixC13, ic) &
-          &                                - herbivory_fruit_resp_c13(ic) * dtime / 1.e6_wp
+          &                                - herbivory_fruit_resp_c13(ic) * dtime / 1.e6_lp
         veg_pool_mt(ix_fruit, ixC14, ic) = veg_pool_mt(ix_fruit, ixC14, ic) &
-          &                                - herbivory_fruit_resp_c14(ic) * dtime / 1.e6_wp
+          &                                - herbivory_fruit_resp_c14(ic) * dtime / 1.e6_lp
 
         !>  1.6 update fluxes from continuous nutrient turnover and resorption
         !>
@@ -534,8 +534,8 @@ CONTAINS
                   CALL message(TRIM(routine), message_text, all_print=.TRUE.)
                 END IF
               END IF
-              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_wp) THEN
-                veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_wp
+              IF (veg_pool_mt(ix_comp, ix_elem, ic) < 0.0_lp) THEN
+                veg_pool_mt(ix_comp, ix_elem, ic) = 0.0_lp
               END IF
             END DO
             ! set a negative pool to zero (breaking mass balance !)
@@ -551,8 +551,8 @@ CONTAINS
                 CALL message(TRIM(routine), message_text, all_print=.TRUE.)
               END IF
             END IF
-            IF (seed_bed_pool_mt(ix_elem, ic) < 0.0_wp) THEN
-              seed_bed_pool_mt(ix_elem, ic) = 0.0_wp
+            IF (seed_bed_pool_mt(ix_elem, ic) < 0.0_lp) THEN
+              seed_bed_pool_mt(ix_elem, ic) = 0.0_lp
             END IF
           END IF
         END DO
@@ -563,24 +563,24 @@ CONTAINS
       DO ic = 1, nc
         ! in living plant tissue
         DO ix_comp = 1, nr_of_veg_bgcm_comp
-          veg_pool_mt(ix_comp, ixC14, ic) = veg_pool_mt(ix_comp, ixC14, ic) * (1._wp - lambda_C14 * dtime)
+          veg_pool_mt(ix_comp, ixC14, ic) = veg_pool_mt(ix_comp, ixC14, ic) * (1._lp - lambda_C14 * dtime)
         END DO
-        seed_bed_pool_mt(ixC14, ic) = seed_bed_pool_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+        seed_bed_pool_mt(ixC14, ic) = seed_bed_pool_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
 
         ! and if simulating with product pools also within these
         IF (config_l_use_product_pools) THEN
 
           IF (is_active_AGR_or_ALCC) THEN
-            veg_pp_crop_mt(ixC14, ic) = veg_pp_crop_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_crop_mt(ixC14, ic) = veg_pp_crop_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
           END IF
 
           IF (is_active_SYL_or_ALCC) THEN
-            veg_pp_fuel_mt(ixC14, ic) = veg_pp_fuel_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-            veg_pp_paper_mt(ixC14, ic) = veg_pp_paper_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-            veg_pp_fiberboard_mt(ixC14, ic) = veg_pp_fiberboard_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-            veg_pp_oirw_mt(ixC14, ic) = veg_pp_oirw_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-            veg_pp_pv_mt(ixC14, ic) = veg_pp_pv_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
-            veg_pp_sawnwood_mt(ixC14, ic) = veg_pp_sawnwood_mt(ixC14, ic) * (1._wp - lambda_C14 * dtime)
+            veg_pp_fuel_mt(ixC14, ic) = veg_pp_fuel_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
+            veg_pp_paper_mt(ixC14, ic) = veg_pp_paper_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
+            veg_pp_fiberboard_mt(ixC14, ic) = veg_pp_fiberboard_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
+            veg_pp_oirw_mt(ixC14, ic) = veg_pp_oirw_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
+            veg_pp_pv_mt(ixC14, ic) = veg_pp_pv_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
+            veg_pp_sawnwood_mt(ixC14, ic) = veg_pp_sawnwood_mt(ixC14, ic) * (1._lp - lambda_C14 * dtime)
           END IF
         END IF
       END DO
@@ -610,10 +610,10 @@ CONTAINS
     DO ic = 1, nc
       IF (veg_pool_mt(ix_leaf, ixC, ic) > eps8) THEN
         mean_leaf_age(ic) = (mean_leaf_age(ic) + dtime / one_day) &
-          &                * (1._wp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
+          &                * (1._lp - veg_growth_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)) &
           &                - mean_leaf_age(ic) * veg_litterfall_mt(ix_leaf, ixC, ic) / veg_pool_mt(ix_leaf, ixC, ic)
       ELSE
-        mean_leaf_age(ic) = 0.0_wp
+        mean_leaf_age(ic) = 0.0_lp
       END IF
     END DO
     !$ACC END PARALLEL LOOP
@@ -626,36 +626,36 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       ! init pool totals
-      veg_pool_total_c(ic)         = 0.0_wp
-      veg_pool_total_n(ic)         = 0.0_wp
-      veg_pool_total_p(ic)         = 0.0_wp
-      veg_pool_total_c13(ic)       = 0.0_wp
-      veg_pool_total_c14(ic)       = 0.0_wp
-      veg_pool_total_n15(ic)       = 0.0_wp
+      veg_pool_total_c(ic)         = 0.0_lp
+      veg_pool_total_n(ic)         = 0.0_lp
+      veg_pool_total_p(ic)         = 0.0_lp
+      veg_pool_total_c13(ic)       = 0.0_lp
+      veg_pool_total_c14(ic)       = 0.0_lp
+      veg_pool_total_n15(ic)       = 0.0_lp
 
       IF (config_l_use_product_pools) THEN
-        veg_products_total_c(ic)   = 0.0_wp
-        veg_products_total_n(ic)   = 0.0_wp
-        veg_products_total_p(ic)   = 0.0_wp
-        veg_products_total_c13(ic) = 0.0_wp
-        veg_products_total_c14(ic) = 0.0_wp
-        veg_products_total_n15(ic) = 0.0_wp
+        veg_products_total_c(ic)   = 0.0_lp
+        veg_products_total_n(ic)   = 0.0_lp
+        veg_products_total_p(ic)   = 0.0_lp
+        veg_products_total_c13(ic) = 0.0_lp
+        veg_products_total_c14(ic) = 0.0_lp
+        veg_products_total_n15(ic) = 0.0_lp
       END IF
 
       ! init flux totals
-      veg_growth_total_c(ic) = 0.0_wp
-      veg_growth_total_n(ic) = 0.0_wp
-      veg_growth_total_p(ic) = 0.0_wp
-      veg_growth_total_c13(ic) = 0.0_wp
-      veg_growth_total_c14(ic) = 0.0_wp
-      veg_growth_total_n15(ic) = 0.0_wp
+      veg_growth_total_c(ic) = 0.0_lp
+      veg_growth_total_n(ic) = 0.0_lp
+      veg_growth_total_p(ic) = 0.0_lp
+      veg_growth_total_c13(ic) = 0.0_lp
+      veg_growth_total_c14(ic) = 0.0_lp
+      veg_growth_total_n15(ic) = 0.0_lp
 
-      veg_litterfall_total_c(ic) = 0.0_wp
-      veg_litterfall_total_n(ic) = 0.0_wp
-      veg_litterfall_total_p(ic) = 0.0_wp
-      veg_litterfall_total_c13(ic) = 0.0_wp
-      veg_litterfall_total_c14(ic) = 0.0_wp
-      veg_litterfall_total_n15(ic) = 0.0_wp
+      veg_litterfall_total_c(ic) = 0.0_lp
+      veg_litterfall_total_n(ic) = 0.0_lp
+      veg_litterfall_total_p(ic) = 0.0_lp
+      veg_litterfall_total_c13(ic) = 0.0_lp
+      veg_litterfall_total_c14(ic) = 0.0_lp
+      veg_litterfall_total_n15(ic) = 0.0_lp
 
       ! store component totals for aggregation
       veg_pool_leaf_c(ic)          = veg_pool_mt(ix_leaf, ixC, ic)
@@ -673,7 +673,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(hlp)
     DO ic = 1, nc
-      hlp = 0._wp
+      hlp = 0._lp
       !$ACC LOOP REDUCTION(+: hlp)
       DO ix_comp = 1, nr_of_veg_bgcm_comp
         hlp = hlp + veg_pool_mt(ix_comp,ixC, ic)
@@ -697,12 +697,12 @@ CONTAINS
         veg_pool_total_n15(ic)       = veg_pool_total_n15(ic) + veg_pool_mt(ix_comp,ixN15, ic)
 
         IF (config_l_use_product_pools) THEN
-          veg_products_total_c(ic)   = 0.0_wp
-          veg_products_total_n(ic)   = 0.0_wp
-          veg_products_total_p(ic)   = 0.0_wp
-          veg_products_total_c13(ic) = 0.0_wp
-          veg_products_total_c14(ic) = 0.0_wp
-          veg_products_total_n15(ic) = 0.0_wp
+          veg_products_total_c(ic)   = 0.0_lp
+          veg_products_total_n(ic)   = 0.0_lp
+          veg_products_total_p(ic)   = 0.0_lp
+          veg_products_total_c13(ic) = 0.0_lp
+          veg_products_total_c14(ic) = 0.0_lp
+          veg_products_total_n15(ic) = 0.0_lp
 
           IF (is_active_AGR_or_ALCC) THEN
             veg_products_total_c(ic)   = veg_products_total_c(ic)   + veg_pp_crop_mt(ixC,ic)
@@ -791,12 +791,12 @@ CONTAINS
     IF (config_l_use_product_pools) THEN
       !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
       DO ic = 1, nc
-        veg_products_decay_c(ic)   =  prod_decay_mt(ixC, ic)   * 1000000.0_wp / dtime
-        veg_products_decay_n(ic)   =  prod_decay_mt(ixN, ic)   * 1000000.0_wp / dtime
-        veg_products_decay_p(ic)   =  prod_decay_mt(ixP, ic)   * 1000000.0_wp / dtime
-        veg_products_decay_c13(ic) =  prod_decay_mt(ixC13, ic) * 1000000.0_wp / dtime
-        veg_products_decay_c14(ic) =  prod_decay_mt(ixC14, ic) * 1000000.0_wp / dtime
-        veg_products_decay_n15(ic) =  prod_decay_mt(ixN15, ic) * 1000000.0_wp / dtime
+        veg_products_decay_c(ic)   =  prod_decay_mt(ixC, ic)   * 1000000.0_lp / dtime
+        veg_products_decay_n(ic)   =  prod_decay_mt(ixN, ic)   * 1000000.0_lp / dtime
+        veg_products_decay_p(ic)   =  prod_decay_mt(ixP, ic)   * 1000000.0_lp / dtime
+        veg_products_decay_c13(ic) =  prod_decay_mt(ixC13, ic) * 1000000.0_lp / dtime
+        veg_products_decay_c14(ic) =  prod_decay_mt(ixC14, ic) * 1000000.0_lp / dtime
+        veg_products_decay_n15(ic) =  prod_decay_mt(ixN15, ic) * 1000000.0_lp / dtime
       END DO
       !$ACC END PARALLEL LOOP
     END IF
@@ -829,9 +829,9 @@ CONTAINS
 
       IF (config_l_use_product_pools) THEN
         ! The product pool decay is a loss to the atmosphere (prod_decay_mt unit is mol m-2 timestep-1)
-        net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_wp / dtime)
-        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_wp / dtime)
-        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_wp / dtime)
+        net_biosphere_production(ic)     = net_biosphere_production(ic)     - (prod_decay_mt(ixC,ic) * 1000000.0_lp / dtime)
+        net_biosphere_production_c13(ic) = net_biosphere_production_c13(ic) - (prod_decay_mt(ixC13,ic) * 1000000.0_lp / dtime)
+        net_biosphere_production_c14(ic) = net_biosphere_production_c14(ic) - (prod_decay_mt(ixC14,ic) * 1000000.0_lp / dtime)
       END IF
     END DO
     !$ACC END PARALLEL LOOP

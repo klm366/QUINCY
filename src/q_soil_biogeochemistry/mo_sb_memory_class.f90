@@ -16,20 +16,20 @@
 !>#### definition and init of (memory) variables for the soil-biogeochemistry process
 !>
 MODULE mo_sb_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
 
   USE mo_jsb_process_class,      ONLY: SB_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                  SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -403,7 +403,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_elements
     TYPE(t_jsb_var_real3d), POINTER :: carbon
     TYPE(t_jsb_var_real3d), POINTER :: nitrogen
     TYPE(t_jsb_var_real3d), POINTER :: phosphorus
@@ -419,7 +419,7 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_with_components
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom              !< elements of dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: dom_assoc        !< elements of minerally associated dissolved organic matter
     TYPE(t_sb_bgcm_with_elements), POINTER :: soluable_litter  !< elements of metabolic litter (sugars, cellulose etc.)
@@ -438,17 +438,17 @@ MODULE mo_sb_memory_class
   !>
   !> Type definition for sb_bgc_material_main
   !> the main bgc_material structure containing all SB_ bgc_material structures
-  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_jsb_pool) :: bgc_material"
+  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_sb_memory" as "CLASS(t_lnd_bgcm) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_sb_bgcm_main
     !! pools
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbpool
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbdelta_pools
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_pool
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_delta_pools
     ! !! fluxes
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbformation
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbloss
-    TYPE(t_sb_bgcm_with_components), POINTER :: sbbtransport
-    TYPE(t_sb_bgcm_with_elements),   POINTER :: sbbmyco_export
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_formation
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_loss
+    TYPE(t_sb_bgcm_with_components), POINTER :: sb_transport
+    TYPE(t_sb_bgcm_with_elements),   POINTER :: sb_myco_export
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_main_get_element_name_by_id
     PROCEDURE :: Init                       => sb_bgcm_main_init
@@ -526,7 +526,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('noy_deposition_monthly', mem%noy_deposition_monthly, &
         & hgrid, vgrid_month, &
@@ -536,7 +536,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('p_deposition_monthly', mem%p_deposition_monthly, &
         & hgrid, vgrid_month, &
@@ -546,7 +546,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
     END IF
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -556,7 +556,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (sbbpool -> sb_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -581,19 +580,19 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_pool
-      mem%sb_bgcm_main%sbbpool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_pool => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_POOL_ID, name = 'soil_biogeochemistry_bgcm_pool', shortname = 'sb_bgcm_pool', &
         & unit = unit_sb_pool, elements_index_map = elem_idx_map(:))
       ! sb_formation
-      mem%sb_bgcm_main%sbbformation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
+      mem%sb_bgcm_main%sb_formation => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,                   &
         & SB_BGCM_FORMATION_ID, name = 'soil_biogeochemistry_bgcm_formation', shortname = 'sb_bgcm_formation', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_loss
-      mem%sb_bgcm_main%sbbloss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_loss => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_LOSS_ID, name = 'soil_biogeochemistry_bgcm_loss', shortname = 'sb_bgcm_loss', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
       ! sb_transport
-      mem%sb_bgcm_main%sbbtransport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
+      mem%sb_bgcm_main%sb_transport => Add_sb_bgc_material_with_components(mem%sb_bgcm_main,         &
         & SB_BGCM_TRANSPORT_ID, name = 'soil_biogeochemistry_bgcm_transport', shortname = 'sb_bgcm_transport', &
         & unit = unit_sb_flux, elements_index_map = elem_idx_map(:))
 
@@ -602,11 +601,11 @@ CONTAINS
       !>
       ! "shortname" is used for model output names
       ! sb_delta_pools
-      mem%sb_bgcm_main%sbbdelta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
+      mem%sb_bgcm_main%sb_delta_pools => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,            &
         & name = 'soil_biogeochemistry_bgcm_delta_pools', shortname = 'sb_bgcm_delta_pools',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_pool, bgcm_id = SB_BGCM_DELTA_POOLS_ID)
       ! sb_myco_export
-      mem%sb_bgcm_main%sbbmyco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
+      mem%sb_bgcm_main%sb_myco_export => Add_sb_bgc_material_with_elements(mem%sb_bgcm_main,        &
         & name = 'soil_biogeochemistry_bgcm_myco_export', shortname = 'sb_bgcm_myc_exp',            &
         & elements_index_map = elem_idx_map(:), unit = unit_sb_flux, bgcm_id = SB_BGCM_MYCO_EXPORT_ID)
 
@@ -614,7 +613,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbpool,                                 &
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_pool,                                 &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -622,8 +621,8 @@ CONTAINS
         & loutput = .TRUE.,                                                      &
         & lrestart = .TRUE.,                                                     &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE,                                &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbformation,                            &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_formation,                            &
         & hgrid, surface, vgrid_soil_w,                                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -632,39 +631,39 @@ CONTAINS
         & lrestart = .FALSE.,                                                    &
         & cons_quan_type_id = IQ_SL_FLUX_CQ_TYPE,                                &
         & transfer_all = .TRUE.,                                                 &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbloss, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_loss, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbtransport, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_transport, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbdelta_pools, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_delta_pools, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%sb_bgcm_main%sbbmyco_export, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%sb_bgcm_main%sb_myco_export, &
         & hgrid, surface, vgrid_soil_w,                                                               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                       &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
     END IF ! IF(lib_id > 0) THEN (i.e. if PFT tile)
 
     ! ----------------------------------------------------------------------------------------------------- !
@@ -684,7 +683,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_n', mem%sb_pool_total_n, &
@@ -696,7 +695,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_p', mem%sb_pool_total_p, &
@@ -708,7 +707,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_c13', mem%sb_pool_total_c13, &
@@ -720,7 +719,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_c14', mem%sb_pool_total_c14, &
@@ -732,7 +731,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_n15', mem%sb_pool_total_n15, &
@@ -744,7 +743,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_c', mem%sb_pool_total_bg_soil_c, &
@@ -756,7 +755,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_n', mem%sb_pool_total_bg_soil_n, &
@@ -768,7 +767,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_p', mem%sb_pool_total_bg_soil_p, &
@@ -780,7 +779,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_c13', mem%sb_pool_total_bg_soil_c13, &
@@ -792,7 +791,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_c14', mem%sb_pool_total_bg_soil_c14, &
@@ -804,19 +803,19 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_bg_soil_n15', mem%sb_pool_total_bg_soil_n15, &
         & hgrid, vgrid_soil_w, &
-        & t_cf('sb_pool_total_som_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
+        & t_cf('sb_pool_total_bg_soil_n15', 'mol m-3', 'total N15, sum of SOM and below ground litter in sb_pool components'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c', mem%sb_pool_total_ag_litter_c, &
@@ -828,7 +827,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_n', mem%sb_pool_total_ag_litter_n, &
@@ -840,7 +839,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_p', mem%sb_pool_total_ag_litter_p, &
@@ -852,7 +851,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c13', mem%sb_pool_total_ag_litter_c13, &
@@ -864,7 +863,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_c14', mem%sb_pool_total_ag_litter_c14, &
@@ -876,7 +875,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_total_ag_litter_n15', mem%sb_pool_total_ag_litter_n15, &
@@ -888,7 +887,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_c', mem%sb_pool_ag_woody_litter_c, &
@@ -900,7 +899,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_n', mem%sb_pool_ag_woody_litter_n, &
@@ -912,7 +911,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_p', mem%sb_pool_ag_woody_litter_p, &
@@ -924,7 +923,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_c13', mem%sb_pool_ag_woody_litter_c13, &
@@ -936,7 +935,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_c14', mem%sb_pool_ag_woody_litter_c14, &
@@ -948,7 +947,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_pool_ag_woody_litter_n15', mem%sb_pool_ag_woody_litter_n15, &
@@ -960,7 +959,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       ! --------------------------------------------------------------------------------------------------- !
@@ -976,7 +975,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nh4_assoc', mem%nh4_assoc, &
@@ -989,7 +988,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('no3_solute', mem%no3_solute, &
@@ -1002,7 +1001,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('noy', mem%noy, &
@@ -1014,7 +1013,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n2o', mem%n2o, &
@@ -1026,7 +1025,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n2', mem%n2, &
@@ -1038,7 +1037,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nh4_n15_solute', mem%nh4_n15_solute, &
@@ -1051,7 +1050,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nh4_n15_assoc', mem%nh4_n15_assoc, &
@@ -1064,7 +1063,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('no3_n15_solute', mem%no3_n15_solute, &
@@ -1077,7 +1076,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('noy_n15', mem%noy_n15, &
@@ -1089,7 +1088,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n2o_n15', mem%n2o_n15, &
@@ -1101,7 +1100,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n2_n15', mem%n2_n15, &
@@ -1113,7 +1112,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('po4_assoc_fast', mem%po4_assoc_fast, &
@@ -1126,7 +1125,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('po4_assoc_slow', mem%po4_assoc_slow, &
@@ -1139,7 +1138,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('po4_occluded', mem%po4_occluded, &
@@ -1152,7 +1151,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('po4_primary', mem%po4_primary, &
@@ -1165,7 +1164,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('po4_solute', mem%po4_solute, &
@@ -1178,7 +1177,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & cons_quan_type_id = IQ_SL_POOL_CQ_TYPE, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_nh4_solute', mem%transport_nh4_solute, &
@@ -1190,7 +1189,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_nh4_assoc', mem%transport_nh4_assoc, &
@@ -1202,7 +1201,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_no3_solute', mem%transport_no3_solute, &
@@ -1214,7 +1213,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_noy', mem%transport_noy, &
@@ -1226,7 +1225,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_n2o', mem%transport_n2o, &
@@ -1238,7 +1237,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_n2', mem%transport_n2, &
@@ -1250,7 +1249,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
@@ -1262,7 +1261,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
@@ -1274,7 +1273,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_no3_n15_solute', mem%transport_no3_n15_solute, &
@@ -1286,7 +1285,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_noy_n15', mem%transport_noy_n15, &
@@ -1298,7 +1297,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_n2o_n15', mem%transport_n2o_n15, &
@@ -1310,7 +1309,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_n2_n15', mem%transport_n2_n15, &
@@ -1322,7 +1321,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
@@ -1334,7 +1333,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
@@ -1346,7 +1345,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_po4_occluded', mem%transport_po4_occluded, &
@@ -1358,7 +1357,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_po4_primary', mem%transport_po4_primary, &
@@ -1370,7 +1369,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('transport_po4_solute', mem%transport_po4_solute, &
@@ -1382,7 +1381,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_carbon_sl', mem%lateral_loss_dom_carbon_sl, &
@@ -1394,7 +1393,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_nitrogen_sl', mem%lateral_loss_dom_nitrogen_sl, &
@@ -1406,7 +1405,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_phosphorus_sl', mem%lateral_loss_dom_phosphorus_sl, &
@@ -1418,7 +1417,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_carbon13_sl', mem%lateral_loss_dom_carbon13_sl, &
@@ -1430,7 +1429,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_carbon14_sl', mem%lateral_loss_dom_carbon14_sl, &
@@ -1442,7 +1441,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_dom_nitrogen15_sl', mem%lateral_loss_dom_nitrogen15_sl, &
@@ -1454,7 +1453,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_nh4_solute_sl', mem%lateral_loss_nh4_solute_sl, &
@@ -1466,7 +1465,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_no3_solute_sl', mem%lateral_loss_no3_solute_sl, &
@@ -1478,7 +1477,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_po4_solute_sl', mem%lateral_loss_po4_solute_sl, &
@@ -1490,7 +1489,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_nh4_n15_solute_sl', mem%lateral_loss_nh4_n15_solute_sl, &
@@ -1502,7 +1501,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lateral_loss_no3_n15_solute_sl', mem%lateral_loss_no3_n15_solute_sl, &
@@ -1514,7 +1513,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('rtm_decomposition', mem%rtm_decomposition, &
@@ -1526,7 +1525,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_depolymerisation', mem%rtm_depolymerisation, &
         & hgrid, vgrid_soil_w, &
@@ -1537,7 +1536,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_mic_uptake', mem%rtm_mic_uptake, &
         & hgrid, vgrid_soil_w, &
@@ -1548,7 +1547,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_plant_uptake', mem%rtm_plant_uptake, &
         & hgrid, vgrid_soil_w, &
@@ -1559,7 +1558,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_sorption', mem%rtm_sorption, &
         & hgrid, vgrid_soil_w, &
@@ -1570,7 +1569,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_desorption', mem%rtm_desorption, &
         & hgrid, vgrid_soil_w, &
@@ -1581,7 +1580,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_hsc', mem%rtm_hsc, &
         & hgrid, vgrid_soil_w, &
@@ -1592,7 +1591,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_nitrification', mem%rtm_nitrification, &
         & hgrid, vgrid_soil_w, &
@@ -1603,7 +1602,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_denitrification', mem%rtm_denitrification, &
         & hgrid, vgrid_soil_w, &
@@ -1614,7 +1613,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_gasdiffusion', mem%rtm_gasdiffusion, &
         & hgrid, vgrid_soil_w, &
@@ -1625,7 +1624,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rtm_asymb_bnf', mem%rtm_asymb_bnf, &
         & hgrid, vgrid_soil_w, &
@@ -1636,7 +1635,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_decomposition', mem%rmm_decomposition, &
         & hgrid, vgrid_soil_w, &
@@ -1647,7 +1646,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_depolymerisation', mem%rmm_depolymerisation, &
         & hgrid, vgrid_soil_w, &
@@ -1658,7 +1657,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_mic_uptake', mem%rmm_mic_uptake, &
         & hgrid, vgrid_soil_w, &
@@ -1669,7 +1668,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_plant_uptake', mem%rmm_plant_uptake, &
         & hgrid, vgrid_soil_w, &
@@ -1680,7 +1679,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_sorption', mem%rmm_sorption, &
         & hgrid, vgrid_soil_w, &
@@ -1691,7 +1690,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_desorption', mem%rmm_desorption, &
         & hgrid, vgrid_soil_w, &
@@ -1702,7 +1701,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_hsc', mem%rmm_hsc, &
         & hgrid, vgrid_soil_w, &
@@ -1713,7 +1712,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_nitrification', mem%rmm_nitrification, &
         & hgrid, vgrid_soil_w, &
@@ -1724,7 +1723,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_gasdiffusion', mem%rmm_gasdiffusion, &
         & hgrid, vgrid_soil_w, &
@@ -1735,7 +1734,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rmm_asymb_bnf', mem%rmm_asymb_bnf, &
         & hgrid, vgrid_soil_w, &
@@ -1746,7 +1745,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('het_respiration', mem%het_respiration, &
         & hgrid, vgrid_soil_w, &
@@ -1757,7 +1756,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('het_respiration_c13', mem%het_respiration_c13, &
@@ -1769,7 +1768,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('het_respiration_c14', mem%het_respiration_c14, &
@@ -1781,7 +1780,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_respiration', mem%myc_respiration, &
@@ -1793,7 +1792,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_respiration_c13', mem%myc_respiration_c13, &
@@ -1805,7 +1804,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_respiration_c14', mem%myc_respiration_c14, &
@@ -1817,7 +1816,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_mineralisation_nh4', mem%net_mineralisation_nh4, &
@@ -1829,7 +1828,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
@@ -1841,7 +1840,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_mineralisation_no3', mem%net_mineralisation_no3, &
@@ -1853,7 +1852,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
@@ -1865,7 +1864,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_mineralisation_po4', mem%net_mineralisation_po4, &
@@ -1877,7 +1876,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
@@ -1889,7 +1888,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
@@ -1901,7 +1900,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
@@ -1913,7 +1912,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
@@ -1925,7 +1924,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
@@ -1937,7 +1936,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
@@ -1949,7 +1948,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
@@ -1961,7 +1960,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
@@ -1973,7 +1972,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
@@ -1985,7 +1984,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
@@ -1997,7 +1996,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
@@ -2009,7 +2008,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
@@ -2021,7 +2020,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
@@ -2033,7 +2032,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
@@ -2045,7 +2044,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
@@ -2057,7 +2056,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
@@ -2069,7 +2068,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
@@ -2081,7 +2080,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_export_n_tlabile_mavg_sl', mem%myc_export_n_tlabile_mavg_sl, &
@@ -2093,7 +2092,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_export_p_tlabile_mavg_sl', mem%myc_export_p_tlabile_mavg_sl, &
@@ -2105,7 +2104,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_export_c_tmyc_mavg_sl', mem%myc_export_c_tmyc_mavg_sl, &
@@ -2117,7 +2116,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('myc_export_n_tmyc_mavg_sl', mem%myc_export_n_tmyc_mavg_sl, &
@@ -2129,7 +2128,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('volatilisation_nh4', mem%volatilisation_nh4, &
@@ -2141,7 +2140,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
@@ -2153,7 +2152,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_no3', mem%nitrification_no3, &
@@ -2165,7 +2164,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_no3_n15', mem%nitrification_no3_n15, &
@@ -2177,7 +2176,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_noy', mem%nitrification_noy, &
@@ -2189,7 +2188,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_noy_n15', mem%nitrification_noy_n15, &
@@ -2201,7 +2200,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_n2o', mem%nitrification_n2o, &
@@ -2213,7 +2212,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('nitrification_n2o_n15', mem%nitrification_n2o_n15, &
@@ -2225,7 +2224,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_noy', mem%denitrification_noy, &
@@ -2237,7 +2236,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_n2o_n15', mem%denitrification_n2o_n15, &
@@ -2249,7 +2248,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_n2o', mem%denitrification_n2o, &
@@ -2261,7 +2260,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_noy_n15', mem%denitrification_noy_n15, &
@@ -2273,7 +2272,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_n2', mem%denitrification_n2, &
@@ -2285,7 +2284,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('denitrification_n2_n15', mem%denitrification_n2_n15, &
@@ -2297,7 +2296,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('asymb_n_fixation', mem%asymb_n_fixation, &
@@ -2309,7 +2308,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
@@ -2321,7 +2320,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('weathering_po4', mem%weathering_po4, &
@@ -2331,9 +2330,9 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('occlusion_po4', mem%occlusion_po4, &
@@ -2345,7 +2344,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('slow_exchange_po4', mem%slow_exchange_po4, &
@@ -2357,7 +2356,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fast_exchange_po4', mem%fast_exchange_po4, &
@@ -2369,7 +2368,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fast_exchange_nh4', mem%fast_exchange_nh4, &
@@ -2381,7 +2380,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fast_adsorpt_po4', mem%fast_adsorpt_po4, &
@@ -2393,7 +2392,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fast_adsorpt_nh4', mem%fast_adsorpt_nh4, &
@@ -2405,7 +2404,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
@@ -2415,9 +2414,9 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = output_level_local, &
-        & loutput = output_switch_local, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('gross_mineralisation_po4', mem%gross_mineralisation_po4, &
@@ -2429,7 +2428,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
@@ -2441,7 +2440,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
@@ -2453,7 +2452,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
@@ -2465,7 +2464,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
@@ -2477,7 +2476,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
@@ -2489,7 +2488,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
@@ -2501,7 +2500,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_nh4_solute', mem%leaching_nh4_solute, &
@@ -2513,7 +2512,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_no3_solute', mem%leaching_no3_solute, &
@@ -2525,7 +2524,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_po4_solute', mem%leaching_po4_solute, &
@@ -2535,9 +2534,9 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = FULL, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
@@ -2549,7 +2548,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
@@ -2561,7 +2560,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_noy', mem%emission_noy, &
@@ -2573,7 +2572,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_n2o', mem%emission_n2o, &
@@ -2585,7 +2584,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_n2', mem%emission_n2, &
@@ -2597,7 +2596,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_noy_n15', mem%emission_noy_n15, &
@@ -2609,7 +2608,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_n2o_n15', mem%emission_n2o_n15, &
@@ -2621,7 +2620,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('emission_n2_n15', mem%emission_n2_n15, &
@@ -2633,7 +2632,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_org', mem%qmax_org, &
@@ -2645,7 +2644,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('qmax_po4', mem%qmax_po4, &
         & hgrid, vgrid_soil_w, &
@@ -2656,7 +2655,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('km_adsorpt_po4_sl', mem%km_adsorpt_po4_sl, &
@@ -2668,7 +2667,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_nh4', mem%qmax_nh4, &
@@ -2680,7 +2679,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('km_adsorpt_nh4_sl', mem%km_adsorpt_nh4_sl, &
@@ -2692,7 +2691,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_fast_po4', mem%qmax_fast_po4, &
@@ -2704,7 +2703,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('qmax_slow_po4', mem%qmax_slow_po4, &
@@ -2716,7 +2715,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('km_fast_po4', mem%km_fast_po4, &
@@ -2728,7 +2727,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('km_slow_po4', mem%km_slow_po4, &
@@ -2740,7 +2739,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('k_bioturb', mem%k_bioturb, &
@@ -2752,7 +2751,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('bulk_dens_corr_sl', mem%bulk_dens_corr_sl, &
@@ -2764,7 +2763,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('bulk_soil_carbon_sl', mem%bulk_soil_carbon_sl, &
@@ -2776,7 +2775,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('soil_litter_carbon_sl', mem%soil_litter_carbon_sl, &
@@ -2788,7 +2787,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('particle_fluxrate', mem%particle_fluxrate, &
@@ -2800,7 +2799,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('anaerobic_volume_fraction_sl', mem%anaerobic_volume_fraction_sl, &
@@ -2812,7 +2811,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_cue_eff', mem%microbial_cue_eff, &
         & hgrid, vgrid_soil_w, &
@@ -2823,7 +2822,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_cue_eff_tmic_mavg', mem%microbial_cue_eff_tmic_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -2834,7 +2833,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_nue_eff', mem%microbial_nue_eff, &
         & hgrid, vgrid_soil_w, &
@@ -2845,7 +2844,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_nue_eff_tmic_mavg', mem%microbial_nue_eff_tmic_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -2856,7 +2855,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_pue_eff', mem%microbial_pue_eff, &
         & hgrid, vgrid_soil_w, &
@@ -2867,7 +2866,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('microbial_pue_eff_tmic_mavg', mem%microbial_pue_eff_tmic_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -2878,7 +2877,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fact_n_status_mic_c_growth', mem%fact_n_status_mic_c_growth, &
         & hgrid, vgrid_soil_w, &
@@ -2889,7 +2888,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fact_p_status_mic_c_growth', mem%fact_p_status_mic_c_growth, &
         & hgrid, vgrid_soil_w, &
@@ -2900,7 +2899,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_AP', mem%enzyme_frac_AP, &
         & hgrid, vgrid_soil_w, &
@@ -2911,7 +2910,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dom_cn', mem%dom_cn, &
         & hgrid, vgrid_soil_w, &
@@ -2922,7 +2921,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dom_cp', mem%dom_cp, &
         & hgrid, vgrid_soil_w, &
@@ -2933,7 +2932,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dom_cn_mavg', mem%dom_cn_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -2944,7 +2943,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dom_cp_mavg', mem%dom_cp_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -2955,7 +2954,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       IF (model%config%flag_slow_sb_pool_spinup_accelerator) THEN
         CALL mem%Add_var('residue_som_c_form_mavg_sl', mem%residue_som_c_form_mavg_sl, &
@@ -2967,7 +2966,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('residue_som_c14_form_mavg_sl', mem%residue_som_c14_form_mavg_sl, &
@@ -2979,7 +2978,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('residue_assoc_som_c_form_mavg_sl', mem%residue_assoc_som_c_form_mavg_sl, &
@@ -2991,7 +2990,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('residue_assoc_som_c14_form_mavg_sl', mem%residue_assoc_som_c14_form_mavg_sl, &
@@ -3003,7 +3002,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('assoc_dom_c_form_mavg_sl', mem%assoc_dom_c_form_mavg_sl, &
@@ -3015,7 +3014,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('assoc_dom_c14_form_mavg_sl', mem%assoc_dom_c14_form_mavg_sl, &
@@ -3027,7 +3026,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('residue_som_c_loss_mavg_sl', mem%residue_som_c_loss_mavg_sl, &
@@ -3039,7 +3038,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('residue_assoc_som_c_loss_mavg_sl', mem%residue_assoc_som_c_loss_mavg_sl, &
@@ -3051,7 +3050,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('assoc_dom_c_loss_mavg_sl', mem%assoc_dom_c_loss_mavg_sl, &
@@ -3063,7 +3062,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
       END IF
 
@@ -3076,7 +3075,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('vmax_weath_mineral_sl', mem%vmax_weath_mineral_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3087,7 +3086,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('Qmax_AlFe_cor', mem%Qmax_AlFe_cor, &
@@ -3099,7 +3098,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly', mem%enzyme_frac_poly, &
         & hgrid, vgrid_soil_w, &
@@ -3110,7 +3109,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_residue', mem%enzyme_frac_residue, &
         & hgrid, vgrid_soil_w, &
@@ -3121,7 +3120,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_c', mem%enzyme_frac_poly_c, &
         & hgrid, vgrid_soil_w, &
@@ -3132,7 +3131,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_n', mem%enzyme_frac_poly_n, &
         & hgrid, vgrid_soil_w, &
@@ -3143,7 +3142,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_p', mem%enzyme_frac_poly_p, &
         & hgrid, vgrid_soil_w, &
@@ -3154,7 +3153,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_c_mavg', mem%enzyme_frac_poly_c_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -3165,7 +3164,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_n_mavg', mem%enzyme_frac_poly_n_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -3176,7 +3175,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('enzyme_frac_poly_p_mavg', mem%enzyme_frac_poly_p_mavg, &
         & hgrid, vgrid_soil_w, &
@@ -3187,7 +3186,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_switch_local, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3198,7 +3197,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('qmax_org_min_sl', mem%qmax_org_min_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3209,7 +3208,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('qmax_po4_min_sl', mem%qmax_po4_min_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3220,7 +3219,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('qmax_nh4_min_sl', mem%qmax_nh4_min_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3231,7 +3230,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('qmax_po4_om_sl', mem%qmax_po4_om_sl, &
         & hgrid, vgrid_soil_w, &
@@ -3242,7 +3241,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fertiliser_nh4', mem%fertiliser_nh4, &
         & hgrid, surface, &
@@ -3252,7 +3251,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fertiliser_nh4_n15', mem%fertiliser_nh4_n15, &
@@ -3263,7 +3262,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fertiliser_no3', mem%fertiliser_no3, &
@@ -3274,7 +3273,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fertiliser_no3_n15', mem%fertiliser_no3_n15, &
@@ -3285,7 +3284,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fertiliser_po4', mem%fertiliser_po4, &
@@ -3296,7 +3295,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_carbon', mem%total_flux_carbon, &
@@ -3308,7 +3307,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_nitrogen', mem%total_flux_nitrogen, &
@@ -3320,7 +3319,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_phosphorus', mem%total_flux_phosphorus, &
@@ -3332,7 +3331,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_carbon13', mem%total_flux_carbon13, &
@@ -3344,7 +3343,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_carbon14', mem%total_flux_carbon14, &
@@ -3356,7 +3355,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_flux_nitrogen15', mem%total_flux_nitrogen15, &
@@ -3368,7 +3367,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_soil_n', mem%total_soil_n, &
@@ -3380,7 +3379,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('total_soil_inorg_n', mem%total_soil_inorg_n, &
@@ -3392,7 +3391,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('ecosystem_total_n_loss', mem%ecosystem_total_n_loss, &
@@ -3404,7 +3403,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_microbial_c', mem%sb_bgcm_pool_microbial_c, &
@@ -3416,7 +3415,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_microbial_n', mem%sb_bgcm_pool_microbial_n, &
@@ -3428,7 +3427,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_microbial_p', mem%sb_bgcm_pool_microbial_p, &
@@ -3440,7 +3439,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_c', mem%sb_bgcm_pool_mineral_assoc_c, &
@@ -3452,7 +3451,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_n', mem%sb_bgcm_pool_mineral_assoc_n, &
@@ -3464,7 +3463,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sb_bgcm_pool_mineral_assoc_p', mem%sb_bgcm_pool_mineral_assoc_p, &
@@ -3476,7 +3475,7 @@ CONTAINS
         & output_level = output_level_local, &
         & loutput = output_switch_local, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
@@ -3490,7 +3489,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('total_inorg_n_gsum', mem%total_inorg_n_gsum,                                             &
       & hgrid, surface,                                                                        &
@@ -3498,7 +3497,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('rh_gsum', mem%rh_gsum,                                                        &
       & hgrid, surface,                                                                        &
@@ -3506,7 +3505,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('nbp_gsum', mem%nbp_gsum,                                                       &
       & hgrid, surface,                                                                        &
@@ -3514,7 +3513,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('fnloss_gsum', mem%fnloss_gsum,                                                    &
       & hgrid, surface,                                                                        &
@@ -3522,7 +3521,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('fn2o_gsum', mem%fn2o_gsum,                                                      &
       & hgrid, surface,                                                                        &
@@ -3530,7 +3529,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
   END SUBROUTINE Init_sb_memory
 
@@ -3601,10 +3600,10 @@ CONTAINS
     &                                   l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sb_bgcm_with_elements),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3657,10 +3656,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                     l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_with_components),     INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3684,10 +3683,10 @@ CONTAINS
   SUBROUTINE sb_bgcm_main_init(this, name, shortname, elements_index_map, &
     &                          l_elements, element_list, element_unit)
     CLASS(t_sb_bgcm_main),          INTENT(inout) :: this                   ! bgcm object
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name       (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name (No spaces !)
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3703,10 +3702,10 @@ CONTAINS
   !>
   !> create, init and append a sb bgcm with components
   !>
-  FUNCTION Add_sb_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_sb_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(sb_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)    :: bgcm_id               !< id of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with components
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with components
@@ -3751,18 +3750,18 @@ CONTAINS
     sb_bgcm_with_components%residue_assoc => Add_sb_bgc_material_with_elements(sb_bgcm_with_components, &
       & name = 'residue_assoc_bgcm', shortname = 'residue_assoc', elements_index_map = elements_index_map(:), unit = unit)
 
-    ! Add the bookkeepoing for this sb bgcm with components
-    CALL pool%Add_pool(sb_bgcm_with_components, bgcm_id)
+    ! Add the bookkeeping for this sb bgcm with components
+    CALL bgcm%Add_bgcm(sb_bgcm_with_components, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_components
 
   ! ======================================================================================================= !
   !>
   !> create, init and append a sb bgcm with elements
   !>
-  FUNCTION Add_sb_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_sb_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(sb_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                  !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                  !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                  !< name of this sb bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname             !< shortname of this sb bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:) !< mapping elements ID -> IND
@@ -3775,7 +3774,7 @@ CONTAINS
 
     CALL sb_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(sb_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(sb_bgcm_with_elements, bgcm_id)
   END FUNCTION Add_sb_bgc_material_with_elements
 
 #endif

@@ -16,9 +16,9 @@
 !>#### main routines for the SSM (simple soil model), calculating the soil biogeochemical pools
 !>
 MODULE mo_q_sb_ssm_main
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
 
@@ -74,7 +74,7 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over nsoil_w
     INTEGER                               :: ic, is               !< loop over dimensions
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
                                              apparent_fast_som_np      , &
                                              fine_root_carbon_sl, &
                                              km1_uptake_nh4_act, &
@@ -94,7 +94,7 @@ CONTAINS
                                              k_desorpt_po4_act, &
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act
-    REAL(wp)                              :: dtime
+    REAL(lp)                              :: dtime
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -680,7 +680,7 @@ CONTAINS
       WHERE(soil_depth_sl(:,isoil) > eps8)
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
       ELSEWHERE
-        fine_root_carbon_sl(:,isoil) = 0.0_wp
+        fine_root_carbon_sl(:,isoil) = 0.0_lp
       ENDWHERE
     ENDDO
     ! calculate the potential PO4 flux rate
@@ -714,9 +714,9 @@ CONTAINS
 
     !>  3.1 Calculation of asymbiotic N fixation rate
     !>
-    asymb_n_fixation(:,:) = 0.0_wp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
+    asymb_n_fixation(:,:) = 0.0_lp  ! init variable for all indices (also if is > num_sl_above_bedrock(ic))
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         asymb_n_fixation(ic, is) = calc_asymb_n_fixation( &
           &                         TRIM(dsl4jsb_Config(SB_)%bnf_scheme), &
           &                         sb_loss_mt(ix_soluable_litter, ixC, ic, is) + sb_loss_mt(ix_polymeric_litter, ixC, ic, is), &
@@ -941,96 +941,96 @@ CONTAINS
     !>    convert rates to [micro-mol/ m3 / s]
     !>    covert surface fluxes to [micro-mol / m2 / s]
     !>
-    het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._wp
-    het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._wp
-    het_respiration_c14(:,:) = het_respiration_c14(:,:) / dtime * 1000000._wp
-    myc_respiration(:,:)     = myc_respiration(:,:) / dtime * 1000000._wp
-    myc_respiration_c13(:,:) = myc_respiration_c13(:,:) / dtime * 1000000._wp
-    myc_respiration_c14(:,:) = myc_respiration_c14(:,:) / dtime * 1000000._wp
+    het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._lp
+    het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._lp
+    het_respiration_c14(:,:) = het_respiration_c14(:,:) / dtime * 1000000._lp
+    myc_respiration(:,:)     = myc_respiration(:,:) / dtime * 1000000._lp
+    myc_respiration_c13(:,:) = myc_respiration_c13(:,:) / dtime * 1000000._lp
+    myc_respiration_c14(:,:) = myc_respiration_c14(:,:) / dtime * 1000000._lp
 
-    net_mineralisation_nh4(:,:)    = net_mineralisation_nh4(:,:) / dtime * 1000000._wp
-    net_mineralisation_no3(:,:)    = net_mineralisation_no3(:,:) / dtime * 1000000._wp
-    net_mineralisation_po4(:,:)    = net_mineralisation_po4(:,:) / dtime * 1000000._wp
-    plant_uptake_nh4_sl(:,:)       = plant_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_no3_sl(:,:)       = plant_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_po4_sl(:,:)       = plant_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_nh4_sl(:,:)  = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_no3_sl(:,:)  = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_po4_sl(:,:)  = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_nh4_sl(:,:)   = microbial_uptake_nh4_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_no3_sl(:,:)   = microbial_uptake_no3_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_po4_sl(:,:)   = microbial_uptake_po4_sl(:,:) / dtime * 1000000._wp
-    asymb_n_fixation(:,:)          = asymb_n_fixation(:,:) / dtime * 1000000._wp
+    net_mineralisation_nh4(:,:)    = net_mineralisation_nh4(:,:) / dtime * 1000000._lp
+    net_mineralisation_no3(:,:)    = net_mineralisation_no3(:,:) / dtime * 1000000._lp
+    net_mineralisation_po4(:,:)    = net_mineralisation_po4(:,:) / dtime * 1000000._lp
+    plant_uptake_nh4_sl(:,:)       = plant_uptake_nh4_sl(:,:) / dtime * 1000000._lp
+    plant_uptake_no3_sl(:,:)       = plant_uptake_no3_sl(:,:) / dtime * 1000000._lp
+    plant_uptake_po4_sl(:,:)       = plant_uptake_po4_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_nh4_sl(:,:)  = mycorrhiza_uptake_nh4_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_no3_sl(:,:)  = mycorrhiza_uptake_no3_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_norg_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_po4_sl(:,:)  = mycorrhiza_uptake_po4_sl(:,:) / dtime * 1000000._lp
+    microbial_uptake_nh4_sl(:,:)   = microbial_uptake_nh4_sl(:,:) / dtime * 1000000._lp
+    microbial_uptake_no3_sl(:,:)   = microbial_uptake_no3_sl(:,:) / dtime * 1000000._lp
+    microbial_uptake_po4_sl(:,:)   = microbial_uptake_po4_sl(:,:) / dtime * 1000000._lp
+    asymb_n_fixation(:,:)          = asymb_n_fixation(:,:) / dtime * 1000000._lp
 
-    volatilisation_nh4(:,:)  = volatilisation_nh4(:,:) / dtime * 1000000._wp
-    nitrification_no3(:,:)   = nitrification_no3(:,:) / dtime * 1000000._wp
-    nitrification_noy(:,:)   = nitrification_noy(:,:) / dtime * 1000000._wp
-    nitrification_n2o(:,:)   = nitrification_n2o(:,:) / dtime * 1000000._wp
-    denitrification_noy(:,:) = denitrification_noy(:,:) / dtime * 1000000._wp
-    denitrification_n2o(:,:) = denitrification_n2o(:,:) / dtime * 1000000._wp
-    denitrification_n2(:,:)  = denitrification_n2(:,:) / dtime * 1000000._wp
+    volatilisation_nh4(:,:)  = volatilisation_nh4(:,:) / dtime * 1000000._lp
+    nitrification_no3(:,:)   = nitrification_no3(:,:) / dtime * 1000000._lp
+    nitrification_noy(:,:)   = nitrification_noy(:,:) / dtime * 1000000._lp
+    nitrification_n2o(:,:)   = nitrification_n2o(:,:) / dtime * 1000000._lp
+    denitrification_noy(:,:) = denitrification_noy(:,:) / dtime * 1000000._lp
+    denitrification_n2o(:,:) = denitrification_n2o(:,:) / dtime * 1000000._lp
+    denitrification_n2(:,:)  = denitrification_n2(:,:) / dtime * 1000000._lp
 
-    transport_nh4_solute(:,:)     = transport_nh4_solute(:,:) / dtime * 1000000._wp
-    transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:) / dtime * 1000000._wp
-    transport_no3_solute(:,:)     = transport_no3_solute(:,:) / dtime * 1000000._wp
-    transport_po4_solute(:,:)     = transport_po4_solute(:,:) / dtime * 1000000._wp
-    transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) / dtime * 1000000._wp
-    transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) / dtime * 1000000._wp
-    transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) / dtime * 1000000._wp
-    transport_noy(:,:)            = transport_noy(:,:) / dtime * 1000000._wp
-    transport_n2o(:,:)            = transport_n2o(:,:) / dtime * 1000000._wp
-    transport_n2(:,:)             = transport_n2(:,:) / dtime * 1000000._wp
+    transport_nh4_solute(:,:)     = transport_nh4_solute(:,:) / dtime * 1000000._lp
+    transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:) / dtime * 1000000._lp
+    transport_no3_solute(:,:)     = transport_no3_solute(:,:) / dtime * 1000000._lp
+    transport_po4_solute(:,:)     = transport_po4_solute(:,:) / dtime * 1000000._lp
+    transport_po4_assoc_fast(:,:) = transport_po4_assoc_fast(:,:) / dtime * 1000000._lp
+    transport_po4_assoc_slow(:,:) = transport_po4_assoc_slow(:,:) / dtime * 1000000._lp
+    transport_po4_occluded(:,:)   = transport_po4_occluded(:,:) / dtime * 1000000._lp
+    transport_noy(:,:)            = transport_noy(:,:) / dtime * 1000000._lp
+    transport_n2o(:,:)            = transport_n2o(:,:) / dtime * 1000000._lp
+    transport_n2(:,:)             = transport_n2(:,:) / dtime * 1000000._lp
 
-    lateral_loss_nh4_solute_sl(:,:) = lateral_loss_nh4_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_no3_solute_sl(:,:) = lateral_loss_no3_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_po4_solute_sl(:,:) = lateral_loss_po4_solute_sl(:,:) / dtime * 1000000._wp
+    lateral_loss_nh4_solute_sl(:,:) = lateral_loss_nh4_solute_sl(:,:) / dtime * 1000000._lp
+    lateral_loss_no3_solute_sl(:,:) = lateral_loss_no3_solute_sl(:,:) / dtime * 1000000._lp
+    lateral_loss_po4_solute_sl(:,:) = lateral_loss_po4_solute_sl(:,:) / dtime * 1000000._lp
 
-    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._wp
-    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._wp
-    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._wp
-    emission_noy(:)        = emission_noy(:) / dtime * 1000000._wp
-    emission_n2o(:)        = emission_n2o(:) / dtime * 1000000._wp
-    emission_n2(:)         = emission_n2(:) / dtime * 1000000._wp
+    leaching_nh4_solute(:) = leaching_nh4_solute(:) / dtime * 1000000._lp
+    leaching_no3_solute(:) = leaching_no3_solute(:) / dtime * 1000000._lp
+    leaching_po4_solute(:) = leaching_po4_solute(:) / dtime * 1000000._lp
+    emission_noy(:)        = emission_noy(:) / dtime * 1000000._lp
+    emission_n2o(:)        = emission_n2o(:) / dtime * 1000000._lp
+    emission_n2(:)         = emission_n2(:) / dtime * 1000000._lp
 
-    net_mineralisation_nh4_n15(:,:)   = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._wp
-    net_mineralisation_no3_n15(:,:)   = net_mineralisation_no3_n15(:,:) / dtime * 1000000._wp
-    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:) / dtime * 1000000._wp
-    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:) / dtime * 1000000._wp
-    asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:) / dtime * 1000000._wp
+    net_mineralisation_nh4_n15(:,:)   = net_mineralisation_nh4_n15(:,:) / dtime * 1000000._lp
+    net_mineralisation_no3_n15(:,:)   = net_mineralisation_no3_n15(:,:) / dtime * 1000000._lp
+    plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:) / dtime * 1000000._lp
+    plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1000000._lp
+    mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1000000._lp
+    microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:) / dtime * 1000000._lp
+    microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:) / dtime * 1000000._lp
+    asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:) / dtime * 1000000._lp
 
-    volatilisation_nh4_n15(:,:)  = volatilisation_nh4_n15(:,:) / dtime * 1000000._wp
-    nitrification_no3_n15(:,:)   = nitrification_no3_n15(:,:) / dtime * 1000000._wp
-    nitrification_noy_n15(:,:)   = nitrification_noy_n15(:,:) / dtime * 1000000._wp
-    nitrification_n2o_n15(:,:)   = nitrification_n2o_n15(:,:) / dtime * 1000000._wp
-    denitrification_noy_n15(:,:) = denitrification_noy_n15(:,:) / dtime * 1000000._wp
-    denitrification_n2o_n15(:,:) = denitrification_n2o_n15(:,:) / dtime * 1000000._wp
-    denitrification_n2_n15(:,:)  = denitrification_n2_n15(:,:) / dtime * 1000000._wp
+    volatilisation_nh4_n15(:,:)  = volatilisation_nh4_n15(:,:) / dtime * 1000000._lp
+    nitrification_no3_n15(:,:)   = nitrification_no3_n15(:,:) / dtime * 1000000._lp
+    nitrification_noy_n15(:,:)   = nitrification_noy_n15(:,:) / dtime * 1000000._lp
+    nitrification_n2o_n15(:,:)   = nitrification_n2o_n15(:,:) / dtime * 1000000._lp
+    denitrification_noy_n15(:,:) = denitrification_noy_n15(:,:) / dtime * 1000000._lp
+    denitrification_n2o_n15(:,:) = denitrification_n2o_n15(:,:) / dtime * 1000000._lp
+    denitrification_n2_n15(:,:)  = denitrification_n2_n15(:,:) / dtime * 1000000._lp
 
-    transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1000000._wp
-    transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) / dtime * 1000000._wp
-    transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) / dtime * 1000000._wp
-    transport_noy_n15(:,:)        = transport_noy_n15(:,:) / dtime * 1000000._wp
-    transport_n2o_n15(:,:)        = transport_n2o_n15(:,:) / dtime * 1000000._wp
-    transport_n2_n15(:,:)         = transport_n2_n15(:,:) / dtime * 1000000._wp
+    transport_nh4_n15_solute(:,:) = transport_nh4_n15_solute(:,:) / dtime * 1000000._lp
+    transport_nh4_n15_assoc(:,:)  = transport_nh4_n15_assoc(:,:) / dtime * 1000000._lp
+    transport_no3_n15_solute(:,:) = transport_no3_n15_solute(:,:) / dtime * 1000000._lp
+    transport_noy_n15(:,:)        = transport_noy_n15(:,:) / dtime * 1000000._lp
+    transport_n2o_n15(:,:)        = transport_n2o_n15(:,:) / dtime * 1000000._lp
+    transport_n2_n15(:,:)         = transport_n2_n15(:,:) / dtime * 1000000._lp
 
-    leaching_nh4_n15_solute(:)          = leaching_nh4_n15_solute(:) / dtime * 1000000._wp
-    leaching_no3_n15_solute(:)          = leaching_no3_n15_solute(:) / dtime * 1000000._wp
-    lateral_loss_nh4_n15_solute_sl(:,:) = lateral_loss_nh4_n15_solute_sl(:,:) / dtime * 1000000._wp
-    lateral_loss_no3_n15_solute_sl(:,:) = lateral_loss_no3_n15_solute_sl(:,:) / dtime * 1000000._wp
+    leaching_nh4_n15_solute(:)          = leaching_nh4_n15_solute(:) / dtime * 1000000._lp
+    leaching_no3_n15_solute(:)          = leaching_no3_n15_solute(:) / dtime * 1000000._lp
+    lateral_loss_nh4_n15_solute_sl(:,:) = lateral_loss_nh4_n15_solute_sl(:,:) / dtime * 1000000._lp
+    lateral_loss_no3_n15_solute_sl(:,:) = lateral_loss_no3_n15_solute_sl(:,:) / dtime * 1000000._lp
 
-    emission_noy_n15(:)        = emission_noy_n15(:) / dtime * 1000000._wp
-    emission_n2o_n15(:)        = emission_n2o_n15(:) / dtime * 1000000._wp
-    emission_n2_n15(:)         = emission_n2_n15(:) / dtime * 1000000._wp
+    emission_noy_n15(:)        = emission_noy_n15(:) / dtime * 1000000._lp
+    emission_n2o_n15(:)        = emission_n2o_n15(:) / dtime * 1000000._lp
+    emission_n2_n15(:)         = emission_n2_n15(:) / dtime * 1000000._lp
 
-    weathering_po4(:,:)             = weathering_po4(:,:) / dtime * 1000000._wp
-    occlusion_po4(:,:)              = occlusion_po4(:,:) / dtime * 1000000._wp
-    slow_exchange_po4(:,:)          = slow_exchange_po4(:,:) / dtime * 1000000._wp
-    biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._wp
+    weathering_po4(:,:)             = weathering_po4(:,:) / dtime * 1000000._lp
+    occlusion_po4(:,:)              = occlusion_po4(:,:) / dtime * 1000000._lp
+    slow_exchange_po4(:,:)          = slow_exchange_po4(:,:) / dtime * 1000000._lp
+    biochem_mineralisation_po4(:,:) = biochem_mineralisation_po4(:,:) / dtime * 1000000._lp
 
     !------------------------------------------------------------------------------------------------------ !
     ! de-allocate local allocatable variables
@@ -1107,11 +1107,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                     INTENT(in)  :: nc                           !< dimensions
     INTEGER,                                     INTENT(in)  :: nsoil_w                      !< number of soil layers (water)
-    REAL(wp),                                    INTENT(in)  :: dtime                        !< timestep length
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp),                                    INTENT(in)  :: dtime                        !< timestep length
+    REAL(lp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock         !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     LOGICAL,                                     INTENT(in)  :: flag_sb_interactive_n        !< TRUE: fast SOM CN varies with N solute concentration
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [micro-mol m-2 s-1]
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: &
+    REAL(lp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [micro-mol m-2 s-1]
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3]
                                                                 wtr_soil_sl, &               !< water content of a layer [m]
@@ -1125,7 +1125,7 @@ CONTAINS
                                                                 rmm_desorption, &            !< moisture response scalar for po4 desorption
                                                                 bulk_dens_corr_sl, &         !< bulk density of the soil layer, [kg/m3]
                                                                 vmax_weath_mineral_sl        !< weathering coefficient of mineral soil [mol P m-3 s-1]
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out) :: &
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(out) :: &
                                                                 km1_uptake_nh4_act, &        !< actual km1 for NH4 uptake [m3 / mol]
                                                                 km2_uptake_nh4_act, &        !< actual km2 for NH4 uptake [mol / m3]
                                                                 km1_uptake_no3_act, &        !< actual km1 for NO3 uptake [m3 / mol]
@@ -1151,30 +1151,30 @@ CONTAINS
 
     !> init out var
     !>
-    km1_uptake_nh4_act(:,:)         = 0.0_wp
-    km2_uptake_nh4_act(:,:)         = 0.0_wp
-    km1_uptake_no3_act(:,:)         = 0.0_wp
-    km2_uptake_no3_act(:,:)         = 0.0_wp
-    km1_uptake_po4_act(:,:)         = 0.0_wp
-    km2_uptake_po4_act(:,:)         = 0.0_wp
-    km_uptake_org_act(:,:)          = 0.0_wp
-    km_mic_uptake_nh4_act(:,:)      = 0.0_wp
-    km_mic_uptake_no3_act(:,:)      = 0.0_wp
-    km_denitrification_c_act(:,:)   = 0.0_wp
-    km_denitrification_no3_act(:,:) = 0.0_wp
-    apparent_fast_som_cn(:,:)       = 0.0_wp
-    apparent_fast_som_np(:,:)       = 0.0_wp
-    p_deposition_act(:,:)           = 0.0_wp
-    vmax_weath_mineral_act_sl(:,:)  = 0.0_wp
-    k_adsorpt_po4_act(:,:)          = 0.0_wp
-    k_desorpt_po4_act(:,:)          = 0.0_wp
-    km_dip_biochem_po4_act(:,:)     = 0.0_wp
+    km1_uptake_nh4_act(:,:)         = 0.0_lp
+    km2_uptake_nh4_act(:,:)         = 0.0_lp
+    km1_uptake_no3_act(:,:)         = 0.0_lp
+    km2_uptake_no3_act(:,:)         = 0.0_lp
+    km1_uptake_po4_act(:,:)         = 0.0_lp
+    km2_uptake_po4_act(:,:)         = 0.0_lp
+    km_uptake_org_act(:,:)          = 0.0_lp
+    km_mic_uptake_nh4_act(:,:)      = 0.0_lp
+    km_mic_uptake_no3_act(:,:)      = 0.0_lp
+    km_denitrification_c_act(:,:)   = 0.0_lp
+    km_denitrification_no3_act(:,:) = 0.0_lp
+    apparent_fast_som_cn(:,:)       = 0.0_lp
+    apparent_fast_som_np(:,:)       = 0.0_lp
+    p_deposition_act(:,:)           = 0.0_lp
+    vmax_weath_mineral_act_sl(:,:)  = 0.0_lp
+    k_adsorpt_po4_act(:,:)          = 0.0_lp
+    k_desorpt_po4_act(:,:)          = 0.0_lp
+    km_dip_biochem_po4_act(:,:)     = 0.0_lp
 
 
     !> run calc
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         km1_uptake_nh4_act(ic, is)         = km1_up_nh4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km1_uptake_no3_act(ic, is)         = km1_up_no3 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
         km1_uptake_po4_act(ic, is)         = km1_up_po4 * rtm_hsc(ic, is) * rmm_hsc(ic, is)
@@ -1193,7 +1193,7 @@ CONTAINS
             &                            k_fast_som_cn_min)
         ELSE
           ! set to mean of min-max range
-          apparent_fast_som_cn(ic,is)  = 0.5_wp * (k_fast_som_cn_min + k_fast_som_cn_max)
+          apparent_fast_som_cn(ic,is)  = 0.5_lp * (k_fast_som_cn_min + k_fast_som_cn_max)
         END IF
         apparent_fast_som_np(ic, is) = k_fast_som_np &
           &                            * MAX(k_fast_som_cn_max - f_fast_som_cn * kref_fast_som_np / bulk_dens_sl(ic, is), &
@@ -1201,9 +1201,9 @@ CONTAINS
         vmax_weath_mineral_act_sl(ic, is) = rtm_hsc(ic, is) / rmm_hsc(ic, is) * vmax_weath_mineral_sl(ic, is)
         k_adsorpt_po4_act(ic, is)         = rtm_sorption(ic, is)   * k_adsorpt_po4
         k_desorpt_po4_act(ic, is)         = rtm_desorption(ic, is) * k_desorpt_po4
-        p_deposition_act(ic, is)          = 0.0_wp
+        p_deposition_act(ic, is)          = 0.0_lp
         ! only for the 1st soil layer
-        p_deposition_act(ic,1)            = p_deposition(ic) / 1.e6_wp / soil_depth_sl(ic,1) * dtime
+        p_deposition_act(ic,1)            = p_deposition(ic) / 1.e6_lp / soil_depth_sl(ic,1) * dtime
       END DO
     END DO
   END SUBROUTINE calc_local_soil_profile_values
@@ -1251,15 +1251,15 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                     INTENT(in)  :: nc, &                      !< dimensions
                                                                 nsoil_w
-    REAL(wp),                                    INTENT(in)  :: dtime                      !< timestep length
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp),                                    INTENT(in)  :: lctlib_vmax_uptake_n       !< lctlib parameter
-    REAL(wp),                                    INTENT(in)  :: lctlib_vmax_uptake_p       !< lctlib parameter
+    REAL(lp),                                    INTENT(in)  :: dtime                      !< timestep length
+    REAL(lp), DIMENSION(nc),                     INTENT(in)  :: num_sl_above_bedrock       !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp),                                    INTENT(in)  :: lctlib_vmax_uptake_n       !< lctlib parameter
+    REAL(lp),                                    INTENT(in)  :: lctlib_vmax_uptake_p       !< lctlib parameter
     LOGICAL,                                     INTENT(in)  :: flag_mycorrhiza            !< from sb config
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: soil_depth_sl              !< soil depth per layer [m]
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: veg_pool_fine_root_carbon  !< fine root carbon [mol / m2]
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: sb_pool_mycorrhiza_carbon  !< mycorrhiza carbon [mol / m2]
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: root_fraction_sl, &        !< fraction of fine roots per soil layer
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: soil_depth_sl              !< soil depth per layer [m]
+    REAL(lp), DIMENSION(nc),                     INTENT(in)  :: veg_pool_fine_root_carbon  !< fine root carbon [mol / m2]
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: sb_pool_mycorrhiza_carbon  !< mycorrhiza carbon [mol / m2]
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)  :: root_fraction_sl, &        !< fraction of fine roots per soil layer
                                                                 rtm_root_uptake_act, &     !< temperature response of root uptake
                                                                 rmm_root_uptake_act, &     !< moisture response of root uptake
                                                                 km1_uptake_nh4_act, &      !< actual km1 for NH4 uptake [m3 / mol]
@@ -1271,28 +1271,28 @@ CONTAINS
                                                                 nh4_solute, &              !< NH4 solute concentration [mol / m3]
                                                                 no3_solute, &              !< NO3 solute concentration [mol / m3]
                                                                 po4_solute                 !< PO4 solute concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),            INTENT(out) :: &
+    REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(out) :: &
                                                                 plant_uptake_nh4_sl, &     !< potential plant uptake of NH4 [mol / m3 / timestep]
                                                                 plant_uptake_no3_sl, &     !< potential plant uptake of NO3 [mol / m3 / timestep]
                                                                 plant_uptake_po4_sl        !< potential plant uptake of PO4 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot, &       !< potential N uptake by fine roots per unit mass [micro-mol / mol / s]
+    REAL(lp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot, &       !< potential N uptake by fine roots per unit mass [micro-mol / mol / s]
                                                                 unit_uptake_p_pot          !< potential P uptake by fine roots per unit mass [micro-mol / mol / s]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: ic, is       !< loop over dimensions
-    REAL(wp), DIMENSION(nc)                          :: myc_root_coverage_act, f_vmax_uptake_act
-    REAL(wp), DIMENSION(nc,nsoil_w)                  :: hlp1, hlp2   !< helpers
+    REAL(lp), DIMENSION(nc)                          :: myc_root_coverage_act, f_vmax_uptake_act
+    REAL(lp), DIMENSION(nc,nsoil_w)                  :: hlp1, hlp2   !< helpers
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_potential_plant_uptake_rate'
 
 
 
     !> 0.9 zero output variables
     !!
-    plant_uptake_nh4_sl(:,:) = 0.0_wp
-    plant_uptake_no3_sl(:,:) = 0.0_wp
-    plant_uptake_po4_sl(:,:) = 0.0_wp
-    unit_uptake_n_pot(:)     = 0.0_wp
-    unit_uptake_p_pot(:)     = 0.0_wp
+    plant_uptake_nh4_sl(:,:) = 0.0_lp
+    plant_uptake_no3_sl(:,:) = 0.0_lp
+    plant_uptake_po4_sl(:,:) = 0.0_lp
+    unit_uptake_n_pot(:)     = 0.0_lp
+    unit_uptake_p_pot(:)     = 0.0_lp
 
 
     !> 1.0 inorganic plant N uptake
@@ -1306,50 +1306,50 @@ CONTAINS
           myc_root_coverage_act(ic) = MIN(myc_root_coverage_max, &
             &                         SUM(sb_pool_mycorrhiza_carbon(ic,:) * soil_depth_sl(ic,:)) &
             &                         / veg_pool_fine_root_carbon(ic))
-          f_vmax_uptake_act(ic)     = 1.0_wp / (1.0_wp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
+          f_vmax_uptake_act(ic)     = 1.0_lp / (1.0_lp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
         ELSE
-          myc_root_coverage_act(ic) = 0.0_wp
-          f_vmax_uptake_act(ic)     = 1.0_wp
+          myc_root_coverage_act(ic) = 0.0_lp
+          f_vmax_uptake_act(ic)     = 1.0_lp
         ENDIF
       ENDDO
     ELSE
-       f_vmax_uptake_act(:)     = 1.0_wp
-       myc_root_coverage_act(:) = 0.0_wp
+       f_vmax_uptake_act(:)     = 1.0_lp
+       myc_root_coverage_act(:) = 0.0_lp
     ENDIF
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         !> 2.1 inorganic plant N uptake
         !!
         !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
+                        (1.0_lp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
                         nh4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_nh4_act(ic, is) + nh4_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_nh4_act(ic, is) + nh4_solute(ic, is) ))
+                        1._lp / ( km2_uptake_nh4_act(ic, is) + nh4_solute(ic, is) ))
         hlp2(ic, is) = root_fraction_sl(ic, is) * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
+                        (1.0_lp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
                         no3_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_no3_act(ic, is) + no3_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
+                        1._lp / ( km2_uptake_no3_act(ic, is) + no3_solute(ic, is) ))
         unit_uptake_n_pot(ic) = unit_uptake_n_pot(ic) + hlp1(ic, is) + hlp2(ic, is)
 
         ! potential uptake rate in mol N / m3 / timestep
         plant_uptake_nh4_sl(ic, is) = hlp1(ic, is) * &
                                        veg_pool_fine_root_carbon(ic) / &
-                                       soil_depth_sl(ic, is) * dtime / 1.e6_wp
+                                       soil_depth_sl(ic, is) * dtime / 1.e6_lp
         plant_uptake_no3_sl(ic, is) = hlp2(ic, is) * &
                                        veg_pool_fine_root_carbon(ic) / &
-                                       soil_depth_sl(ic, is) * dtime / 1.e6_wp
+                                       soil_depth_sl(ic, is) * dtime / 1.e6_lp
 
         !> 2.2 inorganic plant P uptake
         !!
         !! potential P uptake rate (micro-mol P / mol C fine-root / s), weighted by root distribution
         hlp1(ic, is) = root_fraction_sl(ic, is)  * rtm_root_uptake_act(ic, is) * rmm_root_uptake_act(ic, is) * &
-                        (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
+                        (1.0_lp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
                         po4_solute(ic, is) * ( fract_vmax_low_affinity / ( km1_uptake_po4_act(ic, is) + po4_solute(ic, is)) + &
-                        1._wp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
+                        1._lp / ( km2_uptake_po4_act(ic, is) + po4_solute(ic, is) ))
         unit_uptake_p_pot(ic) = unit_uptake_p_pot(ic) + hlp1(ic, is)
         ! potential uptake rate in mol P / m3 / timestep
-        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_wp
+        plant_uptake_po4_sl(ic, is) = hlp1(ic, is) * veg_pool_fine_root_carbon(ic) / soil_depth_sl(ic, is) * dtime / 1.e6_lp
       ENDDO
     ENDDO
   END SUBROUTINE calc_potential_plant_uptake_rate
@@ -1394,14 +1394,14 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)  :: nc                           !< dimensions
     INTEGER,                                          INTENT(in)  :: nsoil_w                      !< number of soil layers (water)
-    REAL(wp),                                         INTENT(in)  :: dtime                        !< timestep length
-    REAL(wp),                                         INTENT(in)  :: lctlib_vmax_uptake_n         !< lctlib parameter
-    REAL(wp),                                         INTENT(in)  :: lctlib_vmax_uptake_p         !< lctlib parameter
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: soil_depth_sl                !< soil depth per layer [m]
-    REAL(wp), DIMENSION(nc),                          INTENT(in)  :: veg_pool_fine_root_carbon    !< fine root carbon [mol / m2]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_mycorrhiza_carbon    !< mycorrhizal biomass [mol C / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_mycorrhiza_nitrogen  !< mycorrhizal biomass [mol C / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: rtm_mycorrhiza_uptake_act, & !< temperature response of mycorrhiza uptake
+    REAL(lp),                                         INTENT(in)  :: dtime                        !< timestep length
+    REAL(lp),                                         INTENT(in)  :: lctlib_vmax_uptake_n         !< lctlib parameter
+    REAL(lp),                                         INTENT(in)  :: lctlib_vmax_uptake_p         !< lctlib parameter
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: soil_depth_sl                !< soil depth per layer [m]
+    REAL(lp), DIMENSION(nc),                          INTENT(in)  :: veg_pool_fine_root_carbon    !< fine root carbon [mol / m2]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_mycorrhiza_carbon    !< mycorrhizal biomass [mol C / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_mycorrhiza_nitrogen  !< mycorrhizal biomass [mol C / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: rtm_mycorrhiza_uptake_act, & !< temperature response of mycorrhiza uptake
                                                                      rmm_mycorrhiza_uptake_act, & !< moisture response of mycorrhiza uptake
                                                                      km1_uptake_nh4_act, &        !< actual km1 for NH4 uptake [m3 / mol]
                                                                      km2_uptake_nh4_act, &        !< actual km2 for NH4 uptake [mol / m3]
@@ -1412,32 +1412,32 @@ CONTAINS
                                                                      nh4_solute, &                !< NH4 solute concentration [mol / m3]
                                                                      no3_solute, &                !< NO3 solute concentration [mol / m3]
                                                                      po4_solute                   !< PO4 solute concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: mycorrhiza_uptake_nh4_sl, &  !< potential mycorrhiza uptake of NH4 [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: mycorrhiza_uptake_nh4_sl, &  !< potential mycorrhiza uptake of NH4 [mol / m3 / timestep]
                                                                      mycorrhiza_uptake_no3_sl, &  !< potential mycorrhiza uptake of NO3 [mol / m3 / timestep]
                                                                      mycorrhiza_uptake_po4_sl     !< potential mycorrhiza uptake of PO4 [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: isoil        !< loop over nsoil_w
-    REAL(wp), DIMENSION(nc)                          :: f_vmax_uptake_act
-    REAL(wp), DIMENSION(nc,nsoil_w)                  :: hlp1, hlp2   !< helpers
+    REAL(lp), DIMENSION(nc)                          :: f_vmax_uptake_act
+    REAL(lp), DIMENSION(nc,nsoil_w)                  :: hlp1, hlp2   !< helpers
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_potential_mycorrhiza_uptake_rate'
 
     !> 0.9.1 init out arguments
     !>
-    mycorrhiza_uptake_nh4_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_no3_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_po4_sl(:,:) = 0.0_wp
+    mycorrhiza_uptake_nh4_sl(:,:) = 0.0_lp
+    mycorrhiza_uptake_no3_sl(:,:) = 0.0_lp
+    mycorrhiza_uptake_po4_sl(:,:) = 0.0_lp
 
     !> 0.9.2 init local var
     !>
-    f_vmax_uptake_act(:) = 0.0_wp
+    f_vmax_uptake_act(:) = 0.0_lp
 
     !> 1.0 pot. N uptake by mycorrhizal fungi (mol / m3 / timestep)
     !>
     WHERE(veg_pool_fine_root_carbon(:) > eps8)
-       f_vmax_uptake_act(:) =  1.0_wp / (1.0_wp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
+       f_vmax_uptake_act(:) =  1.0_lp / (1.0_lp - myc_root_coverage_max + myc_root_coverage_max * f_surface_myc2fineroot)
     ELSEWHERE
-       f_vmax_uptake_act(:) = 1.0_wp
+       f_vmax_uptake_act(:) = 1.0_lp
     ENDWHERE
     DO isoil = 1,nsoil_w
       mycorrhiza_uptake_nh4_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
@@ -1445,15 +1445,15 @@ CONTAINS
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                           nh4_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._lp / ( km2_uptake_nh4_act(:, isoil) + nh4_solute(:, isoil) )) * &
+                                          dtime / 1.e6_lp
       mycorrhiza_uptake_no3_sl(:,isoil) = sb_pool_mycorrhiza_carbon(:,isoil) * &
                                           rtm_mycorrhiza_uptake_act(:,isoil) * rmm_mycorrhiza_uptake_act(:,isoil) * &
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                                           no3_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_no3_act(:, isoil) + no3_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_no3_act(:, isoil) + no3_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._lp / ( km2_uptake_no3_act(:, isoil) + no3_solute(:, isoil) )) * &
+                                          dtime / 1.e6_lp
       !> 1.1 constrain potential N uptake by avaiable C for N transformation to organic
       !!
       hlp1(:,isoil) = mycorrhiza_uptake_nh4_sl(:,isoil) * transform_cost_nh4 + &
@@ -1465,8 +1465,8 @@ CONTAINS
           mycorrhiza_uptake_nh4_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_nh4_sl(:,isoil)
           mycorrhiza_uptake_no3_sl(:,isoil) = hlp2(:,isoil) * mycorrhiza_uptake_no3_sl(:,isoil)
         ELSEWHERE
-          mycorrhiza_uptake_nh4_sl(:,isoil) = 0.0_wp
-          mycorrhiza_uptake_no3_sl(:,isoil) = 0.0_wp
+          mycorrhiza_uptake_nh4_sl(:,isoil) = 0.0_lp
+          mycorrhiza_uptake_no3_sl(:,isoil) = 0.0_lp
         ENDWHERE
       ENDWHERE
       !> 2.0 pot. P uptake by mycorrhizal fungi (mol / m3 / timestep)
@@ -1476,8 +1476,8 @@ CONTAINS
                                           f_surface_myc2fineroot * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * &
                                           po4_solute(:, isoil) * ( fract_vmax_low_affinity / &
                                           ( km1_uptake_po4_act(:, isoil) + po4_solute(:, isoil)) + &
-                                          1._wp / ( km2_uptake_po4_act(:, isoil) + po4_solute(:, isoil) )) * &
-                                          dtime / 1.e6_wp
+                                          1._lp / ( km2_uptake_po4_act(:, isoil) + po4_solute(:, isoil) )) * &
+                                          dtime / 1.e6_lp
     END DO
   END SUBROUTINE calc_potential_mycorrhiza_uptake_rate
 
@@ -1513,9 +1513,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)  :: nc                             !< dimensions
     INTEGER,                                          INTENT(in)  :: nsoil_w                        !< number of soil layers (water)
-    REAL(wp),                                         INTENT(in)  :: dtime                          !< timestep length
-    REAL(wp), DIMENSION(nc),                          INTENT(in)  :: num_sl_above_bedrock           !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: rtm_nitrification, &           !< actual temperature response for nitrification
+    REAL(lp),                                         INTENT(in)  :: dtime                          !< timestep length
+    REAL(lp), DIMENSION(nc),                          INTENT(in)  :: num_sl_above_bedrock           !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: rtm_nitrification, &           !< actual temperature response for nitrification
                                                                      rmm_nitrification, &           !< actual moisture response for nitrification
                                                                      rtm_denitrification, &         !< actual temperature response for denitrification
                                                                      km_denitrification_c_act, &    !< actual km on C for denitrification
@@ -1523,8 +1523,8 @@ CONTAINS
                                                                      anaerobic_volume_fraction, &   !< actual anaerobic volume fraction
                                                                      nh4_solute, &                  !< NH4 in solution [mol / m3]
                                                                      no3_solute                     !< NO3 in solution [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_microbial_carbon       !< microbial C [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: nitrification_no3, &           !< potential nitrification rate [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: sb_pool_microbial_carbon       !< microbial C [mol / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: nitrification_no3, &           !< potential nitrification rate [mol / m3 / timestep]
                                                                      denitrification_n2             !< potential denitrification rate [mol / m3 / timestep]
     ! 0.2 Local
     INTEGER                     :: ic, is       !< loop over dimensions
@@ -1532,25 +1532,25 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_no3(:,:)  = 0.0_wp
-    denitrification_n2(:,:) = 0.0_wp
+    nitrification_no3(:,:)  = 0.0_lp
+    denitrification_n2(:,:) = 0.0_lp
 
     !> run calc
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! potential nitrification rate from NH4 to NO3 [mol/m3/timestep]
         nitrification_no3(ic,is)   = vmax_nitrification * rtm_nitrification(ic,is) * rmm_nitrification(ic,is) * &
                                    MAX(c_limit_on_nitrification_min, sb_pool_microbial_carbon(ic,is) / &
                                    (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
-                                   (1._wp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_wp
+                                   (1._lp - anaerobic_volume_fraction(ic,is)) * nh4_solute(ic,is) * dtime / 1.e6_lp
 
         ! potential denitrification rate from NO3 to N2 [mol/m3/timestep]
         denitrification_n2(ic,is)  = vmax_denitrification * rtm_denitrification(ic,is) * &
                                    MAX(c_limit_on_denitrification_min, sb_pool_microbial_carbon(ic,is) / &
                                    (km_denitrification_c_act(ic,is) + sb_pool_microbial_carbon(ic,is)))  * &
                                    anaerobic_volume_fraction(ic,is) * no3_solute(ic,is) / &
-                                   (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_wp
+                                   (km_denitrification_no3_act(ic,is) + no3_solute(ic,is)) * dtime / 1.e6_lp
       ENDDO
     ENDDO
   END SUBROUTINE calc_potential_nitrification_denitrification_rate
@@ -1619,10 +1619,10 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                           INTENT(in)    :: nc                                 !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                            !< number of soil layers (water)
-    REAL(wp),                          INTENT(in)    :: dtime                              !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock               !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl                      !< soil layer depth [m]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: frac_wtr_transp_down_sl, &         !< fraction of water/material transported [s-1]
+    REAL(lp),                          INTENT(in)    :: dtime                              !< timestep length
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock               !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl                      !< soil layer depth [m]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: frac_wtr_transp_down_sl, &         !< fraction of water/material transported [s-1]
                                                         frac_w_lat_loss_sl, &              !< constrained fraction of lateral (horizontal) water loss of 'w_soil_sl_old' (prev. timestep)
                                                         rtm_gasdiffusion, &                !< temperature modifier for gas diffusion
                                                         rmm_gasdiffusion, &                !< moisture modifier for gas diffusion
@@ -1637,12 +1637,12 @@ CONTAINS
                                                         n2o_n15, &                         !< 15N2O concentration [mol / m3]
                                                         n2, &                              !< N2 concentration [mol / m3]
                                                         n2_n15                             !< 15N2 concentration [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_solute, &            !< vertical transport of NH4 inside soil column [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_solute, &            !< vertical transport of NH4 inside soil column [mol / m3 / timestep]
                                                         transport_nh4_n15_solute, &        !< vertical transport of 15NH4 inside soil column [mol / m3 / timestep]
                                                         transport_no3_solute, &            !< vertical transport of NO3 inside soil column [mol / m3 / timestep]
                                                         transport_no3_n15_solute, &        !< vertical transport of 15NO3 inside soil column [mol / m3 / timestep]
                                                         transport_po4_solute               !< vertical transport of PO4 inside soil column [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: transport_noy, &                   !< vertical transport of NOy [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: transport_noy, &                   !< vertical transport of NOy [mol / m3 / timestep]
                                                         transport_noy_n15, &               !< vertical transport of 15NOy [mol / m3 / timestep]
                                                         transport_n2o, &                   !< vertical transport of N2O [mol / m3 / timestep]
                                                         transport_n2o_n15, &               !< vertical transport of 15N2O [mol / m3 / timestep]
@@ -1653,7 +1653,7 @@ CONTAINS
                                                         lateral_loss_no3_solute_sl, &      !< lateral loss of NO3 [mol/ m2 / timestep]
                                                         lateral_loss_no3_n15_solute_sl, &  !< lateral loss of 15NO3 [mol / m2 / timestep]
                                                         lateral_loss_po4_solute_sl         !< lateral loss of PO4 [mol / m2 / timestep]
-    REAL(wp), DIMENSION(nc),           INTENT(out)   :: leaching_nh4_solute, &             !< leaching of NH4 [mol / m2 / timestep]
+    REAL(lp), DIMENSION(nc),           INTENT(out)   :: leaching_nh4_solute, &             !< leaching of NH4 [mol / m2 / timestep]
                                                         leaching_nh4_n15_solute, &         !< leaching of 15NH4 [mol / m2 / timestep]
                                                         leaching_no3_solute, &             !< leaching of NO3 [mol / m2 / timestep]
                                                         leaching_no3_n15_solute, &         !< leaching of 15NO3 [mol / m2 / timestep]
@@ -1670,28 +1670,28 @@ CONTAINS
 
     !> init out var
     !>
-    transport_noy(:,:)                  = 0.0_wp
-    transport_noy_n15(:,:)              = 0.0_wp
-    transport_n2o(:,:)                  = 0.0_wp
-    transport_n2o_n15(:,:)              = 0.0_wp
-    transport_n2(:,:)                   = 0.0_wp
-    transport_n2_n15(:,:)               = 0.0_wp
-    lateral_loss_nh4_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_wp
-    lateral_loss_no3_solute_sl(:,:)     = 0.0_wp
-    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_wp
-    lateral_loss_po4_solute_sl(:,:)     = 0.0_wp
-    leaching_nh4_solute(:)              = 0.0_wp
-    leaching_nh4_n15_solute(:)          = 0.0_wp
-    leaching_no3_solute(:)              = 0.0_wp
-    leaching_no3_n15_solute(:)          = 0.0_wp
-    leaching_po4_solute(:)              = 0.0_wp
-    emission_noy(:)                     = 0.0_wp
-    emission_noy_n15(:)                 = 0.0_wp
-    emission_n2o(:)                     = 0.0_wp
-    emission_n2o_n15(:)                 = 0.0_wp
-    emission_n2(:)                      = 0.0_wp
-    emission_n2_n15(:)                  = 0.0_wp
+    transport_noy(:,:)                  = 0.0_lp
+    transport_noy_n15(:,:)              = 0.0_lp
+    transport_n2o(:,:)                  = 0.0_lp
+    transport_n2o_n15(:,:)              = 0.0_lp
+    transport_n2(:,:)                   = 0.0_lp
+    transport_n2_n15(:,:)               = 0.0_lp
+    lateral_loss_nh4_solute_sl(:,:)     = 0.0_lp
+    lateral_loss_nh4_n15_solute_sl(:,:) = 0.0_lp
+    lateral_loss_no3_solute_sl(:,:)     = 0.0_lp
+    lateral_loss_no3_n15_solute_sl(:,:) = 0.0_lp
+    lateral_loss_po4_solute_sl(:,:)     = 0.0_lp
+    leaching_nh4_solute(:)              = 0.0_lp
+    leaching_nh4_n15_solute(:)          = 0.0_lp
+    leaching_no3_solute(:)              = 0.0_lp
+    leaching_no3_n15_solute(:)          = 0.0_lp
+    leaching_po4_solute(:)              = 0.0_lp
+    emission_noy(:)                     = 0.0_lp
+    emission_noy_n15(:)                 = 0.0_lp
+    emission_n2o(:)                     = 0.0_lp
+    emission_n2o_n15(:)                 = 0.0_lp
+    emission_n2(:)                      = 0.0_lp
+    emission_n2_n15(:)                  = 0.0_lp
 
 
     !>1.0. Leaching rate
@@ -1769,31 +1769,31 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc                       !< dimensions
     INTEGER,                            INTENT(in)    :: nsoil_w                  !< number of soil layers (water)
-    REAL(wp),                           INTENT(in)    :: dtime                    !< timestep length
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl            !< soil layer depth [m]
+    REAL(lp),                           INTENT(in)    :: dtime                    !< timestep length
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: soil_depth_sl            !< soil layer depth [m]
     INTEGER,                            INTENT(in)    :: elements_index_map(:)    !< map bgcm element ID -> IDX
     LOGICAL,                            INTENT(in)    :: is_element_used(:)       !< is element in 'elements_index_map' used
     LOGICAL,                            INTENT(in)    :: flag_mycorrhiza_prim, &  !< from sb config
                                                          flag_mycorrhiza_org      !< from sb config
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_decomposition, &     !< temperature response of decomposition
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: rtm_decomposition, &     !< temperature response of decomposition
                                                          rmm_decomposition        !< moisture response of decomposition
-    REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< sb_pool [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration, &       !< heterotrophic respiration [mol C / m3 / timestep]
+    REAL(lp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< sb_pool [mol / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(inout) :: het_respiration, &       !< heterotrophic respiration [mol C / m3 / timestep]
                                                          het_respiration_c13, &   !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                          het_respiration_c14, &   !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                          myc_respiration, &       !< mycorrhizae respiration [mol C / m3 / timestep]
                                                          myc_respiration_c13, &   !< mycorrhizae respiration [mol 13C / m3 / timestep]
                                                          myc_respiration_c14      !< mycorrhizae respiration [micro-mol 14C / m3 / timestep]
-    REAL(wp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)      !< sb_loss flux [mol / m3  ??]
+    REAL(lp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)      !< sb_loss flux [mol / m3  ??]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                           :: ielem                !< loop over bgcm elements
     INTEGER                           :: ix_elem              !< index of element in bgcm, used for looping
-    REAL(wp), DIMENSION(nc,nsoil_w)   :: tau_slow_myc, &
+    REAL(lp), DIMENSION(nc,nsoil_w)   :: tau_slow_myc, &
                                          km_priming_act, &
                                          resp_priming_act, &
                                          tau_slow_act
-    REAL(wp), DIMENSION(nc,nsoil_w)   :: hlp1, hlp2, hlp3
-    REAL(wp), DIMENSION(nc,nsoil_w)   :: hlp_cn
+    REAL(lp), DIMENSION(nc,nsoil_w)   :: hlp1, hlp2, hlp3
+    REAL(lp), DIMENSION(nc,nsoil_w)   :: hlp_cn
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_decomposition_rate'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -1923,10 +1923,10 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                           INTENT(in)  :: nc                            !< dimensions
     INTEGER,                           INTENT(in)  :: nsoil_w                       !< number of soil layers (water)
-    REAL(wp),                          INTENT(in)  :: dtime                         !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)  :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp),                          INTENT(in)  :: dtime                         !< timestep length
+    REAL(lp), DIMENSION(nc),           INTENT(in)  :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     LOGICAL,                           INTENT(in)  :: flag_sb_interactive_p         !< whether or not solute PO4 is causing biochem_mineralisation_po4
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)  :: rtm_decomposition, &          !< temperature response of decomposition
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)  :: rtm_decomposition, &          !< temperature response of decomposition
                                                       rmm_decomposition, &          !< moisture response of decomposition
                                                       km_dip_biochem_po4_act, &     !< actual half-saturation soluble P for biochem_mineralisation_po4 [mol P / m3]
                                                       bulk_dens_corr_sl, &          !< bulk density of the soil layer, [kg/m3]
@@ -1940,27 +1940,27 @@ CONTAINS
                                                       k_adsorpt_po4_act, &          !< actual adsorption rate for fast_assoc_po4 [s-1]
                                                       k_desorpt_po4_act, &          !< actual desorption rate for slow_assoc_po4 [s-1]
                                                       sb_pool_residue_phosphorus    !< slow SOM P pool [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(out) :: weathering_po4, &             !< phosphorus weathering rate [mol P / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(out) :: weathering_po4, &             !< phosphorus weathering rate [mol P / m3 / timestep]
                                                       occlusion_po4, &              !< phosphorus occlusion rate, assoc_slow --> occluded [mol P / m3 / timestep]
                                                       slow_exchange_po4, &          !< phosphorus desorption rate, assoc_fast --> assoc_slow [mol P / m3 / timestep]
                                                       biochem_mineralisation_po4    !< potential biomineralisation rate [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: ic, is
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1, hlp2, hlp3
+    REAL(lp), DIMENSION(nc, nsoil_w)                 :: hlp1, hlp2, hlp3
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_potential_p_flux_rate'
 
     !> init out var
     !>
-    weathering_po4(:,:)             = 0.0_wp
-    occlusion_po4(:,:)              = 0.0_wp
-    slow_exchange_po4(:,:)          = 0.0_wp
-    biochem_mineralisation_po4(:,:) = 0.0_wp
+    weathering_po4(:,:)             = 0.0_lp
+    occlusion_po4(:,:)              = 0.0_lp
+    slow_exchange_po4(:,:)          = 0.0_lp
+    biochem_mineralisation_po4(:,:) = 0.0_lp
 
     !> 1.0 Calculate P weathering rate from Primary P pool (mol /m3 / timestep)
     !! weathering rate is composed of a background rate (frac_background_weath_mineral) and pH/root biomass regulated rate
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         weathering_po4(ic, is) = vmax_weath_mineral_act_sl(ic, is) * po4_primary(ic, is) &
           &                   * (frac_background_weath_mineral + fine_root_carbon_sl(ic, is) &
           &                   / (km_rootc_weath_po4 + fine_root_carbon_sl(ic, is))) * dtime
@@ -1980,19 +1980,19 @@ CONTAINS
     !!
     IF (flag_sb_interactive_p) THEN
       DO ic = 1,nc
-        DO is = 1,INT(num_sl_above_bedrock(ic))
+        DO is = 1,NINT(num_sl_above_bedrock(ic))
           hlp1(ic, is) = km_dip_biochem_po4_act(ic, is) / (km_dip_biochem_po4_act(ic, is) + po4_solute(ic, is))
           IF (fine_root_carbon_sl(ic, is) > eps8) THEN
             hlp2(ic, is) = fine_root_carbon_sl(ic, is) / (km_rootc_biochem_po4 + fine_root_carbon_sl(ic, is))
           ELSE
-            hlp2(ic, is) = 0.0_wp
+            hlp2(ic, is) = 0.0_lp
           ENDIF
           biochem_mineralisation_po4(ic, is) = rtm_decomposition(ic, is) * rmm_decomposition(ic, is) / tau_biomineralisation * &
             &                                  sb_pool_residue_phosphorus(ic, is) * hlp1(ic, is) * hlp2(ic, is) * dtime
         ENDDO
       ENDDO
     ELSE
-      biochem_mineralisation_po4(:,:) = 0.0_wp
+      biochem_mineralisation_po4(:,:) = 0.0_lp
     ENDIF
 
   END SUBROUTINE calc_potential_p_flux_rate
@@ -2020,22 +2020,22 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     CHARACTER(len=*), INTENT(in)     :: bnf_scheme                    !< SB_ asymbiotic N fixation scheme
-    REAL(wp), INTENT(in)             :: sb_loss_litter_carbon,  &     !< C flux from litter to fast pool [mol / m3 / timestep]
+    REAL(lp), INTENT(in)             :: sb_loss_litter_carbon,  &     !< C flux from litter to fast pool [mol / m3 / timestep]
                                         sb_loss_litter_nitrogen,  &   !< N flux from litter to fast pool [mol / m3 / timestep]
                                         apparent_fast_som_cn, &       !< apparent microbial carbon-nitrogen ratio [mol/mol]
                                         rtm_asymb_bnf, &              !< temperature rate modifier []
                                         rmm_asymb_bnf, &              !< moisture rate modifier []
                                         nh4_solute, &                 !< NH4 in solution [mol / m3]
                                         no3_solute                    !< NO3 in solution [mol / m3]
-    REAL(wp)                         :: asymb_n_fixation              !< asymbiotic N fixation [mol / m3 / timestep]
+    REAL(lp)                         :: asymb_n_fixation              !< asymbiotic N fixation [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp)                         :: f_nav,n_demand
+    REAL(lp)                         :: f_nav,n_demand
     CHARACTER(len=*), PARAMETER      :: routine = TRIM(modname)//':calc_asymb_n_fixation'
 
     !> init out var
     !>
-    asymb_n_fixation = 0.0_wp
+    asymb_n_fixation = 0.0_lp
 
     SELECT CASE(TRIM(bnf_scheme))
     ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed"
@@ -2053,16 +2053,16 @@ CONTAINS
       !>1.2 rate modifier for mineral soil nitrogen
       !>
       IF(nh4_solute + no3_solute > eps8) THEN
-        f_nav = MIN(1._wp, 1.0_wp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
+        f_nav = MIN(1._lp, 1.0_lp - (nh4_solute + no3_solute) / (nh4_solute + no3_solute + km_asymb_bnf))
       ELSE
-        f_nav = 1._wp
+        f_nav = 1._lp
       ENDIF
 
       asymb_n_fixation = vmax_asymb_bnf * rtm_asymb_bnf * rmm_asymb_bnf * f_nav * n_demand
     CASE("none", "unlimited")
       !>1.3 asymb_n_fixation is calculated during the decomposition process for these cases
       !>
-      asymb_n_fixation = 0.0_wp
+      asymb_n_fixation = 0.0_lp
     END SELECT
 
   END FUNCTION calc_asymb_n_fixation
@@ -2121,9 +2121,9 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                           INTENT(in)    :: nc, &                         !< dimensions
                                                         nsoil_w
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock          !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                  INTENT(in)    :: bnf_scheme                    !< SB_ asymbiotic N fixation scheme
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_solute, &                 !< NH4 in solution [mol / m3]
                                                         no3_solute, &                 !< NO3 in solution [mol / m3]
                                                         po4_solute, &                 !< PO4 in solution [mol / m3]
                                                         po4_assoc_fast, &             !< labile mineral P [mol / m3]
@@ -2137,7 +2137,7 @@ CONTAINS
                                                         apparent_fast_som_cn, &       !< apparent microbial carbon-nitrogen ratio [mol/mol]
                                                         km_mic_uptake_nh4_act, &      !< actual km for microbial NH4 uptake [mol / m3]
                                                         km_mic_uptake_no3_act         !< actual km for microbial NO3 uptake [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: plant_uptake_nh4_sl, &        !< plant NH4 uptake [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: plant_uptake_nh4_sl, &        !< plant NH4 uptake [mol / m3 / timestep]
                                                         plant_uptake_no3_sl, &        !< plant NO3 uptake [mol / m3 / timestep]
                                                         plant_uptake_po4_sl, &        !< plant PO4 uptake [mol / m3 / timestep]
                                                         mycorrhiza_uptake_nh4_sl, &   !< mycorrhizal NH4 uptake [mol / m3 / timestep]
@@ -2147,16 +2147,16 @@ CONTAINS
                                                         denitrification_n2, &         !< denitrification rate [mol / m3 / timestep]
                                                         asymb_n_fixation, &           !< asymbiotic N fixation (unlimited BNF only) [mol / m3 / timestep]
                                                         biochem_mineralisation_po4    !< biomineralisation rate [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)           !< bgcm sb_loss flux: decomposition of SOM and litter pools [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)           !< bgcm sb_loss flux: decomposition of SOM and litter pools [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: microbial_uptake_nh4_sl, &    !< microbial immobilisation of NH4 [mol / m3 / timestep]
                                                         microbial_uptake_no3_sl, &    !< microbial immobilisation of NO3 [mol / m3 / timestep]
                                                         microbial_uptake_po4_sl       !< microbial immobilisation of PO4 [mol / m3 / timestep]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                           :: ic, is      !< looping
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: hlp1, hlp2
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: litter_requirement_n   !< nitrogen required for litter decomposition
-    REAL(wp)                          :: litter_deficit_n, &    !< difference between N requirement and N provided by litter
+    REAL(lp), DIMENSION(nc, nsoil_w)  :: hlp1, hlp2
+    REAL(lp), DIMENSION(nc, nsoil_w)  :: litter_requirement_n   !< nitrogen required for litter decomposition
+    REAL(lp)                          :: litter_deficit_n, &    !< difference between N requirement and N provided by litter
                                                                 !< and asymbiotic N fixation (only if N cycle is activated)
                                          f_uptake_nh4_sl, &     !< fraction of microbial uptake that is satisfied by NH4 (as opposed to NO3)
                                          affinity_nh4, &        !< affinity of microbial uptake to NH4
@@ -2165,9 +2165,9 @@ CONTAINS
 
     !> init out var
     !>
-    microbial_uptake_nh4_sl(:,:) = 0.0_wp
-    microbial_uptake_no3_sl(:,:) = 0.0_wp
-    microbial_uptake_po4_sl(:,:) = 0.0_wp
+    microbial_uptake_nh4_sl(:,:) = 0.0_lp
+    microbial_uptake_no3_sl(:,:) = 0.0_lp
+    microbial_uptake_po4_sl(:,:) = 0.0_lp
 
     !>1.0 formation of fast SOM from litter
     !>
@@ -2193,7 +2193,7 @@ CONTAINS
         !>
         SELECT CASE(TRIM(bnf_scheme))
         CASE("unlimited")
-          f_uptake_nh4_sl = 1.0_wp
+          f_uptake_nh4_sl = 1.0_lp
 
         CASE("none", "dynamic", "fixed")
           affinity_nh4 = vmax_mic_uptake_nh4 * nh4_solute(ic, is) &
@@ -2203,12 +2203,12 @@ CONTAINS
           IF (nh4_solute(ic, is) + no3_solute(ic, is) > eps8) THEN
             f_uptake_nh4_sl = affinity_nh4 / (affinity_nh4 + affinity_no3)
           ELSE
-            f_uptake_nh4_sl = 1.0_wp
+            f_uptake_nh4_sl = 1.0_lp
           END IF
         END SELECT
 
         microbial_uptake_nh4_sl(ic, is) = f_uptake_nh4_sl * litter_deficit_n
-        microbial_uptake_no3_sl(ic, is) = (1.0_wp - f_uptake_nh4_sl) * litter_deficit_n
+        microbial_uptake_no3_sl(ic, is) = (1.0_lp - f_uptake_nh4_sl) * litter_deficit_n
 
         !! limit uptake rate at low nitrogen assuming a Michaelis-Menten Kinetic
         !! only for cases without unlimited BNF. In unlimited BNF, the missing N will be supplied via BNF
@@ -2216,16 +2216,16 @@ CONTAINS
           CASE("unlimited")
             !! asymbiotic N fixation is the difference between the required uptake and the available N
             asymb_n_fixation(ic, is) = MAX(microbial_uptake_nh4_sl(ic, is) &
-              &                            - (nh4_solute(ic, is) + transport_nh4_solute(ic, is)), 0.0_wp)
+              &                            - (nh4_solute(ic, is) + transport_nh4_solute(ic, is)), 0.0_lp)
             !! microbial uptake is corrected to be the actual update, i.e. reduced by the amount added as asymbiotic n fixation
             microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) - asymb_n_fixation(ic, is)
 
           CASE("none", "dynamic", "fixed")
             hlp1(ic, is) = nh4_solute(ic, is) / ( nh4_solute(ic, is) + km_mic_uptake_nh4_act(ic, is) )
-            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+            microbial_uptake_nh4_sl(ic, is) = microbial_uptake_nh4_sl(ic, is) * MIN(hlp1(ic, is), 1.0_lp)
 
             hlp1(ic, is) = no3_solute(ic, is) / ( no3_solute(ic, is) + km_mic_uptake_no3_act(ic, is) )
-            microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_wp)
+            microbial_uptake_no3_sl(ic, is) = microbial_uptake_no3_sl(ic, is) * MIN(hlp1(ic, is), 1.0_lp)
         END SELECT
       END DO
     END DO
@@ -2244,9 +2244,9 @@ CONTAINS
               nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-              nitrification_no3(ic, is)        = 0.0_wp
-              mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+              plant_uptake_nh4_sl(ic, is)      = 0.0_lp
+              nitrification_no3(ic, is)        = 0.0_lp
+              mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_lp
             END IF
           END IF
         END DO
@@ -2257,7 +2257,7 @@ CONTAINS
     CASE("none", "dynamic", "fixed")
       DO ic = 1, nc
         DO is = 1, NINT(num_sl_above_bedrock(ic))
-          IF (microbial_uptake_nh4_sl(ic, is) > 0.0_wp) THEN
+          IF (microbial_uptake_nh4_sl(ic, is) > 0.0_lp) THEN
             hlp1(ic, is) = microbial_uptake_nh4_sl(ic, is) + plant_uptake_nh4_sl(ic, is) + nitrification_no3(ic, is) &
               &            + mycorrhiza_uptake_nh4_sl(ic, is)
             hlp2(ic, is) = nh4_solute(ic, is) + transport_nh4_solute(ic, is)
@@ -2268,10 +2268,10 @@ CONTAINS
                 nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
                 mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
               ELSE
-                microbial_uptake_nh4_sl(ic, is)  = 0.0_wp
-                plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-                nitrification_no3(ic, is)        = 0.0_wp
-                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+                microbial_uptake_nh4_sl(ic, is)  = 0.0_lp
+                plant_uptake_nh4_sl(ic, is)      = 0.0_lp
+                nitrification_no3(ic, is)        = 0.0_lp
+                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_lp
               END IF
             END IF
           ELSE
@@ -2283,9 +2283,9 @@ CONTAINS
                 nitrification_no3(ic, is)        = hlp2(ic, is) * nitrification_no3(ic, is) / hlp1(ic, is)
                 mycorrhiza_uptake_nh4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_nh4_sl(ic, is) / hlp1(ic, is)
               ELSE
-                plant_uptake_nh4_sl(ic, is)      = 0.0_wp
-                nitrification_no3(ic, is)        = 0.0_wp
-                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_wp
+                plant_uptake_nh4_sl(ic, is)      = 0.0_lp
+                nitrification_no3(ic, is)        = 0.0_lp
+                mycorrhiza_uptake_nh4_sl(ic, is) = 0.0_lp
               END IF
             END IF
           END IF
@@ -2299,7 +2299,7 @@ CONTAINS
     !!
     DO ic = 1, nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
-        IF (microbial_uptake_no3_sl(ic,is) > 0.0_wp) THEN
+        IF (microbial_uptake_no3_sl(ic,is) > 0.0_lp) THEN
           hlp1(ic,is) = microbial_uptake_no3_sl(ic,is) + plant_uptake_no3_sl(ic,is) &
             &           + denitrification_n2(ic,is) + mycorrhiza_uptake_no3_sl(ic,is)
           hlp2(ic,is) = no3_solute(ic,is) + transport_no3_solute(ic,is)
@@ -2310,10 +2310,10 @@ CONTAINS
               denitrification_n2(ic,is)       = hlp2(ic,is) * denitrification_n2(ic,is) / hlp1(ic,is)
               mycorrhiza_uptake_no3_sl(ic,is) = hlp2(ic,is) * mycorrhiza_uptake_no3_sl(ic,is) / hlp1(ic,is)
             ELSE
-              microbial_uptake_no3_sl(ic,is)  = 0.0_wp
-              plant_uptake_no3_sl(ic,is)      = 0.0_wp
-              denitrification_n2(ic,is)       = 0.0_wp
-              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
+              microbial_uptake_no3_sl(ic,is)  = 0.0_lp
+              plant_uptake_no3_sl(ic,is)      = 0.0_lp
+              denitrification_n2(ic,is)       = 0.0_lp
+              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_lp
             END IF
           END IF
         ELSE
@@ -2325,12 +2325,12 @@ CONTAINS
               denitrification_n2(ic,is)       = hlp2(ic,is) * denitrification_n2(ic,is) / hlp1(ic,is)
               mycorrhiza_uptake_no3_sl(ic,is) = hlp2(ic,is) * mycorrhiza_uptake_no3_sl(ic,is) / hlp1(ic,is)
             ELSE
-              plant_uptake_no3_sl(ic,is)      = 0.0_wp
-              denitrification_n2(ic,is)       = 0.0_wp
-              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_wp
+              plant_uptake_no3_sl(ic,is)      = 0.0_lp
+              denitrification_n2(ic,is)       = 0.0_lp
+              mycorrhiza_uptake_no3_sl(ic,is) = 0.0_lp
             END IF
           END IF
-        END IF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_wp
+        END IF  !< microbial_uptake_no3_sl(ic,is) >= 0.0_lp
       END DO
     END DO
 
@@ -2349,7 +2349,7 @@ CONTAINS
           IF (hlp1(ic, is) > eps8) THEN
             hlp2(ic, is) = (microbial_uptake_nh4_sl(ic, is) + microbial_uptake_no3_sl(ic, is)) / hlp1(ic, is)
           ELSE
-            hlp2(ic, is) = 0.0_wp
+            hlp2(ic, is) = 0.0_lp
           ENDIF
           sb_loss_mt(ix_soluable_litter, ixC, ic, is)    = hlp2(ic, is) * sb_loss_mt(ix_soluable_litter, ixC, ic, is)
           sb_loss_mt(ix_soluable_litter, ixN, ic, is)    = hlp2(ic, is) * sb_loss_mt(ix_soluable_litter, ixN, ic, is)
@@ -2382,7 +2382,7 @@ CONTAINS
         !>  3.1 constrain P uptake by microbes and plants to the available sum of P from P_soluable,
         !>      biomineralisation and transport (mol /m3 / timestep)
         !>
-        IF (microbial_uptake_po4_sl(ic, is) > 0.0_wp) THEN ! if microbes take up P, constrain both microbial and plant uptake to available P
+        IF (microbial_uptake_po4_sl(ic, is) > 0.0_lp) THEN ! if microbes take up P, constrain both microbial and plant uptake to available P
           hlp1(ic, is) = microbial_uptake_po4_sl(ic, is) + plant_uptake_po4_sl(ic, is) + mycorrhiza_uptake_po4_sl(ic, is)
           hlp2(ic, is) = po4_solute(ic, is) + transport_po4_solute(ic, is)
           IF (hlp2(ic, is) < hlp1(ic, is)) THEN
@@ -2391,9 +2391,9 @@ CONTAINS
               plant_uptake_po4_sl(ic, is)      = hlp2(ic, is) * plant_uptake_po4_sl(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_po4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_po4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              microbial_uptake_po4_sl(ic, is)  = 0.0_wp
-              plant_uptake_po4_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_wp
+              microbial_uptake_po4_sl(ic, is)  = 0.0_lp
+              plant_uptake_po4_sl(ic, is)      = 0.0_lp
+              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_lp
             ENDIF
           ENDIF
         ELSE ! if microbes release P, constrain plant uptake to available P, note the negative sign of microbial_uptake_po4_sl(ic, is)
@@ -2404,8 +2404,8 @@ CONTAINS
               plant_uptake_po4_sl(ic, is)      = hlp2(ic, is) * plant_uptake_po4_sl(ic, is) / hlp1(ic, is)
               mycorrhiza_uptake_po4_sl(ic, is) = hlp2(ic, is) * mycorrhiza_uptake_po4_sl(ic, is) / hlp1(ic, is)
             ELSE
-              plant_uptake_po4_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_wp
+              plant_uptake_po4_sl(ic, is)      = 0.0_lp
+              mycorrhiza_uptake_po4_sl(ic, is) = 0.0_lp
             ENDIF
           ENDIF
         ENDIF
@@ -2436,11 +2436,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                      !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                 !< number of soil layers (water)
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock    !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rtm_denitrification     !< temperature modifier for denitrification
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: nitrification_no3, &    !< nitrification to NO3 [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock    !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: rtm_denitrification     !< temperature modifier for denitrification
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: nitrification_no3, &    !< nitrification to NO3 [mol / m3 / timestep]
                                                         denitrification_n2      !< denitrification to N2 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: nitrification_noy, &    !< nitrification to NOy [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(out)   :: nitrification_noy, &    !< nitrification to NOy [mol / m3 / timestep]
                                                         nitrification_n2o, &    !< nitrification to N2O [mol / m3 / timestep]
                                                         denitrification_noy, &  !< denitrification to NOy [mol / m3 / timestep]
                                                         denitrification_n2o     !< denitrification to N2O [mol / m3 / timestep]
@@ -2451,15 +2451,15 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_noy(:,:)    = 0.0_wp
-    nitrification_n2o(:,:)    = 0.0_wp
-    denitrification_noy(:,:)  = 0.0_wp
-    denitrification_n2o(:,:)  = 0.0_wp
+    nitrification_noy(:,:)    = 0.0_lp
+    nitrification_n2o(:,:)    = 0.0_lp
+    denitrification_noy(:,:)  = 0.0_lp
+    denitrification_n2o(:,:)  = 0.0_lp
 
     !>1.0 case of dynamic N loss calculations, following Zaehle et al. 2011
     !>
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! nitrification rate to produce NO3, NOy and N2O from NH4 [mol m-3 timestep-1]
         nitrification_noy(ic, is)   = f_nit_noy * nitrification_no3(ic, is)
         nitrification_n2o(ic, is)   = f_nit_n2o * nitrification_no3(ic, is)
@@ -2530,10 +2530,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                            INTENT(in)    :: nc, &                       !< dimensions
                                                          nsoil_w
-    REAL(wp),                           INTENT(in)    :: dtime                       !< timestep length
-    REAL(wp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp),                           INTENT(in)    :: dtime                       !< timestep length
+    REAL(lp), DIMENSION(nc),            INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     CHARACTER(len=*),                   INTENT(in)    :: sb_model_scheme             !< simple_1d / jsm from sb config
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute, &               !< soil solute NH4 concentration [mol m-3]
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(in)    :: nh4_solute, &               !< soil solute NH4 concentration [mol m-3]
                                                          nh4_n15_solute, &           !< soil solute 15NH4 concentration [mol m-3]
                                                          no3_solute, &               !< soil solute NO3 concentration [mol m-3]
                                                          no3_n15_solute, &           !< soil solute 15NO3 concentration [mol m-3]
@@ -2552,7 +2552,7 @@ CONTAINS
                                                          denitrification_n2, &       !< denitrification to N2 [mol / m3 / timestep]
                                                          transport_nh4_n15_solute, & !< transport of 15NH4 [mol / m3 / timestep]
                                                          transport_no3_n15_solute    !< transport of 15NO3 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: plant_uptake_nh4_n15_sl, &      !< 15NH4 uptake by plants [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),   INTENT(out)   :: plant_uptake_nh4_n15_sl, &      !< 15NH4 uptake by plants [mol / m3 / timestep]
                                                          plant_uptake_no3_n15_sl, &      !< 15NO3 uptake by plants [mol / m3 / timestep]
                                                          mycorrhiza_uptake_nh4_n15_sl, & !< 15NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                          mycorrhiza_uptake_no3_n15_sl, & !< 15NO3 uptake by mycorrhiza [mol / m3 / timestep]
@@ -2567,8 +2567,8 @@ CONTAINS
                                                          denitrification_n2_n15          !< denitrification to 15N2 [mol / m3 / timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                   :: ic, is
-    REAL(wp), DIMENSION(nc, nsoil_w)          :: hlp1, hlp2
-    REAL(wp), DIMENSION(nc, nsoil_w)          :: &                ! flux rates with unit conversion for JSM
+    REAL(lp), DIMENSION(nc, nsoil_w)          :: hlp1, hlp2
+    REAL(lp), DIMENSION(nc, nsoil_w)          :: &                ! flux rates with unit conversion for JSM
                                                  plant_uptake_nh4_local_sl, &
                                                  plant_uptake_no3_local_sl, &
                                                  mycorrhiza_uptake_nh4_local_sl, &
@@ -2588,38 +2588,38 @@ CONTAINS
 
     !> init out var
     !>
-    plant_uptake_nh4_n15_sl(:,:)      = 0.0_wp
-    plant_uptake_no3_n15_sl(:,:)      = 0.0_wp
-    mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_wp
-    mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_wp
-    microbial_uptake_nh4_n15_sl(:,:)  = 0.0_wp
-    microbial_uptake_no3_n15_sl(:,:)  = 0.0_wp
-    asymb_n_fixation_n15(:,:)         = 0.0_wp
-    nitrification_no3_n15(:,:)        = 0.0_wp
-    nitrification_noy_n15(:,:)        = 0.0_wp
-    nitrification_n2o_n15(:,:)        = 0.0_wp
-    denitrification_noy_n15(:,:)      = 0.0_wp
-    denitrification_n2o_n15(:,:)      = 0.0_wp
-    denitrification_n2_n15(:,:)       = 0.0_wp
+    plant_uptake_nh4_n15_sl(:,:)      = 0.0_lp
+    plant_uptake_no3_n15_sl(:,:)      = 0.0_lp
+    mycorrhiza_uptake_nh4_n15_sl(:,:) = 0.0_lp
+    mycorrhiza_uptake_no3_n15_sl(:,:) = 0.0_lp
+    microbial_uptake_nh4_n15_sl(:,:)  = 0.0_lp
+    microbial_uptake_no3_n15_sl(:,:)  = 0.0_lp
+    asymb_n_fixation_n15(:,:)         = 0.0_lp
+    nitrification_no3_n15(:,:)        = 0.0_lp
+    nitrification_noy_n15(:,:)        = 0.0_lp
+    nitrification_n2o_n15(:,:)        = 0.0_lp
+    denitrification_noy_n15(:,:)      = 0.0_lp
+    denitrification_n2o_n15(:,:)      = 0.0_lp
+    denitrification_n2_n15(:,:)       = 0.0_lp
 
     !>0.9 'INTENT(in) valiables': flux rates unit conversion when this routines is called from JSM
     !>  unit conversion: [micro-mol/m3/s] -> [mol/m3/timestep]
     !>
     !> @NOTE @TODO ? not all INTENT(in) variables are considered ?
     IF(sb_model_scheme == 'jsm') THEN
-      plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)      * dtime / 1.e6_wp
-      plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)      * dtime / 1.e6_wp
-      mycorrhiza_uptake_nh4_local_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_wp
-      mycorrhiza_uptake_no3_local_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_wp
-      microbial_uptake_nh4_local_sl(:,:)  = microbial_uptake_nh4_sl(:,:)  * dtime / 1.e6_wp
-      microbial_uptake_no3_local_sl(:,:)  = microbial_uptake_no3_sl(:,:)  * dtime / 1.e6_wp
-      asymb_n_fixation_local(:,:)         = asymb_n_fixation(:,:)         * dtime / 1.e6_wp
-      nitrification_no3_local(:,:)        = nitrification_no3(:,:)        * dtime / 1.e6_wp
-      nitrification_noy_local(:,:)        = nitrification_noy(:,:)        * dtime / 1.e6_wp
-      nitrification_n2o_local(:,:)        = nitrification_n2o(:,:)        * dtime / 1.e6_wp
-      denitrification_noy_local(:,:)      = denitrification_noy(:,:)      * dtime / 1.e6_wp
-      denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)      * dtime / 1.e6_wp
-      denitrification_n2_local(:,:)       = denitrification_n2(:,:)       * dtime / 1.e6_wp
+      plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)      * dtime / 1.e6_lp
+      plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)      * dtime / 1.e6_lp
+      mycorrhiza_uptake_nh4_local_sl(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * dtime / 1.e6_lp
+      mycorrhiza_uptake_no3_local_sl(:,:) = mycorrhiza_uptake_no3_sl(:,:) * dtime / 1.e6_lp
+      microbial_uptake_nh4_local_sl(:,:)  = microbial_uptake_nh4_sl(:,:)  * dtime / 1.e6_lp
+      microbial_uptake_no3_local_sl(:,:)  = microbial_uptake_no3_sl(:,:)  * dtime / 1.e6_lp
+      asymb_n_fixation_local(:,:)         = asymb_n_fixation(:,:)         * dtime / 1.e6_lp
+      nitrification_no3_local(:,:)        = nitrification_no3(:,:)        * dtime / 1.e6_lp
+      nitrification_noy_local(:,:)        = nitrification_noy(:,:)        * dtime / 1.e6_lp
+      nitrification_n2o_local(:,:)        = nitrification_n2o(:,:)        * dtime / 1.e6_lp
+      denitrification_noy_local(:,:)      = denitrification_noy(:,:)      * dtime / 1.e6_lp
+      denitrification_n2o_local(:,:)      = denitrification_n2o(:,:)      * dtime / 1.e6_lp
+      denitrification_n2_local(:,:)       = denitrification_n2(:,:)       * dtime / 1.e6_lp
     ELSE
       plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)
       plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)
@@ -2640,20 +2640,20 @@ CONTAINS
     !!     which depends on the fraction of the source consumed f = (sum of fluxes)/stock = hlp1.
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         ! fraction of NH4 that is consumed
         IF (nh4_solute(ic, is) > eps8) THEN
           hlp1(ic, is) = MAX((plant_uptake_nh4_local_sl(ic, is) + mycorrhiza_uptake_nh4_local_sl(ic, is) + &
             &              microbial_uptake_nh4_local_sl(ic, is) + nitrification_no3_local(ic, is) + &
             &              nitrification_noy_local(ic, is) + nitrification_n2o_local(ic, is)) / nh4_solute(ic, is), eps8)
         ELSE
-          hlp1(ic, is) = 1.0_wp
+          hlp1(ic, is) = 1.0_lp
         ENDIF
         ! calculate reduction factor for discrimination
-        IF (hlp1(ic, is) < (1.0_wp - eps8)) THEN
-          hlp2(ic, is) = (hlp1(ic, is) - 1.0_wp) * LOG(1.0_wp - hlp1(ic, is)) / hlp1(ic, is)
+        IF (hlp1(ic, is) < (1.0_lp - eps8)) THEN
+          hlp2(ic, is) = (hlp1(ic, is) - 1.0_lp) * LOG(1.0_lp - hlp1(ic, is)) / hlp1(ic, is)
         ELSE
-          hlp2(ic, is) = 0.0_wp
+          hlp2(ic, is) = 0.0_lp
         ENDIF
       ENDDO
     ENDDO
@@ -2661,7 +2661,7 @@ CONTAINS
     !> 1.1 15N fluxes involving ammonium
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_nh4_n15_sl(ic, is)      = plant_uptake_nh4_local_sl(ic, is) * &
           &                                    calc_fractionation(nh4_solute(ic, is), nh4_n15_solute(ic, is), &
           &                                    eta_plant_uptake_nh4 * hlp2(ic, is))
@@ -2686,7 +2686,7 @@ CONTAINS
     !> 1.2 contrain 15NH4 fluxes to available 15NH4
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = plant_uptake_nh4_n15_sl(ic, is) + mycorrhiza_uptake_nh4_n15_sl(ic, is) &
           &            + microbial_uptake_nh4_n15_sl(ic, is) + nitrification_no3_n15(ic, is) &
           &            + nitrification_noy_n15(ic, is) + nitrification_n2o_n15(ic, is)
@@ -2700,12 +2700,12 @@ CONTAINS
               nitrification_noy_n15(ic, is)        = hlp2(ic, is) * nitrification_noy_n15(ic, is) / hlp1(ic, is)
               nitrification_n2o_n15(ic, is)        = hlp2(ic, is) * nitrification_n2o_n15(ic, is) / hlp1(ic, is)
            ELSE
-              plant_uptake_nh4_n15_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_nh4_n15_sl(ic, is) = 0.0_wp
-              microbial_uptake_nh4_n15_sl(ic, is)  = 0.0_wp
-              nitrification_no3_n15(ic, is)        = 0.0_wp
-              nitrification_noy_n15(ic, is)        = 0.0_wp
-              nitrification_n2o_n15(ic, is)        = 0.0_wp
+              plant_uptake_nh4_n15_sl(ic, is)      = 0.0_lp
+              mycorrhiza_uptake_nh4_n15_sl(ic, is) = 0.0_lp
+              microbial_uptake_nh4_n15_sl(ic, is)  = 0.0_lp
+              nitrification_no3_n15(ic, is)        = 0.0_lp
+              nitrification_noy_n15(ic, is)        = 0.0_lp
+              nitrification_n2o_n15(ic, is)        = 0.0_lp
            ENDIF
         ENDIF
       ENDDO
@@ -2716,18 +2716,18 @@ CONTAINS
     !!     The discrimination is then reduced by a reduction factor r = - (1-f) ln (1-f) / f = hlp2
     ! fraction of NO3 that is consumed
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         IF (no3_solute(ic, is) > eps8) THEN
            hlp1(ic, is) = MAX((plant_uptake_no3_local_sl(ic, is) + mycorrhiza_uptake_no3_local_sl(ic, is) + &
                             microbial_uptake_no3_local_sl(ic, is) + denitrification_noy_local(ic, is) + &
                             denitrification_n2o_local(ic, is) + denitrification_n2_local(ic, is)) / no3_solute(ic, is), eps8)
         ELSE
-           hlp1(ic, is) = 1.0_wp
+           hlp1(ic, is) = 1.0_lp
         ENDIF
-        IF (hlp1(ic, is) < (1.0_wp - eps8)) THEN
-           hlp2(ic, is) = (hlp1(ic, is) - 1.0_wp) * LOG(1.0_wp - hlp1(ic, is)) / hlp1(ic, is)
+        IF (hlp1(ic, is) < (1.0_lp - eps8)) THEN
+           hlp2(ic, is) = (hlp1(ic, is) - 1.0_lp) * LOG(1.0_lp - hlp1(ic, is)) / hlp1(ic, is)
         ELSE
-           hlp2(ic, is) = 0.0_wp
+           hlp2(ic, is) = 0.0_lp
         ENDIF
       ENDDO
     ENDDO
@@ -2735,7 +2735,7 @@ CONTAINS
     !> 2.1 N15 fluxes involving NO3
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         plant_uptake_no3_n15_sl(ic, is)      = plant_uptake_no3_local_sl(ic, is) * &
           &                                 calc_fractionation(no3_solute(ic, is), no3_n15_solute(ic, is), &
           &                                                    eta_plant_uptake_no3 * hlp2(ic, is))
@@ -2760,7 +2760,7 @@ CONTAINS
     !> 2.2 constrain 15NO3 fluxes to available 15NO3
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         hlp1(ic, is) = plant_uptake_no3_n15_sl(ic, is) + mycorrhiza_uptake_no3_n15_sl(ic, is) &
           &            + microbial_uptake_no3_n15_sl(ic, is) + denitrification_noy_n15(ic, is) &
           &            + denitrification_n2o_n15(ic, is) + denitrification_n2_n15(ic, is)
@@ -2774,12 +2774,12 @@ CONTAINS
               denitrification_n2o_n15(ic, is)      = hlp2(ic, is) * denitrification_n2o_n15(ic, is) / hlp1(ic, is)
               denitrification_n2_n15(ic, is)       = hlp2(ic, is) * denitrification_n2_n15(ic, is) / hlp1(ic, is)
            ELSE
-              plant_uptake_no3_n15_sl(ic, is)      = 0.0_wp
-              mycorrhiza_uptake_no3_n15_sl(ic, is) = 0.0_wp
-              microbial_uptake_no3_n15_sl(ic, is)  = 0.0_wp
-              denitrification_noy_n15(ic, is)      = 0.0_wp
-              denitrification_n2o_n15(ic, is)      = 0.0_wp
-              denitrification_n2_n15(ic, is)       = 0.0_wp
+              plant_uptake_no3_n15_sl(ic, is)      = 0.0_lp
+              mycorrhiza_uptake_no3_n15_sl(ic, is) = 0.0_lp
+              microbial_uptake_no3_n15_sl(ic, is)  = 0.0_lp
+              denitrification_noy_n15(ic, is)      = 0.0_lp
+              denitrification_n2o_n15(ic, is)      = 0.0_lp
+              denitrification_n2_n15(ic, is)       = 0.0_lp
            ENDIF
         ENDIF
       ENDDO
@@ -2788,8 +2788,8 @@ CONTAINS
     !> 3.0 15N signal of asymbiotic fixation
     !!
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
-        asymb_n_fixation_n15(ic, is) = asymb_n_fixation_local(ic, is) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
+        asymb_n_fixation_n15(ic, is) = asymb_n_fixation_local(ic, is) / ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(-eta_nfixation))
       ENDDO
     ENDDO
 
@@ -2798,19 +2798,19 @@ CONTAINS
     !! 'INTENT(out)' variables unit conversion when this routines is called from JSM
     !!
     IF(sb_model_scheme == 'jsm') THEN
-      plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_wp
-      plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_wp
-      mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_wp
-      mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_wp
-      microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_wp
-      microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_wp
-      asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:)         / dtime * 1.e6_wp
-      nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_wp
-      nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_wp
-      nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_wp
-      denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_wp
-      denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_wp
-      denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_wp
+      plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_lp
+      plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_lp
+      mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) / dtime * 1.e6_lp
+      mycorrhiza_uptake_no3_n15_sl(:,:) = mycorrhiza_uptake_no3_n15_sl(:,:) / dtime * 1.e6_lp
+      microbial_uptake_nh4_n15_sl(:,:)  = microbial_uptake_nh4_n15_sl(:,:)  / dtime * 1.e6_lp
+      microbial_uptake_no3_n15_sl(:,:)  = microbial_uptake_no3_n15_sl(:,:)  / dtime * 1.e6_lp
+      asymb_n_fixation_n15(:,:)         = asymb_n_fixation_n15(:,:)         / dtime * 1.e6_lp
+      nitrification_no3_n15(:,:)        = nitrification_no3_n15(:,:)        / dtime * 1.e6_lp
+      nitrification_noy_n15(:,:)        = nitrification_noy_n15(:,:)        / dtime * 1.e6_lp
+      nitrification_n2o_n15(:,:)        = nitrification_n2o_n15(:,:)        / dtime * 1.e6_lp
+      denitrification_noy_n15(:,:)      = denitrification_noy_n15(:,:)      / dtime * 1.e6_lp
+      denitrification_n2o_n15(:,:)      = denitrification_n2o_n15(:,:)      / dtime * 1.e6_lp
+      denitrification_n2_n15(:,:)       = denitrification_n2_n15(:,:)       / dtime * 1.e6_lp
     ENDIF
 
   END SUBROUTINE calc_sb_inorganic_n15_fluxes
@@ -2855,8 +2855,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                              !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                         !< number of soil layers (water)
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock            !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: apparent_fast_som_cn, &         !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol]
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock            !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: apparent_fast_som_cn, &         !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol]
                                                         apparent_fast_som_np, &         !< apparent carbon-nitrogen ratio of microbial uptake [mol/mol]
                                                         microbial_uptake_nh4_sl, &      !< microbial NH4 uptake [mol / m3 / timestep]
                                                         microbial_uptake_nh4_n15_sl, &  !< microbial 15NH4 uptake [mol / m3 / timestep]
@@ -2865,7 +2865,7 @@ CONTAINS
                                                         asymb_n_fixation, &             !< asymbiotic N fixation [mol / m3 / timestep]
                                                         asymb_n_fixation_n15, &         !< asymbiotic 15N fixation [mol / m3 / timestep]
                                                         microbial_uptake_po4_sl         !< microbial PO4 uptake [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: het_respiration, &              !< heterotrophic respiration [mol C / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: het_respiration, &              !< heterotrophic respiration [mol C / m3 / timestep]
                                                         het_respiration_c13, &          !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                         het_respiration_c14, &          !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                         net_mineralisation_nh4, &       !< net mineralisation of NH4 [mol / m3 / timestep]
@@ -2874,25 +2874,25 @@ CONTAINS
                                                         net_mineralisation_nh4_n15, &   !< net mineralisation of 15NH4 [mol / m3 / timestep]
                                                         net_mineralisation_no3_n15, &   !< net mineralisation of 15NO3 [mol / m3 / timestep]
                                                         biochem_mineralisation_po4      !< biomineralisation rate [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)             !< bgcm sb_loss flux: turnover of SOM and litter pools  [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)        !< bgcm sb_formation flux: formation of SOM and litter pools  [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)             !< bgcm sb_loss flux: turnover of SOM and litter pools  [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)        !< bgcm sb_formation flux: formation of SOM and litter pools  [mol / m3 / timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                          :: ic, is       !< loop over dimensions
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp2
+    REAL(lp), DIMENSION(nc, nsoil_w)                 :: hlp1
+    REAL(lp), DIMENSION(nc, nsoil_w)                 :: hlp2
     CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':calc_SOM_formation'
     ! ----------------------------------------------------------------------------------------------------- !
 
     DO ic = 1,nc
-      DO is = 1,INT(num_sl_above_bedrock(ic))
+      DO is = 1,NINT(num_sl_above_bedrock(ic))
         !>1.0 formation of fast SOM from litter
         !>
         ! calculate 15N mineralised during litter decay, remainder enters fast pool
-        hlp1(ic, is) = (1.0_wp - microbial_nue) * sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
+        hlp1(ic, is) = (1.0_lp - microbial_nue) * sb_loss_mt(ix_soluable_litter, ixN, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_soluable_litter, ixN, ic, is), &
           &                              sb_loss_mt(ix_soluable_litter, ixN15, ic, is), &
           &                              eta_ammonification)
-        hlp2(ic, is) = (1.0_wp - microbial_nue) * sb_loss_mt(ix_polymeric_litter, ixN, ic, is) &
+        hlp2(ic, is) = (1.0_lp - microbial_nue) * sb_loss_mt(ix_polymeric_litter, ixN, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_polymeric_litter, ixN, ic, is), &
           &                              sb_loss_mt(ix_polymeric_litter, ixN15, ic, is), &
           &                              eta_ammonification)
@@ -2921,22 +2921,22 @@ CONTAINS
           &                                          + microbial_uptake_nh4_n15_sl(ic, is) + microbial_uptake_no3_n15_sl(ic, is) &
           &                                          + asymb_n_fixation_n15(ic, is)
 
-        het_respiration(ic, is)            = het_respiration(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration(ic, is)            = het_respiration(ic, is) + (1._lp - frac_litter2fast_som) * &
           &                                                      (sb_loss_mt(ix_soluable_litter, ixC, ic, is) + &
           &                                                       sb_loss_mt(ix_polymeric_litter, ixC, ic, is))
-        het_respiration_c13(ic, is)        = het_respiration_c13(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration_c13(ic, is)        = het_respiration_c13(ic, is) + (1._lp - frac_litter2fast_som) * &
           &                                                          (sb_loss_mt(ix_soluable_litter, ixC13, ic, is) + &
           &                                                           sb_loss_mt(ix_polymeric_litter, ixC13, ic, is))
-        het_respiration_c14(ic, is)        = het_respiration_c14(ic, is) + (1._wp - frac_litter2fast_som) * &
+        het_respiration_c14(ic, is)        = het_respiration_c14(ic, is) + (1._lp - frac_litter2fast_som) * &
           &                                                          (sb_loss_mt(ix_soluable_litter, ixC14, ic, is) + &
           &                                                           sb_loss_mt(ix_polymeric_litter, ixC14, ic, is))
         net_mineralisation_nh4(ic, is)     = net_mineralisation_nh4(ic, is) - microbial_uptake_nh4_sl(ic, is) + &
-          &                                                             (1.0_wp - microbial_nue) * &
+          &                                                             (1.0_lp - microbial_nue) * &
           &                                                             (sb_loss_mt(ix_soluable_litter, ixN, ic, is) + &
           &                                                              sb_loss_mt(ix_polymeric_litter, ixN, ic, is))
         net_mineralisation_no3(ic, is)     = net_mineralisation_no3(ic, is) - microbial_uptake_no3_sl(ic, is)
         net_mineralisation_po4(ic, is)     = net_mineralisation_po4(ic, is) - microbial_uptake_po4_sl(ic, is) + &
-          &                                                             (1.0_wp - microbial_pue) * &
+          &                                                             (1.0_lp - microbial_pue) * &
           &                                                             (sb_loss_mt(ix_soluable_litter, ixP, ic, is) + &
           &                                                              sb_loss_mt(ix_polymeric_litter, ixP, ic, is))
         net_mineralisation_nh4_n15(ic, is) = net_mineralisation_nh4_n15(ic, is) - microbial_uptake_nh4_n15_sl(ic, is) &
@@ -2964,14 +2964,14 @@ CONTAINS
         hlp1(ic, is) = frac_fast2slow_som / k_slow_som_cn * sb_loss_mt(ix_microbial, ixC, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_microbial, ixN, ic, is), &
           &                              sb_loss_mt(ix_microbial, ixN15, ic, is), &
-          &                              0.0_wp)
+          &                              0.0_lp)
         sb_formation_mt(ix_residue, ixN15, ic, is) = sb_formation_mt(ix_residue, ixN15, ic, is) + hlp1(ic, is)
 
-        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._wp - frac_fast2slow_som) &
+        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._lp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC, ic, is)
-        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._wp - frac_fast2slow_som) &
+        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._lp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC13, ic, is)
-        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._wp - frac_fast2slow_som) &
+        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._lp - frac_fast2slow_som) &
           &                              * sb_loss_mt(ix_microbial, ixC14, ic, is)
         net_mineralisation_nh4(ic, is) = net_mineralisation_nh4(ic, is) + sb_loss_mt(ix_microbial, ixN, ic, is) &
           &                           - frac_fast2slow_som / k_slow_som_cn * sb_loss_mt(ix_microbial, ixC, ic, is)
@@ -3013,14 +3013,14 @@ CONTAINS
         hlp1(ic, is) = frac_slow2fast_som / apparent_fast_som_cn(ic, is) * sb_loss_mt(ix_residue, ixC, ic, is) &
           &         * calc_fractionation(sb_loss_mt(ix_residue, ixN, ic, is), &
           &                              sb_loss_mt(ix_residue, ixN15, ic, is), &
-          &                              0.0_wp)
+          &                              0.0_lp)
         sb_formation_mt(ix_microbial, ixN15, ic, is) = sb_formation_mt(ix_microbial, ixN15, ic, is) + hlp1(ic, is)
 
-        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._wp - frac_slow2fast_som) &
+        het_respiration(ic, is)        = het_respiration(ic, is)     + (1._lp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC, ic, is)
-        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._wp - frac_slow2fast_som) &
+        het_respiration_c13(ic, is)    = het_respiration_c13(ic, is) + (1._lp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC13, ic, is)
-        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._wp - frac_slow2fast_som) &
+        het_respiration_c14(ic, is)    = het_respiration_c14(ic, is) + (1._lp - frac_slow2fast_som) &
           &                              * sb_loss_mt(ix_residue, ixC14, ic, is)
         net_mineralisation_nh4(ic, is) = net_mineralisation_nh4(ic, is) + sb_loss_mt(ix_residue, ixN, ic, is) &
           &                           - frac_slow2fast_som / apparent_fast_som_cn(ic, is) * sb_loss_mt(ix_residue, ixC, ic, is)
@@ -3071,16 +3071,16 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc, &                         !< dimensions
                                                         nsoil_w
-    REAL(wp),                          INTENT(in)    :: sb_loss_mt(:,:,:,:)           !< bgcm sb_loss flux: turnover of SOM and litter pools  [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
+    REAL(lp),                          INTENT(in)    :: sb_loss_mt(:,:,:,:)           !< bgcm sb_loss flux: turnover of SOM and litter pools  [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                         het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
                                                         het_respiration_c14, &        !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                         net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                         net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                         net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)      !< bgcm sb_formation flux: formation of SOM and litter pools  [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)      !< bgcm sb_formation flux: formation of SOM and litter pools  [mol / m3 / timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_w)  :: fc_soluable_woody_litter, & !< fraction of non-respired woody litter becoming metabolic litter
+    REAL(lp), DIMENSION(nc, nsoil_w)  :: fc_soluable_woody_litter, & !< fraction of non-respired woody litter becoming metabolic litter
                                          fn_soluable_woody_litter, &
                                          fp_soluable_woody_litter
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_litter_formation_from_woody_decay'
@@ -3088,16 +3088,16 @@ CONTAINS
 
     !>1.0 Calculate partitioning of decaying woody litter into metabolic and structural litter
     !>
-    fc_soluable_woody_litter(:,:) = 0.0_wp
-    fn_soluable_woody_litter(:,:) = 0.0_wp
-    fp_soluable_woody_litter(:,:) = 0.0_wp
+    fc_soluable_woody_litter(:,:) = 0.0_lp
+    fn_soluable_woody_litter(:,:) = 0.0_lp
+    fp_soluable_woody_litter(:,:) = 0.0_lp
     WHERE(sb_loss_mt(ix_woody_litter, ixN, :, :) > eps8)
-      fc_soluable_woody_litter(:,:) = MAX(0.0_wp,fc_soluable_max - k_fc_soluable * lc_woody_litter &
+      fc_soluable_woody_litter(:,:) = MAX(0.0_lp,fc_soluable_max - k_fc_soluable * lc_woody_litter &
         &                             * sb_loss_mt(ix_woody_litter, ixC, :, :) / sb_loss_mt(ix_woody_litter, ixN, :, :))
       WHERE(fc_soluable_woody_litter(:,:) > eps8)
-        fn_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) &
+        fn_soluable_woody_litter(:,:) = 1._lp / (1._lp + (1._lp - fc_soluable_woody_litter(:,:)) &
           &                             / (k_fn_soluable * fc_soluable_woody_litter(:,:)))
-        fp_soluable_woody_litter(:,:) = 1._wp / (1._wp + (1._wp - fc_soluable_woody_litter(:,:)) &
+        fp_soluable_woody_litter(:,:) = 1._lp / (1._lp + (1._lp - fc_soluable_woody_litter(:,:)) &
           &                             / (k_fp_soluable * fc_soluable_woody_litter(:,:)))
       ENDWHERE
     ENDWHERE
@@ -3125,43 +3125,43 @@ CONTAINS
       &                                                * sb_loss_mt(ix_woody_litter, ixN15, :, :)
 
     sb_formation_mt(ix_polymeric_litter, ixC, :, :)   = sb_formation_mt(ix_polymeric_litter, ixC, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_lp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC, :, :)
     sb_formation_mt(ix_polymeric_litter, ixN, :, :)   = sb_formation_mt(ix_polymeric_litter, ixN, :, :) &
-      &                                                 + (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue &
+      &                                                 + (1.0_lp - fn_soluable_woody_litter(:,:)) * microbial_nue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixN, :, :)
     sb_formation_mt(ix_polymeric_litter, ixP, :, :)   = sb_formation_mt(ix_polymeric_litter, ixP, :, :) &
-      &                                                 + (1.0_wp - fp_soluable_woody_litter(:,:)) * microbial_pue &
+      &                                                 + (1.0_lp - fp_soluable_woody_litter(:,:)) * microbial_pue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixP, :, :)
     sb_formation_mt(ix_polymeric_litter, ixC13, :, :) = sb_formation_mt(ix_polymeric_litter, ixC13, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_lp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC13, :, :)
     sb_formation_mt(ix_polymeric_litter, ixC14, :, :) = sb_formation_mt(ix_polymeric_litter, ixC14, :, :) &
-      &                                                 + (1.0_wp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
+      &                                                 + (1.0_lp - fc_soluable_woody_litter(:,:)) * frac_woody2dec_litter &
       &                                                 * sb_loss_mt(ix_woody_litter, ixC14, :, :)
     sb_formation_mt(ix_polymeric_litter, ixN15, :, :) = sb_formation_mt(ix_polymeric_litter, ixN15, :, :) &
-      &                                                 + (1.0_wp - fn_soluable_woody_litter(:,:)) * microbial_nue &
+      &                                                 + (1.0_lp - fn_soluable_woody_litter(:,:)) * microbial_nue &
       &                                                 * sb_loss_mt(ix_woody_litter, ixN15, :, :)
 
     !>3.0 record losses to heterotrophic respiration and mineralisation
     !>
     het_respiration(:,:)            = het_respiration(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_lp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC, :, :)
     net_mineralisation_nh4(:,:)     = net_mineralisation_nh4(:,:) &
-      &                               + (1.0_wp - microbial_nue) &
+      &                               + (1.0_lp - microbial_nue) &
       &                               * sb_loss_mt(ix_woody_litter, ixN, :, :)
     net_mineralisation_po4(:,:)     = net_mineralisation_po4(:,:) &
-      &                               + (1.0_wp - microbial_pue) &
+      &                               + (1.0_lp - microbial_pue) &
       &                               * sb_loss_mt(ix_woody_litter, ixP, :, :)
     het_respiration_c13(:,:)        = het_respiration_c13(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_lp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC13, :, :)
     het_respiration_c14(:,:)        = het_respiration_c14(:,:) &
-      &                               + (1.0_wp - frac_woody2dec_litter) &
+      &                               + (1.0_lp - frac_woody2dec_litter) &
       &                               * sb_loss_mt(ix_woody_litter, ixC14, :, :)
     net_mineralisation_nh4_n15(:,:) = net_mineralisation_nh4_n15(:,:) &
-      &                               + (1.0_wp - microbial_nue) &
+      &                               + (1.0_lp - microbial_nue) &
       &                               * sb_loss_mt(ix_woody_litter, ixN15, :, :)
   END SUBROUTINE calc_litter_formation_from_woody_decay
 
@@ -3199,24 +3199,24 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                          !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                     !< number of soil layers (water)
-    REAL(wp),                          INTENT(in)    :: dtime                       !< timestep length
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl               !< depth of each soil layer [m]
+    REAL(lp),                          INTENT(in)    :: dtime                       !< timestep length
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: num_sl_above_bedrock        !< number of soil layers above bedrock, i.e., with layer thickness > eps8
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl               !< depth of each soil layer [m]
     INTEGER,                           INTENT(in)    :: elements_index_map(:)       !< map bgcm element ID -> IDX
     LOGICAL,                           INTENT(in)    :: is_element_used(:)          !< is element in 'elements_index_map' used
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: k_bioturb                   !< diffusion factor for bioturbation
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_assoc                   !< adsorbed NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_n15_assoc               !< adsorbed 15NH4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_assoc_fast              !< fast minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_assoc_slow              !< slow minerally associated PO4 pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_occluded                !< occluded PO4 pool [mol/m3]
-    REAL(wp),                          INTENT(in)    :: sb_pool_mt(:, :, :, :)      !< sb_pool
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_assoc         !< rate of associated NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_n15_assoc     !< rate of associated 15NH4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_assoc_fast    !< rate of fast associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_assoc_slow    !< rate of slow associated PO4 transport [mol/m3/timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_occluded      !< rate of occluded PO4 transport [mol/m3/timestep]
-    REAL(wp),                          INTENT(inout) :: sb_transport_mt(:, :, :, :) !< sb_transport flux
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: k_bioturb                   !< diffusion factor for bioturbation
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_assoc                   !< adsorbed NH4 pool [mol/m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_n15_assoc               !< adsorbed 15NH4 pool [mol/m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_assoc_fast              !< fast minerally associated PO4 pool [mol/m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_assoc_slow              !< slow minerally associated PO4 pool [mol/m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: po4_occluded                !< occluded PO4 pool [mol/m3]
+    REAL(lp),                          INTENT(in)    :: sb_pool_mt(:, :, :, :)      !< sb_pool
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_assoc         !< rate of associated NH4 transport [mol/m3/timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_nh4_n15_assoc     !< rate of associated 15NH4 transport [mol/m3/timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_assoc_fast    !< rate of fast associated PO4 transport [mol/m3/timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_assoc_slow    !< rate of slow associated PO4 transport [mol/m3/timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: transport_po4_occluded      !< rate of occluded PO4 transport [mol/m3/timestep]
+    REAL(lp),                          INTENT(inout) :: sb_transport_mt(:, :, :, :) !< sb_transport flux
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ielem             !< loop over bgcm elements
     INTEGER                     :: ix_elem           !< index of element in bgcm, used for looping
@@ -3300,14 +3300,14 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                          INTENT(in)  :: nc                            !< dimensions
     INTEGER,                                          INTENT(in)  :: nsoil_w                       !< number of soil layers (water)
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: soil_depth_sl, &              !< soil depth per layer [m]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(in)  :: soil_depth_sl, &              !< soil depth per layer [m]
                                                                      net_mineralisation_nh4, &     !< net mineralisation rate of NH4 [mol / m3 / timestep]
                                                                      net_mineralisation_nh4_n15    !< net mineralisation rate of 15NH4 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: nitrification_no3, &          !< nitrification to NO3 [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc, nsoil_w),                 INTENT(out) :: nitrification_no3, &          !< nitrification to NO3 [mol / m3 / timestep]
                                                                      nitrification_no3_n15, &      !< nitrification to 15NO3 [mol / m3 / timestep]
                                                                      volatilisation_nh4, &         !< volatilisation of NH4 [mol / m3 / timestep]
                                                                      volatilisation_nh4_n15        !< volatilisation of 15NH4 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc),                          INTENT(out) :: emission_n2, &                !< soil efflux of N2 [mol / m2 / timestep]
+    REAL(lp), DIMENSION(nc),                          INTENT(out) :: emission_n2, &                !< soil efflux of N2 [mol / m2 / timestep]
                                                                      emission_n2_n15               !< soil efflux of 15N2 [mol / m2 / timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fixed_nloss_rate'
@@ -3315,22 +3315,22 @@ CONTAINS
 
     !> init out var
     !>
-    nitrification_no3(:,:)      = 0.0_wp
-    nitrification_no3_n15(:,:)  = 0.0_wp
-    volatilisation_nh4(:,:)     = 0.0_wp
-    volatilisation_nh4_n15(:,:) = 0.0_wp
-    emission_n2(:)              = 0.0_wp
-    emission_n2_n15(:)          = 0.0_wp
+    nitrification_no3(:,:)      = 0.0_lp
+    nitrification_no3_n15(:,:)  = 0.0_lp
+    volatilisation_nh4(:,:)     = 0.0_lp
+    volatilisation_nh4_n15(:,:) = 0.0_lp
+    emission_n2(:)              = 0.0_lp
+    emission_n2_n15(:)          = 0.0_lp
 
     !>1.0 case of fixed N losses: N loss proportional to net mineralisation
     !>
-    WHERE(net_mineralisation_nh4(:,:) > 0.0_wp)
+    WHERE(net_mineralisation_nh4(:,:) > 0.0_lp)
       ! N lost to atmosphere during processing of net mineralisation [mol m-3 timestep-1]
       volatilisation_nh4(:,:)      = net_mineralisation_nh4(:,:)     * floss_nmin
       volatilisation_nh4_n15(:,:)  = net_mineralisation_nh4_n15(:,:) * floss_nmin
       ! NH4 transformed to NO3 [mol m-3 timestep-1]
-      nitrification_no3(:,:)       = net_mineralisation_nh4(:,:)     * (1._wp - floss_nmin) * fnit_nmin
-      nitrification_no3_n15(:,:)   = net_mineralisation_nh4_n15(:,:) * (1._wp - floss_nmin) * fnit_nmin
+      nitrification_no3(:,:)       = net_mineralisation_nh4(:,:)     * (1._lp - floss_nmin) * fnit_nmin
+      nitrification_no3_n15(:,:)   = net_mineralisation_nh4_n15(:,:) * (1._lp - floss_nmin) * fnit_nmin
     ENDWHERE
     ! report volatilisation losses as N2 emission [mol m-2 timestep-1]
     emission_n2(:)     = SUM(volatilisation_nh4(:,:)     * soil_depth_sl(:,:), DIM=2)
@@ -3384,20 +3384,20 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                           INTENT(in)    :: nc                                !< dimensions
     INTEGER,                           INTENT(in)    :: nsoil_w                           !< number of soil layers (water)
-    REAL(wp),                          INTENT(in)    :: dtime                             !< timestep length
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl                     !< depth per soil layer
+    REAL(lp),                          INTENT(in)    :: dtime                             !< timestep length
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: soil_depth_sl                     !< depth per soil layer
     INTEGER,                           INTENT(in)    :: elements_index_map(:)             !< map bgcm element ID -> IDX
     LOGICAL,                           INTENT(in)    :: is_element_used(:)                !< is element in 'elements_index_map' used
-    REAL(wp),                          INTENT(in)    :: lctlib_tau_mycorrhiza             !< lctlib parameter
+    REAL(lp),                          INTENT(in)    :: lctlib_tau_mycorrhiza             !< lctlib parameter
     LOGICAL,                           INTENT(in)    :: flag_mycorrhiza_org               !< from sb config
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_solute, &                     !< soil solute NH4 concentration [mol m-3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(in)    :: nh4_solute, &                     !< soil solute NH4 concentration [mol m-3]
                                                         no3_solute, &                     !< soil solute NO3 concentration [mol m-3]
                                                         km2_uptake_nh4_act, &             !< ..
                                                         km2_uptake_no3_act, &             !< ..
                                                         km_uptake_org_act                 !< ..
-    REAL(wp), DIMENSION(nc),           INTENT(in)    :: veg_pool_fine_root_carbon         !< fine root carbon [mol / m2]
-    REAL(wp),                          INTENT(in)    :: sb_pool_mt(:,:,:,:)               !< bgcm sb_pool: soil biogeochemistry pools [mol / m3]
-    REAL(wp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: mycorrhiza_uptake_nh4_sl, &       !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
+    REAL(lp), DIMENSION(nc),           INTENT(in)    :: veg_pool_fine_root_carbon         !< fine root carbon [mol / m2]
+    REAL(lp),                          INTENT(in)    :: sb_pool_mt(:,:,:,:)               !< bgcm sb_pool: soil biogeochemistry pools [mol / m3]
+    REAL(lp), DIMENSION(nc, nsoil_w),  INTENT(inout) :: mycorrhiza_uptake_nh4_sl, &       !< NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                         mycorrhiza_uptake_nh4_n15_sl, &   !< 15NH4 uptake by mycorrhiza [mol / m3 / timestep]
                                                         mycorrhiza_uptake_no3_sl, &       !< NO3 uptake by mycorrhiza [mol / m3 / timestep]
                                                         mycorrhiza_uptake_no3_n15_sl, &   !< 15NO3 uptake by mycorrhiza [mol / m3 / timestep]
@@ -3410,11 +3410,11 @@ CONTAINS
                                                         myc_respiration, &                !< mycorrhizae respiration [mol / m3 / timestep]
                                                         myc_respiration_c13, &            !< mycorrhizae respiration [mol / m3 / timestep]
                                                         myc_respiration_c14               !< mycorrhizae respiration [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)          !< bgcm sb_formation flux: formation rate  [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)               !< bgcm sb_loss flux: loss rate  [mol / m3 / timestep]
-    REAL(wp),                          INTENT(inout) :: sb_mycorrhiza_export_mt(:,:,:)    !< bgcm sb_mycorrhiza_export flux: export from mycorrhiza to plants [mol / m2 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_formation_mt(:,:,:,:)          !< bgcm sb_formation flux: formation rate  [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_loss_mt(:,:,:,:)               !< bgcm sb_loss flux: loss rate  [mol / m3 / timestep]
+    REAL(lp),                          INTENT(inout) :: sb_mycorrhiza_export_mt(:,:,:)    !< bgcm sb_mycorrhiza_export flux: export from mycorrhiza to plants [mol / m2 / timestep]
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: transform_respiration, &
+    REAL(lp), DIMENSION(nc, nsoil_w)                 :: transform_respiration, &
                                                         fresp, &
                                                         fturn_mycorrhiza, &
                                                         fvmax, &
@@ -3423,7 +3423,7 @@ CONTAINS
                                                         norg_act, &
                                                         fnorg, &
                                                         f_myc_opt
-    REAL(wp), DIMENSION(nc, nsoil_w)                 :: hlp1, hlp2, hlp3
+    REAL(lp), DIMENSION(nc, nsoil_w)                 :: hlp1, hlp2, hlp3
     INTEGER                                          :: ielem               !< loop over bgcm elements
     INTEGER                                          :: ix_elem             !< index of element in bgcm, used for looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mycorrhiza_dynamics'
@@ -3435,10 +3435,10 @@ CONTAINS
     !>  1.1 uptake of nutrients by mycorrhiza and associated respiration losses to heterotrophic respiration
     !>
     WHERE(sb_pool_mt(ix_mycorrhiza, ixN, :, :) > eps8)
-      hlp1(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
+      hlp1(:,:) = MIN(1.0_lp, MAX(0.0_lp, &
         & (((sb_pool_mt(ix_mycorrhiza, ixC, :, :) / sb_pool_mt(ix_mycorrhiza, ixN, :, :)) &
         & - mycorrhiza_cn * f_norg_limit) &
-        & / (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+        & / (mycorrhiza_cn * (1._lp - f_norg_limit)))))
       mycorrhiza_uptake_nh4_sl(:,:)     = mycorrhiza_uptake_nh4_sl(:,:)     * hlp1(:,:)
       mycorrhiza_uptake_nh4_n15_sl(:,:) = mycorrhiza_uptake_nh4_n15_sl(:,:) * hlp1(:,:)
       mycorrhiza_uptake_no3_sl(:,:)     = mycorrhiza_uptake_no3_sl(:,:)     * hlp1(:,:)
@@ -3446,10 +3446,10 @@ CONTAINS
     ENDWHERE
 
     WHERE(sb_pool_mt(ix_mycorrhiza, ixP, :, :) > eps8)
-      hlp1(:,:) = MIN(1.0_wp,MAX(0.0_wp, &
+      hlp1(:,:) = MIN(1.0_lp,MAX(0.0_lp, &
         & (((sb_pool_mt(ix_mycorrhiza, ixN, :, :) / sb_pool_mt(ix_mycorrhiza, ixP, :, :)) &
         & - mycorrhiza_np * f_norg_limit) &
-        & / (mycorrhiza_np * (1._wp - f_norg_limit)))))
+        & / (mycorrhiza_np * (1._lp - f_norg_limit)))))
       mycorrhiza_uptake_po4_sl(:,:) = mycorrhiza_uptake_po4_sl(:,:) * hlp1(:,:)
     ENDWHERE
 
@@ -3457,7 +3457,7 @@ CONTAINS
     transform_respiration(:,:) = mycorrhiza_uptake_nh4_sl(:,:) * transform_cost_nh4 &
       &                          + mycorrhiza_uptake_no3_sl(:,:) * transform_cost_no3
 
-    fresp(:,:) = 0.0_wp
+    fresp(:,:) = 0.0_lp
     WHERE(sb_pool_mt(ix_mycorrhiza, ixC, :, :) > eps8)
       fresp(:,:) = transform_respiration(:,:) / sb_pool_mt(ix_mycorrhiza, ixC, :, :)
     ENDWHERE
@@ -3481,15 +3481,15 @@ CONTAINS
     !>
     IF (flag_mycorrhiza_org) THEN
       ! limit organic uptake when inorganic nitrogen is abundant
-      fvmax(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
-        & 0.5_wp * (2.0_wp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) &
+      fvmax(:,:) = MIN(1.0_lp, MAX(0.0_lp, &
+        & 0.5_lp * (2.0_lp - nh4_solute(:,:) / (f_nin2norg * km2_uptake_nh4_act(:,:) + nh4_solute(:,:)) &
         & - no3_solute(:,:) / (f_nin2norg * km2_uptake_no3_act(:,:) + no3_solute(:,:)))))
       hlp1(:,:) = fvmax(:,:)
 
       ! limit organic uptake according to accessibility to substrate
       fvmax(:,:) = fvmax(:,:) * sb_pool_mt(ix_residue, ixN, :, :) / ( km_uptake_org_act(:,:) + sb_pool_mt(ix_residue, ixN, :, :))
       mycorrhiza_uptake_norg_sl(:,:) = fvmax(:,:) * vmax_uptake_norg * sb_pool_mt(ix_mycorrhiza, ixC, :, :) &
-        &                              * dtime / 1000000._wp
+        &                              * dtime / 1000000._lp
 
       WHERE(sb_pool_mt(ix_residue, ixN, :, :) > eps8)
         mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_sl(:,:) &
@@ -3498,16 +3498,16 @@ CONTAINS
 
       ! reduce organic uptake at low mycorrhiza CN (should be obsolete with above function)
       WHERE(sb_pool_mt(ix_mycorrhiza, ixN, :, :) > eps8)
-        hlp1(:,:) = MIN(1.0_wp, MAX(0.0_wp, &
+        hlp1(:,:) = MIN(1.0_lp, MAX(0.0_lp, &
           & (((sb_pool_mt(ix_mycorrhiza, ixC, :, :) / sb_pool_mt(ix_mycorrhiza, ixN, :, :)) &
           & - mycorrhiza_cn * f_norg_limit) &
-          & / (mycorrhiza_cn * (1._wp - f_norg_limit)))))
+          & / (mycorrhiza_cn * (1._lp - f_norg_limit)))))
         mycorrhiza_uptake_norg_sl(:,:)     = mycorrhiza_uptake_norg_sl(:,:)     * hlp1(:,:)
         mycorrhiza_uptake_norg_n15_sl(:,:) = mycorrhiza_uptake_norg_n15_sl(:,:) * hlp1(:,:)
       ENDWHERE
 
       ! calculate N uptake fraction
-      fnorg(:,:) = 0.0_wp
+      fnorg(:,:) = 0.0_lp
       WHERE(sb_pool_mt(ix_residue, ixN, :, :) > eps8)
         fnorg(:,:) = mycorrhiza_uptake_norg_sl(:,:) / sb_pool_mt(ix_residue, ixN, :, :)
       ENDWHERE
@@ -3533,11 +3533,11 @@ CONTAINS
       sb_formation_mt(ix_mycorrhiza, ixN15, :, :) = sb_formation_mt(ix_mycorrhiza, ixN15, :, :) &
         &                                           + fnorg(:,:) * sb_pool_mt(ix_residue, ixN15, :, :)
 
-      het_respiration(:,:)     = het_respiration(:,:)     + (1.0_wp - mycorrhiza_cue) &
+      het_respiration(:,:)     = het_respiration(:,:)     + (1.0_lp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC, :, :)
-      het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1.0_wp - mycorrhiza_cue) &
+      het_respiration_c13(:,:) = het_respiration_c13(:,:) + (1.0_lp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC13, :, :)
-      het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1.0_wp - mycorrhiza_cue) &
+      het_respiration_c14(:,:) = het_respiration_c14(:,:) + (1.0_lp - mycorrhiza_cue) &
         &                        * fnorg(:,:) * sb_pool_mt(ix_residue, ixC14, :, :)
     ENDIF
 
@@ -3548,7 +3548,7 @@ CONTAINS
     ! N demand can be negative => N supply can be greater then current N uptake by plants!
 
     ! N demand of mycorrhiza in mol N / m3 / timestep
-    hlp1(:,:) = MAX(0.0_wp, &
+    hlp1(:,:) = MAX(0.0_lp, &
       &         sb_pool_mt(ix_mycorrhiza, ixC, :, :) / mycorrhiza_cn - sb_pool_mt(ix_mycorrhiza, ixN, :, :))
     ! N uptake incorporated into mycorrhiza (minimum of potential uptake and demand)
     hlp2(:,:) = MIN(hlp1(:,:), &
@@ -3579,7 +3579,7 @@ CONTAINS
 
     ! P demand of mycorrhiza in mol P / m3 / timestep
     hlp1(:,:) = MAX(sb_pool_mt(ix_mycorrhiza, ixN, :, :) / mycorrhiza_np &
-      &         - sb_pool_mt(ix_mycorrhiza, ixP, :, :), 0.0_wp)
+      &         - sb_pool_mt(ix_mycorrhiza, ixP, :, :), 0.0_lp)
     ! incorporation of P into mycorrhiza (mol P / m3 / timestep), constrain flux to minimum of potential uptake and demand
     hlp2(:,:) = MIN(hlp1(:,:), mycorrhiza_uptake_po4_sl(:,:))
     ! remainder is exported to plants (mol P / m3 / timestep)
@@ -3589,7 +3589,7 @@ CONTAINS
     !>  1.4 Formation of litter from mycorrhiza turnover (mol / m3 / timestep)
     !>
     ! calc turnover
-    fturn_mycorrhiza(:,:) = 1.0_wp / lctlib_tau_mycorrhiza / one_day / one_year * dtime
+    fturn_mycorrhiza(:,:) = 1.0_lp / lctlib_tau_mycorrhiza / one_day / one_year * dtime
     ! loop over bgcm elements
     DO ielem = FIRST_ELEM_ID, LAST_ELEM_ID
       IF (is_element_used(ielem)) THEN

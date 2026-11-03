@@ -16,9 +16,9 @@
 !>#### initialization of agriculture memory variables using, e.g., ic & bc input files
 !>
 MODULE mo_q_agr_init
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_class,           ONLY: Get_model
@@ -41,7 +41,7 @@ MODULE mo_q_agr_init
   !
   !> Type to hold variables read from input files
   TYPE t_q_agr_init_vars
-    REAL(wp), POINTER ::  &
+    REAL(lp), POINTER ::  &
       & c3_crop_type(:,:), &    !< major c3 crop
       & c4_crop_type(:,:)       !< major c4 crop
   END TYPE t_q_agr_init_vars
@@ -103,7 +103,7 @@ CONTAINS
     IF (lctlib_ps_pathway == ic3phot) THEN ! C3 Crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_lp .AND. grid%lat(ic,iblk) > -30.0_lp ) THEN
             crop_type_index(ic,iblk) = ix_trsoy ! tropical C3 crop = soybean
           ELSE
             crop_type_index(ic,iblk) = ix_wheat ! temperate C3 crop = wheat
@@ -113,7 +113,7 @@ CONTAINS
     ELSE ! C4 crops
       DO ic = 1,nproma
         DO iblk = 1,nblks
-          IF (grid%lat(ic,iblk) < 30.0_wp .AND. grid%lat(ic,iblk) > -30.0_wp ) THEN
+          IF (grid%lat(ic,iblk) < 30.0_lp .AND. grid%lat(ic,iblk) > -30.0_lp ) THEN
             crop_type_index(ic,iblk) = ix_trcorn ! tropical C4 crop = corn
           ELSE
             crop_type_index(ic,iblk) = ix_tecorn ! temperate C4 crop = corn
@@ -184,7 +184,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: n_fertiliser_c4
 
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
+    REAL(lp),           POINTER :: ptr_2D(:,:)  ! tmp pointer
     INTEGER                     :: current_year
     TYPE(t_input_file)          :: input_file
     CHARACTER(len=filename_max) :: filename_fertiliser_data
@@ -224,8 +224,8 @@ CONTAINS
       CALL input_file%Close()
 
       ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-      n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._wp / molar_mass_N)
-      n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._wp / molar_mass_N)
+      n_fertiliser_c3(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c3(:,:) / 10._lp / molar_mass_N)
+      n_fertiliser_c4(:,:) = MAX(iq_background_n_fertiliser_rate, n_fertiliser_c4(:,:) / 10._lp / molar_mass_N)
     END IF
 
     !$ACC UPDATE DEVICE(n_fertiliser_c3, n_fertiliser_c4) ASYNC(1)
@@ -264,7 +264,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
-    REAL(wp), POINTER  :: ptr_2D(:,:)
+    REAL(lp), POINTER  :: ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
     INTEGER            :: nproma, nblks
 

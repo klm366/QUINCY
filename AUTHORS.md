@@ -3,11 +3,14 @@ title: Authors
 ---
 ## ICON-Land Authors
 
+- Albert Jornet Puig
 - Ana Bastos
 - Cheng Gong
 - Christian Reick
 - Daniel Goll
 - Dmitry Alexeev
+- Dylan Kierans
+- Enrico Degregori
 - Erich Roeckner
 - Fabrice Lacroix
 - Francisco Jose Cuesta-Valero
@@ -15,18 +18,24 @@ title: Authors
 - Georgii Nerobelov
 - Hideki Ninomiya
 - Jan Engel
+- Jens-Olaf Beismann
 - Julia Nabel
+- Jussi Enkovaara
 - Karolina Slominska-Durdasiak
 - Lin Yu
 - Marvin Heidkamp
 - Melanie Thurner
 - Mingyue Zhang
+- Mittal Rameshbhai Parmar
+- Moritz Hanke
 - Moritz Waldmann
 - Philipp de Vrese
 - Pinhsin Hu
 - Rainer Schneck
+- Ralf Mueller
 - Reiner Schnur
 - Roland Wirth
+- Sergey Kosukhin
 - Sergey Sukov
 - Silvia Caldararu
 - Soenke Zaehle
@@ -38,9 +47,11 @@ title: Authors
 - Thomas Raddatz
 - Tobias Stacke
 - Tom Riddick
+- Tuomas Lunttila
 - Valentin Clement
 - Veronika Gayler
 - Wolfgang Knorr
+- Yen-Chen Chen
 
 ## Contributors to ICON-Land
 

@@ -25,7 +25,7 @@ MODULE mo_rad_interface
 
   ! Use of basic structures
   USE mo_jsb_control,         ONLY: debug_on, acc_stream
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message, message_text, finish
 
   USE mo_jsb_control,         ONLY: jsbach_runs_standalone
@@ -36,7 +36,7 @@ MODULE mo_rad_interface
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_
+  dsl4jsb_Use_processes A2L_, RAD_, SEB_, HYDRO_, SB_, VEG_
 
   ! Use process configurations
   dsl4jsb_Use_config(RAD_)
@@ -48,6 +48,8 @@ MODULE mo_rad_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(SB_)
+  dsl4jsb_Use_memory(VEG_)
 #ifdef __QUINCY_STANDALONE__
 #else
   ! Use of processes in this module
@@ -59,11 +61,6 @@ MODULE mo_rad_interface
   ! Use of process memories
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(CARBON_)
-#endif
-#ifndef __NO_QUINCY__
-  dsl4jsb_Use_processes SB_, VEG_
-  dsl4jsb_Use_memory(SB_)
-  dsl4jsb_Use_memory(VEG_)
 #endif
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -251,7 +248,7 @@ CONTAINS
       & t_lwtr,               &
       & t_lice
 
-    REAL(wp) ::                  &
+    REAL(lp) ::                  &
       & lw_net_lwtr(options%nc), &
       & lw_net_lice(options%nc), &
       & sw_net_lwtr(options%nc), &
@@ -335,9 +332,9 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          rad_srf_net(ic) = (1._wp - fract_lice(ic)) * rad_net_lwtr(ic) + fract_lice(ic) * rad_net_lice(ic)
-          sw_srf_net (ic) = (1._wp - fract_lice(ic)) * sw_net_lwtr(ic)  + fract_lice(ic) * sw_net_lice(ic)
-          lw_srf_net (ic) = (1._wp - fract_lice(ic)) * lw_net_lwtr(ic)  + fract_lice(ic) * lw_net_lice(ic)
+          rad_srf_net(ic) = (1._lp - fract_lice(ic)) * rad_net_lwtr(ic) + fract_lice(ic) * rad_net_lice(ic)
+          sw_srf_net (ic) = (1._lp - fract_lice(ic)) * sw_net_lwtr(ic)  + fract_lice(ic) * sw_net_lice(ic)
+          lw_srf_net (ic) = (1._lp - fract_lice(ic)) * lw_net_lwtr(ic)  + fract_lice(ic) * lw_net_lice(ic)
         END DO
         !$ACC END PARALLEL LOOP
       ELSE
@@ -357,12 +354,10 @@ CONTAINS
     !!
     ELSE
       dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
-#ifndef __NO_QUINCY__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_var2D_onChunk(SEB_,    t_old)          ! in
       END SELECT
-#endif
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_lnd)    ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
@@ -382,18 +377,16 @@ CONTAINS
         & lw_net    = lw_srf_net(:)     & ! out
         & )
 
-#ifndef __NO_QUINCY__
       ! re-calculate rad_srf_net for QUINCY
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_old(ic) ** 4._wp
+          rad_srf_net(ic) = sw_srf_net(ic) + lw_srf_down(ic) - stbo * zemiss_def * t_old(ic) ** 4._lp
         END DO
         !$ACC END PARALLEL LOOP
       END SELECT
-#endif
-    END IF
+    END IF  ! NOT LAKES
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -471,10 +464,8 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
       CALL update_radiation_par_jsb(tile, options)
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       CALL update_radiation_par_quincy(tile, options)
-#endif
     END SELECT
 
   END SUBROUTINE update_radiation_par
@@ -483,7 +474,6 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculates PAR (Photosynthetically Active Photon Flux Density)
   !>
-#ifndef __NO_QUINCY__
   SUBROUTINE update_radiation_par_quincy(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -513,8 +503,8 @@ CONTAINS
     INTEGER                           :: icanopy                !< loop 1,ncanopy
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
     INTEGER                           :: ic                     !< looping
-    REAL(wp)                          :: dtime                  !< timestep
-    REAL(wp)                          :: fapar(options%nc)      !< fraction of absorbed photosynthetically active radiation
+    REAL(lp)                          :: dtime                  !< timestep
+    REAL(lp)                          :: fapar(options%nc)      !< fraction of absorbed photosynthetically active radiation
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation_par_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
@@ -607,7 +597,7 @@ CONTAINS
     !
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1,nc
-      IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
+      IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._lp) + dtime)) < eps1) THEN
         fapar_noon(ic) = fapar(ic)
       END IF
     END DO
@@ -616,7 +606,7 @@ CONTAINS
 
     !$ACC END DATA
   END SUBROUTINE update_radiation_par_quincy
-#endif
+
   ! ================================================================================================================================
   !>
   !> Implementation to update the photosynthetically active radiation
@@ -638,12 +628,12 @@ CONTAINS
     INTEGER                           :: icanopy
 
     INTEGER                           :: iblk , ics, ice, nc, ic
-    REAL(wp)                          :: dtime
+    REAL(lp)                          :: dtime
 
-    REAL(wp)                          :: canopy_bound_lai_tmp, canopy_bound_lai_delta
-    REAL(wp), POINTER :: canopy_bound_lai(:)
+    REAL(lp)                          :: canopy_bound_lai_tmp, canopy_bound_lai_delta
+    REAL(lp), POINTER :: canopy_bound_lai(:)
 
-    REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
+    REAL(lp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
                                                         !    and thus has to have the same dimensions as the other out arguments.
 
     ! Declare pointers for process configuration and memory
@@ -740,25 +730,25 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream) COLLAPSE(2)
     DO icanopy=1,ncanopy
       DO ic=1,nc
-        apar_per_lai_cl(ic,icanopy) = 0._wp
+        apar_per_lai_cl(ic,icanopy) = 0._lp
       END DO
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic=1,nc
-      par_down_mol(ic)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-      soil_reflectivity_par(ic) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
+      par_down_mol(ic)          = 0._lp ! for now also in the memory but is only for current time step/"delta_time"
+      soil_reflectivity_par(ic) = 0._lp ! for now also in the memory but is only for current time step/"delta_time"
 
       par(ic) = swpar_srf_down(ic)
 
       ! Compute direct fraction of PAR.
       ! R: fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
-      fract_par_direct(ic) = 1._wp - fract_par_diffuse(ic)
+      fract_par_direct(ic) = 1._lp - fract_par_diffuse(ic)
 
-      B4_layer_above(ic) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
+      B4_layer_above(ic) = 7777777._lp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
                                       ! first layer
-      fapar(ic) = 0._wp
+      fapar(ic) = 0._lp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -822,7 +812,7 @@ CONTAINS
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
 !        ! par and fraction of absorbed PAR
-!        apar_per_lai_cl(:,icanopy) = par_down_mol(:) * faPAR_cl(:,icanopy) / (MAX(lai_cl(:,icanopy),1.e-10_wp))
+!        apar_per_lai_cl(:,icanopy) = par_down_mol(:) * faPAR_cl(:,icanopy) / (MAX(lai_cl(:,icanopy),1.e-10_lp))
 !        ! R: Folgendes faellt weg:
 !        ! mask(1:nidx,itile) <--theLand%Surface%is_vegetation(kidx0:kidx1,1:ntiles)
 !        ! apar_per_lai_cl(:,icanopy) = MERGE(apar_per_lai_cl(:,icanopy),0._dp,mask(1:nidx,itile))
@@ -894,9 +884,7 @@ CONTAINS
       & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
       & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation, calc_snow_age, get_litter_carbon, get_soil_carbon
-#ifndef __NO_QUINCY__
     USE mo_rad_process,         ONLY: calc_canopy_radiation_budget
-#endif
     USE mo_jsb_time,            ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
     USE mo_jsb_math_constants,  ONLY: eps8, eps1, seconds_per_day
     USE mo_jsb_control,         ONLY: jsbach_runs_standalone
@@ -917,9 +905,9 @@ CONTAINS
     INTEGER                         :: ics, ice, nc
     INTEGER                         :: model_scheme
     LOGICAL, ALLOCATABLE            :: l_day(:)
-    REAL(wp)                        :: dtime                     !< timestep
-    REAL(wp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
-    REAL(wp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
+    REAL(lp)                        :: dtime                     !< timestep
+    REAL(lp)                        :: lctlib_specific_leaf_area !< use for jsbach & quincy, as helper variable
+    REAL(lp), ALLOCATABLE           :: temperature_surface(:)    !< use for jsbach & quincy, as helper variable
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
     ! Declare pointers to process configuration and memory
@@ -930,19 +918,17 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(SB_)
 #ifndef __QUINCY_STANDALONE__
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
-#endif
-#ifndef __NO_QUINCY__
-    dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SB_)
 #endif
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
     INTEGER :: use_alb_soil_organic_int
 
-    REAL(wp) ::            &
+    REAL(lp) ::            &
       & albedo_age_weight, &    ! 0 < albedo_age_weight < 1: snow albedo is calculated by linearly weighting
                                 !                            the snow albedo resulting from both schemes
       & AlbedoCanopySnow
@@ -1015,7 +1001,7 @@ CONTAINS
       c_humus_1,               &
       c_humus_2
 
-    REAL(wp), ALLOCATABLE ::   &
+    REAL(lp), ALLOCATABLE ::   &
       & litter_carbon(:),      &  ! Amount of litter carbon [mol(C)/m2(canopy)], used with use_alb_soil_litter
       & soil_carbon(:)            ! Amount of soil carbon [mol(C)/m2(canopy)], used with use_alb_soil_organic_C
 
@@ -1034,7 +1020,7 @@ CONTAINS
       & lai_cl,                     &
       & cumm_lai_cl
 
-    REAL(wp) :: &
+    REAL(lp) :: &
       & specificLeafArea_C_param, &
       & AlbedoLitterVIS_param,    &
       & AlbedoLitterNIR_param,    &
@@ -1056,13 +1042,11 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     model_scheme = model%config%model_scheme
 
-#ifndef __NO_QUINCY__
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       vgrid_soil_w  => Get_vgrid('soil_depth_water')
       nsoil_w       =  vgrid_soil_w%n_levels
     END SELECT
-#endif
 
 #ifndef __QUINCY_STANDALONE__
     ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
@@ -1102,10 +1086,8 @@ CONTAINS
       CASE (MODEL_JSBACH)
         dsl4jsb_Get_memory(PHENO_)
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(VEG_)
-#endif
       END SELECT
     END IF
 
@@ -1174,7 +1156,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
       CASE (MODEL_QUINCY)
         dsl4jsb_Get_memory(SB_)
         dsl4jsb_Get_var2D_onChunk(HYDRO_, num_sl_above_bedrock)      ! in
@@ -1190,7 +1171,7 @@ CONTAINS
 
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic=1,nc
-          soil_carbon(ic) = 0._wp
+          soil_carbon(ic) = 0._lp
         END DO
         !$ACC END PARALLEL LOOP
         !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
@@ -1203,8 +1184,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
-#endif
+        !$ACC END PARALLEL
       END SELECT
     END IF   ! perparations for alb_soil_scheme
 
@@ -1227,7 +1207,6 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
     CASE (MODEL_QUINCY)
       dsl4jsb_Get_var2D_onChunk(SEB_,   t)                   ! in
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1239,7 +1218,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_noon)           ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_vis_noon)          ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,   alb_nir_noon)          ! out
-#endif
     END SELECT
 
     dsl4jsb_Get_var2D_onChunk(RAD_,   alb_background)        ! in
@@ -1359,7 +1337,7 @@ CONTAINS
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
           IF(l_day(ic)) THEN
-            alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
+            alb_vis(ic) = (1._lp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
             alb_nir(ic) = alb_vis(ic)  ! TODO
           END IF
         END DO
@@ -1439,12 +1417,12 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
         alb_vis_lnd(ic) = fract_snow_soil(ic)                                       * alb_vis_snow(ic) &
-                     & + (1.0_wp - fract_snow_soil(ic)) * fract_pond(ic)            * alb_vis_pond(ic) &
-                     & + (1.0_wp - fract_snow_soil(ic)) * (1.0_wp - fract_pond(ic)) * alb_vis_soil(ic)
+                     & + (1.0_lp - fract_snow_soil(ic)) * fract_pond(ic)            * alb_vis_pond(ic) &
+                     & + (1.0_lp - fract_snow_soil(ic)) * (1.0_lp - fract_pond(ic)) * alb_vis_soil(ic)
 
         alb_nir_lnd(ic) = fract_snow_soil(ic)                                       * alb_nir_snow(ic) &
-                     & + (1.0_wp - fract_snow_soil(ic)) * fract_pond(ic)            * alb_nir_pond(ic) &
-                     & + (1.0_wp - fract_snow_soil(ic)) * (1.0_wp - fract_pond(ic)) * alb_nir_soil(ic)
+                     & + (1.0_lp - fract_snow_soil(ic)) * fract_pond(ic)            * alb_nir_pond(ic) &
+                     & + (1.0_lp - fract_snow_soil(ic)) * (1.0_lp - fract_pond(ic)) * alb_nir_soil(ic)
       END DO
       !$ACC END PARALLEL LOOP
 
@@ -1510,10 +1488,8 @@ CONTAINS
           CASE (MODEL_JSBACH)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
 #endif
-#ifndef __NO_QUINCY__
           CASE (MODEL_QUINCY)
             specificLeafArea_C_param = dsl4jsb_Lctlib_param(sla)
-#endif
           END SELECT
           AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
           AlbedoLitterNIR_param    = dsl4jsb_Lctlib_param(AlbedoLitterNIR)
@@ -1606,7 +1582,6 @@ CONTAINS
         END DO
         !$ACC END PARALLEL LOOP
 #endif
-#ifndef __NO_QUINCY__
         CASE (MODEL_QUINCY)
           vgrid_canopy_q_assimi => Get_vgrid('q_canopy_layer')
           ncanopy               =  vgrid_canopy_q_assimi%n_levels
@@ -1621,9 +1596,9 @@ CONTAINS
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             alb_vis_soil_and_snow(ic) = fract_snow_soil(ic) * alb_vis_snow(ic) &
-              &                + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic)
+              &                + (1.0_lp - fract_snow_soil(ic)) * alb_vis_soil(ic)
             alb_nir_soil_and_snow(ic) = fract_snow_soil(ic) * alb_nir_snow(ic) &
-              &                + (1.0_wp - fract_snow_soil(ic)) * alb_nir_soil(ic)
+              &                + (1.0_lp - fract_snow_soil(ic)) * alb_nir_soil(ic)
           END DO
           !$ACC END PARALLEL LOOP
 
@@ -1642,7 +1617,7 @@ CONTAINS
           ! correct surface albedo by canopy fraction covered with snow
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic=1,nc
-            alb_vis_lnd(ic) = alb_vis_lnd(ic) * (1._wp - fract_snow_can(ic)) &
+            alb_vis_lnd(ic) = alb_vis_lnd(ic) * (1._lp - fract_snow_can(ic)) &
               &               + AlbedoCanopySnow * fract_snow_can(ic)
           END DO
           !$ACC END PARALLEL LOOP
@@ -1665,12 +1640,11 @@ CONTAINS
           ! correct canopy albedo by fraction covered with snow
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic=1,nc
-            alb_nir_lnd(ic) = alb_nir_lnd(ic) * (1._wp - fract_snow_can(ic)) &
+            alb_nir_lnd(ic) = alb_nir_lnd(ic) * (1._lp - fract_snow_can(ic)) &
               &               + AlbedoCanopySnow * fract_snow_can(ic)
           END DO
           !$ACC END PARALLEL LOOP
 
-#endif
         END SELECT  ! quincy / jsbach
       END IF      ! NOT use_alb_veg_simple
     END IF      ! IF (tile%is_vegetation)
@@ -1679,11 +1653,10 @@ CONTAINS
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly
     !! but for vegetation, bare and glacier, the "land albedo" is calculated
     !!
-#ifndef __NO_QUINCY__
     IF (model_scheme == MODEL_QUINCY) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_, local_time_day_seconds)         ! in
     END IF
-#endif
+
     IF (tile%is_bare .OR. tile%is_glacier .OR. tile%is_vegetation) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic=1,nc
@@ -1694,7 +1667,6 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-#ifndef __NO_QUINCY__
     ! calculate albedo and albedo_noon for all tiles
     !
     IF (model_scheme == MODEL_QUINCY) THEN
@@ -1702,7 +1674,7 @@ CONTAINS
       DO ic = 1, nc
         ! at noon: set alb_noon to current albedo (noon equals half a day plus one timestep)
         !
-        IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._wp) + dtime)) < eps1) THEN
+        IF (ABS(local_time_day_seconds(ic) - ((seconds_per_day / 2._lp) + dtime)) < eps1) THEN
           alb_vis_noon(ic) = alb_vis(ic)
           alb_nir_noon(ic) = alb_nir(ic)
           ! calculate albedo for total shortwave radiation
@@ -1712,13 +1684,12 @@ CONTAINS
               &               / (swvis_srf_down(ic) + swnir_srf_down(ic))
           ELSE
             ! albedo is not defined when radiation <= 0 and set to zero
-            albedo_noon(ic) = 0.0_wp
+            albedo_noon(ic) = 0.0_lp
           END IF
         END IF
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-#endif
 
     !$ACC EXIT DATA DELETE(l_day, temperature_surface) ASYNC(acc_stream)
     DEALLOCATE(l_day, temperature_surface)
@@ -1793,10 +1764,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,            weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_noon,            weighted_by_fract)
-#ifndef __NO_QUINCY__
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_noon,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_noon,           weighted_by_fract)
-#endif
 
     CASE (MODEL_JSBACH)
 #ifndef __QUINCY_STANDALONE__
@@ -1836,10 +1805,9 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for RAD_
   !>
-#ifndef __NO_QUINCY__
   SUBROUTINE update_time_average_radiation(tile, options)
 
-    USE mo_kind,                    ONLY: wp
+    USE mo_kind,                    ONLY: lp
     USE mo_jsb_math_constants,      ONLY: eps8, eps1
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_control,             ONLY: debug_on
@@ -1870,7 +1838,7 @@ CONTAINS
     INTEGER                                 :: icanopy                !< looping
     INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc !< dimensions, looping
-    REAL(wp)                                :: dtime                  !< timestep
+    REAL(lp)                                :: dtime                  !< timestep
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -1998,12 +1966,12 @@ CONTAINS
             ppfd_sunlit_daytime_cl(ic,icanopy) = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) / daytime_counter(ic)
             ppfd_shaded_daytime_cl(ic,icanopy) = ppfd_shaded_daytime_dacc_cl(ic,icanopy) / daytime_counter(ic)
           ELSE
-            ppfd_sunlit_daytime_cl(ic,icanopy) = 0.0_wp
-            ppfd_shaded_daytime_cl(ic,icanopy) = 0.0_wp
+            ppfd_sunlit_daytime_cl(ic,icanopy) = 0.0_lp
+            ppfd_shaded_daytime_cl(ic,icanopy) = 0.0_lp
           END IF
           ! zero the accumulation variables after daily average has been calculated
-          ppfd_sunlit_daytime_dacc_cl(ic,icanopy) = 0.0_wp
-          ppfd_shaded_daytime_dacc_cl(ic,icanopy) = 0.0_wp
+          ppfd_sunlit_daytime_dacc_cl(ic,icanopy) = 0.0_lp
+          ppfd_shaded_daytime_dacc_cl(ic,icanopy) = 0.0_lp
         END IF
       END DO
     END DO
@@ -2048,16 +2016,6 @@ CONTAINS
 
   END SUBROUTINE update_time_average_radiation
 
-#else
-
-  SUBROUTINE update_time_average_radiation(tile, options)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-  END SUBROUTINE update_time_average_radiation
-
-#endif
   ! ======================================================================================================= !
   !> aggregate: time moving averages and daytime averages for RAD_
   !>

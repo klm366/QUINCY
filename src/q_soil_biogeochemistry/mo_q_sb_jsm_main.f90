@@ -16,9 +16,9 @@
 !>#### main routines for JSM (jena soil model), calculating the soil biogeochemical pools
 !>
 MODULE mo_q_sb_jsm_main
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                    ONLY: wp
+  USE mo_kind,                    ONLY: lp
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, message_text, finish
 
@@ -79,24 +79,24 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers as used/defined by the SB_ process
     INTEGER                               :: ic                   !< looping over points
     INTEGER                               :: isoil, is            !< looping over soil layers
-    REAL(wp)                              :: hlp1                 !< helper
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: km_array                                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: avail_soil_surface_sorption_capacity_sl  !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_po4                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4                 !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4_n15             !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_n_pot_sl                     !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
+    REAL(lp)                              :: hlp1                 !< helper
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km_array                                 !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: avail_soil_surface_sorption_capacity_sl  !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_po4                 !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4                 !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: graze_mineralisation_nh4_n15             !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_n_pot_sl                     !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: unit_uptake_p_pot_sl                     !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: growth_p_limit_smoothed_sl               !<
+    REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: asymb_n_fixation_rel_rate_sl             !< asymbiotic N fixation rate (relativ to N demand)
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
-    REAL(wp)                              :: dtime                          !< timestep length
+    REAL(lp)                              :: dtime                          !< timestep length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_jsm'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -529,14 +529,14 @@ CONTAINS
         fine_root_carbon_sl(:,isoil) = root_fraction_sl(:,isoil) / soil_depth_sl(:,isoil) * veg_pool_mt(ix_fine_root, ixC, :)
         ! using LOG() here to smooth the response curve in case of extreme P limited condition,
         ! avoiding drastic changes in plant phosphatase productions as it is updated at each time step
-        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_wp, LOG(growth_p_limit_based_on_n_mavg(:)))
+        growth_p_limit_smoothed_sl(:,isoil) = MAX(0.0_lp, LOG(growth_p_limit_based_on_n_mavg(:)))
       ELSEWHERE
-        fine_root_carbon_sl(:,isoil)        = 0.0_wp
-        growth_p_limit_smoothed_sl(:,isoil) = 0.0_wp
+        fine_root_carbon_sl(:,isoil)        = 0.0_lp
+        growth_p_limit_smoothed_sl(:,isoil) = 0.0_lp
       ENDWHERE
     END DO
-    unit_uptake_n_pot(:) = 0.0_wp
-    unit_uptake_p_pot(:) = 0.0_wp
+    unit_uptake_n_pot(:) = 0.0_lp
+    unit_uptake_p_pot(:) = 0.0_lp
 
     !>2.0 Inorganic N assimilation
     !>
@@ -760,20 +760,20 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_po4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._lp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_po4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_po4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._lp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_lp
+          km2_uptake_act(ic,is) = 0.0_lp
         END IF
       END DO
     END DO
     arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
-    arr_hlp2(:,:)        = 1._wp
+    arr_hlp2(:,:)        = 1._lp
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
-    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_po4(:,:) - po4_assoc_fast(:,:))
+    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._lp, qmax_po4(:,:) - po4_assoc_fast(:,:))
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -808,20 +808,20 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_nh4 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._lp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_nh4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_nh4 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._lp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_lp
+          km2_uptake_act(ic,is) = 0.0_lp
         END IF
       END DO
     END DO
     arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
-    arr_hlp2(:,:)        = 1._wp - anaerobic_volume_fraction_sl(:,:)
+    arr_hlp2(:,:)        = 1._lp - anaerobic_volume_fraction_sl(:,:)
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
-    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._wp, qmax_nh4(:,:) - nh4_assoc(:,:))
+    avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._lp, qmax_nh4(:,:) - nh4_assoc(:,:))
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -859,19 +859,19 @@ CONTAINS
     DO ic = 1,nc
       DO is = 1, NINT(num_sl_above_bedrock(ic))
         IF (wtr_soil_sl(ic, is) > eps8) THEN
-          km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._wp / (wtr_soil_sl(ic,is) &
+          km1_uptake_act(ic,is) = km1_up_no3 / (rtm_hsc(ic,is) * rmm_hsc(ic,is)) / 1000._lp / (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
-          km2_uptake_act(ic,is) = km2_up_no3 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._wp * (wtr_soil_sl(ic,is) &
+          km2_uptake_act(ic,is) = km2_up_no3 *  rtm_hsc(ic,is) * rmm_hsc(ic,is)  * 1000._lp * (wtr_soil_sl(ic,is) &
             &                     / soil_depth_sl(ic,is))
         ELSE
-          km1_uptake_act(ic,is) = 0.0_wp
-          km2_uptake_act(ic,is) = 0.0_wp
+          km1_uptake_act(ic,is) = 0.0_lp
+          km2_uptake_act(ic,is) = 0.0_lp
         END IF
       END DO
     END DO
-    arr_hlp1(:,:)        = 1._wp
-    km_array(:,:)        = 1._wp
-    avail_soil_surface_sorption_capacity_sl(:,:) = 1._wp
+    arr_hlp1(:,:)        = 1._lp
+    km_array(:,:)        = 1._lp
+    avail_soil_surface_sorption_capacity_sl(:,:) = 1._lp
     CALL calc_sinking_flux( &
       &   nc, &                                           ! in
       &   nsoil_w, &
@@ -970,7 +970,7 @@ CONTAINS
 
     !>8.0 co-metabolisation of polymeric litter & residues
     !>
-    arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._wp - enzyme_frac_AP(:,:))
+    arr_hlp1(:,:) = sb_pool_mt(ix_microbial, ixC, :, :) * enzyme_frac_total * (1._lp - enzyme_frac_AP(:,:))
     CALL calc_depolymerisation_SESAM( &
       & nc, &                                 ! in
       & nsoil_w, &

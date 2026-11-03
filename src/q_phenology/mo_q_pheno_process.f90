@@ -16,9 +16,9 @@
 !>#### determine onset and end of the growing season across plant functional types (PFT)
 !>
 MODULE mo_q_pheno_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                 ONLY: wp
+  USE mo_kind,                 ONLY: lp
   USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class, ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, &
@@ -68,10 +68,10 @@ CONTAINS
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store             !< the bgcm store of this tile
     TYPE(t_lctlib_element), POINTER   :: lctlib                 !< land-cover-type library - parameter across pft's
     INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(lp)                          :: dtime                  !< timestep length
 
     INTEGER  :: lctlib_phenology_type
-    REAL(wp) :: lctlib_beta_soil_flush, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, lctlib_tau_leaf, &
+    REAL(lp) :: lctlib_beta_soil_flush, lctlib_sla, lctlib_cn_leaf, lctlib_np_leaf, lctlib_tau_leaf, &
       &         lctlib_gdd_req_max, lctlib_k_gdd_dormance, lctlib_beta_soil_senescence, lctlib_t_air_senescence, &
       &         lctlib_min_leaf_age
 
@@ -279,33 +279,33 @@ CONTAINS
       &                                   ipheno_type_cbalance_deciduous
     USE mo_q_pheno_parameters,      ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp),     INTENT(in)    :: dtime                            !< timestep length
+    REAL(lp),     INTENT(in)    :: dtime                            !< timestep length
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: np_leaf                          !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: gdd_req_max                      !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: k_gdd_dormance                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: beta_soil_senescence             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: t_air_senescence                 !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: min_leaf_age                     !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: t_air                            !< air temp
-    REAL(wp),     INTENT(in)    :: beta_soil_gs_tphen_mavg          !< soil ..
-    REAL(wp),     INTENT(in)    :: t_air_tphen_mavg                 !< moving average air temperature over phenology-relevant period
-    REAL(wp),     INTENT(in)    :: t_soil_srf_tphen_mavg            !< moving average soil surface temperature
-    REAL(wp),     INTENT(in)    :: t_air_week_mavg                  !< moving average air temperature over a week
-    REAL(wp),     INTENT(in)    :: t_air_month_mavg                 !< moving average air temperature over a month
-    REAL(wp),     INTENT(in)    :: mean_leaf_age                    !< mean leaf age
-    REAL(wp),     INTENT(in)    :: gpp_tlabile_mavg                 !< moving average gpp over tlabile
-    REAL(wp),     INTENT(in)    :: maint_respiration_tlabile_mavg   !< moving average maintenance respiration over tlabile
-    REAL(wp),     INTENT(inout) :: growing_season                   !< growing season Yes/No
-    REAL(wp),     INTENT(inout) :: growth_req_n_tlabile_mavg        !< moles N required for a unit of C growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
-    REAL(wp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
-    REAL(wp),     INTENT(inout) :: gdd                              !< growing degree days
-    REAL(wp),     INTENT(inout) :: root_phenology_type              !< category for trigger of end of growing season in grasses
+    REAL(lp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: cn_leaf                          !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: np_leaf                          !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: gdd_req_max                      !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: k_gdd_dormance                   !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: beta_soil_senescence             !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: t_air_senescence                 !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: min_leaf_age                     !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: t_air                            !< air temp
+    REAL(lp),     INTENT(in)    :: beta_soil_gs_tphen_mavg          !< soil ..
+    REAL(lp),     INTENT(in)    :: t_air_tphen_mavg                 !< moving average air temperature over phenology-relevant period
+    REAL(lp),     INTENT(in)    :: t_soil_srf_tphen_mavg            !< moving average soil surface temperature
+    REAL(lp),     INTENT(in)    :: t_air_week_mavg                  !< moving average air temperature over a week
+    REAL(lp),     INTENT(in)    :: t_air_month_mavg                 !< moving average air temperature over a month
+    REAL(lp),     INTENT(in)    :: mean_leaf_age                    !< mean leaf age
+    REAL(lp),     INTENT(in)    :: gpp_tlabile_mavg                 !< moving average gpp over tlabile
+    REAL(lp),     INTENT(in)    :: maint_respiration_tlabile_mavg   !< moving average maintenance respiration over tlabile
+    REAL(lp),     INTENT(inout) :: growing_season                   !< growing season Yes/No
+    REAL(lp),     INTENT(inout) :: growth_req_n_tlabile_mavg        !< moles N required for a unit of C growth to determine labile pool size
+    REAL(lp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
+    REAL(lp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
+    REAL(lp),     INTENT(inout) :: gdd                              !< growing degree days
+    REAL(lp),     INTENT(inout) :: root_phenology_type              !< category for trigger of end of growing season in grasses
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                    :: hlp1                             !< helper variable for tmp values
+    REAL(lp)                    :: hlp1                             !< helper variable for tmp values
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -320,8 +320,8 @@ CONTAINS
         ! if soil moisture is above specified threshold
         IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
           growing_season            = true
-          growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-          growth_req_p_tlabile_mavg = 1._wp / np_leaf
+          growth_req_n_tlabile_mavg = 1._lp / cn_leaf
+          growth_req_p_tlabile_mavg = 1._lp / np_leaf
         ENDIF
       CASE (isummergreen)
         ! if GDD requirement is exceeded. The latter depends on the length of the
@@ -329,16 +329,16 @@ CONTAINS
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1) THEN
            growing_season            = true
-           growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-           growth_req_p_tlabile_mavg = 1._wp / np_leaf
+           growth_req_n_tlabile_mavg = 1._lp / cn_leaf
+           growth_req_p_tlabile_mavg = 1._lp / np_leaf
         ENDIF
       CASE (iperennial,icrop_phenology)
         ! if temperature and soil moisture are not limiting growth
         hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
         IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
           growing_season            = true
-          growth_req_n_tlabile_mavg = 1._wp / cn_leaf
-          growth_req_p_tlabile_mavg = 1._wp / np_leaf
+          growth_req_n_tlabile_mavg = 1._lp / cn_leaf
+          growth_req_p_tlabile_mavg = 1._lp / np_leaf
         ENDIF
       END SELECT
     ! If in the growing season, check whether growing season has ended
@@ -391,14 +391,14 @@ CONTAINS
     ENDIF
     ! vegetation growth doesn't start when there is snow coverage and soil is frozen
     IF(t_air_tphen_mavg < Tzero .AND. t_soil_srf_tphen_mavg <= Tzero) THEN
-      gdd = 0.0_wp
+      gdd = 0.0_lp
     ENDIF
 
     !>  2.2 nd_dormance counter
     !>
     IF (growing_season > test_false_true) THEN
-      gdd         = 0.0_wp
-      nd_dormance = 0.0_wp
+      gdd         = 0.0_lp
+      nd_dormance = 0.0_lp
     ELSE
       nd_dormance = nd_dormance + dtime / one_day
     ENDIF
@@ -441,22 +441,22 @@ CONTAINS
     USE mo_q_pheno_parameters,            ONLY: k_leafon_canopy
     !------------------------------------------------------------------------------------------------------ !
     INTEGER,      INTENT(in)    :: nc                                !< dimensions
-    REAL(wp),     INTENT(in)    :: dtime                             !< timestep length
+    REAL(lp),     INTENT(in)    :: dtime                             !< timestep length
     INTEGER,      INTENT(in)    :: lctlib_phenology_type             !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_tau_leaf                   !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
-    REAL(wp),     INTENT(in)    :: growing_season(:)                 !< does the plant intend to grow?
-    REAL(wp),     INTENT(in)    :: lai(:)                            !< current LAI (m2/m2)
-    REAL(wp),     INTENT(in)    :: lai_max(:)                        !< maximum LAI (m2/m2)
-    REAL(wp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
-    REAL(wp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
+    REAL(lp),     INTENT(in)    :: lctlib_sla                        !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: lctlib_tau_leaf                   !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: lctlib_cn_leaf                    !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: lctlib_np_leaf                    !< lctlib parameter
+    REAL(lp),     INTENT(in)    :: growing_season(:)                 !< does the plant intend to grow?
+    REAL(lp),     INTENT(in)    :: lai(:)                            !< current LAI (m2/m2)
+    REAL(lp),     INTENT(in)    :: lai_max(:)                        !< maximum LAI (m2/m2)
+    REAL(lp),     INTENT(in)    :: veg_pool_leaf_carbon(:)           !< the plant's leaf carbon pool (mol/m2)
+    REAL(lp),     INTENT(inout) :: veg_growth_leaf_carbon(:)         !< the plant's current leaf growth rate (mol/time step)
+    REAL(lp),     INTENT(inout) :: veg_growth_leaf_nitrogen(:)       !< the plant's current leaf growth rate (mol/time step)
+    REAL(lp),     INTENT(inout) :: veg_growth_leaf_phosphorus(:)     !< the plant's current leaf growth rate (mol/time step)
+    REAL(lp),     INTENT(inout) :: veg_litterfall_leaf_carbon(:)     !< the plant's current litter fall rate (mol/time step)
+    REAL(lp),     INTENT(inout) :: veg_litterfall_leaf_nitrogen(:)   !< the plant's current litter fall rate (mol/time step)
+    REAL(lp),     INTENT(inout) :: veg_litterfall_leaf_phosphorus(:) !< the plant's current litter fall rate (mol/time step)
     !------------------------------------------------------------------------------------------------------ !
     INTEGER                     :: ic                       !< loop over point of the chunk
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_leaf_bgcm_change'
@@ -467,7 +467,7 @@ CONTAINS
       ! diagnose required change in leaf C given phenology to attain prescribed LAI max
        IF (growing_season(ic) > test_false_true) THEN
          veg_growth_leaf_carbon(ic) = lai_max(ic) / lctlib_sla &
-           &                          * (1._wp - exp(-k_leafon_canopy &
+           &                          * (1._lp - exp(-k_leafon_canopy &
            &                          * (lai_max(ic) - lai(ic)) / lai_max(ic))) &
            &                          * dtime / one_day
        ELSE

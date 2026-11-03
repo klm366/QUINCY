@@ -20,7 +20,7 @@ MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,       ONLY: debug_on
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message, finish, message_text
   USE mo_util,              ONLY: one_of
 
@@ -31,10 +31,7 @@ MODULE mo_alcc_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_lcc_class,      ONLY: max_tolerated_cf_mismatch
-
-#ifndef __NO_QUINCY__
   USE mo_quincy_model_config, ONLY: QLAND, QPLANT
-#endif
 
   ! Use of processes in this module
   dsl4jsb_Use_processes ALCC_, PPLCC_, FAGE_, NLCC_
@@ -151,9 +148,9 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile !< Pointer to the tile for which fraction changes are determined
     TYPE(t_jsb_model), POINTER          :: model        !< Current instance of the model
 
-    REAL(wp)              :: current_fract(options%nc)  !< Current cover fraction
-    REAL(wp)              :: cf_veg(options%nc)         !< Current veg tile fraction
-    REAL(wp), ALLOCATABLE :: cf_pft(:,:)                !< Current PFT tile cover fractions (used if NLCC_ is enabled)
+    REAL(lp)              :: current_fract(options%nc)  !< Current cover fraction
+    REAL(lp)              :: cf_veg(options%nc)         !< Current veg tile fraction
+    REAL(lp), ALLOCATABLE :: cf_pft(:,:)                !< Current PFT tile cover fractions (used if NLCC_ is enabled)
     CHARACTER(len=15), DIMENSION(:), ALLOCATABLE :: trans_names
 
     INTEGER  :: &
@@ -168,8 +165,8 @@ CONTAINS
       & number_of_days, & !< Number of days in current year
       & idx             !< Index for transition rate loop
 
-    REAL(wp) :: delta_threshold !< Threshold below which cover fraction changes are not conducted
-    REAL(wp) :: dtime   !< Time step length
+    REAL(lp) :: delta_threshold !< Threshold below which cover fraction changes are not conducted
+    REAL(lp) :: dtime   !< Time step length
 
     LOGICAL :: nlcc_tile(options%npft)  !< Is the tile's area fraction affected by natural land cover change (NLCC)?
 
@@ -215,7 +212,7 @@ CONTAINS
     ! ELSE
     !   delta_threshold = min_annual_cf_change
     ! END IF
-    delta_threshold = EPSILON(1._wp)
+    delta_threshold = EPSILON(1._lp)
 
     !> If NLCC is active, natural PFT fractions are calculated in the NLCC process. These fractions
     !> are independent from the natural vegetation fractions defined in the bc_land_fract files, thus
@@ -288,28 +285,28 @@ CONTAINS
 
           ! Derive area changes
           DO ic = 1,nc
-            IF (cf_target_year(ic, i_cf_tile) < 0.0_wp) THEN
+            IF (cf_target_year(ic, i_cf_tile) < 0.0_lp) THEN
               ! This should only happen upon init with -0.1 / i.e. if not read from a file
-              cf_delta(ic, i_cf_tile) = 0.0_wp
+              cf_delta(ic, i_cf_tile) = 0.0_lp
             ELSE
               cf_delta(ic, i_cf_tile) = cf_target_year(ic, i_cf_tile) - current_fract(ic)
             END IF
 
             IF (dsl4jsb_Config(ALCC_)%l_daily_alcc .AND. &
-                & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, wp) * EPSILON(1._wp)) THEN
+                & ABS(cf_delta(ic, i_cf_tile)) >= REAL(number_of_days, lp) * EPSILON(1._lp)) THEN
               ! In case that area changes are daily the difference has to be distributed over the year
               ! such that the target is reached at the end of the year
-              cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, wp)
+              cf_delta(ic, i_cf_tile) = cf_delta(ic, i_cf_tile) / REAL(number_of_days, lp)
             ELSE
-              cf_delta(ic, i_cf_tile) = 0._wp
+              cf_delta(ic, i_cf_tile) = 0._lp
             END IF
 
             IF (ABS(cf_delta(ic, i_cf_tile)) >= delta_threshold) THEN
               ! If there are area changes above the threshold set l_fract_alcc_change flag (just required for QUINCY)
               current_tile%l_fract_alcc_change(ics+ic-1,iblk) = .TRUE.
             ELSE
-              ! else set to 0.0_wp
-              cf_delta(ic, i_cf_tile) = 0.0_wp
+              ! else set to 0.0_lp
+              cf_delta(ic, i_cf_tile) = 0.0_lp
             END IF
           END DO
 
@@ -329,11 +326,11 @@ CONTAINS
         DO idx = 1, SIZE(trans_names)
           DO ic = 1,nc
 
-            transition_rate(ic, idx) = transition_rate(ic, idx) / REAL(number_of_days, wp)
+            transition_rate(ic, idx) = transition_rate(ic, idx) / REAL(number_of_days, lp)
 
             IF (transition_rate(ic, idx) < delta_threshold) THEN
-              ! in analog to the maps scheme set to 0.0_wp
-              transition_rate(ic, idx) = 0.0_wp
+              ! in analog to the maps scheme set to 0.0_lp
+              transition_rate(ic, idx) = 0.0_lp
             END IF
 
           END DO
@@ -400,12 +397,12 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
 
-    REAL(wp), POINTER ::   &
+    REAL(lp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
 
-    REAL(wp), DIMENSION(options%nc) :: &
+    REAL(lp), DIMENSION(options%nc) :: &
       & cf_diff,      & !< Change in cover fractions
       & current_fract,& !< Current cover fraction
       & from_cf_sum,  & !< Sum of cover fractions of all tiles losing area for a specific transition
@@ -425,7 +422,7 @@ CONTAINS
       & idx, &        !< Index for transition loop
       & idxe          !< End index for transition loop
 
-    REAL(wp) :: dtime !< Time step length
+    REAL(lp) :: dtime !< Time step length
 
     LOGICAL :: nlcc_tile !< Boolean indicating if a tile is a dynamic NLCC tile (only if NLCC is active)
 
@@ -496,9 +493,9 @@ CONTAINS
 
     DO idx = 1, idxe
       ! loop over all transition types for transitions scheme; only one iteration for 'maps' scheme
-      initial_area(:,:) = 0.0_wp
-      lost_area(:,:) = 0.0_wp
-      gained_area(:,:) = 0.0_wp
+      initial_area(:,:) = 0.0_lp
+      lost_area(:,:) = 0.0_lp
+      gained_area(:,:) = 0.0_lp
 
       ! Collect current area of all involved tiles
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
@@ -509,9 +506,9 @@ CONTAINS
         current_tile => tile%Get_first_child_tile()
         i_tile = 0
 
-        from_cf_sum(:) = 0.0_wp
-        to_cf_sum(:) = 0.0_wp
-        to_potential_sum(:) = 0.0_wp
+        from_cf_sum(:) = 0.0_lp
+        to_cf_sum(:) = 0.0_lp
+        to_potential_sum(:) = 0.0_lp
 
         DO WHILE (ASSOCIATED(current_tile))
           i_tile = i_tile + 1
@@ -553,9 +550,9 @@ CONTAINS
         !     realised at all in this cell; without this the lost area would not be matched by any gain.
         DO ic = 1, nc
           transition_rate(ic, idx) = MIN(transition_rate(ic, idx), from_cf_sum(ic))
-          transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_wp - to_cf_sum(ic))
-          IF (to_cf_sum(ic) <= 0.0_wp .AND. to_potential_sum(ic) <= 0.0_wp) THEN
-            transition_rate(ic, idx) = 0.0_wp
+          transition_rate(ic, idx) = MIN(transition_rate(ic, idx), 1.0_lp - to_cf_sum(ic))
+          IF (to_cf_sum(ic) <= 0.0_lp .AND. to_potential_sum(ic) <= 0.0_lp) THEN
+            transition_rate(ic, idx) = 0.0_lp
           END IF
         END DO
 
@@ -637,24 +634,24 @@ CONTAINS
                 cf_diff(ic) = cf_delta(ic, i_cf_tile)
 
                 ! Determine new cover fractions, while keeping within the boundaries valid for cover fractions [0,1]
-                IF ((cf_diff(ic) < 0.0_wp) .AND. (ABS(cf_diff(ic)) >= initial_area(ic, i_tile))) THEN
+                IF ((cf_diff(ic) < 0.0_lp) .AND. (ABS(cf_diff(ic)) >= initial_area(ic, i_tile))) THEN
                   ! If area is lost it should not exceed the initial area
-                  current_fract(ic) = 0.0_wp
-                  cf_diff(ic) = -1.0_wp * initial_area(ic, i_tile)
-                ELSE IF ((cf_diff(ic) > 0.0_wp) .AND. ((cf_diff(ic) + initial_area(ic, i_tile)) >= 1.0_wp)) THEN
+                  current_fract(ic) = 0.0_lp
+                  cf_diff(ic) = -1.0_lp * initial_area(ic, i_tile)
+                ELSE IF ((cf_diff(ic) > 0.0_lp) .AND. ((cf_diff(ic) + initial_area(ic, i_tile)) >= 1.0_lp)) THEN
                   ! If area is gained the sum of initial area and gained area should not exceed 1 (total available area)
-                  current_fract(ic) = 1.0_wp
-                  cf_diff(ic) = 1.0_wp - initial_area(ic, i_tile)
+                  current_fract(ic) = 1.0_lp
+                  cf_diff(ic) = 1.0_lp - initial_area(ic, i_tile)
                 ELSE
                   current_fract(ic) = initial_area(ic, i_tile) + cf_diff(ic)
                 END IF
 
                 ! Derive gained and lost area
-                IF (cf_diff(ic) >= 0.0_wp) THEN
+                IF (cf_diff(ic) >= 0.0_lp) THEN
                   gained_area(ic, i_tile) = cf_diff(ic)
                 ELSE
                   ! The lcc framework expects also lost area to be a positive value, therefore the sign is swapped here
-                  lost_area(ic, i_tile) = -1.0_wp * cf_diff(ic)
+                  lost_area(ic, i_tile) = -1.0_lp * cf_diff(ic)
                 END IF
               END DO
               CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -667,13 +664,13 @@ CONTAINS
               DO ic = 1,nc
 
                 IF (dsl4jsb_Config(ALCC_)%from_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-                  IF (from_cf_sum(ic) < 0.0_wp) THEN
+                  IF (from_cf_sum(ic) < 0.0_lp) THEN
                     CALL finish(TRIM(routine), 'Violation of assertion: from_cf_sum is negative. Please check transition rates' &
                     & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
                   END IF
-                  IF (from_cf_sum(ic) > 0.0_wp) THEN
+                  IF (from_cf_sum(ic) > 0.0_lp) THEN
                     lost_area(ic, i_tile) = transition_rate(ic, idx) *  &
-                        max(0.0_wp, initial_area(ic, i_tile)) / from_cf_sum(ic)
+                        max(0.0_lp, initial_area(ic, i_tile)) / from_cf_sum(ic)
                     ! Floating-point safety: the per-tile rate tightening above ensures lost_area <=
                     ! initial_area analytically, but the two-step multiply/divide can produce a result
                     ! that exceeds initial_area by O(machine_epsilon). Clamp to prevent -eps fractions.
@@ -681,25 +678,25 @@ CONTAINS
                   END IF
                   current_fract(ic) = initial_area(ic, i_tile) - lost_area(ic, i_tile)
                 ELSE IF (dsl4jsb_Config(ALCC_)%to_class(idx) == dsl4jsb_Config(ALCC_)%pft_class(i_tile)) THEN
-                  IF (to_cf_sum(ic) < 0.0_wp) THEN
+                  IF (to_cf_sum(ic) < 0.0_lp) THEN
                     CALL finish(TRIM(routine), 'Violation of assertion: to_cf_sum is negative. Please check transition rates' &
                     & // ' and initial areas. Tile: ' // TRIM(current_tile%name))
                   END IF
-                  IF (to_cf_sum(ic) > 0.0_wp) THEN
+                  IF (to_cf_sum(ic) > 0.0_lp) THEN
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * initial_area(ic, i_tile) / to_cf_sum(ic)
                     ! Floating-point safety: the per-tile rate tightening above ensures
                     ! gained_area <= 1 - initial_area analytically, but rounding errors in the
                     ! two-step multiply/divide can push gained_area above 1 - initial_area by
                     ! O(machine_epsilon). Clamp to prevent fractions exceeding 1.
                     gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
-                        MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
-                  ELSE IF (to_potential_sum(ic) > 0.0_wp) THEN
+                        MAX(0.0_lp, 1.0_lp - initial_area(ic, i_tile)))
+                  ELSE IF (to_potential_sum(ic) > 0.0_lp) THEN
                     ! to_cf_sum == 0: all to-tiles have initial_area == 0.
                     ! Distribute the transition area proportional to each tile's potential cover fraction.
                     gained_area(ic, i_tile) = transition_rate(ic, idx) * cf_potential(ic, i_tile) / to_potential_sum(ic)
                     ! Floating-point safety clamp
                     gained_area(ic, i_tile) = MIN(gained_area(ic, i_tile), &
-                        MAX(0.0_wp, 1.0_wp - initial_area(ic, i_tile)))
+                        MAX(0.0_lp, 1.0_lp - initial_area(ic, i_tile)))
                   END IF
                   current_fract(ic) = initial_area(ic, i_tile) + gained_area(ic, i_tile)
                 ELSE
@@ -708,7 +705,7 @@ CONTAINS
 
               END DO
 
-              IF (ANY(current_fract(:) < 0.0_wp) .OR. ANY(current_fract(:) > 1.0_wp)) THEN
+              IF (ANY(current_fract(:) < 0.0_lp) .OR. ANY(current_fract(:) > 1.0_lp)) THEN
                 CALL finish(TRIM(routine), 'Violation of assertion: cover fractions need to be between 0 and 1.' &
                 & // ' Please check transition rates and initial areas. Tile: ' // TRIM(current_tile%name))
               END IF
@@ -743,12 +740,10 @@ CONTAINS
       ! Now do the matter translocation
       IF (model%config%model_scheme == MODEL_JSBACH) THEN
         CALL alcc_matter_translocation_jsb(tile, options)
-#ifndef __NO_QUINCY__
       ELSE IF (model%config%model_scheme == MODEL_QUINCY) THEN
         IF (model%config%qmodel_id == QLAND) THEN
           CALL alcc_matter_translocation_iq(tile, options)
         END IF
-#endif
       END IF
     END DO ! idx for transition names
 
@@ -816,7 +811,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model           !< Current instance of the model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations !< lcc relocations instance of the ALCC process
 
-    REAL(wp), POINTER ::   &
+    REAL(lp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
@@ -826,7 +821,7 @@ CONTAINS
       & ics, &        !< Index of first cell of block
       & ice, &        !< Index of last cell of block
       & i_tile        !< Index of a tile in the lcc_relocations
-    REAL(wp) :: dtime !< Time step length
+    REAL(lp) :: dtime !< Time step length
 
     LOGICAL  :: is_age_class !< Boolean indicating if a tile is a forest age class
 
@@ -901,7 +896,7 @@ CONTAINS
 
       IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
         i_tile = i_tile + 1
-        IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+        IF (ANY(lost_area(:, i_tile) > 0.0_lp)) THEN
           CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
         END IF
       END IF
@@ -926,7 +921,6 @@ CONTAINS
   END SUBROUTINE alcc_matter_translocation_jsb
 
 
-#ifndef __NO_QUINCY__
   ! ====================================================================================================== !
   !
   !> Do the matter translocation for quincy.
@@ -989,15 +983,15 @@ CONTAINS
     TYPE(t_lctlib_element),     POINTER :: lctlib          !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),          POINTER :: vgrid_soil_w    !< Vertical grid
 
-    REAL(wp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
+    REAL(lp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
 
-    REAL(wp), POINTER ::   &
+    REAL(lp), POINTER ::   &
       & initial_area(:,:), & !< Pointer to initial area in lcc relocations instance of the ALCC process
       & lost_area(:,:),    & !< Pointer to lost area in lcc relocations instance of the ALCC process
       & gained_area(:,:)     !< Pointer to gained area in lcc relocations instance of the ALCC process
 
-    REAL(wp) :: scaling !< scaling of new to old cover fraction required to calculate the density change in extending forest tiles
-    REAL(wp) :: dtime   !< Time step length
+    REAL(lp) :: scaling !< scaling of new to old cover fraction required to calculate the density change in extending forest tiles
+    REAL(lp) :: dtime   !< Time step length
 
     INTEGER  :: &
       & iblk, &       !< Current block index
@@ -1045,7 +1039,7 @@ CONTAINS
     !>
     !> 2. Matter translocation for "active" variables needs to be done explicitly for quincy (if bgcm matrices are involved)
     !>
-    zero_mt(:,:) = 0.0_wp
+    zero_mt(:,:) = 0.0_lp
 
     current_tile => tile%Get_first_child_tile()
     i_tile = 0
@@ -1067,7 +1061,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk_tile(VEG_, root_fraction_sl, current_tile)
 
       ! Relocation of "active" variables only happens on tiles with grid cells that are loosing area
-      IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, i_tile) > 0.0_lp)) THEN
         ! ---------------------------------------------------------------------------------------------------!
         ! For tiles with grid cells that loose area also hydrology variables are requried
         dsl4jsb_Get_memory_tile(HYDRO_, current_tile)
@@ -1103,16 +1097,16 @@ CONTAINS
             ! sapwood: lctlib_frac_sapwood_branch goes to litter, rest to product pool -> but mind: slash fraction
             veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
               & + (veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
-              &    * (1._wp - dsl4jsb_Lctlib_param_tile(frac_sapwood_branch, current_tile)) * (1._wp - fract_wood_to_slash(ic)))
+              &    * (1._lp - dsl4jsb_Lctlib_param_tile(frac_sapwood_branch, current_tile)) * (1._lp - fract_wood_to_slash(ic)))
             veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) = veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
               & - (veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
-              &    * (1._wp - dsl4jsb_Lctlib_param_tile(frac_sapwood_branch, current_tile)) * (1._wp - fract_wood_to_slash(ic)))
+              &    * (1._lp - dsl4jsb_Lctlib_param_tile(frac_sapwood_branch, current_tile)) * (1._lp - fract_wood_to_slash(ic)))
 
             ! heartwood: goes to product pool -> but mind: slash fraction
             veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
-              & + veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._wp - fract_wood_to_slash(ic))
+              & + veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._lp - fract_wood_to_slash(ic))
             veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) = veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) &
-              & - veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._wp - fract_wood_to_slash(ic))
+              & - veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._lp - fract_wood_to_slash(ic))
           END DO
         END IF
 
@@ -1139,7 +1133,7 @@ CONTAINS
 
         ! veg_litter_flux_harvest_mt is only temporarily required to carry the litter flux into the partitioning routine
         ! it will not be synchronised back and is set to zero here
-        veg_litter_flux_harvest_mt(:,:,:) = 0.0_wp
+        veg_litter_flux_harvest_mt(:,:,:) = 0.0_lp
 
         ! ---------------------------------------------------------------------------------------------------!
         ! Sync matrices back to variables
@@ -1149,7 +1143,7 @@ CONTAINS
         IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
           dsl4jsb_Write_mt1L2D_to_vars_tile(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt, current_tile)
         END IF
-      END IF ! IF (ANY(lost_area(:, i_tile) > 0.0_wp))
+      END IF ! IF (ANY(lost_area(:, i_tile) > 0.0_lp))
 
       ! -----------------------------------------------------------------------------------------------------!
       ! The density on a tile only needs to be adapted on tiles which gain area
@@ -1158,9 +1152,9 @@ CONTAINS
       !          this is not the case for the density such that a scaling to the change in area is required
       IF (dsl4jsb_Lctlib_param_tile(ForestFlag, current_tile)) THEN
         DO ic = 1,nc
-          IF (gained_area(ic, i_tile) > 0.0_wp) THEN
+          IF (gained_area(ic, i_tile) > 0.0_lp) THEN
             scaling = initial_area(ic,i_tile) / (initial_area(ic,i_tile) + gained_area(ic, i_tile))
-            delta_dens_ind(ic) = dens_ind(ic) * (scaling - 1._wp)
+            delta_dens_ind(ic) = dens_ind(ic) * (scaling - 1._lp)
           END IF
         END DO
       END IF
@@ -1191,7 +1185,7 @@ CONTAINS
       DO WHILE (ASSOCIATED(current_tile))
         i_tile = i_tile + 1
 
-        IF (ANY(gained_area(:, i_tile) > 0.0_wp)) THEN
+        IF (ANY(gained_area(:, i_tile) > 0.0_lp)) THEN
           bgcm_store => current_tile%bgcm_store
 
           dsl4jsb_Get_mt1L2D_tile(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt, current_tile)
@@ -1201,7 +1195,7 @@ CONTAINS
           dsl4jsb_Update_mt1L2D_tile(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt, current_tile)
 
           veg_pp_fuel_mt(:,:) = veg_pp_fuel_mt(:,:) + veg_pp_flux_harvest_mt(:,:)
-          veg_pp_flux_harvest_mt(:,:) = 0.0_wp
+          veg_pp_flux_harvest_mt(:,:) = 0.0_lp
 
           dsl4jsb_Write_mt1L2D_to_vars_tile(VEG_BGCM_PP_FUEL_ID, veg_pp_fuel_mt, current_tile)
           dsl4jsb_Write_mt1L2D_to_vars_tile(VEG_BGCM_HARVEST_TO_PROD_ID, veg_pp_flux_harvest_mt, current_tile)
@@ -1214,7 +1208,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE alcc_matter_translocation_iq
-#endif
 
   ! ====================================================================================================== !
   !
@@ -1226,19 +1219,19 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile          !< Forest pft for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options       !< Additional run-time parameters
-    REAL(wp),                   INTENT(in)    :: cf_diff(:)    !< To be distributed changes of cover fractions
+    REAL(lp),                   INTENT(in)    :: cf_diff(:)    !< To be distributed changes of cover fractions
     INTEGER,                    INTENT(in)    :: i_first_child
        !< Index of first child tile in gained and lost area matrices
-    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained area matrix for lcc calculations
-    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost area matrix for lcc calculations
+    REAL(lp),                   INTENT(inout) :: gained_area(:,:) !< Gained area matrix for lcc calculations
+    REAL(lp),                   INTENT(inout) :: lost_area(:,:)   !< Lost area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':redistribute_cover_fraction_changes_of_forest_pft'
 
-    REAL(wp), DIMENSION(options%nc) :: this_loss !< Area loss of forest PFT to be distributed to its children (age classes)
-    REAL(wp), DIMENSION(options%nc) :: this_gain !< Area gains of forest PFT to be distributed to its children (age classes)
+    REAL(lp), DIMENSION(options%nc) :: this_loss !< Area loss of forest PFT to be distributed to its children (age classes)
+    REAL(lp), DIMENSION(options%nc) :: this_gain !< Area gains of forest PFT to be distributed to its children (age classes)
     ! -------------------------------------------------------------------------------------------------- !
-    this_loss(:) = -1._wp * MIN(cf_diff(:), 0._wp)
-    this_gain(:) = MAX(cf_diff(:), 0._wp)
+    this_loss(:) = -1._lp * MIN(cf_diff(:), 0._lp)
+    this_gain(:) = MAX(cf_diff(:), 0._lp)
 
     ! per definition, all gains are distributed to the first age class
     gained_area(:, i_first_child) = gained_area(:, i_first_child) + this_gain(:)
@@ -1266,27 +1259,27 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile              !< Parent tile for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< Additional run-time parameters
-    REAL(wp),                   INTENT(inout) :: initial_area(:,:) !< Initial area matrix for lcc calculations
-    REAL(wp),         INTENT(inout), OPTIONAL :: gained_area(:,:)  !< Gained area matrix for lcc calculations
-    REAL(wp),         INTENT(inout), OPTIONAL :: lost_area(:,:)    !< Lost area matrix for lcc calculations
+    REAL(lp),                   INTENT(inout) :: initial_area(:,:) !< Initial area matrix for lcc calculations
+    REAL(lp),         INTENT(inout), OPTIONAL :: gained_area(:,:)  !< Gained area matrix for lcc calculations
+    REAL(lp),         INTENT(inout), OPTIONAL :: lost_area(:,:)    !< Lost area matrix for lcc calculations
     LOGICAL,          INTENT(in),    OPTIONAL :: book_anthro_changes !< Book NLCC-induced changes of anthropogenic
                                                                    !< tiles in gained/lost area and write them back
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: i_tile, iblk, ic                             !< Looping indices
     LOGICAL  :: book_anthro                                  !< Anthropogenic changes by NLCC are booked
-    REAL(wp) :: delta, taken                                 !< Area change by NLCC / part covered by existing gain or loss
+    REAL(lp) :: delta, taken                                 !< Area change by NLCC / part covered by existing gain or loss
     INTEGER  :: ics, ice                                     !< First and last grid cell in current vector
     INTEGER  :: ndynamic                                     !< Number of PFTs handled in NLCC
     TYPE(t_jsb_model), POINTER          :: model             !< Current instance of the model
 
     CLASS(t_jsb_tile_abstract), POINTER :: current_tile      !< Tile currently investigated
 
-    REAL(wp) :: current_fract(options%nc,options%npft)       !< Current tile fraction
-    REAL(wp) :: veg_tile_fract(options%nc)                   !< Fraction of the vegetation tile
-    REAL(wp) :: pft_fractions(options%nc,options%npft)       !< Relative PFT fractions, after anthropogenic
+    REAL(lp) :: current_fract(options%nc,options%npft)       !< Current tile fraction
+    REAL(lp) :: veg_tile_fract(options%nc)                   !< Fraction of the vegetation tile
+    REAL(lp) :: pft_fractions(options%nc,options%npft)       !< Relative PFT fractions, after anthropogenic
                                                              !< fractions have been updated
-    REAL(wp) :: gained_area_loc(options%nc,options%npft)     !< Local array for gained_area
-    REAL(wp) :: lost_area_loc(options%nc,options%npft)       !< Local array for lost_area
+    REAL(lp) :: gained_area_loc(options%nc,options%npft)     !< Local array for gained_area
+    REAL(lp) :: lost_area_loc(options%nc,options%npft)       !< Local array for lost_area
 
     LOGICAL :: is_woody(options%nc,options%npft)     ! PFTs that build wood
     LOGICAL :: is_dynamic(options%nc,options%npft)   ! PFTs taking part in competition (NLCC)
@@ -1311,8 +1304,8 @@ CONTAINS
       gained_area_loc(:,:) = gained_area(:,:)
       lost_area_loc(:,:) = lost_area(:,:)
     ELSE
-      gained_area_loc(:,:) = 0._wp
-      lost_area_loc(:,:) = 0._wp
+      gained_area_loc(:,:) = 0._lp
+      lost_area_loc(:,:) = 0._lp
     END IF
 
     ! Get local variables from options argument
@@ -1349,16 +1342,16 @@ CONTAINS
         END IF
         ! We just initialize natural PFT fractions here. They will be calculated below in NLCC process
         ! routine calc_cover_fract_inst.
-        pft_fractions(:,i_tile) = 0._wp
+        pft_fractions(:,i_tile) = 0._lp
 
       ELSE
         ! Anthropogenic PFTs
-        WHERE (veg_tile_fract(:) > 0._wp)
+        WHERE (veg_tile_fract(:) > 0._lp)
           pft_fractions(:,i_tile) = &
             &     (initial_area(:,i_tile) + gained_area_loc(:,i_tile) - lost_area_loc(:,i_tile)) &
             &   /  veg_tile_fract(:)
         ELSE WHERE
-          pft_fractions(:,i_tile) = 0._wp
+          pft_fractions(:,i_tile) = 0._lp
         END WHERE
         IF (dsl4jsb_Lctlib_param_tile(pasture_PFT, current_tile)) THEN
           is_pasture(:, i_tile) = .TRUE.
@@ -1387,12 +1380,12 @@ CONTAINS
         WHERE (current_fract(:,:) > initial_area(:,:))
           gained_area(:,:) = current_fract(:,:) - initial_area(:,:)
         ELSE WHERE
-          gained_area(:,:) = 0._wp
+          gained_area(:,:) = 0._lp
         END WHERE
         WHERE (current_fract(:,:) < initial_area(:,:))
           lost_area(:,:) = initial_area(:,:) - current_fract(:,:)
         ELSE WHERE
-          lost_area(:,:) = 0._wp
+          lost_area(:,:) = 0._lp
         END WHERE
       END WHERE
     END IF
@@ -1406,10 +1399,10 @@ CONTAINS
           IF (is_dynamic(ic,i_tile)) CYCLE
           delta = current_fract(ic,i_tile) &
             &   - (initial_area(ic,i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile))
-          IF (ABS(delta) <= 10._wp * EPSILON(1._wp)) THEN
+          IF (ABS(delta) <= 10._lp * EPSILON(1._lp)) THEN
             ! Only rounding noise: keep the tile fraction as set in update_alcc_translocation
             current_fract(ic,i_tile) = initial_area(ic,i_tile) + gained_area(ic,i_tile) - lost_area(ic,i_tile)
-          ELSE IF (delta < 0._wp) THEN
+          ELSE IF (delta < 0._lp) THEN
             ! Area removed by NLCC: first reduce the gained area, then increase the lost area
             taken = MIN(gained_area(ic,i_tile), -delta)
             gained_area(ic,i_tile) = gained_area(ic,i_tile) - taken
@@ -1449,21 +1442,21 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile             !< Parent tile for which the routine is called
     TYPE(t_jsb_task_options),   INTENT(in)    :: options          !< Additional run-time parameters
     INTEGER,                    INTENT(in)    :: nr_of_tiles      !< Number of tiles involved in the lcc calculation
-    REAL(wp),                   INTENT(inout) :: gained_area(:,:) !< Gained_area matrix for lcc calculations
-    REAL(wp),                   INTENT(inout) :: lost_area(:,:)   !< Lost_area matrix for lcc calculations
+    REAL(lp),                   INTENT(inout) :: gained_area(:,:) !< Gained_area matrix for lcc calculations
+    REAL(lp),                   INTENT(inout) :: lost_area(:,:)   !< Lost_area matrix for lcc calculations
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                     :: model         !< Current instance of the model
     INTEGER  :: ic, i_tile, i_sort  !< Looping indices
-    REAL(wp) :: remaining_diff      !< Remaining difference between area losses and gains
+    REAL(lp) :: remaining_diff      !< Remaining difference between area losses and gains
     CLASS(t_jsb_tile_abstract), POINTER            :: current_tile  !< Pointer on currently investigated tile
-    REAL(wp), DIMENSION(options%nc)                :: current_fract !< Cover fraction if current tile
-    REAL(wp), DIMENSION(options%nc)                :: cf_diff       !< Difference between gained and lost areas
+    REAL(lp), DIMENSION(options%nc)                :: current_fract !< Cover fraction if current tile
+    REAL(lp), DIMENSION(options%nc)                :: cf_diff       !< Difference between gained and lost areas
     LOGICAL,  DIMENSION(nr_of_tiles)               :: tiles_mask    !< Mask of tiles considered for correction
-    REAL(wp), DIMENSION(nr_of_tiles)               :: area_change   !< Area change to sort for (either losses or gains)
-    REAL(wp), DIMENSION(options%nc)                :: veg_fraction  !< Area fraction of the vegetation tile
-    REAL(wp), DIMENSION(options%nc)                :: sum_pft_fract !< Sum of the PFT tile area fractions
-    REAL(wp), DIMENSION(options%nc, nr_of_tiles)   :: child_fractions !< Area change to sort for (either losses or gains)
-    REAL(wp), DIMENSION(options%nc, nr_of_tiles) :: cf_correction   !< Cover fraction correction
+    REAL(lp), DIMENSION(nr_of_tiles)               :: area_change   !< Area change to sort for (either losses or gains)
+    REAL(lp), DIMENSION(options%nc)                :: veg_fraction  !< Area fraction of the vegetation tile
+    REAL(lp), DIMENSION(options%nc)                :: sum_pft_fract !< Sum of the PFT tile area fractions
+    REAL(lp), DIMENSION(options%nc, nr_of_tiles)   :: child_fractions !< Area change to sort for (either losses or gains)
+    REAL(lp), DIMENSION(options%nc, nr_of_tiles) :: cf_correction   !< Cover fraction correction
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_and_correct_cf_mismatches'
     ! -------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
@@ -1475,7 +1468,7 @@ CONTAINS
       CALL tile%Get_fraction(options%ics, options%ice, options%iblk, fract=veg_fraction(:))
 
       ! Get tile fractions of the PFT tiles, i.e. children of the veg tile
-      sum_pft_fract(:) = 0._wp
+      sum_pft_fract(:) = 0._lp
       current_tile => tile%Get_first_child_tile()
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
@@ -1495,29 +1488,29 @@ CONTAINS
     END IF
 
     cf_diff(:) = SUM(gained_area(:,:),DIM=2) - SUM(lost_area(:,:),DIM=2)
-    cf_correction(:,:) = 0.0_wp
-    area_change(:) = 0.0_wp
+    cf_correction(:,:) = 0.0_lp
+    area_change(:) = 0.0_lp
 
-    IF (ANY(ABS(cf_diff(:)) > EPSILON(1._wp))) THEN
+    IF (ANY(ABS(cf_diff(:)) > EPSILON(1._lp))) THEN
       DO ic = 1, options%nc
-        IF (ABS(cf_diff(ic)) > EPSILON(1._wp)) THEN
+        IF (ABS(cf_diff(ic)) > EPSILON(1._lp)) THEN
           tiles_mask(:) = .TRUE.
           remaining_diff = cf_diff(ic)
           DO i_sort = 1, nr_of_tiles
-            IF (remaining_diff > EPSILON(1._wp)) THEN
+            IF (remaining_diff > EPSILON(1._lp)) THEN
               ! I.e. gain > loss
               area_change(:) = gained_area(ic,:)
               i_tile = MAXLOC(area_change(:), DIM=1, MASK=tiles_mask(:))
               cf_correction(ic,i_tile) = MIN(remaining_diff, gained_area(ic,i_tile))
-              remaining_diff = MAX(0.0_wp, remaining_diff - gained_area(ic,i_tile))
+              remaining_diff = MAX(0.0_lp, remaining_diff - gained_area(ic,i_tile))
               gained_area(ic,i_tile) = gained_area(ic,i_tile) - cf_correction(ic,i_tile)
               tiles_mask(i_tile) = .FALSE.
-            ELSE IF (remaining_diff < -EPSILON(1._wp)) THEN
+            ELSE IF (remaining_diff < -EPSILON(1._lp)) THEN
               ! I.e. loss > gain
               area_change(:) = lost_area(ic,:)
               i_tile = MAXLOC(area_change(:), DIM=1, MASK=tiles_mask(:))
               cf_correction(ic,i_tile) = - MIN(ABS(remaining_diff), lost_area(ic,i_tile))
-              remaining_diff = - MAX(0.0_wp, ABS(remaining_diff) - lost_area(ic,i_tile))
+              remaining_diff = - MAX(0.0_lp, ABS(remaining_diff) - lost_area(ic,i_tile))
               lost_area(ic,i_tile) = lost_area(ic,i_tile) - cf_correction(ic,i_tile)
               tiles_mask(i_tile) = .FALSE.
             ELSE
@@ -1537,7 +1530,7 @@ CONTAINS
         CALL current_tile%Set_fraction(options%ics, options%ice, options%iblk, fract=current_fract(:))
         current_tile => current_tile%Get_next_sibling_tile()
       END DO ! WHILE (ASSOCIATED(current_tile))
-    END IF ! (ANY(ABS(cf_diff) > EPSILON(1._wp))) THEN
+    END IF ! (ANY(ABS(cf_diff) > EPSILON(1._lp))) THEN
 
   END SUBROUTINE check_and_correct_cf_mismatches
 

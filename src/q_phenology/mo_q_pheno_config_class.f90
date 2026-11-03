@@ -16,9 +16,9 @@
 !>#### define phenology config structure, read phenology namelist and init configuration parameters
 !>
 MODULE mo_q_pheno_config_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -32,7 +32,7 @@ MODULE mo_q_pheno_config_class
   !> Q_PHENO_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_q_pheno_config
-    REAL(wp)            :: lai_max              !< site specific lai, used to init lai_max in Q_PHENO_
+    REAL(lp)            :: lai_max              !< site specific lai, used to init lai_max in Q_PHENO_
     CONTAINS
       PROCEDURE :: Init => Init_q_pheno_config
   END type t_q_pheno_config
@@ -53,7 +53,7 @@ CONTAINS
     LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    REAL(wp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
+    REAL(lp)                    :: lai_max         !< init lai_max Q_PHENO_ memory variable
                                                    !! in case this value is less than zero, the lctlib value is used
     NAMELIST /lnd_q_pheno_nml/  &
       & active,               &
@@ -71,7 +71,7 @@ CONTAINS
     lrestart_cont = .FALSE.      ! TRUE: Continue although PHENO variables are missing in restart file
     bc_filename = 'bc_land_phenology.nc'
     ic_filename = 'ic_land_phenology.nc'
-    lai_max     = -1.0_wp
+    lai_max     = -1.0_lp
     !first_call_phenology_this_day = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist

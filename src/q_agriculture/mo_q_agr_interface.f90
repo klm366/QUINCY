@@ -16,9 +16,9 @@
 !>#### definition and init of tasks for the quincy agriculture process
 !>
 MODULE mo_q_agr_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish, message_text
@@ -114,7 +114,7 @@ MODULE mo_q_agr_interface
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     TYPE(t_lctlib_element),     POINTER       :: lctlib                     !< land-cover-type library - parameter across pft's
     INTEGER  :: lctlib_growthform, lctlib_ps_pathway
-    REAL(wp) :: lctlib_gdd_req_max, lctlib_beta_soil_flush, lctlib_t_air_senescence, lctlib_beta_soil_senescence, &
+    REAL(lp) :: lctlib_gdd_req_max, lctlib_beta_soil_flush, lctlib_t_air_senescence, lctlib_beta_soil_senescence, &
       &         lctlib_cn_leaf, lctlib_np_leaf, lctlib_sla
     ! ----------------------------------------------------------------------------------------------------- !
     ! Declare pointers for process configuration and memory
@@ -183,10 +183,10 @@ MODULE mo_q_agr_interface
     TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                    :: nsoil_w               !< number of soil layers as used/defined by the SB_ process
     INTEGER                    :: nr_of_veg_bgcm_comp    !< dim for veg compartments
-    REAL(wp)                   :: dtime                  !< timestep length
+    REAL(lp)                   :: dtime                  !< timestep length
     TYPE(t_jsb_model), POINTER :: model
 
-    REAL(wp),     DIMENSION(options%nc) :: n_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
+    REAL(lp),     DIMENSION(options%nc) :: n_fertiliser  !< local fertiliser depending on if this is a c3 or c4 crop
     CLASS(t_jsb_tile_abstract), POINTER :: box_tile      !< pointer to the box tile to get the fertiliser data
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_cropland_process'

@@ -16,7 +16,7 @@
 !>#### routine for updating the characteristics of the plants on a tile after changes in the vegetation pools
 !>
 MODULE mo_q_veg_plant_characteristics
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,             ONLY: debug_on
   USE mo_exception,               ONLY: message, finish
@@ -37,7 +37,7 @@ CONTAINS
   !>update vegetation pools
   !>
   SUBROUTINE update_plant_characteristics(tile, options)
-    USE mo_kind,                            ONLY: wp
+    USE mo_kind,                            ONLY: lp
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
@@ -50,6 +50,7 @@ CONTAINS
     USE mo_jsb_math_constants,              ONLY: one_day, eps8
     USE mo_q_veg_canopy,                    ONLY: calc_canopy_layers
     USE mo_q_veg_growth,                    ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
+    USE mo_q_assimi_config_class,           ONLY: MEDLYN, BALLBERRY
     USE mo_veg_constants,                   ONLY: itree, k_fpc, k_sai2lai
     USE mo_turb_constants,                  ONLY: veg_height_to_rough_momentum, veg_min_roughness
     ! ----------------------------------------------------------------------------------------------------- !
@@ -70,20 +71,20 @@ CONTAINS
     TYPE(t_jsb_vgrid),        POINTER :: vgrid_soil_w           !< Vertical grid
     INTEGER                           :: ncanopy                !< number of canopy layers
     INTEGER                           :: nsoil_w                !< number of soil layers as used/defined by the SB_ process
-    REAL(wp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
-    REAL(wp), ALLOCATABLE             :: vgrid_canopy_ubounds(:)!< canopy grid helper variable ubounds
-    REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp)                          :: dtime                  !< timestep length
+    REAL(lp), DIMENSION(options%nc)   :: leaf_nitrogen          !< helper array for leaf nitrogen
+    REAL(lp), ALLOCATABLE             :: vgrid_canopy_dz(:)     !< canopy grid helper variable dz
+    REAL(lp), ALLOCATABLE             :: vgrid_canopy_lbounds(:)!< canopy grid helper variable lbounds
+    REAL(lp), ALLOCATABLE             :: vgrid_canopy_ubounds(:)!< canopy grid helper variable ubounds
+    REAL(lp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
+    REAL(lp)                          :: dtime                  !< timestep length
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
     INTEGER                           :: ic, is, icanopy        !< looping indices
-    CHARACTER(len=1024)               :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
+    INTEGER                           :: canopy_cond_scheme     !< canopy_conductance_scheme: medlyn / ballberry - q_assimi config
     LOGICAL                           :: flag_optimal_Nfraction !< on/off optimise leaf internal N allocation - q_assimi config
-    REAL(wp) :: config_blending_height
-    REAL(wp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
-    REAL(wp) :: lctlib_wood_density, lctlib_phi_leaf_min, lctlib_k_latosa, lctlib_k0_fn_struc, lctlib_fn_oth_min
-    REAL(wp) :: lctlib_gmin, lctlib_g0, lctlib_t_jmax_omega
+    REAL(lp) :: config_blending_height
+    REAL(lp) :: lctlib_sla, lctlib_np_leaf, lctlib_allom_k1, lctlib_allom_k2
+    REAL(lp) :: lctlib_wood_density, lctlib_phi_leaf_min, lctlib_k_latosa, lctlib_k0_fn_struc, lctlib_fn_oth_min
+    REAL(lp) :: lctlib_gmin, lctlib_g0, lctlib_t_jmax_omega
     INTEGER  :: lctlib_growthform, lctlib_ps_pathway
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_plant_characteristics'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -237,15 +238,15 @@ CONTAINS
     lctlib_g0 = dsl4jsb_Lctlib_param(g0)
     lctlib_t_jmax_omega = dsl4jsb_Lctlib_param(t_jmax_omega)
 
-    canopy_cond_scheme = TRIM(dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme)
+    canopy_cond_scheme = dsl4jsb_Config(Q_ASSIMI_)%canopy_conductance_scheme
     flag_optimal_Nfraction = dsl4jsb_Config(Q_ASSIMI_)%flag_optimal_Nfraction
 
     !>0.9 set g1 according to canopy_conductance_scheme
     !>
     SELECT CASE(canopy_cond_scheme)
-      CASE ("medlyn")
+      CASE (MEDLYN)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_medlyn)
-      CASE ("ballberry")
+      CASE (BALLBERRY)
         lctlib_g1 = dsl4jsb_Lctlib_param(g1_bberry)
     END SELECT
 
@@ -257,9 +258,9 @@ CONTAINS
       lai(ic)      = veg_pool_mt(ix_leaf, ixC, ic) * lctlib_sla
 
       IF (lctlib_growthform == itree) THEN
-        dens_ind(ic) = MAX(0.0_wp, dens_ind(ic) + delta_dens_ind(ic))
+        dens_ind(ic) = MAX(0.0_lp, dens_ind(ic) + delta_dens_ind(ic))
         ! reset delta_dens_ind to zero in cases plant characteristics are updated several times in the timestep
-        delta_dens_ind(ic) = 0.0_wp
+        delta_dens_ind(ic) = 0.0_lp
 
         ! In CANOPY mode dens_ind is zero and height is a pft specific lctlib constant
         IF (dens_ind(ic) > eps8) THEN
@@ -273,7 +274,7 @@ CONTAINS
         END IF
       END IF
 
-      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_wp
+      dphi(ic) = wtr_soil_root_pot(ic) - lctlib_phi_leaf_min - grav * rhoh2o * height(ic) * 1.e-6_lp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -285,7 +286,7 @@ CONTAINS
             sai(ic) = k_sai2lai * veg_pool_mt(ix_sap_wood, ixC, ic) &
               &       * lctlib_k_latosa / lctlib_wood_density / height(ic)
           ELSE
-            sai(ic) = 0.0_wp
+            sai(ic) = 0.0_lp
           END IF
         END DO
       CASE(QCANOPY)
@@ -301,12 +302,12 @@ CONTAINS
     !>
     !$ACC PARALLEL LOOP GANG VECTOR DEFAULT(PRESENT) ASYNC(1)
     DO ic = 1, nc
-      fract_fpc(ic) = 1.0_wp - EXP(-k_fpc * (lai(ic) + sai(ic)))
+      fract_fpc(ic) = 1.0_lp - EXP(-k_fpc * (lai(ic) + sai(ic)))
       ! NOTE use as minimum value for all PFT veg_min_roughness, because
       !      vegetation density and height can change and
       !      therefore a tile occupied by a woody PFT can have a height lower than 10m, implying a rough_m less than 1;
       !      jsbach is using the lctlib parameter MinVegRoughness instead
-      rough_veg_star(ic) = 1._wp / LOG(config_blending_height / MAX((height(ic) / veg_height_to_rough_momentum), &
+      rough_veg_star(ic) = 1._lp / LOG(config_blending_height / MAX((height(ic) / veg_height_to_rough_momentum), &
         &                  veg_min_roughness)) ** 2
     END DO
     !$ACC END PARALLEL LOOP

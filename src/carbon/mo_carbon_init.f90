@@ -14,7 +14,7 @@
 MODULE mo_carbon_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
+  USE mo_kind,              ONLY: lp
   USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -26,6 +26,13 @@ MODULE mo_carbon_init
   dsl4jsb_Use_processes CARBON_
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_memory(CARBON_)
+
+#ifdef _OPENACC
+  use openacc
+#define __acc_attach(ptr) CALL acc_attach(ptr)
+#else
+#define __acc_attach(ptr)
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -129,7 +136,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     !INTEGER :: icarbon
-    REAL(wp), POINTER ::          &
+    REAL(lp), POINTER ::          &
       & return_pointer  (:,  :) , &  !< temporary pointer just used to "call" the reading
       ! & return_pointer3d(:,:,:)
       & memory_pointer  (:,  :)      !< pointer the memory of the current variable of the current tile
@@ -213,13 +220,15 @@ CONTAINS
       CASE ("c_humus_2")
         memory_pointer => CARBON__mem%c_humus_2%ptr
       END SELECT
+      __acc_attach(memory_pointer)
 
       return_pointer => input_file%Read_2d(        &
         & variable_name = invar_name,              &
         & fill_array = memory_pointer )
 
-      memory_pointer(:,:) = &
-        & MERGE( memory_pointer(:,:), 0._wp,  memory_pointer(:,:) >= 0._wp)
+      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
+
+      !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
 
     END DO
 

@@ -15,102 +15,30 @@ MODULE mo_nlcc_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_kind,        ONLY: wp
+  USE mo_kind,        ONLY: lp
   USE mo_exception,   ONLY: message, finish, message_text
   USE mo_jsb_physical_constants, ONLY: tmelt
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_climbuf, bioclim_limits, scale_fpc, potential_tree_fpc, calc_cover_fract_inst
+  PUBLIC :: bioclim_limits, scale_fpc, potential_tree_fpc, calc_cover_fract_inst
   PUBLIC :: fpc_to_cover_fract_pot, cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, fract_small
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_nlcc_process'
-  REAL(wp), PARAMETER :: fract_small = 1.e-10_wp   !! smallest fraction of PFT tiles
-  REAL(wp), PARAMETER :: act_fpc_min = 0.005_wp    !! minimum actual FPC to be considered to calculate potential FPC
-  REAL(wp), PARAMETER :: sum_npp_min = 1.e-12_wp   !! minimum total npp for tree cover
-  REAL(wp), PARAMETER :: tree_fpc_max = 1.0_wp     !! maximum FPC of woody PFTs
-  REAL(wp), PARAMETER :: npp_nonlinearity = 1.5_wp !! parameter controlling the non-linearity in the dynamic equation with
+  REAL(lp), PARAMETER :: fract_small = 1.e-10_lp   !! smallest fraction of PFT tiles
+  REAL(lp), PARAMETER :: act_fpc_min = 0.005_lp    !! minimum actual FPC to be considered to calculate potential FPC
+  REAL(lp), PARAMETER :: sum_npp_min = 1.e-12_lp   !! minimum total npp for tree cover
+  REAL(lp), PARAMETER :: tree_fpc_max = 1.0_lp     !! maximum FPC of woody PFTs
+  REAL(lp), PARAMETER :: npp_nonlinearity = 1.5_lp !! parameter controlling the non-linearity in the dynamic equation with
                                                    !! respect to NPP
-  REAL(wp), PARAMETER :: desert_extend = 0.65_wp   !! parameter controlling the extend of desert
+  REAL(lp), PARAMETER :: desert_extend = 0.65_lp   !! parameter controlling the extend of desert
                                                    !! (the lower the value the more desert)
-  REAL(wp), PARAMETER :: desert_margin = 2._wp     !! parameter controlling the transition from vegetated land to desert
+  REAL(lp), PARAMETER :: desert_margin = 2._lp     !! parameter controlling the transition from vegetated land to desert
                                                    !! (the higher the value the sharper the transition)
-  REAL(wp), PARAMETER :: tau_desert = 50._wp       !! time constant [year] by which the extension of deserts is adapted
+  REAL(lp), PARAMETER :: tau_desert = 50._lp       !! time constant [year] by which the extension of deserts is adapted
 
 CONTAINS
-  !
-  ! ===============================================================================================================================
-  !>
-  !! Compute running averages of climate variables for nlcc
-  !!
-
-  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
-                                          seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-                                          min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
-                                          gdd_sum_year, gdd_prev_year)
-
-    LOGICAL, INTENT(in) :: lstart ! first time step in a simulation
-    LOGICAL, INTENT(in) :: init_running_means ! initialize the min/max temperature climatology
-    LOGICAL, INTENT(in) :: new_day ! first time step in a day
-    LOGICAL, INTENT(in) :: new_month ! firest time step in a month
-    LOGICAL, INTENT(in) :: new_year ! first time step in a year
-    REAL(wp), INTENT(in) :: delta_time ! time step length [s]
-    REAL(wp), INTENT(in) :: seconds_day ! lenght of a day [s]
-    REAL(wp), INTENT(in) :: seconds_month ! length of the previous month [s]
-    REAL(wp), INTENT(in) :: t_air ! air temperature of lowest atmosphere level [K]
-    REAL(wp), INTENT(inout) :: temp_sum_day
-    REAL(wp), INTENT(inout) :: temp_sum_month
-    REAL(wp), INTENT(inout) :: min_mmtemp_of_yr ! temperature of coldest month of previous year [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp_of_yr ! temperature of warmest month of previous year [K]
-    REAL(wp), INTENT(inout) :: min_mmtemp20 ! temperature of coldest month climatology [K]
-    REAL(wp), INTENT(inout) :: max_mmtemp20 ! temperature of warmest month climatology [K]
-    REAL(wp), INTENT(inout) :: gdd_sum_year ! growing degree days of current year [C]
-    REAL(wp), INTENT(inout) :: gdd_prev_year ! growing degree days of previous year [C]
-
-!   local variables
-    REAL(wp) :: prev_day_mean_temp   ! air temperature of previous day [K]
-    REAL(wp) :: prev_month_mean_temp ! air temperature of previous month [K]
-
-
-    IF (new_year) THEN
-       gdd_prev_year = gdd_sum_year
-       gdd_sum_year = 0._wp
-    ENDIF
-
-    IF (.NOT. new_day .OR. lstart) THEN
-       temp_sum_day = temp_sum_day + t_air * delta_time
-    ELSE
-       prev_day_mean_temp = temp_sum_day / seconds_day
-       temp_sum_day = t_air * delta_time
-       gdd_sum_year = gdd_sum_year + MAX(0._wp,prev_day_mean_temp - tmelt - 5._wp)
-    ENDIF
-
-    IF (.NOT. new_month .OR. lstart) THEN
-       temp_sum_month = temp_sum_month + t_air * delta_time
-    ELSE
-       prev_month_mean_temp = temp_sum_month / seconds_month
-       temp_sum_month = t_air * delta_time
-       ! --- minimum/maximum monthly mean temperature (20 year climatology)
-       ! --- calculate coldest/warmest month of the year so far
-       min_mmtemp_of_yr = min(min_mmtemp_of_yr, prev_month_mean_temp)
-       max_mmtemp_of_yr = max(max_mmtemp_of_yr, prev_month_mean_temp)
-       IF (new_year) THEN
-          ! --- build 20yr running mean of coldest and warmest monthly temperature
-          IF (init_running_means) THEN
-             min_mmtemp20 = min_mmtemp_of_yr
-             max_mmtemp20 = max_mmtemp_of_yr
-          ELSE
-             min_mmtemp20 = (min_mmtemp20 * 19._wp + min_mmtemp_of_yr) / 20._wp
-             max_mmtemp20 = (max_mmtemp20 * 19._wp + max_mmtemp_of_yr) / 20._wp
-          ENDIF
-          ! --- reset for current year
-          min_mmtemp_of_yr =  1000._wp
-          max_mmtemp_of_yr = -1000._wp
-       END IF ! new_year
-    END IF ! new_month
-
-  END SUBROUTINE calc_climbuf
 
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
@@ -124,26 +52,26 @@ CONTAINS
 
 ! input
     LOGICAL,  INTENT(in)  :: is_dynamic        ! mask indicating whether a PFT is subject to vegetation dynamics
-    REAL(wp), INTENT(in)  :: lct_tcmin         ! PFT-specific minimum coldest-month temperature limit [C]
-    REAL(wp), INTENT(in)  :: lct_tcmax         ! PFT-specific maximum coldest-month temperature limit [C]
-    REAL(wp), INTENT(in)  :: lct_twmax         ! PFT-specific maximum warmest-month temperature limit [C]
-    REAL(wp), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
+    REAL(lp), INTENT(in)  :: lct_tcmin         ! PFT-specific minimum coldest-month temperature limit [C]
+    REAL(lp), INTENT(in)  :: lct_tcmax         ! PFT-specific maximum coldest-month temperature limit [C]
+    REAL(lp), INTENT(in)  :: lct_twmax         ! PFT-specific maximum warmest-month temperature limit [C]
+    REAL(lp), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
                                                ! minus coldest month temperature [C]
-    REAL(wp), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
-    REAL(wp), INTENT(in)  :: min_mmtemp20      ! Minimum monthly mean temp. (20yr climatology) [K]
-    REAL(wp), INTENT(in)  :: max_mmtemp20      ! Maximum monthly mean temp. (20yr climatology) [K]
-    REAL(wp), INTENT(in)  :: gdd_prev_year     ! GDD of previous year
+    REAL(lp), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
+    REAL(lp), INTENT(in)  :: min_mmtemp20      ! Minimum monthly mean temp. (20yr climatology) [K]
+    REAL(lp), INTENT(in)  :: max_mmtemp20      ! Maximum monthly mean temp. (20yr climatology) [K]
+    REAL(lp), INTENT(in)  :: gdd_prev_year     ! GDD of previous year
 
 ! output
-    REAL(wp), INTENT(inout) :: bio_exist
+    REAL(lp), INTENT(inout) :: bio_exist
 
 !------------------------------------------------------------------------------
 
-    bio_exist = 1._wp
+    bio_exist = 1._lp
 
     IF (is_dynamic .AND. (min_mmtemp20 - tmelt < lct_tcmin .OR. min_mmtemp20 - tmelt > lct_tcmax  &
        .OR. gdd_prev_year < lct_gddmin .OR. max_mmtemp20 - tmelt > lct_twmax                      &
-       .OR. (max_mmtemp20 - min_mmtemp20) < lct_min_temprange)) bio_exist = 0._wp
+       .OR. (max_mmtemp20 - min_mmtemp20) < lct_min_temprange)) bio_exist = 0._lp
 
   END SUBROUTINE bioclim_limits
 
@@ -163,24 +91,24 @@ CONTAINS
     INTEGER,  INTENT(in)  :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:) ! flag indicating dynamic PFTs
     LOGICAL,  INTENT(in)  :: is_woody(:,:)   ! flag indicating woody PFTs
-    REAL(wp), INTENT(in)  :: bio_exist(:,:)  ! bio_exist=1. indicates that all bio-climatic limits are fulfilled
-    REAL(wp), INTENT(in)  :: npp_ave(:,:)    ! NPP averaged over 5 years
-    REAL(wp), INTENT(in)  :: act_fpc(:,:)    ! actual foliage projective cover
+    REAL(lp), INTENT(in)  :: bio_exist(:,:)  ! bio_exist=1. indicates that all bio-climatic limits are fulfilled
+    REAL(lp), INTENT(in)  :: npp_ave(:,:)    ! NPP averaged over 5 years
+    REAL(lp), INTENT(in)  :: act_fpc(:,:)    ! actual foliage projective cover
 
 ! output
-    REAL(wp), INTENT(out) :: pot_fpc(:,:)
+    REAL(lp), INTENT(out) :: pot_fpc(:,:)
 
 ! local variables
     INTEGER           :: i, itile
-    REAL(wp)          :: sum_npp(nidx)
+    REAL(lp)          :: sum_npp(nidx)
 
 ! summing up NPP
-    sum_npp(:) = 0._wp
+    sum_npp(:) = 0._lp
 
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_woody(i,itile) .AND. is_dynamic(i,itile) .AND. &
-           npp_ave(i,itile) > sum_npp_min .AND. bio_exist(i,itile) > 0.5_wp) &
+           npp_ave(i,itile) > sum_npp_min .AND. bio_exist(i,itile) > 0.5_lp) &
            sum_npp(i) = sum_npp(i) + npp_ave(i,itile) ** npp_nonlinearity * MAX(act_fpc_min,act_fpc(i,itile))
        END DO
     END DO
@@ -189,11 +117,11 @@ CONTAINS
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_woody(i,itile) .AND. is_dynamic(i,itile) .AND. npp_ave(i,itile) > sum_npp_min .AND. &
-              bio_exist(i,itile) > 0.5_wp) THEN
+              bio_exist(i,itile) > 0.5_lp) THEN
              pot_fpc(i,itile) = npp_ave(i,itile) ** npp_nonlinearity / sum_npp(i) * &
                                 tree_fpc_max * MAX(act_fpc_min,act_fpc(i,itile))
           ELSE
-             pot_fpc(i,itile) = 0._wp
+             pot_fpc(i,itile) = 0._lp
           END IF
        END DO
     END DO
@@ -216,20 +144,20 @@ CONTAINS
     INTEGER,  INTENT(in)  :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:) !
     LOGICAL,  INTENT(in)  :: is_woody(:,:)   !
-    REAL(wp), INTENT(in)  :: act_fpc(:,:)    ! actual fpc in nlcc
-    REAL(wp), INTENT(in)  :: bare_fpc(:)     ! nlcc bare soil fraction
+    REAL(lp), INTENT(in)  :: act_fpc(:,:)    ! actual fpc in nlcc
+    REAL(lp), INTENT(in)  :: bare_fpc(:)     ! nlcc bare soil fraction
 ! output
-    REAL(wp), INTENT(out) :: cover_fract_pot(:,:) ! cover fractions if there was only natural vegetation
+    REAL(lp), INTENT(out) :: cover_fract_pot(:,:) ! cover fractions if there was only natural vegetation
 
 ! local variables
     INTEGER   :: i, itile
-    REAL(wp)  :: sum_grass_fpc(nidx)     ! part of the vegetated area covered by grass
+    REAL(lp)  :: sum_grass_fpc(nidx)     ! part of the vegetated area covered by grass
 
 ! -- initialization
-    cover_fract_pot(:,:) = 0._wp
+    cover_fract_pot(:,:) = 0._lp
 
 ! -- find out fpc of grass
-    sum_grass_fpc(:) = 0._wp
+    sum_grass_fpc(:) = 0._lp
 
     DO i = 1,nidx
       DO itile = 1,ntiles
@@ -245,7 +173,7 @@ CONTAINS
              IF (is_woody(i,itile)) THEN
                 cover_fract_pot(i,itile) = act_fpc(i,itile)
              ELSE
-                cover_fract_pot(i,itile) = act_fpc(i,itile) * (1._wp + bare_fpc(i) / MAX(sum_grass_fpc(i),EPSILON(1._wp)))
+                cover_fract_pot(i,itile) = act_fpc(i,itile) * (1._lp + bare_fpc(i) / MAX(sum_grass_fpc(i),EPSILON(1._lp)))
              END IF
           END IF
        END DO
@@ -253,8 +181,8 @@ CONTAINS
 
     CALL scale_cover_fract (nidx, ntiles, is_dynamic(:,:), cover_fract_pot(:,:))
 
-    IF (ANY(SUM(cover_fract_pot(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR. &
-        ANY(SUM(cover_fract_pot(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract_pot(:,:),DIM=2) > 1._lp + REAL(ntiles,lp)*EPSILON(1._lp)) .OR. &
+        ANY(SUM(cover_fract_pot(:,:),DIM=2) < 1._lp - REAL(ntiles,lp)*EPSILON(1._lp))) THEN
        WRITE (message_text,*) 'sum of cover_fract_pot /= 1: ', &
             MINVAL(SUM(cover_fract_pot(:,:),DIM=2)), MAXVAL(SUM(cover_fract_pot(:,:),DIM=2)), &
             MAXLOC(SUM(cover_fract_pot(:,:),DIM=2))
@@ -295,52 +223,52 @@ CONTAINS
     LOGICAL,  INTENT(in)  :: is_woody(:,:)        ! PFTs that build wood
     LOGICAL,  INTENT(in)  :: is_pasture(:,:)      ! logical mask for pasture
     LOGICAL,  INTENT(in)  :: is_crop(:,:)         ! logical mask for crops
-    REAL(wp), INTENT(in)  :: cover_fract_pot(:,:) ! cover fractions if there was only natural vegetation
-    REAL(wp), INTENT(in)  :: cover_fract_pot_previous_year(:,:) ! last years cover_fract_pot
+    REAL(lp), INTENT(in)  :: cover_fract_pot(:,:) ! cover fractions if there was only natural vegetation
+    REAL(lp), INTENT(in)  :: cover_fract_pot_previous_year(:,:) ! last years cover_fract_pot
 
 ! inout
-    REAL(wp), INTENT(inout) :: cover_fract(:,:)  ! cover fraction within jsbach
+    REAL(lp), INTENT(inout) :: cover_fract(:,:)  ! cover fraction within jsbach
 
 ! local variables
 
     INTEGER   :: i, itile
     INTEGER   :: nwoody(nidx)                   ! number of woody PFTs
-    REAL(wp)  :: nexcluded(nidx)                ! number of non-dynamic PFTs (crops, pastures)
-    REAL(wp)  :: cover_fract_inst(nidx,ntiles)  ! cover fractions that would result from an instantanous implementation of
+    REAL(lp)  :: nexcluded(nidx)                ! number of non-dynamic PFTs (crops, pastures)
+    REAL(lp)  :: cover_fract_inst(nidx,ntiles)  ! cover fractions that would result from an instantanous implementation of
                                                 ! land use change and vegetation dynamics
-    REAL(wp)  :: excluded_fract(nidx)           ! fraction of the vegetated part of the grid box not considered for vegetation
+    REAL(lp)  :: excluded_fract(nidx)           ! fraction of the vegetated part of the grid box not considered for vegetation
                                                 ! dynamics (e.g. agricultural areas)
-    REAL(wp)  :: sum_woody_fract(nidx)          ! fraction of the vegetated part of the grid box covered by woody plants
-    REAL(wp)  :: sum_grass_fract(nidx)          ! fraction of the vegetated part of the grid box covered by grass
-    REAL(wp)  :: sum_woody_fract_inst(nidx)     ! fraction of the vegetated part of the grid box covered by woody plants
+    REAL(lp)  :: sum_woody_fract(nidx)          ! fraction of the vegetated part of the grid box covered by woody plants
+    REAL(lp)  :: sum_grass_fract(nidx)          ! fraction of the vegetated part of the grid box covered by grass
+    REAL(lp)  :: sum_woody_fract_inst(nidx)     ! fraction of the vegetated part of the grid box covered by woody plants
                                                 ! based on cover_fract_inst
-    REAL(wp)  :: sum_woody_fract_pot(nidx)      ! woody fraction of the vegetated part of the grid box considering natural
+    REAL(lp)  :: sum_woody_fract_pot(nidx)      ! woody fraction of the vegetated part of the grid box considering natural
                                                 ! vegetation, only
-    REAL(wp)  :: sum_grass_fract_pot(nidx)      ! grass fraction of the vegetated part of the grid box considering natural
+    REAL(lp)  :: sum_grass_fract_pot(nidx)      ! grass fraction of the vegetated part of the grid box considering natural
                                                 ! vegetation, only
-    REAL(wp)  :: sum_woody_fract_old(nidx)      ! fraction of the vegetated part of the grid box covered by woody plants
+    REAL(lp)  :: sum_woody_fract_old(nidx)      ! fraction of the vegetated part of the grid box covered by woody plants
                                                 ! (based on act_fpc_previous_year) that would have resulted from an
                                                 ! instantaneous establishment of crop land and pasture
-    REAL(wp)  :: sum_woody_fract_act(nidx)      ! fraction of the vegetated part of the grid box covered by woody plants
-    REAL(wp)  :: sum_grass_fract_act(nidx)      ! fraction of the vegetated part of the grid box covered by grasses
-    REAL(wp)  :: delta_woody(nidx)              ! deviation of the fraction of the vegetated part of the grid box covered
+    REAL(lp)  :: sum_woody_fract_act(nidx)      ! fraction of the vegetated part of the grid box covered by woody plants
+    REAL(lp)  :: sum_grass_fract_act(nidx)      ! fraction of the vegetated part of the grid box covered by grasses
+    REAL(lp)  :: delta_woody(nidx)              ! deviation of the fraction of the vegetated part of the grid box covered
                                                 ! by woody plants from the fraction that would result from an instantaneous
                                                 !  establishment of crop land and pasture
 
     !-- find out number of woody types and number of exculded types
     nwoody(:) = 0
-    nexcluded(:) = 0._wp
+    nexcluded(:) = 0._lp
     DO i=1,nidx
        DO itile = 1,ntiles
           IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) nwoody(i) = nwoody(i) + 1
-          IF (.NOT. is_dynamic(i,itile)) nexcluded(i) = nexcluded(i) + 1._wp
+          IF (.NOT. is_dynamic(i,itile)) nexcluded(i) = nexcluded(i) + 1._lp
        ENDDO
     ENDDO
 
     !-- Sum up cover fractions of woody types, grasses and fractions not affected by NLCC.
-    sum_woody_fract(:) = 0._wp
-    sum_grass_fract(:) = 0._wp
-    excluded_fract(:) = 0._wp
+    sum_woody_fract(:) = 0._lp
+    sum_grass_fract(:) = 0._lp
+    excluded_fract(:) = 0._lp
 
     DO i = 1,nidx
        DO itile = 1,ntiles
@@ -355,8 +283,8 @@ CONTAINS
     END DO
 
     !-- Sum up woody and grass fractions of the potential natural vegetation based on current vegetation dynamics
-    sum_woody_fract_pot(:) = 0._wp
-    sum_grass_fract_pot(:) = 0._wp
+    sum_woody_fract_pot(:) = 0._lp
+    sum_grass_fract_pot(:) = 0._lp
 
     DO i = 1,nidx
        DO itile = 1,ntiles
@@ -373,7 +301,7 @@ CONTAINS
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot_previous_year(:,:), cover_fract(:,:), cover_fract_inst(:,:))
 
-    sum_woody_fract_old(:) = 0._wp
+    sum_woody_fract_old(:) = 0._lp
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_woody(i,itile) .AND. is_dynamic(i,itile)) &
@@ -386,7 +314,7 @@ CONTAINS
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot(:,:), cover_fract(:,:), cover_fract_inst(:,:))
 
-    sum_woody_fract_inst(:) = 0._wp
+    sum_woody_fract_inst(:) = 0._lp
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_woody(i,itile) .AND. is_dynamic(i,itile)) THEN
@@ -402,29 +330,29 @@ CONTAINS
     !   The idea of this routine is, to allow shifts in forest fractions only if they reduce the imbalance between nlcc
     !   and landuse change.
     DO i = 1,nidx
-       IF (sum_woody_fract(i) - sum_woody_fract_old(i) > 0._wp) THEN
+       IF (sum_woody_fract(i) - sum_woody_fract_old(i) > 0._lp) THEN
           ! -- woody fraction of cover_fract entering the routine (last updated by last years land use change) is greater
           !    than the the woody fraction resulting from last years potential vegetation and instantanous establishment of
           !    crops and pastures. Thus there is an inbalance, the woody fraction of cover_fract is too high.
-          IF (sum_woody_fract_inst(i) - sum_woody_fract_old(i) > 0._wp) THEN
+          IF (sum_woody_fract_inst(i) - sum_woody_fract_old(i) > 0._lp) THEN
              ! -- vegetation dynamics even enlarge woody fraction
              !    ==> no change in actual woody fraction, unless the enlargement by vegetation dynamics exceeds the initial
              !        woody surplus
-             delta_woody(i) = MAX(0._wp, sum_woody_fract_inst(i) - sum_woody_fract(i))
+             delta_woody(i) = MAX(0._lp, sum_woody_fract_inst(i) - sum_woody_fract(i))
           ELSE
              ! -- vegetation dynamics shrink woody fraction
              delta_woody(i) = sum_woody_fract_inst(i) - sum_woody_fract_old(i)
           END IF
        ELSE
           ! -- The woody fraction of cover_fract is too small
-          IF (sum_woody_fract_inst(i) - sum_woody_fract_old(i) > 0._wp) THEN
+          IF (sum_woody_fract_inst(i) - sum_woody_fract_old(i) > 0._lp) THEN
              ! -- vegetation dynamics enlarge woody fraction
              delta_woody(i) = sum_woody_fract_inst(i) - sum_woody_fract_old(i)
           ELSE
              ! -- vegetation dynamics shrink woody fraction
              !    ==> no change in actual woody fraction, unless the reduction by vegetation dynamics exceeds the initial
              !        woody deficit
-             delta_woody(i) = MIN(0._wp, sum_woody_fract_inst(i) - sum_woody_fract(i))
+             delta_woody(i) = MIN(0._lp, sum_woody_fract_inst(i) - sum_woody_fract(i))
           END IF
        END IF
 
@@ -438,7 +366,7 @@ CONTAINS
                                     sum_woody_fract(i) + delta_woody(i)))
     END DO
 
-    sum_grass_fract_act(:) = 1._wp - sum_woody_fract_act(:) - excluded_fract(:)
+    sum_grass_fract_act(:) = 1._lp - sum_woody_fract_act(:) - excluded_fract(:)
 
     !-- Use actual woody fraction to determine all actual fractions
     DO i = 1,nidx
@@ -456,8 +384,8 @@ CONTAINS
     CALL scale_cover_fract(nidx, ntiles, is_dynamic(:,:), cover_fract(:,:))
 
     !-- Stop simulation, if sum of cover fractions is not equal to 1 or a cover fraction is smaller than fract_small
-    IF (  ANY(SUM(cover_fract(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR.   &
-       &  ANY(SUM(cover_fract(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
+    IF (  ANY(SUM(cover_fract(:,:),DIM=2) > 1._lp + REAL(ntiles,lp)*EPSILON(1._lp)) .OR.   &
+       &  ANY(SUM(cover_fract(:,:),DIM=2) < 1._lp - REAL(ntiles,lp)*EPSILON(1._lp))) THEN
        WRITE (message_text,*) 'sum of cover_fract /= 1: ', &
          &   MINVAL(SUM(cover_fract(:,:),DIM=2)), MAXVAL(SUM(cover_fract(:,:),DIM=2)), ', MINLOC: ', &
          &   MINLOC(SUM(cover_fract(:,:),DIM=2)), ', MAXLOC: ', MAXLOC(SUM(cover_fract(:,:),DIM=2))
@@ -490,32 +418,32 @@ CONTAINS
     INTEGER,  INTENT(in)  :: nidx              ! vector length
     INTEGER,  INTENT(in)  :: ntiles            ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: init_running_means! initialisation of sum_green_bio_memory
-    REAL(wp), INTENT(in)  :: accelerate_nlcc   ! acceleration factor for vegetation and desert dynamics
+    REAL(lp), INTENT(in)  :: accelerate_nlcc   ! acceleration factor for vegetation and desert dynamics
     LOGICAL,  INTENT(in)  :: is_woody(:,:)     ! flag to label a woody PFT
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:)   ! flag to label PFTs that take part in the natural vegetation dynamics
-    REAL(wp), INTENT(in)  :: act_fpc(:,:)      ! actual FPC
-    REAL(wp), INTENT(in)  :: bare_fpc(:)       ! bare FPC
-    REAL(wp), INTENT(in)  :: sla(:,:)          ! specific leaf area
-    REAL(wp), INTENT(in)  :: max_green_bio(:,:)! maximum value of green biomass within a year
+    REAL(lp), INTENT(in)  :: act_fpc(:,:)      ! actual FPC
+    REAL(lp), INTENT(in)  :: bare_fpc(:)       ! bare FPC
+    REAL(lp), INTENT(in)  :: sla(:,:)          ! specific leaf area
+    REAL(lp), INTENT(in)  :: max_green_bio(:,:)! maximum value of green biomass within a year
 
 ! input/output
-    REAL(wp), INTENT(inout) :: sum_green_bio_memory(:) ! vegetated fraction calculated from green biomass
+    REAL(lp), INTENT(inout) :: sum_green_bio_memory(:) ! vegetated fraction calculated from green biomass
 
 ! output
-    REAL(wp), INTENT(out) :: desert_fpc(:) ! desert FPC
+    REAL(lp), INTENT(out) :: desert_fpc(:) ! desert FPC
 
 ! local variables
     INTEGER           :: i, itile
-    REAL(wp)          :: sum_green_bio(nidx)
-    REAL(wp)          :: sum_act_fpc(nidx)
-    REAL(wp)          :: sum_grass_fpc(nidx)
+    REAL(lp)          :: sum_green_bio(nidx)
+    REAL(lp)          :: sum_act_fpc(nidx)
+    REAL(lp)          :: sum_grass_fpc(nidx)
     INTEGER           :: n_grass_pft(nidx)
 
 !------------------------------------------------------------------------------
 
-    sum_green_bio(:) = 0._wp
-    sum_act_fpc(:) = 0._wp
-    sum_grass_fpc(:) = 0._wp
+    sum_green_bio(:) = 0._lp
+    sum_act_fpc(:) = 0._lp
+    sum_grass_fpc(:) = 0._lp
     n_grass_pft(:) = 0
 
     DO i = 1,nidx
@@ -530,39 +458,39 @@ CONTAINS
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_woody(i,itile) .AND. is_dynamic(i,itile)) THEN
-             sum_green_bio(i) = sum_green_bio(i) + MAX(0._wp, act_fpc(i,itile) * (1._wp -          &
+             sum_green_bio(i) = sum_green_bio(i) + MAX(0._lp, act_fpc(i,itile) * (1._lp -          &
                exp(-desert_extend * ((max_green_bio(i,itile) * sla(i,itile)) ** desert_margin) /   &
-               (3._wp ** (desert_margin - 1._wp)))))
+               (3._lp ** (desert_margin - 1._lp)))))
              sum_act_fpc(i) = sum_act_fpc(i) + act_fpc(i,itile)
           ELSE IF (.NOT. is_woody(i,itile) .AND. is_dynamic(i,itile)) THEN
-             IF (sum_grass_fpc(i) > EPSILON(1._wp)) THEN
+             IF (sum_grass_fpc(i) > EPSILON(1._lp)) THEN
                 sum_green_bio(i) = sum_green_bio(i) +                                              &
-                 MAX(0._wp, act_fpc(i,itile) * (1._wp + bare_fpc(i) / sum_grass_fpc(i)) * (1._wp - &
+                 MAX(0._lp, act_fpc(i,itile) * (1._lp + bare_fpc(i) / sum_grass_fpc(i)) * (1._lp - &
                  exp(-desert_extend * ((max_green_bio(i,itile) * sla(i,itile)) ** desert_margin) / &
-                (3._wp ** (desert_margin - 1._wp)))))
-                sum_act_fpc(i) = sum_act_fpc(i) + act_fpc(i,itile) * (1._wp + bare_fpc(i) / sum_grass_fpc(i))
+                (3._lp ** (desert_margin - 1._lp)))))
+                sum_act_fpc(i) = sum_act_fpc(i) + act_fpc(i,itile) * (1._lp + bare_fpc(i) / sum_grass_fpc(i))
              ELSE
                 sum_green_bio(i) = sum_green_bio(i) +                                              &
-                 MAX(0._wp, (bare_fpc(i) / REAL(n_grass_pft(i),wp)) * (1._wp -                     &
+                 MAX(0._lp, (bare_fpc(i) / REAL(n_grass_pft(i),lp)) * (1._lp -                     &
                  exp(-desert_extend * ((max_green_bio(i,itile) * sla(i,itile)) ** desert_margin) / &
-                 (3._wp ** (desert_margin - 1._wp)))))
-                sum_act_fpc(i) = sum_act_fpc(i) + (bare_fpc(i) / REAL(n_grass_pft(i),wp))
+                 (3._lp ** (desert_margin - 1._lp)))))
+                sum_act_fpc(i) = sum_act_fpc(i) + (bare_fpc(i) / REAL(n_grass_pft(i),lp))
              END IF
           END IF
        END DO
     END DO
 
-    WHERE (sum_act_fpc(:) > EPSILON(1._wp))
+    WHERE (sum_act_fpc(:) > EPSILON(1._lp))
        sum_green_bio(:) = sum_green_bio(:) / sum_act_fpc(:)
     END WHERE
     IF (init_running_means) THEN
        sum_green_bio_memory(:) = sum_green_bio(:)
     ELSE
-       sum_green_bio_memory(:) = (sum_green_bio_memory(:) * (tau_desert/accelerate_nlcc - 1._wp) + sum_green_bio(:)) &
+       sum_green_bio_memory(:) = (sum_green_bio_memory(:) * (tau_desert/accelerate_nlcc - 1._lp) + sum_green_bio(:)) &
                                  / (tau_desert/accelerate_nlcc)
     END IF
 
-    desert_fpc(:) = MIN(1._wp - 2._wp * EPSILON(1._wp),MAX(0._wp,1._wp - sum_green_bio_memory(:)))
+    desert_fpc(:) = MIN(1._lp - 2._lp * EPSILON(1._lp),MAX(0._lp,1._lp - sum_green_bio_memory(:)))
 
   END SUBROUTINE desert_fraction
 
@@ -577,34 +505,34 @@ CONTAINS
 ! input
     INTEGER,         INTENT(in) :: nidx            ! vector length
     INTEGER,         INTENT(in) :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
-    REAL(wp),        INTENT(in) :: accelerate_nlcc ! factor to accellerate vegetation and desert dynamics
+    REAL(lp),        INTENT(in) :: accelerate_nlcc ! factor to accellerate vegetation and desert dynamics
     LOGICAL,         INTENT(in) :: is_woody(:,:)
     LOGICAL,         INTENT(in) :: is_dynamic(:,:)
-    REAL(wp),        INTENT(in) :: tau_Cpool_woods(:,:) ! lifetime of Cpool_woods [days]
-    REAL(wp),        INTENT(in) :: npp_ave(:,:)
-    REAL(wp),        INTENT(in) :: bio_exist(:,:)
-    REAL(wp),        INTENT(in) :: burned_fract(:,:)
-    REAL(wp),        INTENT(in) :: damaged_fract(:,:)
-    REAL(wp),        INTENT(in) :: pot_fpc(:,:)
+    REAL(lp),        INTENT(in) :: tau_Cpool_woods(:,:) ! lifetime of Cpool_woods [days]
+    REAL(lp),        INTENT(in) :: npp_ave(:,:)
+    REAL(lp),        INTENT(in) :: bio_exist(:,:)
+    REAL(lp),        INTENT(in) :: burned_fract(:,:)
+    REAL(lp),        INTENT(in) :: damaged_fract(:,:)
+    REAL(lp),        INTENT(in) :: pot_fpc(:,:)
 
 ! inout
-    REAL(wp), INTENT(inout) :: act_fpc(:,:)
-    REAL(wp), INTENT(inout) :: bare_fpc(:)
-    REAL(wp), INTENT(inout), optional :: fuel(:)
+    REAL(lp), INTENT(inout) :: act_fpc(:,:)
+    REAL(lp), INTENT(inout) :: bare_fpc(:)
+    REAL(lp), INTENT(inout), optional :: fuel(:)
 
 ! local variables
     INTEGER     :: i, j, itile
-    REAL(wp)    :: act_fpc_previous_day(nidx,ntiles)
-    REAL(wp)    :: total_act_fpc(nidx)
-    REAL(wp)    :: grass_sum(nidx)
-    REAL(wp)    :: non_woody_fpc(nidx)
-    REAL(wp)    :: woody_estab_fpc(nidx)
-    REAL(wp)    :: theta, veg_inc, tau_pft
-    REAL(wp), PARAMETER  ::  min_dist_woody = 0.002_wp / 365._wp !! mortality of woody plants (not caused by fire/windthrow,
+    REAL(lp)    :: act_fpc_previous_day(nidx,ntiles)
+    REAL(lp)    :: total_act_fpc(nidx)
+    REAL(lp)    :: grass_sum(nidx)
+    REAL(lp)    :: non_woody_fpc(nidx)
+    REAL(lp)    :: woody_estab_fpc(nidx)
+    REAL(lp)    :: theta, veg_inc, tau_pft
+    REAL(lp), PARAMETER  ::  min_dist_woody = 0.002_lp / 365._lp !! mortality of woody plants (not caused by fire/windthrow,
                                                                  !! but by other unresolved processes)
-    REAL(wp), PARAMETER  ::  grass_mortality = 0.01_wp / 365._wp !! grass mortality (not caused by fire, but by other
+    REAL(lp), PARAMETER  ::  grass_mortality = 0.01_lp / 365._lp !! grass mortality (not caused by fire, but by other
                                                                  !! unresolved processes)
-    REAL(wp), PARAMETER  ::  tau_Cpool_woods_to_tau_pft = 1._wp
+    REAL(lp), PARAMETER  ::  tau_Cpool_woods_to_tau_pft = 1._lp
 
     ! initialisations
 
@@ -613,10 +541,10 @@ CONTAINS
 
     DO itile = 1,ntiles
        DO i = 1,nidx
-!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) burned_local(i,itile) = 3.e-5_wp
-!!$ TR          IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) burned_local(i,itile) = 1.e-4_wp
-!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) damaged_local(i,itile) = 1.e-5_wp
-          IF (.NOT. is_dynamic(i,itile)) act_fpc(i,itile) = 0._wp
+!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) burned_local(i,itile) = 3.e-5_lp
+!!$ TR          IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) burned_local(i,itile) = 1.e-4_lp
+!!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) damaged_local(i,itile) = 1.e-5_lp
+          IF (.NOT. is_dynamic(i,itile)) act_fpc(i,itile) = 0._lp
           IF (.NOT. is_woody(i,itile)) non_woody_fpc(i) = non_woody_fpc(i) + act_fpc(i,itile)
        END DO
     END DO
@@ -624,13 +552,13 @@ CONTAINS
     !-- adjust grass fractions to changes in woody type fpc
 
     !-- reset temporary arrays
-    grass_sum(:)     = 0._wp
+    grass_sum(:)     = 0._lp
 
     !-- temporary sums for grass types
     DO itile = 1,ntiles
        DO i = 1,nidx
-          IF (.NOT. is_woody(i,itile) .AND. is_dynamic(i,itile) .AND. bio_exist(i,itile) > 0.5_wp .AND. &
-              npp_ave(i,itile) > EPSILON(1._wp)) THEN
+          IF (.NOT. is_woody(i,itile) .AND. is_dynamic(i,itile) .AND. bio_exist(i,itile) > 0.5_lp .AND. &
+              npp_ave(i,itile) > EPSILON(1._lp)) THEN
             grass_sum(i) = grass_sum(i) + npp_ave(i,itile) * MAX(act_fpc_min,act_fpc(i,itile))
           END IF
        END DO
@@ -648,7 +576,7 @@ CONTAINS
     !-- dynamic equation for act_fpc, woody types
 
     DO i = 1,nidx
-      veg_inc = 0._wp
+      veg_inc = 0._lp
       DO itile = 1,ntiles
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
@@ -657,7 +585,7 @@ CONTAINS
           - (burned_fract(i,itile) + damaged_fract(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile))) &
           - act_fpc(i,itile)
         ELSEIF(is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
-          IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
+          IF (bio_exist(i,itile) > 0.5_lp .AND. npp_ave(i,itile) > EPSILON(1._lp)) THEN
             veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
             (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
             grass_mortality * act_fpc(i,itile) - &
@@ -671,8 +599,8 @@ CONTAINS
           ENDIF
         ENDIF
       END DO
-      theta = 1._wp
-      IF (bare_fpc(i) < (veg_inc + fract_small)) theta = 0._wp
+      theta = 1._lp
+      IF (bare_fpc(i) < (veg_inc + fract_small)) theta = 0._lp
       DO itile = 1,ntiles
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
@@ -689,7 +617,7 @@ CONTAINS
       DO itile = 1,ntiles
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
-          IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
+          IF (bio_exist(i,itile) > 0.5_lp .AND. npp_ave(i,itile) > EPSILON(1._lp)) THEN
             act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
                (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
                grass_mortality * act_fpc(i,itile) - &
@@ -705,7 +633,7 @@ CONTAINS
 
     !-- calculate total area fraction covered by dynamic vegetation
 
-    total_act_fpc(:) = 0._wp
+    total_act_fpc(:) = 0._lp
 
     DO itile = 1,ntiles
        DO i = 1,nidx
@@ -715,7 +643,7 @@ CONTAINS
 
     !-- calculation of bare soil fraction
 
-    bare_fpc(:) = MAX(0._wp,1._wp - total_act_fpc(:))
+    bare_fpc(:) = MAX(0._lp,1._lp - total_act_fpc(:))
 
   END SUBROUTINE fpc_daily
 
@@ -735,17 +663,17 @@ CONTAINS
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:) ! PFTs taking part in competition
 
 ! inout
-    REAL(wp), INTENT(inout) :: act_fpc(:,:) ! actual fpc in nlcc
-    REAL(wp), INTENT(inout) :: bare_fpc(:)  ! fraction of bare ground
+    REAL(lp), INTENT(inout) :: act_fpc(:,:) ! actual fpc in nlcc
+    REAL(lp), INTENT(inout) :: bare_fpc(:)  ! fraction of bare ground
 
 ! local variables
     LOGICAL   :: just_return
     INTEGER   :: i, itile       ! indices
     INTEGER   :: nsparce(nidx)  ! number of PFTs with less then fract_small vegetation
-    REAL(wp)  :: sum_fpc(nidx)  ! sum of the different cover fractions
-    REAL(wp)  :: excess         ! extra fraction, that needs to be redistibuted
-    REAL(wp)  :: scalable       ! sum of fraction of tiles that can be scaled
-    REAL(wp)  :: rescale        ! factor to rescale fraction of tiles
+    REAL(lp)  :: sum_fpc(nidx)  ! sum of the different cover fractions
+    REAL(lp)  :: excess         ! extra fraction, that needs to be redistibuted
+    REAL(lp)  :: scalable       ! sum of fraction of tiles that can be scaled
+    REAL(lp)  :: rescale        ! factor to rescale fraction of tiles
 
     ! test, if scaling is necessary
     just_return = .true.
@@ -756,7 +684,7 @@ CONTAINS
           IF (is_dynamic(i,itile) .AND. &
               act_fpc(i,itile) < fract_small) just_return = .false.
        END DO
-       IF (ABS(1._wp - sum_fpc(i)) > 3._wp * EPSILON(1._wp)) just_return = .false.
+       IF (ABS(1._lp - sum_fpc(i)) > 3._lp * EPSILON(1._lp)) just_return = .false.
     END DO
 
     IF (just_return) RETURN
@@ -777,28 +705,28 @@ CONTAINS
                 act_fpc(i,itile) = fract_small
              END IF
           ELSE
-             act_fpc(i,itile) = 0._wp
+             act_fpc(i,itile) = 0._lp
           END IF
        END DO
     END DO
 
-    sum_fpc(:) = sum_fpc(:) + REAL(nsparce(:),wp) * fract_small
+    sum_fpc(:) = sum_fpc(:) + REAL(nsparce(:),lp) * fract_small
 
     ! scaling of bare_fpc
-    WHERE (sum_fpc(:) <= 1._wp - EPSILON(1._wp))
-       bare_fpc(:) = bare_fpc(:) + (1._wp - sum_fpc(:))
-    ELSEWHERE (sum_fpc(:) >= 1._wp + EPSILON(1._wp))
+    WHERE (sum_fpc(:) <= 1._lp - EPSILON(1._lp))
+       bare_fpc(:) = bare_fpc(:) + (1._lp - sum_fpc(:))
+    ELSEWHERE (sum_fpc(:) >= 1._lp + EPSILON(1._lp))
        bare_fpc(:) = bare_fpc(:) / sum_fpc(:)
     END WHERE
 
     ! scaling of act_fpc
     DO i = 1,nidx
-       excess = 0._wp
+       excess = 0._lp
        DO itile = 1,ntiles
           IF (is_dynamic(i,itile)) THEN
-             IF (sum_fpc(i) >= 1._wp + EPSILON(1._wp) .AND. act_fpc(i,itile) > fract_small * sum_fpc(i)) THEN
+             IF (sum_fpc(i) >= 1._lp + EPSILON(1._lp) .AND. act_fpc(i,itile) > fract_small * sum_fpc(i)) THEN
                 act_fpc(i,itile) = act_fpc(i,itile) / sum_fpc(i)
-             ELSE IF (sum_fpc(i) >= 1._wp + EPSILON(1._wp)) THEN
+             ELSE IF (sum_fpc(i) >= 1._lp + EPSILON(1._lp)) THEN
                 excess = excess + fract_small - act_fpc(i,itile) / sum_fpc(i)
                 act_fpc(i,itile) = fract_small
              END IF
@@ -807,14 +735,14 @@ CONTAINS
        scalable = bare_fpc(i)
        DO itile = 1,ntiles
           IF (is_dynamic(i,itile)) THEN
-             IF (act_fpc(i,itile) > 2._wp * fract_small) scalable = scalable + act_fpc(i,itile)
+             IF (act_fpc(i,itile) > 2._lp * fract_small) scalable = scalable + act_fpc(i,itile)
           END IF
        END DO
        rescale = (scalable - excess) / scalable
        bare_fpc(i) = bare_fpc(i) * rescale
        DO itile = 1,ntiles
           IF (is_dynamic(i,itile)) THEN
-             IF (act_fpc(i,itile) > 2._wp * fract_small) act_fpc(i,itile) = act_fpc(i,itile) * rescale
+             IF (act_fpc(i,itile) > 2._lp * fract_small) act_fpc(i,itile) = act_fpc(i,itile) * rescale
           END IF
        END DO
     END DO
@@ -838,24 +766,24 @@ CONTAINS
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:)   ! PFTs taking part in competition
     LOGICAL,  INTENT(in)  :: is_pasture(:,:)   ! PFTs that are pasture
     LOGICAL,  INTENT(in)  :: is_crop(:,:)      ! PFTs that are crop
-    REAL(wp), INTENT(in)  :: cover_fract_pot(:,:)  ! potential cover fractions (without land use)
-    REAL(wp), INTENT(in)  :: cover_fract(:,:)  ! cover fraction within jsbach
+    REAL(lp), INTENT(in)  :: cover_fract_pot(:,:)  ! potential cover fractions (without land use)
+    REAL(lp), INTENT(in)  :: cover_fract(:,:)  ! cover fraction within jsbach
 
 ! output
-    REAL(wp), INTENT(out) :: cover_fract_inst(:,:) ! cover fraction within jsbach resulting from an
+    REAL(lp), INTENT(out) :: cover_fract_inst(:,:) ! cover fraction within jsbach resulting from an
                                                    ! instantaneous establishment of crop land and pasture
 ! local variables
     INTEGER   :: i, itile
     INTEGER   :: ngrass                  ! number of grass types
     INTEGER   :: ncrops                  ! number of crop types
-    REAL(wp)  :: sum_grass_fract(nidx)   ! potential fraction of grass if there was no land use
-    REAL(wp)  :: sum_pasture_fract(nidx) ! fraction of the vegetated part of the grid box covered with pasture
-    REAL(wp)  :: sum_crop_fract(nidx)    ! fraction of the vegetated part of the grid box covered with crops
+    REAL(lp)  :: sum_grass_fract(nidx)   ! potential fraction of grass if there was no land use
+    REAL(lp)  :: sum_pasture_fract(nidx) ! fraction of the vegetated part of the grid box covered with pasture
+    REAL(lp)  :: sum_crop_fract(nidx)    ! fraction of the vegetated part of the grid box covered with crops
 
     !-- sum up FPC of grasses, pastures and crops
-    sum_grass_fract(:) = 0._wp
-    sum_pasture_fract(:) = 0._wp
-    sum_crop_fract(:) = 0._wp
+    sum_grass_fract(:) = 0._lp
+    sum_pasture_fract(:) = 0._lp
+    sum_crop_fract(:) = 0._lp
     ngrass = 0
     ncrops = 0
     DO itile = 1, ntiles
@@ -886,7 +814,7 @@ CONTAINS
                 ! There are not enough grasslands for all pastures, so that woody types are also reduced
                 IF (is_woody(i,itile)) THEN
                    cover_fract_inst(i,itile) = cover_fract_pot(i,itile) &
-                     &  * (1._wp - sum_pasture_fract(i)) / (1._wp - sum_grass_fract(i))
+                     &  * (1._lp - sum_pasture_fract(i)) / (1._lp - sum_grass_fract(i))
                 ELSE
                    cover_fract_inst(i,itile) = fract_small
                 END IF
@@ -903,15 +831,15 @@ CONTAINS
           cover_fract_inst(:,itile) = cover_fract(:,itile)
        ELSEWHERE (.NOT. is_pasture(:,itile))
           cover_fract_inst(:,itile) = cover_fract_inst(:,itile) &
-            &  * (1._wp - sum_pasture_fract(:) - sum_crop_fract(:)) &
-            &  / (1._wp - sum_pasture_fract(:) - ncrops * fract_small)
+            &  * (1._lp - sum_pasture_fract(:) - sum_crop_fract(:)) &
+            &  / (1._lp - sum_pasture_fract(:) - ncrops * fract_small)
        END WHERE
     END DO
 
     CALL scale_cover_fract (nidx, ntiles, is_dynamic(:,:), cover_fract_inst(:,:))
 
-    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._wp + REAL(ntiles,wp)*EPSILON(1._wp)) .OR. &
-      & ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._wp - REAL(ntiles,wp)*EPSILON(1._wp))) THEN
+    IF (ANY(SUM(cover_fract_inst(:,:),DIM=2) > 1._lp + REAL(ntiles,lp)*EPSILON(1._lp)) .OR. &
+      & ANY(SUM(cover_fract_inst(:,:),DIM=2) < 1._lp - REAL(ntiles,lp)*EPSILON(1._lp))) THEN
        WRITE (message_text,*) 'sum of cover_fract_inst /= 1: ', &
          &   MINVAL(SUM(cover_fract_inst(:,:),DIM=2)), MAXVAL(SUM(cover_fract_inst(:,:),DIM=2)), ', MINLOC: ', &
          &   MINLOC(SUM(cover_fract_inst(:,:),DIM=2)), ', MAXLOC: ', MAXLOC(SUM(cover_fract_inst(:,:),DIM=2))
@@ -948,18 +876,18 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
 !
 ! !IN- and OUTPUT PARAMETERS:
 !
-    REAL(wp), INTENT(inout) :: cover_fract(:,:) ! vegetated fraction
+    REAL(lp), INTENT(inout) :: cover_fract(:,:) ! vegetated fraction
 
 ! !LOCAL VARIABLES:
 !
     INTEGER   :: itile, ic, iter   ! looping indices
     INTEGER   :: niter             ! number of iterations needed
     INTEGER   :: nsparce(nidx)     ! number of PFTs with a vegetated fraction of less then fract_small
-    REAL(wp)  :: sum_fract(nidx)   ! sum of all cover fractions
-    REAL(wp)  :: excluded_fract(nidx) ! sum of the PFT fractions that cannot be changed by natural vegetation
+    REAL(lp)  :: sum_fract(nidx)   ! sum of all cover fractions
+    REAL(lp)  :: excluded_fract(nidx) ! sum of the PFT fractions that cannot be changed by natural vegetation
                                       ! dynamics: non-dynamic fractions and minimum fractions of dynamic PFTs
-    REAL(wp)  :: anthro_fract(nidx)   ! sum of non-dynamic PFT fractions
-    REAL(wp)  :: considerable_nat_fract(nidx) ! sum of natural PFTs with considerable fractions
+    REAL(lp)  :: anthro_fract(nidx)   ! sum of non-dynamic PFT fractions
+    REAL(lp)  :: considerable_nat_fract(nidx) ! sum of natural PFTs with considerable fractions
     LOGICAL   :: corrected(nidx)      ! flag indicating cells with corrected fractions
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':scale_cover_fract'
@@ -971,7 +899,7 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
     END WHERE
 
     ! Make sure, the sum of non-dynamic PFTs is smaller than (1 - fract_small*n_natural)
-    excluded_fract(:) = 0._wp
+    excluded_fract(:) = 0._lp
     DO itile = 1,ntiles
        WHERE (is_dynamic(:,itile))
           excluded_fract(:) = excluded_fract(:) + fract_small
@@ -979,12 +907,12 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
           excluded_fract(:) = excluded_fract(:) + cover_fract(:,itile)
        END WHERE
     END DO
-    IF (ANY(excluded_fract(:) > 1._wp)) THEN
+    IF (ANY(excluded_fract(:) > 1._lp)) THEN
        corrected(:) = .FALSE.
        DO itile = 1, ntiles
-          WHERE (excluded_fract(:) > 1._wp .AND. .NOT. corrected(:) .AND. .NOT. is_dynamic(:,itile) &
-               &  .AND. cover_fract(:,itile) > (fract_small + excluded_fract(:)-1._wp))
-             cover_fract(:,itile) = cover_fract(:,itile) - (excluded_fract(:)-1._wp)
+          WHERE (excluded_fract(:) > 1._lp .AND. .NOT. corrected(:) .AND. .NOT. is_dynamic(:,itile) &
+               &  .AND. cover_fract(:,itile) > (fract_small + excluded_fract(:)-1._lp))
+             cover_fract(:,itile) = cover_fract(:,itile) - (excluded_fract(:)-1._lp)
              corrected(:) = .TRUE.
           END WHERE
        END DO
@@ -995,9 +923,9 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
     niter = ntiles
     DO iter = 1, niter
 
-       sum_fract(:) = 0._wp
-       considerable_nat_fract(:) = 0._wp
-       anthro_fract(:) = 0._wp
+       sum_fract(:) = 0._lp
+       considerable_nat_fract(:) = 0._lp
+       anthro_fract(:) = 0._lp
        nsparce(:) = 0
 
        DO itile = 1,ntiles
@@ -1013,7 +941,7 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
        DO itile = 1,ntiles
           WHERE (cover_fract(:,itile) > fract_small .AND. is_dynamic(:,itile))
              cover_fract(:,itile) = cover_fract(:,itile) * &
-               &                    (1._wp - anthro_fract(:) - REAL(nsparce,wp)*fract_small) / considerable_nat_fract(:)
+               &                    (1._lp - anthro_fract(:) - REAL(nsparce,lp)*fract_small) / considerable_nat_fract(:)
           ELSEWHERE (is_dynamic(:,itile))
              cover_fract(:,itile) = fract_small
           ELSEWHERE
@@ -1027,7 +955,7 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
 
     sum_fract(:) = SUM(cover_fract(:,:), DIM=2)
     ! Exit if the cover fraction sum is considerably different from 1.
-    IF (ANY(ABS(1._wp - sum_fract(:)) > fract_small)) THEN
+    IF (ANY(ABS(1._lp - sum_fract(:)) > fract_small)) THEN
        WRITE(message_text,*) 'Sum of PFT fractions differs from 1.: ', &
          &  MINVAL(sum_fract(:)), MAXVAL(sum_fract(:)), ' MINLOC: ', &
          &  MINLOC(sum_fract(:)), ' MAXLOC: ', MAXLOC(sum_fract(:))
@@ -1036,35 +964,35 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
 
     corrected(:) = .FALSE.
     DO itile = 1,ntiles
-       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) < 1._wp - EPSILON(1._wp)) &
+       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) < 1._lp - EPSILON(1._lp)) &
             &  .AND. .NOT. corrected(:) .AND. cover_fract(:,itile) < sum_fract(:))
-          cover_fract(:,itile) = cover_fract(:,itile) + (1._wp - sum_fract(:))
+          cover_fract(:,itile) = cover_fract(:,itile) + (1._lp - sum_fract(:))
           corrected(:) = .TRUE.
        END WHERE
     END DO
     corrected(:) = .FALSE.
     DO itile = 1,ntiles
-       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) > 1._wp + EPSILON(1._wp)) &
-            &  .AND. .NOT. corrected(:) .AND. cover_fract(:,itile) > 1._wp - sum_fract(:) - fract_small)
-          cover_fract(:,itile) = cover_fract(:,itile) - (sum_fract(:) - 1._wp)
+       WHERE (is_dynamic(:,itile) .AND. (sum_fract(:) > 1._lp + EPSILON(1._lp)) &
+            &  .AND. .NOT. corrected(:) .AND. cover_fract(:,itile) > 1._lp - sum_fract(:) - fract_small)
+          cover_fract(:,itile) = cover_fract(:,itile) - (sum_fract(:) - 1._lp)
           corrected(:) = .TRUE.
        END WHERE
     END DO
 
     IF (ANY(cover_fract(:,:) < fract_small)) THEN
        WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
-          &  MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp)), 'MINLOC: ', &
-          &  MINLOC(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
+          &  MINVAL(MERGE(cover_fract(:,:), 1._lp, cover_fract > 0._lp)), 'MINLOC: ', &
+          &  MINLOC(MERGE(cover_fract(:,:), 1._lp, cover_fract > 0._lp))
        CALL message (routine, message_text)
 
        ! Sometimes cover_fract remains slightly smaller than fract_small for numerical reasons
-       WHERE (cover_fract(:,:) < fract_small .AND. cover_fract(:,:) >= fract_small - REAL(ntiles,wp)*EPSILON(1._wp))
+       WHERE (cover_fract(:,:) < fract_small .AND. cover_fract(:,:) >= fract_small - REAL(ntiles,lp)*EPSILON(1._lp))
           cover_fract(:,:) = fract_small
        END WHERE
        IF (ANY(cover_fract(:,:) < fract_small)) THEN
           WRITE(message_text,*) 'cover_fract still smaller ', fract_small, ' after ', niter, ' iterations:', &
-             &  MINVAL(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp)),'MINLOC: ', &
-             &  MINLOC(MERGE(cover_fract(:,:), 1._wp, cover_fract > 0._wp))
+             &  MINVAL(MERGE(cover_fract(:,:), 1._lp, cover_fract > 0._lp)),'MINLOC: ', &
+             &  MINLOC(MERGE(cover_fract(:,:), 1._lp, cover_fract > 0._lp))
           CALL finish (routine, message_text)
        END IF
     END IF

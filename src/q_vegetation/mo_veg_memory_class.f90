@@ -16,15 +16,16 @@
 !>#### definition and init of (memory) variables for the vegetation process
 !>
 MODULE mo_veg_memory_class
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                   ONLY: wp
+  USE mo_kind,                   ONLY: lp
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of, int2string
 
   USE mo_jsb_process_class,      ONLY: VEG_, Q_SYL_, Q_AGR_, Q_ASSIMI_, ALCC_
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
-    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
+    &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id, &
+    &                                  t_lnd_bgcm
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_SEED_BED_POOL_ID, VEG_BGCM_GROWTH_ID,                           &
     &                                  VEG_BGCM_SEED_BED_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_SEED_BED_LITTERFALL_ID,      &
     &                                  VEG_BGCM_FRAC_ALLOC_ID,                                                                    &
@@ -34,7 +35,6 @@ MODULE mo_veg_memory_class
     &                                  VEG_BGCM_PROD_DECAY_ID, VEG_BGCM_HARVEST_TO_PROD_ID, VEG_BGCM_HARVEST_LITTER_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d, t_jsb_var_real1d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE
   USE mo_jsb_cqt_class,          ONLY: IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE
 
@@ -379,7 +379,7 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_elements
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_with_elements
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_with_elements
     TYPE(t_jsb_var_real2d), POINTER :: carbon
     TYPE(t_jsb_var_real2d), POINTER :: nitrogen
     TYPE(t_jsb_var_real2d), POINTER :: phosphorus
@@ -395,7 +395,7 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_components
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_with_components
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_with_components
     TYPE(t_veg_bgcm_with_elements),    POINTER :: leaf
     TYPE(t_veg_bgcm_with_elements),    POINTER :: fine_root
     TYPE(t_veg_bgcm_with_elements),    POINTER :: coarse_root
@@ -413,11 +413,11 @@ MODULE mo_veg_memory_class
   !>
   !> Type definition for veg_bgc_material_main
   !> the main bgc_material structure containing all VEG_ bgc_material structures
-  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_veg_memory" as "CLASS(t_jsb_pool) :: bgc_material"
+  !> main structure, added directly into the "TYPE(t_jsb_memory) :: t_veg_memory" as "CLASS(t_lnd_bgcm) :: bgc_material"
   !>
-  TYPE, EXTENDS(t_jsb_pool) :: t_veg_bgcm_main
+  TYPE, EXTENDS(t_lnd_bgcm) :: t_veg_bgcm_main
     !! pools
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_pool
     ! ... separate seed bed pool
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_pool
     ! ... and if with product pools
@@ -429,14 +429,14 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_pv
     TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_pp_sawnwood
     !! fluxes
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfrac_alloc
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_growth
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_litterfall
+    TYPE(t_veg_bgcm_with_components),  POINTER :: veg_frac_alloc
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_growth
     TYPE(t_veg_bgcm_with_elements),    POINTER :: seed_bed_litterfall
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_exudation
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_establishment
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: veg_reserve_use
     ! ... if with sylviculture or agriculture
     TYPE(t_veg_bgcm_with_components),  POINTER :: harvest_litter
     ! ... if with product pools
@@ -465,7 +465,7 @@ CONTAINS
     USE mo_jsb_model_class,     ONLY: t_jsb_model
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
-    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool_flux
+    USE mo_quincy_output_class, ONLY: unitless, unit_veg_pool, unit_veg_flux
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(Q_AGR_)
@@ -484,8 +484,6 @@ CONTAINS
     TYPE(t_jsb_vgrid),  POINTER :: surface                    !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy_q_assimi      !< Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_soil_w               !< Vertical grid
-    CHARACTER(len=30)           :: unit_veg_pool              !< unit of element var
-    CHARACTER(len=30)           :: unit_veg_flux              !< unit of element var
     INTEGER                     :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IND
     INTEGER                     :: table                      !< ...
     TYPE(t_grib2)               :: grib2_desc                 !< used for lai settings
@@ -516,11 +514,6 @@ CONTAINS
     dsl4jsb_Get_config(Q_AGR_)
     dsl4jsb_Get_config(ALCC_)
     dsl4jsb_Get_config(Q_ASSIMI_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! init local variables
-    unit_veg_pool = "mol m-2"
-    unit_veg_flux = "mol m-2 timestep-1"
-
     ! ----------------------------------------------------------------------------------------------------- !
     ! Depending on other active processes, certain bgcms are required or not
     is_active_AGR_or_ALCC = .FALSE.
@@ -563,7 +556,6 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.0 bgc_material structures
       !>
-      !>  @TODO replace "b" in bgcm object names by "_" (vegbpool -> veg_pool) !!
       !>
       ! copy elements_index_map from config to local
       elem_idx_map(:) = model%config%elements_index_map(:)
@@ -587,22 +579,22 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material components structures
       !>
-      ! each component structure is created within the main bgcm pool structure together with required bookkeeping information
+      ! each component structure is created within the t_veg_bgcm_main together with required bookkeeping information
       ! "shortname" is used for model output names
       ! veg_pool
-      mem%veg_bgcm_main%vegbpool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_pool => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_POOL_ID, name = 'vegetation_bgcm_pool', shortname = 'veg_bgcm_pool',     &
         & unit = unit_veg_pool, elements_index_map = elem_idx_map(:))
       ! veg_growth
-      mem%veg_bgcm_main%vegbgrowth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
+      mem%veg_bgcm_main%veg_growth => Add_veg_bgc_material_with_components(mem%veg_bgcm_main, &
         & VEG_BGCM_GROWTH_ID, name = 'vegetation_bgcm_growth', shortname = 'veg_bgcm_growth', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_litterfall
-      mem%veg_bgcm_main%vegblitterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_litterfall => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_LITTERFALL_ID, name = 'vegetation_bgcm_litterfall', shortname = 'veg_bgcm_litterfall', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
       ! veg_frac_alloc
-      mem%veg_bgcm_main%vegbfrac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
+      mem%veg_bgcm_main%veg_frac_alloc => Add_veg_bgc_material_with_components(mem%veg_bgcm_main,         &
         & VEG_BGCM_FRAC_ALLOC_ID, name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', &
         & unit = unit_veg_flux, elements_index_map = elem_idx_map(:))
 
@@ -634,15 +626,15 @@ CONTAINS
         & name = 'vegetation_bgcm_seed_bed_litterfall', shortname = 'veg_bgcm_seed_bed_litterfall', &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_SEED_BED_LITTERFALL_ID)
       ! veg_exudation
-      mem%veg_bgcm_main%vegbexudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_exudation => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_exudation', shortname = 'veg_bgcm_exudation',                       &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_EXUDATION_ID)
       ! veg_establishment
-      mem%veg_bgcm_main%vegbestablishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_establishment => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_establishment', shortname = 'veg_bgcm_establishment',                   &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_ESTABLISHMENT_ID)
       ! veg_reserve_use
-      mem%veg_bgcm_main%vegbreserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
+      mem%veg_bgcm_main%veg_reserve_use => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,        &
         & name = 'vegetation_bgcm_reserve_use', shortname = 'veg_bgcm_reserve_use',                     &
         & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_RESERVE_USE_ID)
 
@@ -659,7 +651,7 @@ CONTAINS
         !       If the alcc flux would be required for diagnostical reasons, an additional bgcm would be needed.
         mem%veg_bgcm_main%harvest_to_prod => Add_veg_bgc_material_with_elements(mem%veg_bgcm_main,             &
           & name = 'vegetation_bgcm_flux_harvest_to_product_pools', shortname = 'veg_bgcm_harvest_to_prod',    &
-          & elements_index_map = elem_idx_map(:), unit = unit_veg_pool_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
+          & elements_index_map = elem_idx_map(:), unit = unit_veg_flux, bgcm_id = VEG_BGCM_HARVEST_TO_PROD_ID)
 
         ! only create the crop product pool bgcm if running with agriculture or anthropogenic land cover change
         IF (is_active_AGR_or_ALCC) THEN
@@ -702,7 +694,7 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbpool,                               &
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_pool,                               &
         & hgrid, surface, vgrid_canopy_q_assimi,                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
@@ -710,7 +702,7 @@ CONTAINS
         & loutput = .TRUE.,                                                      &
         & lrestart = .TRUE.,                                                     &
         & cons_quan_type_id = IQ_2L2D_POOL_CQ_TYPE,                              &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
       CALL mem%Add_var(mem%veg_bgcm_main%seed_bed_pool, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -719,15 +711,15 @@ CONTAINS
         & loutput = .TRUE.,                                                                            &
         & lrestart = .TRUE.,                                                                           &
         & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbgrowth, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_growth, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
       CALL mem%Add_var(mem%veg_bgcm_main%seed_bed_growth, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -735,15 +727,15 @@ CONTAINS
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegblitterfall, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_litterfall, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
       CALL mem%Add_var(mem%veg_bgcm_main%seed_bed_litterfall, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -751,39 +743,39 @@ CONTAINS
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbfrac_alloc, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_frac_alloc, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbexudation, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_exudation, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbestablishment, &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_establishment, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbreserve_use,                                              &
+        & initval_r = 0.0_lp)
+      CALL mem%Add_var(mem%veg_bgcm_main%veg_reserve_use,                                              &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = FULL,                                                                         &
         & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       ! Flux to litter due to harvest
       IF (is_active_harvest_process) THEN
@@ -794,7 +786,7 @@ CONTAINS
           & output_level = MEDIUM,                                                                       &
           & loutput = .TRUE.,                                                                            &
           & lrestart = .FALSE.,                                                                          &
-          & initval_r = 0.0_wp)
+          & initval_r = 0.0_lp)
       END IF
 
       ! Product pools and decay
@@ -806,7 +798,7 @@ CONTAINS
             & output_level = MEDIUM,                                                                       &
             & loutput = .TRUE.,                                                                            &
             & lrestart = .FALSE.,                                                                          &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
 
         CALL mem%Add_var(mem%veg_bgcm_main%harvest_to_prod,                                                &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
@@ -817,7 +809,7 @@ CONTAINS
             & lrestart = .FALSE.,                                                                          &
             & cons_quan_type_id = IQ_FLUX_CQ_TYPE,                                                         &
             & transfer_all = .TRUE.,                                                                       &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
 
         ! Only create crop pool bgcm if running with aggriculture or anthropogenic land cover change
         IF (is_active_AGR_or_ALCC) THEN
@@ -830,7 +822,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
         END IF
 
         ! Only create the wood product pool bgcms if running with sylviculture or anthropogenic land cover change
@@ -844,7 +836,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
           CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_paper, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -854,7 +846,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
           CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_fiberboard, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -864,7 +856,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
           CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_oirw, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -874,7 +866,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
           CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_pv, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -884,7 +876,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
           CALL mem%Add_var(mem%veg_bgcm_main%veg_pp_sawnwood, &
             & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -894,7 +886,7 @@ CONTAINS
             & lrestart = .TRUE.,                                                                           &
             & lrestart_cont=.TRUE.,                                                                        &
             & cons_quan_type_id = IQ_1L2D_POOL_CQ_TYPE,                                                    &
-            & initval_r = 0.0_wp)
+            & initval_r = 0.0_lp)
         END IF ! IF (is_active_SYL_or_ALCC)
       END IF ! IF (dsl4jsb_Config(VEG_)%l_use_product_pools)
 
@@ -916,7 +908,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_n', mem%veg_pool_total_n, &
@@ -928,7 +920,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_p', mem%veg_pool_total_p, &
@@ -940,7 +932,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_c13', mem%veg_pool_total_c13, &
@@ -952,7 +944,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_c14', mem%veg_pool_total_c14, &
@@ -964,7 +956,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_total_n15', mem%veg_pool_total_n15, &
@@ -976,7 +968,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       ! diagnostic variables specific to QUINCY pools in ICON-Land
@@ -989,7 +981,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_n', mem%veg_growth_total_n, &
@@ -1001,7 +993,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_p', mem%veg_growth_total_p, &
@@ -1013,7 +1005,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_c13', mem%veg_growth_total_c13, &
@@ -1025,7 +1017,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_c14', mem%veg_growth_total_c14, &
@@ -1037,7 +1029,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_growth_total_n15', mem%veg_growth_total_n15, &
@@ -1049,7 +1041,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       ! diagnostic variables specific to QUINCY pools in ICON-Land
@@ -1062,7 +1054,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_n', mem%veg_litterfall_total_n, &
@@ -1074,7 +1066,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_p', mem%veg_litterfall_total_p, &
@@ -1086,7 +1078,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_c13', mem%veg_litterfall_total_c13, &
@@ -1098,7 +1090,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_c14', mem%veg_litterfall_total_c14, &
@@ -1110,7 +1102,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_litterfall_total_n15', mem%veg_litterfall_total_n15, &
@@ -1122,7 +1114,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_leaf_c', mem%veg_pool_leaf_c, &
@@ -1134,7 +1126,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_leaf_n', mem%veg_pool_leaf_n, &
@@ -1146,7 +1138,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_leaf_p', mem%veg_pool_leaf_p, &
@@ -1158,7 +1150,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_wood_c', mem%veg_pool_wood_c, &
@@ -1170,7 +1162,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_wood_n', mem%veg_pool_wood_n, &
@@ -1182,7 +1174,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_wood_p', mem%veg_pool_wood_p, &
@@ -1194,7 +1186,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_fine_root_c', mem%veg_pool_fine_root_c, &
@@ -1206,7 +1198,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_fine_root_n', mem%veg_pool_fine_root_n, &
@@ -1218,7 +1210,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('veg_pool_fine_root_p', mem%veg_pool_fine_root_p, &
@@ -1230,7 +1222,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
@@ -1243,7 +1235,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_n', mem%veg_products_total_n, &
@@ -1255,7 +1247,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_p', mem%veg_products_total_p, &
@@ -1267,7 +1259,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_c13', mem%veg_products_total_c13, &
@@ -1279,7 +1271,7 @@ CONTAINS
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_c14', mem%veg_products_total_c14, &
@@ -1291,7 +1283,7 @@ CONTAINS
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_total_n15', mem%veg_products_total_n15, &
@@ -1303,7 +1295,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_c', mem%veg_products_decay_c, &
@@ -1315,7 +1307,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_n', mem%veg_products_decay_n, &
@@ -1327,7 +1319,7 @@ CONTAINS
           & output_level = BASIC, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_p', mem%veg_products_decay_p, &
@@ -1339,7 +1331,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_c13', mem%veg_products_decay_c13, &
@@ -1351,7 +1343,7 @@ CONTAINS
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_c14', mem%veg_products_decay_c14, &
@@ -1363,7 +1355,7 @@ CONTAINS
           & output_level = MEDIUM, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
 
         CALL mem%Add_var('veg_products_decay_n15', mem%veg_products_decay_n15, &
@@ -1375,7 +1367,7 @@ CONTAINS
           & output_level = FULL, &
           & loutput = .TRUE., &
           & lrestart = .FALSE., &
-          & initval_r = 0.0_wp, &
+          & initval_r = 0.0_lp, &
           & l_aggregate_all = .TRUE.)
       END IF
 
@@ -1391,7 +1383,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('diameter', mem%diameter, &
@@ -1403,7 +1395,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('dens_ind', mem%dens_ind, &
@@ -1415,7 +1407,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       ! grib setting for: lai differentiation box tile and other tiles
@@ -1435,7 +1427,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('sai', mem%sai, &
@@ -1447,7 +1439,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('target_cn_leaf', mem%target_cn_leaf, &
@@ -1459,7 +1451,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_np_leaf', mem%target_np_leaf, &
         & hgrid, surface, &
@@ -1470,7 +1462,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('mean_leaf_age', mem%mean_leaf_age, &
         & hgrid, surface, &
@@ -1481,7 +1473,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fract_fpc', mem%fract_fpc, &
         & hgrid, surface, &
@@ -1492,7 +1484,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rough_veg_star ', mem%rough_veg_star, &
         & hgrid, surface, &
@@ -1503,7 +1495,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('f_n_demand', mem%f_n_demand, &
         & hgrid, surface, &
@@ -1514,7 +1506,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('f_p_demand', mem%f_p_demand, &
         & hgrid, surface, &
@@ -1525,7 +1517,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_sinklim_ps', mem%beta_sinklim_ps, &
         & hgrid, surface, &
@@ -1536,7 +1528,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dphi', mem%dphi, &
         & hgrid, surface, &
@@ -1547,7 +1539,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_req_n', mem%growth_req_n, &
         & hgrid, surface, &
@@ -1558,7 +1550,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_req_p', mem%growth_req_p, &
         & hgrid, surface, &
@@ -1569,7 +1561,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('leaf_cn_direction', mem%leaf_cn_direction, &
         & hgrid, surface, &
@@ -1580,7 +1572,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_lai', mem%target_lai, &
         & hgrid, surface, &
@@ -1591,7 +1583,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('kstar_labile', mem%kstar_labile, &
@@ -1603,7 +1595,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('root_limitation_state', mem%root_limitation_state, &
         & hgrid, surface, &
@@ -1614,7 +1606,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('falloc_fruit_crop', mem%falloc_fruit_crop, &
         & hgrid, surface, &
@@ -1624,7 +1616,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = NONE, &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('root_fraction_sl', mem%root_fraction_sl, &
         & hgrid, vgrid_soil_w, &
@@ -1635,7 +1627,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('delta_root_fraction_sl', mem%delta_root_fraction_sl, &
         & hgrid, vgrid_soil_w, &
@@ -1646,7 +1638,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('lai_cl', mem%lai_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1657,7 +1649,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
@@ -1669,7 +1661,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
@@ -1681,7 +1673,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_cn_coarse_root', mem%target_cn_coarse_root, &
         & hgrid, surface, &
@@ -1692,7 +1684,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_cn_sap_wood', mem%target_cn_sap_wood, &
         & hgrid, surface, &
@@ -1703,7 +1695,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_cn_fruit', mem%target_cn_fruit, &
         & hgrid, surface, &
@@ -1714,7 +1706,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_np_fine_root', mem%target_np_fine_root, &
         & hgrid, surface, &
@@ -1725,7 +1717,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_np_coarse_root', mem%target_np_coarse_root, &
         & hgrid, surface, &
@@ -1736,7 +1728,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_np_sap_wood', mem%target_np_sap_wood, &
         & hgrid, surface, &
@@ -1747,7 +1739,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('target_np_fruit', mem%target_np_fruit, &
         & hgrid, surface, &
@@ -1758,7 +1750,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('leaf_nitrogen_cl', mem%leaf_nitrogen_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1769,7 +1761,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
@@ -1781,7 +1773,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1792,7 +1784,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1803,7 +1795,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1814,7 +1806,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1825,7 +1817,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -1836,7 +1828,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
         & hgrid, surface, &
@@ -1847,7 +1839,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration', mem%maint_respiration, &
@@ -1859,7 +1851,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_c13', mem%maint_respiration_c13, &
@@ -1871,7 +1863,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_c14', mem%maint_respiration_c14, &
@@ -1883,7 +1875,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration', mem%growth_respiration, &
@@ -1895,7 +1887,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration_c13', mem%growth_respiration_c13, &
@@ -1907,7 +1899,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_respiration_c14', mem%growth_respiration_c14, &
@@ -1919,7 +1911,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_transform_respiration', mem%n_transform_respiration, &
@@ -1931,7 +1923,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_respiration', mem%n_fixation_respiration, &
@@ -1943,7 +1935,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration', mem%n_processing_respiration, &
@@ -1955,7 +1947,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration_c13', mem%n_processing_respiration_c13, &
@@ -1967,7 +1959,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_processing_respiration_c14', mem%n_processing_respiration_c14, &
@@ -1979,7 +1971,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp', mem%npp, &
@@ -1991,7 +1983,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp_c13', mem%npp_c13, &
@@ -2003,7 +1995,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('npp_c14', mem%npp_c14, &
@@ -2015,7 +2007,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_nh4', mem%uptake_nh4, &
@@ -2027,7 +2019,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_nh4_n15', mem%uptake_nh4_n15, &
@@ -2039,7 +2031,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_no3', mem%uptake_no3, &
@@ -2051,7 +2043,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_no3_n15', mem%uptake_no3_n15, &
@@ -2063,7 +2055,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('uptake_po4', mem%uptake_po4, &
@@ -2075,7 +2067,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation', mem%n_fixation, &
@@ -2087,7 +2079,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_n15', mem%n_fixation_n15, &
@@ -2099,7 +2091,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_n', mem%recycling_leaf_n, &
@@ -2111,7 +2103,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_n15', mem%recycling_leaf_n15, &
@@ -2123,7 +2115,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_leaf_p', mem%recycling_leaf_p, &
@@ -2135,7 +2127,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_n', mem%recycling_fine_root_n, &
@@ -2147,7 +2139,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_n15', mem%recycling_fine_root_n15, &
@@ -2159,7 +2151,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_fine_root_p', mem%recycling_fine_root_p, &
@@ -2171,7 +2163,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_n', mem%recycling_heart_wood_n, &
@@ -2183,7 +2175,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_n15', mem%recycling_heart_wood_n15, &
@@ -2195,7 +2187,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('recycling_heart_wood_p', mem%recycling_heart_wood_p, &
@@ -2207,7 +2199,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_growth', mem%net_growth, &
@@ -2219,7 +2211,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp', mem%herbivory_leaf_resp, &
@@ -2231,7 +2223,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp_c13', mem%herbivory_leaf_resp_c13, &
@@ -2243,7 +2235,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_leaf_resp_c14', mem%herbivory_leaf_resp_c14, &
@@ -2255,7 +2247,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp', mem%herbivory_fruit_resp, &
@@ -2267,7 +2259,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp_c13', mem%herbivory_fruit_resp_c13, &
@@ -2279,7 +2271,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('herbivory_fruit_resp_c14', mem%herbivory_fruit_resp_c14, &
@@ -2291,7 +2283,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('fmaint_rate_root', mem%fmaint_rate_root, &
@@ -2303,7 +2295,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_npp', mem%unit_npp, &
         & hgrid, surface, &
@@ -2314,7 +2306,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_transpiration', mem%unit_transpiration, &
         & hgrid, surface, &
@@ -2325,7 +2317,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_n_pot', mem%unit_uptake_n_pot, &
         & hgrid, surface, &
@@ -2336,7 +2328,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_p_pot', mem%unit_uptake_p_pot, &
         & hgrid, surface, &
@@ -2347,7 +2339,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_n_act', mem%unit_uptake_n_act, &
         & hgrid, surface, &
@@ -2358,7 +2350,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_p_act', mem%unit_uptake_p_act, &
         & hgrid, surface, &
@@ -2369,7 +2361,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('delta_dens_ind', mem%delta_dens_ind, &
         & hgrid, surface, &
@@ -2380,7 +2372,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('cost_n_uptake_root', mem%cost_n_uptake_root, &
@@ -2392,7 +2384,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('mortality_rate', mem%mortality_rate, &
         & hgrid, surface, &
@@ -2403,7 +2395,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('k1_opt', mem%k1_opt, &
         & hgrid, surface, &
@@ -2414,7 +2406,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('k2_opt', mem%k2_opt, &
         & hgrid, surface, &
@@ -2425,7 +2417,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('leaf2sapwood_mass_ratio', mem%leaf2sapwood_mass_ratio, &
         & hgrid, surface, &
@@ -2436,7 +2428,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('leaf2root_mass_ratio', mem%leaf2root_mass_ratio, &
         & hgrid, surface, &
@@ -2447,7 +2439,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('active_n_fixation', mem%active_n_fixation, &
         & hgrid, surface, &
@@ -2458,7 +2450,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 1.0_wp)
+        & initval_r = 1.0_lp)
 
       CALL mem%Add_var('fleaf_sunlit_daytime_cl', mem%fleaf_sunlit_daytime_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -2469,7 +2461,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_daytime', mem%t_air_daytime, &
         & hgrid, surface, &
@@ -2480,7 +2472,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('press_srf_daytime', mem%press_srf_daytime, &
         & hgrid, surface, &
@@ -2491,7 +2483,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_mixing_ratio_daytime', mem%co2_mixing_ratio_daytime, &
         & hgrid, surface, &
@@ -2502,7 +2494,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('ga_daytime', mem%ga_daytime, &
         & hgrid, surface, &
@@ -2513,7 +2505,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_sinklim_ps_daytime', mem%beta_sinklim_ps_daytime, &
         & hgrid, surface, &
@@ -2524,7 +2516,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_jmax_opt_daytime', mem%t_jmax_opt_daytime, &
         & hgrid, surface, &
@@ -2535,7 +2527,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fleaf_sunlit_daytime_dacc_cl', mem%fleaf_sunlit_daytime_dacc_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -2546,7 +2538,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_daytime_dacc', mem%t_air_daytime_dacc, &
         & hgrid, surface, &
@@ -2557,7 +2549,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('press_srf_daytime_dacc', mem%press_srf_daytime_dacc, &
         & hgrid, surface, &
@@ -2568,7 +2560,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_mixing_ratio_daytime_dacc', mem%co2_mixing_ratio_daytime_dacc, &
         & hgrid, surface, &
@@ -2579,7 +2571,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('ga_daytime_dacc', mem%ga_daytime_dacc, &
         & hgrid, surface, &
@@ -2590,7 +2582,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_sinklim_ps_daytime_dacc', mem%beta_sinklim_ps_daytime_dacc, &
         & hgrid, surface, &
@@ -2601,7 +2593,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
         & hgrid, surface, &
@@ -2612,7 +2604,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
         & hgrid, surface, &
@@ -2623,7 +2615,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
@@ -2635,7 +2627,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('growth_req_n_tlabile_mavg', mem%growth_req_n_tlabile_mavg, &
@@ -2647,7 +2639,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_req_p_tlabile_mavg', mem%growth_req_p_tlabile_mavg, &
         & hgrid, surface, &
@@ -2658,7 +2650,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_tphen_mavg', mem%t_air_tphen_mavg, &
         & hgrid, surface, &
@@ -2669,7 +2661,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_soil_srf_tphen_mavg', mem%t_soil_srf_tphen_mavg, &
         & hgrid, surface, &
@@ -2680,7 +2672,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('npp_tuptake_mavg', mem%npp_tuptake_mavg, &
         & hgrid, surface, &
@@ -2691,7 +2683,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('demand_uptake_n_tuptake_mavg', mem%demand_uptake_n_tuptake_mavg, &
@@ -2703,7 +2695,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('demand_uptake_p_tuptake_mavg', mem%demand_uptake_p_tuptake_mavg, &
         & hgrid, surface, &
@@ -2714,7 +2706,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_req_n_tuptake_mavg', mem%growth_req_n_tuptake_mavg, &
         & hgrid, surface, &
@@ -2725,7 +2717,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_req_p_tuptake_mavg', mem%growth_req_p_tuptake_mavg, &
         & hgrid, surface, &
@@ -2736,7 +2728,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('exudation_c_tmyc_mavg', mem%exudation_c_tmyc_mavg, &
         & hgrid, surface, &
@@ -2747,7 +2739,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fleaf_sunlit_tfrac_mavg_cl', mem%fleaf_sunlit_tfrac_mavg_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -2758,7 +2750,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_tfrac_mavg', mem%t_air_tfrac_mavg, &
         & hgrid, surface, &
@@ -2769,7 +2761,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('press_srf_tfrac_mavg', mem%press_srf_tfrac_mavg, &
         & hgrid, surface, &
@@ -2780,7 +2772,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_mixing_ratio_tfrac_mavg', mem%co2_mixing_ratio_tfrac_mavg, &
         & hgrid, surface, &
@@ -2791,7 +2783,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('ga_tfrac_mavg', mem%ga_tfrac_mavg, &
         & hgrid, surface, &
@@ -2802,7 +2794,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('beta_sinklim_ps_tfrac_mavg', mem%beta_sinklim_ps_tfrac_mavg, &
         & hgrid, surface, &
@@ -2813,7 +2805,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_n_fractions, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fleaf_sunlit_tcnl_mavg_cl', mem%fleaf_sunlit_tcnl_mavg_cl, &
         & hgrid, vgrid_canopy_q_assimi, &
@@ -2824,7 +2816,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_tcnl_mavg', mem%t_air_tcnl_mavg, &
         & hgrid, surface, &
@@ -2835,7 +2827,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('press_srf_tcnl_mavg', mem%press_srf_tcnl_mavg, &
         & hgrid, surface, &
@@ -2846,7 +2838,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('co2_mixing_ratio_tcnl_mavg', mem%co2_mixing_ratio_tcnl_mavg, &
         & hgrid, surface, &
@@ -2857,7 +2849,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('ga_tcnl_mavg', mem%ga_tcnl_mavg, &
         & hgrid, surface, &
@@ -2868,7 +2860,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('uptake_n_tcnl_mavg', mem%uptake_n_tcnl_mavg, &
         & hgrid, surface, &
@@ -2879,7 +2871,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_cn_tcnl_mavg', mem%growth_cn_tcnl_mavg, &
         & hgrid, surface, &
@@ -2890,7 +2882,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_np_tcnl_mavg', mem%growth_np_tcnl_mavg, &
         & hgrid, surface, &
@@ -2901,7 +2893,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('npp_tcnl_mavg', mem%npp_tcnl_mavg, &
         & hgrid, surface, &
@@ -2912,7 +2904,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
         & hgrid, surface, &
@@ -2923,7 +2915,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_stoichiometry, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_nitrogen_tcnl_mavg', mem%labile_nitrogen_tcnl_mavg, &
         & hgrid, surface, &
@@ -2934,7 +2926,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_carbon_tcnl_mavg', mem%labile_carbon_tcnl_mavg, &
         & hgrid, surface, &
@@ -2945,7 +2937,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_phosphorus_tcnl_mavg', mem%labile_phosphorus_tcnl_mavg, &
         & hgrid, surface, &
@@ -2956,7 +2948,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('npp_talloc_mavg', mem%npp_talloc_mavg, &
         & hgrid, surface, &
@@ -2967,7 +2959,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('n_fixation_talloc_mavg', mem%n_fixation_talloc_mavg, &
@@ -2979,7 +2971,7 @@ CONTAINS
         & output_level = NONE, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('transpiration_talloc_mavg', mem%transpiration_talloc_mavg, &
         & hgrid, surface, &
@@ -2990,7 +2982,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
         & hgrid, surface, &
@@ -3001,7 +2993,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_transpiration_talloc_mavg', mem%unit_transpiration_talloc_mavg, &
         & hgrid, surface, &
@@ -3012,7 +3004,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
         & hgrid, surface, &
@@ -3023,7 +3015,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
         & hgrid, surface, &
@@ -3034,7 +3026,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('dphi_talloc_mavg', mem%dphi_talloc_mavg, &
         & hgrid, surface, &
@@ -3045,7 +3037,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_cn_talloc_mavg', mem%growth_cn_talloc_mavg, &
         & hgrid, surface, &
@@ -3056,7 +3048,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_cp_talloc_mavg', mem%growth_cp_talloc_mavg, &
         & hgrid, surface, &
@@ -3067,7 +3059,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = restart_veg_optimal_alloc, &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_np_talloc_mavg', mem%growth_np_talloc_mavg, &
         & hgrid, surface, &
@@ -3078,7 +3070,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_carbon_talloc_mavg', mem%labile_carbon_talloc_mavg, &
         & hgrid, surface, &
@@ -3089,7 +3081,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_nitrogen_talloc_mavg', mem%labile_nitrogen_talloc_mavg, &
         & hgrid, surface, &
@@ -3100,7 +3092,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('labile_phosphorus_talloc_mavg', mem%labile_phosphorus_talloc_mavg, &
         & hgrid, surface, &
@@ -3111,7 +3103,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('growth_p_limit_based_on_n_mavg', mem%growth_p_limit_based_on_n_mavg, &
         & hgrid, surface, &
@@ -3122,7 +3114,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('reserve_carbon_talloc_mavg', mem%reserve_carbon_talloc_mavg, &
         & hgrid, surface, &
@@ -3133,7 +3125,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('reserve_nitrogen_talloc_mavg', mem%reserve_nitrogen_talloc_mavg, &
         & hgrid, surface, &
@@ -3144,7 +3136,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('reserve_phosphorus_talloc_mavg', mem%reserve_phosphorus_talloc_mavg, &
         & hgrid, surface, &
@@ -3155,7 +3147,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('wtr_rootzone_rel_talloc_mavg', mem%wtr_rootzone_rel_talloc_mavg, &
         & hgrid, surface, &
@@ -3166,7 +3158,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('leaf2root_troot_mavg', mem%leaf2root_troot_mavg, &
         & hgrid, surface, &
@@ -3177,7 +3169,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
         & hgrid, surface, &
@@ -3188,7 +3180,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
         & hgrid, surface, &
@@ -3199,7 +3191,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
         & hgrid, surface, &
@@ -3210,7 +3202,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
         & hgrid, surface, &
@@ -3221,7 +3213,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('an_boc_tvegdyn_mavg', mem%an_boc_tvegdyn_mavg, &
         & hgrid, surface, &
@@ -3232,7 +3224,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
         & hgrid, surface, &
@@ -3243,7 +3235,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('lai_tvegdyn_mavg', mem%lai_tvegdyn_mavg, &
@@ -3255,7 +3247,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('beta_sinklim_ps_tacclim_mavg', mem%beta_sinklim_ps_tacclim_mavg, &
@@ -3267,7 +3259,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_tacclim_mavg', mem%t_air_tacclim_mavg, &
         & hgrid, surface, &
@@ -3278,7 +3270,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
         & hgrid, surface, &
@@ -3289,7 +3281,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 273.15_wp)
+        & initval_r = 273.15_lp)
 
       CALL mem%Add_var('t_soil_root_tacclim_mavg', mem%t_soil_root_tacclim_mavg, &
         & hgrid, surface, &
@@ -3300,7 +3292,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_week_mavg', mem%t_air_week_mavg, &
         & hgrid, surface, &
@@ -3311,7 +3303,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_air_month_mavg', mem%t_air_month_mavg, &
         & hgrid, surface, &
@@ -3322,7 +3314,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('t_jmax_opt_mavg', mem%t_jmax_opt_mavg, &
         & hgrid, surface, &
@@ -3333,7 +3325,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rfr_ratio_boc', mem%rfr_ratio_boc, &
         & hgrid, surface, &
@@ -3343,7 +3335,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('rfr_ratio_boc_tvegdyn_mavg', mem%rfr_ratio_boc_tvegdyn_mavg, &
         & hgrid, surface, &
@@ -3354,7 +3346,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
+        & initval_r = 0.0_lp)
 
       CALL mem%Add_var('net_biosphere_production', mem%net_biosphere_production, &
         & hgrid, surface, &
@@ -3365,7 +3357,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_biosphere_production_c14', mem%net_biosphere_production_c14, &
@@ -3377,7 +3369,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('net_biosphere_production_c13', mem%net_biosphere_production_c13, &
@@ -3389,7 +3381,7 @@ CONTAINS
         & output_level = MEDIUM, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
       CALL mem%Add_var('biological_n_fixation', mem%biological_n_fixation, &
@@ -3401,7 +3393,7 @@ CONTAINS
         & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp, &
+        & initval_r = 0.0_lp, &
         & l_aggregate_all = .TRUE.)
 
     ENDIF  ! IF One_of(LAND_TYPE  OR VEG_TYPE, lct_ids)
@@ -3415,7 +3407,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     IF(dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
       CALL mem%Add_var('total_prod_c_gsum', mem%total_prod_c_gsum,                             &
@@ -3424,7 +3416,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
         & output_groups=['mon'],                                                               &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+        & lrestart=.FALSE., initval_r=0.0_lp )
     END IF
 
     CALL mem%Add_var('lai_gmean', mem%lai_gmean,                                               &
@@ -3433,7 +3425,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('fract_fpc_gmean', mem%fract_fpc_gmean,                                   &
       & hgrid, surface,                                                                        &
@@ -3441,7 +3433,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('gpp_gsum', mem%gpp_gsum,                                                 &
       & hgrid, surface,                                                                        &
@@ -3449,7 +3441,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('npp_gsum', mem%npp_gsum,                                                 &
       & hgrid, surface,                                                                        &
@@ -3457,7 +3449,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
     CALL mem%Add_var('nuptake_gsum', mem%nuptake_gsum,                                         &
       & hgrid, surface,                                                                        &
@@ -3465,7 +3457,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                     &
       & prefix, suffix,                                                                        &
       & output_groups=['mon'],                                                                 &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.FALSE., initval_r=0.0_lp )
 
   END SUBROUTINE Init_veg_memory
 
@@ -3536,10 +3528,10 @@ CONTAINS
     &                                    l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_with_elements),    INTENT(inout) :: this                   ! object of TYPE t_sb_elements_pool
-    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3593,10 +3585,10 @@ CONTAINS
   SUBROUTINE veg_bgcm_with_components_init(this, name, shortname, elements_index_map, &
     &                                      l_elements, element_list, element_unit)
     CLASS(t_veg_bgcm_with_components),    INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3621,10 +3613,10 @@ CONTAINS
     &                           l_elements, element_list, element_unit)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_veg_bgcm_main),         INTENT(inout) :: this                   ! object of TYPE t_sb_components_pool
-    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
-    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
+    CHARACTER(LEN=*),               INTENT(in)    :: name                   ! bgcm name
+    CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! bgcm short name
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF bgcm has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3640,10 +3632,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with components
   !>
-  FUNCTION Add_veg_bgc_material_with_components(pool, bgcm_id, name, shortname, unit, elements_index_map) &
+  FUNCTION Add_veg_bgc_material_with_components(bgcm, bgcm_id, name, shortname, unit, elements_index_map) &
       & RESULT(veg_bgcm_with_components)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT)  :: pool                  !< pool to which this pool with component should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT)  :: bgcm                  !< bgcm to which this bgcm with component should be added
     INTEGER,                    INTENT(in)     :: bgcm_id               !< id of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: name                  !< name of this veg bgcm with components
     CHARACTER(LEN=*),           INTENT(in)     :: shortname             !< shortname of this veg bgcm with components
@@ -3686,7 +3678,7 @@ CONTAINS
       & name = 'fruit_bgcm', shortname = 'fruit', elements_index_map = elements_index_map(:), unit = unit)
 
     ! Add the bookkeepoing for this veg bgcm with components
-    CALL pool%Add_pool(veg_bgcm_with_components, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_components, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_components
 
@@ -3694,10 +3686,10 @@ CONTAINS
   !>
   !> create, init and append a veg bgcm with elements
   !>
-  FUNCTION Add_veg_bgc_material_with_elements(pool,  name, shortname, elements_index_map, unit, bgcm_id) &
+  FUNCTION Add_veg_bgc_material_with_elements(bgcm,  name, shortname, elements_index_map, unit, bgcm_id) &
       & RESULT(veg_bgcm_with_elements)
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_pool), TARGET,  INTENT(INOUT) :: pool                   !< pool to which this pool with elements should be added
+    CLASS(t_lnd_bgcm), TARGET,  INTENT(INOUT) :: bgcm                   !< bgcm to which this bgcm with elements should be added
     CHARACTER(LEN=*),           INTENT(in)    :: name                   !< name of this veg bgcm with elements
     CHARACTER(LEN=*),           INTENT(in)    :: shortname              !< shortname of this veg bgcm with elements
     INTEGER,                    INTENT(in)    :: elements_index_map(:)  !< mapping elements ID -> IND
@@ -3710,7 +3702,7 @@ CONTAINS
     ALLOCATE(veg_bgcm_with_elements)
     CALL veg_bgcm_with_elements%Init(name = name, shortname = shortname,  &
       & elements_index_map = elements_index_map(:), l_elements = .TRUE., element_unit = unit)
-    CALL pool%Add_pool(veg_bgcm_with_elements, bgcm_id)
+    CALL bgcm%Add_bgcm(veg_bgcm_with_elements, bgcm_id)
 
   END FUNCTION Add_veg_bgc_material_with_elements
 

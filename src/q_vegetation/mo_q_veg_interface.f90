@@ -18,9 +18,9 @@
 !> includes plant growth and turnover
 !>
 MODULE mo_q_veg_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                        ONLY: wp
+  USE mo_kind,                        ONLY: lp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
   USE mo_jsb_class,                   ONLY: Get_model
@@ -30,6 +30,7 @@ MODULE mo_q_veg_interface
   USE mo_jsb_tile_class,              ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process
+  USE mo_quincy_model_config,         ONLY: QLAND, QPLANT
 
   ! "Integrate" routines
   USE mo_q_veg_turnover,                ONLY: update_veg_turnover_real => update_veg_turnover
@@ -620,14 +621,22 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, growth_respiration                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, n_processing_respiration            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c                  , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_c              , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c                  , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c13                , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_c14                , weighted_by_fract)
+    END SELECT
 
     ! C isotopes needed for global analysis (not all fluxes required!)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c13        , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, net_biosphere_production_c14        , weighted_by_fract)
+    END SELECT
 
     ! N fluxes
     dsl4jsb_Aggregate_onChunk(VEG_, n_fixation                          , weighted_by_fract)
@@ -639,9 +648,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_n              , weighted_by_fract)
 
     ! P fluxes
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p                  , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p              , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, uptake_po4                          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_growth_total_p                  , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_litterfall_total_p              , weighted_by_fract)
+    END SELECT
 
     ! Fluxes due to product pool decay if product pool is present
     IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
@@ -662,10 +674,13 @@ CONTAINS
     ! VEG_ bgcm pools needed to close global mass balance
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
+    END SELECT
     IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_c      , weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_n      , weighted_by_fract)
@@ -675,15 +690,20 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(VEG_, veg_products_total_n15    , weighted_by_fract)
     END IF
     ! special diagnostic output for specific pools
+    ! CN
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_c             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_n             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_p             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_c             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_n             , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_p             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_c        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_n        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_p        , weighted_by_fract)
+    ! P
+    SELECT CASE(model%config%qmodel_id)
+    CASE(QPLANT, QLAND)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_leaf_p             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_wood_p             , weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_fine_root_p        , weighted_by_fract)
+    END SELECT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_veg_pools
@@ -871,21 +891,21 @@ CONTAINS
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: global_land_area       !< Global land area
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: global_land_area       !< Global land area
+    REAL(lp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: grid
     CHARACTER(len=*), PARAMETER :: routine = modname//':global_q_veg_diagnostics'
 
-    REAL(wp), POINTER       :: total_veg_c_gsum(:)
-    REAL(wp), POINTER       :: total_prod_c_gsum(:)
-    REAL(wp), POINTER       :: lai_gmean(:)
-    REAL(wp), POINTER       :: fract_fpc_gmean(:)
-    REAL(wp), POINTER       :: gpp_gsum(:)
-    REAL(wp), POINTER       :: npp_gsum(:)
-    REAL(wp), POINTER       :: nuptake_gsum(:)
-    REAL(wp)                :: hlp(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
+    REAL(lp), POINTER       :: total_veg_c_gsum(:)
+    REAL(lp), POINTER       :: total_prod_c_gsum(:)
+    REAL(lp), POINTER       :: lai_gmean(:)
+    REAL(lp), POINTER       :: fract_fpc_gmean(:)
+    REAL(lp), POINTER       :: gpp_gsum(:)
+    REAL(lp), POINTER       :: npp_gsum(:)
+    REAL(lp), POINTER       :: nuptake_gsum(:)
+    REAL(lp)                :: hlp(SIZE(land_area_scaling,1), SIZE(land_area_scaling,2))
 
     INTEGER  :: blk, jc, nblks, nproma
 
@@ -938,21 +958,21 @@ CONTAINS
     !  => Conversion from [mol(C)/m^2] to [PgC]
     !     1 mol C = molar_massC g C   => 1 mol C = molar_mass_C * e-15 Pg C
     IF (VEG__mem%total_veg_c_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(total_veg_c_gsum, veg_pool_total_c, land_area_scaling, molar_mass_C * 1.e-15_wp, acc_stream)
+      CALL scaled_global_sum_2D(total_veg_c_gsum, veg_pool_total_c, land_area_scaling, molar_mass_C * 1.e-15_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%total_veg_c_gsum%ptr(:))
     END IF
     IF (VEG__mem%total_prod_c_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(total_prod_c_gsum, veg_products_total_c, land_area_scaling, molar_mass_C * 1.e-15_wp, acc_stream)
+      CALL scaled_global_sum_2D(total_prod_c_gsum, veg_products_total_c, land_area_scaling, molar_mass_C * 1.e-15_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%total_prod_c_gsum%ptr(:))
     END IF
 
     ! Calculate global land means variables, if requested for output
     IF (VEG__mem%lai_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(lai_gmean, lai, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(lai_gmean, lai, land_area_scaling, 1.0_lp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%lai_gmean%ptr(:))
     END IF
     IF (VEG__mem%fract_fpc_gmean%is_in_output) THEN
-      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_wp / global_land_area, acc_stream)
+      CALL scaled_global_sum_2D(fract_fpc_gmean, fract_fpc, land_area_scaling, 1.0_lp / global_land_area, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%fract_fpc_gmean%ptr(:))
     END IF
 
@@ -962,12 +982,12 @@ CONTAINS
     !     1 s times one_day (60*60*24) time one_year (365)
     IF (VEG__mem%gpp_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(gpp_gsum, gross_assimilation, land_area_scaling, &
-          & molar_mass_C * 1.e-21_wp * (one_day*one_year), acc_stream)
+          & molar_mass_C * 1.e-21_lp * (one_day*one_year), acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%gpp_gsum%ptr(:))
     END IF
     IF (VEG__mem%npp_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(npp_gsum, npp, land_area_scaling, &
-          & molar_mass_C * 1.e-21_wp * (one_day*one_year), acc_stream)
+          & molar_mass_C * 1.e-21_lp * (one_day*one_year), acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%npp_gsum%ptr(:))
     END IF
 
@@ -986,7 +1006,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       CALL scaled_global_sum_2D(nuptake_gsum, hlp, land_area_scaling, &
-          & molar_mass_N * 1.e-18_wp * (one_day*one_year), acc_stream)
+          & molar_mass_N * 1.e-18_lp * (one_day*one_year), acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(VEG__mem%nuptake_gsum%ptr(:))
 
       !$ACC WAIT(acc_stream)

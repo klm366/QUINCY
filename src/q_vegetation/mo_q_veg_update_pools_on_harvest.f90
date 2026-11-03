@@ -16,9 +16,9 @@
 !>#### update veg and product pools and call litter formation on harvest
 !>
 MODULE mo_q_veg_update_pools_on_harvest
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
   USE mo_jsb_time,            ONLY: is_newyear, is_newday
@@ -84,10 +84,10 @@ CONTAINS
     INTEGER                             :: nsoil_w                    !< number of soil layers (water)
     INTEGER                             :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                             :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
-    REAL(wp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
-    REAL(wp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
-    REAL(wp), DIMENSION(options%nc)     :: cover_fraction             !< current tile area
-    REAL(wp)                            :: dtime                      !< timestep length
+    REAL(lp)                            :: zero_mt(LAST_ELEM_ID, options%nc) !< helper array to pass zero seedbed litter
+    REAL(lp), DIMENSION(options%nc)     :: fract_harvest_rel_to_tile  !< harvested area fraction relative to the tile area
+    REAL(lp), DIMENSION(options%nc)     :: cover_fraction             !< current tile area
+    REAL(lp)                            :: dtime                      !< timestep length
     INTEGER                             :: ix_ct                      !< index of crop type (if crop)
     INTEGER                             :: ic, iblk, ics, ice, nc     !< dimensions and loop counter
     INTEGER                             :: i_compartment, nr_of_veg_bgcm_comp !< loop counter and dim for veg compartments
@@ -150,7 +150,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(Q_SYL_)
     ! ----------------------------------------------------------------------------------------------------- !
-    zero_mt(:,:) = 0.0_wp
+    zero_mt(:,:) = 0.0_lp
 
     IF (tile%Is_process_calculated(Q_SYL_)) THEN
       IF (dsl4jsb_Config(Q_SYL_)%l_daily_harvest) THEN
@@ -228,7 +228,7 @@ CONTAINS
 
 
     ! Harvest fraction depends on the kind of harvest - currently Q_AGR_ or Q_SYL_
-    fract_harvest_rel_to_tile(:) = 0.0_wp
+    fract_harvest_rel_to_tile(:) = 0.0_lp
     IF (tile%Is_process_calculated(Q_AGR_)) THEN
       ! calculate flux from harvesting if crop has reached maturity (i.e. growth phase is 3)
       fract_harvest_rel_to_tile(:) = calc_crop_harvest_fraction(dtime, crop_type_index(:),   &
@@ -240,17 +240,17 @@ CONTAINS
       CALL tile%Get_fraction(ics, ice, iblk, fract=cover_fraction)
       DO ic = 1,nc
         IF (cover_fraction(ic) > eps8) THEN
-          fract_harvest_rel_to_tile(ic) = MIN(1.0_wp, fract_forest_harvest(ic) / cover_fraction(ic))
+          fract_harvest_rel_to_tile(ic) = MIN(1.0_lp, fract_forest_harvest(ic) / cover_fraction(ic))
         ELSE
-          fract_harvest_rel_to_tile(ic) = 0.0_wp
+          fract_harvest_rel_to_tile(ic) = 0.0_lp
         END IF
       END DO
     ELSE
       ! Currently only the processes Q_SYL_ and Q_AGR_ lead to harvest
-      ! fract_harvest_rel_to_tile(:) = 0.0_wp
+      ! fract_harvest_rel_to_tile(:) = 0.0_lp
     END IF
 
-    IF (ANY(fract_harvest_rel_to_tile(:) /= 0.0_wp)) THEN
+    IF (ANY(fract_harvest_rel_to_tile(:) /= 0.0_lp)) THEN
       ! ----------------------------------------------------------------------------------------------------- !
       !>
       !> - Note: later we might care for establishment here to represent re-planting
@@ -297,16 +297,16 @@ CONTAINS
             ! sapwood: lctlib_frac_sapwood_branch goes to litter, rest to product pool -> but mind: slash fraction
             veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
               & + (veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
-              &    * (1._wp - lctlib%frac_sapwood_branch) * (1._wp - fract_wood_to_slash(ic)))
+              &    * (1._lp - lctlib%frac_sapwood_branch) * (1._lp - fract_wood_to_slash(ic)))
             veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) = veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
               & - (veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
-              &    * (1._wp - lctlib%frac_sapwood_branch) * (1._wp - fract_wood_to_slash(ic)))
+              &    * (1._lp - lctlib%frac_sapwood_branch) * (1._lp - fract_wood_to_slash(ic)))
 
             ! heartwood: goes to product pool -> but mind: slash fraction
             veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
-              & + veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._wp - fract_wood_to_slash(ic))
+              & + veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._lp - fract_wood_to_slash(ic))
             veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) = veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) &
-              & - veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._wp - fract_wood_to_slash(ic))
+              & - veg_litter_flux_harvest_mt(ix_heart_wood,:,ic) * (1._lp - fract_wood_to_slash(ic))
           END DO
 
           ! distribute to the different product pools
@@ -358,9 +358,9 @@ CONTAINS
     INTEGER,      INTENT(in) :: nc                          !< block dimension
     LOGICAL,      INTENT(in) :: is_elem_used(:)             !< indicates which elements are in use
     INTEGER,      INTENT(in) :: elem_idx_map(:)             !< map bgcm element ID -> IX
-    REAL(wp),     INTENT(in) :: fract_wood_to_pp            !< wood fraction to go into this product pool
-    REAL(wp),     INTENT(in) :: veg_pp_flux_harvest_mt(:,:) !< harvest flux to product pools
-    REAL(wp),  INTENT(inout) :: veg_pp_mt(:,:)              !< this product pool
+    REAL(lp),     INTENT(in) :: fract_wood_to_pp            !< wood fraction to go into this product pool
+    REAL(lp),     INTENT(in) :: veg_pp_flux_harvest_mt(:,:) !< harvest flux to product pools
+    REAL(lp),  INTENT(inout) :: veg_pp_mt(:,:)              !< this product pool
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                     :: ic, id_elem              !< loop counter
     INTEGER                     :: ix_elem                  !< element index
@@ -401,14 +401,14 @@ CONTAINS
     USE mo_q_agr_constants,         ONLY: crop_planting_mass, fstore_seed_min, fract_crop_to_slash
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,  INTENT(in)    :: nc                                !< dimensions
-    REAL(wp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
-    REAL(wp), INTENT(inout) :: veg_pool_mt(:,:,:)                !< bgcm vegetation pool
-    REAL(wp), INTENT(inout) :: seed_bed_pool_mt(:,:)             !< bgcm seed bed pool
-    REAL(wp), INTENT(inout) :: veg_pp_crop_mt(:,:)               !< bgcm crop products pool
-    REAL(wp), INTENT(inout) :: veg_pp_flux_harvest_mt(:,:)       !< bgcm harvest flux to products
+    REAL(lp), INTENT(inout) :: veg_litter_flux_harvest_mt(:,:,:) !< bgcm flux from harvest to litter
+    REAL(lp), INTENT(inout) :: veg_pool_mt(:,:,:)                !< bgcm vegetation pool
+    REAL(lp), INTENT(inout) :: seed_bed_pool_mt(:,:)             !< bgcm seed bed pool
+    REAL(lp), INTENT(inout) :: veg_pp_crop_mt(:,:)               !< bgcm crop products pool
+    REAL(lp), INTENT(inout) :: veg_pp_flux_harvest_mt(:,:)       !< bgcm harvest flux to products
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER        :: ic                !< loop over grid cells
-    REAL(wp)       :: hlp1
+    REAL(lp)       :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_crop_harvest_to_products_flux'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -417,15 +417,15 @@ CONTAINS
 
       ! leaves: slash fraction goes to litter, rest to product pool
       veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
-        & + veg_litter_flux_harvest_mt(ix_leaf,:,ic) * (1._wp - fract_crop_to_slash)
+        & + veg_litter_flux_harvest_mt(ix_leaf,:,ic) * (1._lp - fract_crop_to_slash)
       veg_litter_flux_harvest_mt(ix_leaf,:,ic) = veg_litter_flux_harvest_mt(ix_leaf,:,ic) &
-        & - veg_litter_flux_harvest_mt(ix_leaf,:,ic) * (1._wp - fract_crop_to_slash)
+        & - veg_litter_flux_harvest_mt(ix_leaf,:,ic) * (1._lp - fract_crop_to_slash)
 
       ! stems: slash fraction goes to litter, rest to product pool
       veg_pp_flux_harvest_mt(:,ic) = veg_pp_flux_harvest_mt(:,ic) &
-        & + veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) * (1._wp - fract_crop_to_slash)
+        & + veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) * (1._lp - fract_crop_to_slash)
       veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) = veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) &
-        & - veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) * (1._wp - fract_crop_to_slash)
+        & - veg_litter_flux_harvest_mt(ix_sap_wood,:,ic) * (1._lp - fract_crop_to_slash)
 
       ! fruits: first ensure that the seed pool does not decrease below twice planting level to have planting
       !         material for next growing season
@@ -433,7 +433,7 @@ CONTAINS
           & .AND. veg_litter_flux_harvest_mt(ix_fruit,ixC,ic) > eps8) THEN
         hlp1 = MIN(MAX( &
           &             (fstore_seed_min * crop_planting_mass - seed_bed_pool_mt(ixC,ic)) &
-          &               / veg_litter_flux_harvest_mt(ix_fruit,ixC,ic),0.0_wp),1.0_wp)
+          &               / veg_litter_flux_harvest_mt(ix_fruit,ixC,ic),0.0_lp),1.0_lp)
         seed_bed_pool_mt(:,ic) = seed_bed_pool_mt(:,ic) &
           & + hlp1 * veg_litter_flux_harvest_mt(ix_fruit,:,ic)
         veg_litter_flux_harvest_mt(ix_fruit,:,ic) = veg_litter_flux_harvest_mt(ix_fruit,:,ic) &

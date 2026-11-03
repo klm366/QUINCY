@@ -16,15 +16,15 @@
 !>#### declare and init q_phenology parameters
 !>
 MODULE mo_q_pheno_parameters
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_impl_constants,  ONLY: def_parameters
 
   IMPLICIT NONE
   PUBLIC
 
-  REAL(wp), SAVE :: &
+  REAL(lp), SAVE :: &
     & gdd_t_air_threshold = def_parameters, &   !< temperature threshold for the accumulation of growing degree days [deg K]
     & k_leafon_canopy = def_parameters          !< scaling coefficient for leaf development rate in CANOPY-only model
 
@@ -44,8 +44,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_pheno_parameters'
 
-    gdd_t_air_threshold       = 5.0_wp + Tzero              !< citation or source ....  [ ? ]
-    k_leafon_canopy           = 0.2_wp
+    gdd_t_air_threshold       = 5.0_lp + Tzero              !< citation or source ....  [ ? ]
+    k_leafon_canopy           = 0.2_lp
 
     !$ACC UPDATE DEVICE(gdd_t_air_threshold, k_leafon_canopy) ASYNC(1)
 

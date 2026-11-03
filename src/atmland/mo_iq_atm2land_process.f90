@@ -14,9 +14,9 @@
 !>### Contains routines for the a2l (atm2land) proc
 !>
 MODULE mo_iq_atm2land_process
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_math_constants,    ONLY: eps1, eps8
 
   IMPLICIT NONE
@@ -39,12 +39,12 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER ,  INTENT(in)        :: global_seconds_day     !< seconds passed on this day (global time)
-    REAL(wp),  INTENT(in)        :: dtime                  !< timestep
-    REAL(wp),  INTENT(in)        :: lon                    !< longitude
-    REAL(wp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
-    REAL(wp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
-    REAL(wp),  INTENT(inout)     :: daylength_prev_day     !< time of previous day with light available
-    REAL(wp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
+    REAL(lp),  INTENT(in)        :: dtime                  !< timestep
+    REAL(lp),  INTENT(in)        :: lon                    !< longitude
+    REAL(lp),  INTENT(in)        :: swpar_srf_down         !< current shortwave surface downward flux
+    REAL(lp),  INTENT(inout)     :: daytime_counter        !< nr of timesteps of current day with sunlight
+    REAL(lp),  INTENT(inout)     :: daylength_prev_day     !< time of previous day with light available
+    REAL(lp),  INTENT(inout)     :: local_time_day_seconds !< seconds passed on this day (local cell time)
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER  :: time_shift_in_hours
 
@@ -54,19 +54,19 @@ CONTAINS
     ! reset the daytime_counter if last timestep was midnight
     IF (ABS(local_time_day_seconds - dtime) < eps1) THEN
       daylength_prev_day = daytime_counter * dtime
-      daytime_counter = 0.0_wp
+      daytime_counter = 0.0_lp
     ENDIF
 
     IF (swpar_srf_down > eps8) THEN
       ! count number of daytime values
-      daytime_counter = daytime_counter + 1.0_wp
+      daytime_counter = daytime_counter + 1.0_lp
     ENDIF
 
     ! calculate the local time shift in whole hours (NINT!) relative to the global time (15 degrees per hour)
-    time_shift_in_hours = NINT(MODULO(lon,360._wp)/15._wp)
+    time_shift_in_hours = NINT(MODULO(lon,360._lp)/15._lp)
     ! convert the time shift from whole hours to whole seconds and calculate the seconds passed on this day in local time
     ! (MODULO 86400 is applied to detemine the seconds of the local day, as this can be the day before or after the global day)
-    local_time_day_seconds  = REAL(MODULO(global_seconds_day + (time_shift_in_hours * 3600), 86400),wp)
+    local_time_day_seconds  = REAL(MODULO(global_seconds_day + (time_shift_in_hours * 3600), 86400),lp)
 
   END SUBROUTINE update_local_time_and_daytime_counter
 

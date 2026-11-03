@@ -16,9 +16,9 @@
 !>#### calculate decay of product pools
 !>
 MODULE mo_q_veg_products_decay
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_exception,           ONLY: message
 
@@ -60,7 +60,7 @@ CONTAINS
     TYPE(t_lnd_bgcm_store),   POINTER :: bgcm_store                 !< the bgcm store of this tile
     INTEGER                           :: elem_idx_map(LAST_ELEM_ID) !< element mapper ID -> IX
     LOGICAL                           :: is_elem_used(LAST_ELEM_ID) !< indicates which elements are used in this simulation
-    REAL(wp)                          :: dtime                      !< timestep length
+    REAL(lp)                          :: dtime                      !< timestep length
     INTEGER                           :: iblk, ics, ice, nc         !< dimensions
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':update_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -119,7 +119,7 @@ CONTAINS
     elem_idx_map(:) = model%config%elements_index_map(:)
     is_elem_used(:) = model%config%is_element_used(:)
 
-    prod_decay_mt(:,:) = 0._wp
+    prod_decay_mt(:,:) = 0._lp
 
     IF (dsl4jsb_Config(Q_AGR_)%active .OR. dsl4jsb_Config(ALCC_)%active) THEN
       CALL calc_products_decay(nc, dtime, is_elem_used, elem_idx_map, tau_pp_crop, veg_pp_crop_mt, prod_decay_mt)
@@ -150,27 +150,27 @@ CONTAINS
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in) :: nc                    !< block dimension
-    REAL(wp),     INTENT(in) :: dtime                 !< timestep length
+    REAL(lp),     INTENT(in) :: dtime                 !< timestep length
     LOGICAL,      INTENT(in) :: l_element_used(:)     !< indicates which elements are in use
     INTEGER,      INTENT(in) :: elements_index_map(:) !< map bgcm element ID -> IX
-    REAL(wp),     INTENT(in) :: tau                   !< decay time of decaying product pool
-    REAL(wp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
-    REAL(wp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
+    REAL(lp),     INTENT(in) :: tau                   !< decay time of decaying product pool
+    REAL(lp),  INTENT(inout) :: veg_pp_mt(:,:)        !< decaying bgcm product pool
+    REAL(lp),  INTENT(inout) :: prod_decay_mt(:,:)    !< bgcm flux of product decay
     ! ----------------------------------------------------------------------------------------------------- !
-    REAL(wp)                          :: fract_turnover    !< turnover fraction
+    REAL(lp)                          :: fract_turnover    !< turnover fraction
     INTEGER                           :: ic, id_elem       !< loop counter
     INTEGER                           :: ix_elem           !< element index
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_products_decay'
     ! ----------------------------------------------------------------------------------------------------- !
     ! turnover fraction
-    fract_turnover = 1.0_wp / tau / one_day / one_year * dtime
+    fract_turnover = 1.0_lp / tau / one_day / one_year * dtime
 
     DO ic = 1,nc
       DO id_elem = FIRST_ELEM_ID, LAST_ELEM_ID
         IF (l_element_used(id_elem)) THEN
           ix_elem = elements_index_map(id_elem)
           prod_decay_mt(ix_elem , ic) = prod_decay_mt(ix_elem , ic) + (veg_pp_mt(ix_elem , ic) * fract_turnover)
-          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._wp - fract_turnover)
+          veg_pp_mt(ix_elem , ic) = veg_pp_mt(ix_elem , ic) * (1._lp - fract_turnover)
         END IF
       END DO
     END DO

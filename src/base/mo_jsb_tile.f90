@@ -18,7 +18,6 @@
 !> - Init => [[Init_tile]]
 !> - Init_fractions => [[Init_fractions_on_tile]]
 !> - Init_vars => [[Init_vars_on_tile]]
-!> - Handler => [[Process_task_on_tile]]
 !>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
@@ -26,11 +25,11 @@
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_exception,           ONLY: message_text, message, finish
   USE mo_jsb_control,         ONLY: debug_on, get_no_of_models
 
-  USE mo_hsm_class,           ONLY: t_State, t_Message
+  USE mo_jsb_tile_tree_class, ONLY: t_jsb_tile_tree_node
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
@@ -65,14 +64,13 @@ MODULE mo_jsb_tile
     PROCEDURE :: Is_process_active                => Is_process_active_on_tile
     PROCEDURE :: Has_process_memory               => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities       => Count_conserved_quantities_on_tile
+                 !< Identify conserved quantity types (CQTs) in use on a tile and count their conserved quantities (CQs)
     PROCEDURE :: Collect_conserved_variables      => Collect_conserved_variables_on_tile
+                 !< Collect the pointers to the variables that are conserved quantities (CQs) on a tile
     PROCEDURE :: Check_child_cover_fractions      => Check_child_cover_fractions_on_tile
-#ifndef __NO_QUINCY__
     PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
     PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
-#endif
     PROCEDURE :: Print                            => Print_tile
-    PROCEDURE :: Handler                          => Process_task_on_tile
   END TYPE t_jsb_tile
 
   !> Used to create a vector of tiles
@@ -116,22 +114,22 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),            POINTER :: model
     INTEGER                               :: i, j, iproc
-    CLASS(t_State),               POINTER :: parent_tmp   !< Temporary pointer to the parent tile
+    CLASS(t_jsb_tile_tree_node),  POINTER :: parent_tmp   !< Temporary pointer to the parent tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Starting construction of tile '//TRIM(name))
 
-    ! Allocate and initialize base structure (=state) for tile
+    ! Allocate and initialize base structure (=tile-tree node) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
 
     ! Add the parent tile to the actual tile (for all but the box tile)
-    ! init the parent with information (properties) from the state machine only
+    ! init the parent with information (properties) from the tile-tree structure only
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
-      CALL return_ptr%Init_state(name, description, parent_tmp)
+      CALL return_ptr%Init_node(name, description, parent_tmp)
     ELSE
-      CALL return_ptr%Init_state(name, description)
+      CALL return_ptr%Init_node(name, description)
     END IF
 
     ! Initialize further components of t_jsb_tile_abstract extended type
@@ -419,7 +417,8 @@ CONTAINS
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
             !$ACC ENTER DATA CREATE(parent_tile%mem(iproc)%p%children)
           END IF
-          child_no = this%path(this%level)                ! Index of the child (i.e. the current tile; comes from state machine)
+          ! Index of the child (i.e. the current tile; comes from tile-tree structure)
+          child_no = this%path(this%level)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
           !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p) ASYNC(1)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
@@ -463,7 +462,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER                    :: table
     TYPE(t_input_file)         :: input_file
-    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
+    REAL(lp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
@@ -508,7 +507,7 @@ CONTAINS
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                               &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_lp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
     CALL this%Set_fract_ptr(tmp_fract)
@@ -520,7 +519,7 @@ CONTAINS
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE., &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_lp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -540,9 +539,9 @@ CONTAINS
         ! The tile fraction is set to the fraction of the parent tile divided by
         ! the number of children of the parent tile (i.e. number of sibling tiles + 1)
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), wp)
+        tmp_fract(:,:) = tmp_fract(:,:) / REAL(this%parent_tile%Get_no_of_children(), lp)
       ELSE ! tile is the box tile, fraction of the tile is set to 1
-        tmp_fract(:,:) = 1._wp
+        tmp_fract(:,:) = 1._lp
       END IF
       ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
@@ -550,10 +549,10 @@ CONTAINS
       IF(ASSOCIATED(this%parent_tile)) THEN
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
         IF (.NOT. this%Is_first_child()) THEN
-          tmp_fract(:,:) = 0._wp
+          tmp_fract(:,:) = 0._lp
         END IF
       ELSE
-        tmp_fract(:,:) = 1._wp
+        tmp_fract(:,:) = 1._lp
       END IF
       CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSE
@@ -579,17 +578,17 @@ CONTAINS
                                                                    ! fraction in the model is relative to box tile, but
                                                                    ! fraction in the input file is relative to parent tile
         CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
-        CALL this%Set_fraction(fract=MAX(0._wp, return_pointer(:,:)*tmp_fract(:,:)))
+        CALL this%Set_fraction(fract=MAX(0._lp, return_pointer(:,:)*tmp_fract(:,:)))
       ELSE
         IF (is_sitelevel .AND. .NOT. ASSOCIATED(this%parent_tile)) THEN
           ! For site-level, set fraction of box tile to 1
-          tmp_fract(:,:) = 1._wp
+          tmp_fract(:,:) = 1._lp
           CALL this%Set_fraction(fract=tmp_fract(:,:))
         ELSE
           CALL this%Set_fraction(fract=return_pointer(:,:))
         END IF
         CALL this%Get_fraction(fract=hgrid%lsf(:,:))
-        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._wp
+        hgrid%lsm(:,:) = hgrid%lsf(:,:) > 0._lp
         !$ACC UPDATE DEVICE(hgrid%lsf, hgrid%lsm) ASYNC(1)
       END IF
       ! Close the input file
@@ -639,7 +638,7 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions, lrestart_cont=.TRUE.,                                 &
-        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+        & initval_r=0.0_lp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
@@ -768,7 +767,6 @@ CONTAINS
 
   END FUNCTION Has_process_memory_on_tile
 
-#ifndef __NO_QUINCY__
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
@@ -781,14 +779,14 @@ CONTAINS
   SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
-    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_lnd_bgcm_class,      ONLY: t_lnd_bgcm
     USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
     USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the bgc materials are checked
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER     :: mem
-    CLASS(t_jsb_pool), POINTER       :: bgcm
+    CLASS(t_lnd_bgcm), POINTER       :: bgcm
     CLASS(t_lnd_bgcm_store), POINTER :: bgcm_store
     INTEGER                          :: i_proc, i_bgcm, i_compartment
     INTEGER                          :: nr_of_bgcms_this_proc, nr_of_compartments
@@ -820,10 +818,10 @@ CONTAINS
           this%bgcm_store => bgcm_store
         ENDIF
 
-        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%pool_list)
+        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%bgcm_list)
         this%bgcm_store%nr_of_bgc_materials = this%bgcm_store%nr_of_bgc_materials + nr_of_bgcms_this_proc
         DO i_bgcm = 1, nr_of_bgcms_this_proc
-          bgcm => mem%bgc_material%pool_list(i_bgcm)%p
+          bgcm => mem%bgc_material%bgcm_list(i_bgcm)%p
 
           IF(bgcm%contains_elements) THEN
             ! i.e. directly elements and no compartments
@@ -837,17 +835,17 @@ CONTAINS
           ELSE
             ! i.e. no elements but one layer of compartments which are then expected to have elements
             ! but no further compartments!
-            nr_of_compartments = SIZE(bgcm%pool_list)
+            nr_of_compartments = SIZE(bgcm%bgcm_list)
             common_dim = -1
             DO i_compartment = 1, nr_of_compartments
-              IF(.NOT. bgcm%pool_list(i_compartment)%p%contains_elements) THEN
+              IF(.NOT. bgcm%bgcm_list(i_compartment)%p%contains_elements) THEN
                 CALL finish(TRIM(routine), 'Found bgcm '//TRIM(bgcm%name)//' in tile '//TRIM(this%name)// &
                   & ' that contains a compartment without elements '//                                    &
-                  &  TRIM(bgcm%pool_list(i_compartment)%p%name)//                                         &
+                  &  TRIM(bgcm%bgcm_list(i_compartment)%p%name)//                                         &
                   & ' but no behaviour is implemented for this so far, please check!')
               ENDIF
-              CALL assert_no_compartment_bgc_materials(bgcm%pool_list(i_compartment)%p, this%name, routine)
-              this_dim = get_dimension_of_element_variables(bgcm%pool_list(i_compartment)%p, this%name, routine)
+              CALL assert_no_compartment_bgc_materials(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
+              this_dim = get_dimension_of_element_variables(bgcm%bgcm_list(i_compartment)%p, this%name, routine)
               IF(i_compartment == 1) THEN
                 common_dim = this_dim
               ELSEIF(common_dim /= this_dim) THEN
@@ -934,7 +932,6 @@ CONTAINS
     ENDDO
 
   END SUBROUTINE Collect_bgc_materials_on_tile
-#endif
 
   ! ======================================================================================================= !
   !>
@@ -950,8 +947,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),  POINTER :: current_child
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     INTEGER :: nproma, nblks, i_tile
-    REAL(wp),           POINTER :: tmp_fract(:,:)
-    REAL(wp),       ALLOCATABLE :: sum_fract(:,:)
+    REAL(lp),           POINTER :: tmp_fract(:,:)
+    REAL(lp),       ALLOCATABLE :: sum_fract(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':Check_child_cover_fractions_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     ! Only relevant for tiles with children
@@ -965,7 +962,7 @@ CONTAINS
 
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     ALLOCATE(sum_fract(hgrid%nproma, hgrid%nblks))
-    sum_fract(:,:) = 0.0_wp
+    sum_fract(:,:) = 0.0_lp
 
     current_child => this%Get_first_child_tile()
 
@@ -974,8 +971,8 @@ CONTAINS
       i_tile = i_tile + 1
       CALL current_child%Get_fraction(fract=tmp_fract(:,:))
 
-      tmp_fract(:,:) = MIN(1.0_wp, tmp_fract(:,:))
-      tmp_fract(:,:) = MAX(0.0_wp, tmp_fract(:,:))
+      tmp_fract(:,:) = MIN(1.0_lp, tmp_fract(:,:))
+      tmp_fract(:,:) = MAX(0.0_lp, tmp_fract(:,:))
 
       CALL current_child%Set_fraction(fract=tmp_fract(:,:))
 
@@ -985,7 +982,7 @@ CONTAINS
 
     ! Assert that sum is "equal" to tile fraction (whereby the threshold is arbitraryly chosen here)
     CALL this%Get_fraction(fract=tmp_fract(:,:))
-    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_wp)) THEN
+    IF (ANY(ABS((tmp_fract(:,:) - sum_fract(:,:))) > 1.e-15_lp)) THEN
 
       CALL finish(TRIM(routine), 'Fractions of '//TRIM(this%name)//' not equal to sum of child cf.'// &
         &  ' MAX diff: ' //real2string(ABS(MAXVAL(tmp_fract(:,:) - sum_fract(:,:)))))
@@ -998,19 +995,24 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Identifies the conserved quantity types (CQTs) in use on this tile and counts conserved quantities (CQs) of each CQT
+  !> Identifies the conserved quantity types (CQTs) used on this tile, counts the conserved
+  !> quantities (CQs; i.e. the variables) associated to the different CQTs, and enters this information
+  !> into the conserved quantities type ([[t_jsb_consQuan_p:mo_jsb_cqt_class]]).
   !>
   SUBROUTINE Count_conserved_quantities_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are to be counted
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the conserved quantities are to be counted
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER   :: mem
-    INTEGER                        :: iproc, i, id, ind
-    LOGICAL                        :: consQuanTypeInUse
-    TYPE(t_jsb_consQuan), POINTER  :: consQuanType
-    CHARACTER(len=max_cqt_name_length) :: thisCQTName
+    CLASS(t_jsb_memory), POINTER   :: mem               !< Pointer to currently checked process memory
+    INTEGER                        :: iproc,          & !< Looping index for process on tile
+      &                               i,              & !< Looping index for variables
+      &                               id,             & !< ID of CQT
+      &                               ind               !< Looping index for CQTs
+    LOGICAL                        :: consQuanTypeInUse !< True: current CQT in use on current tile
+    TYPE(t_jsb_consQuan), POINTER  :: consQuanType      !< An object of the conserved quantity (CQ) type
+    CHARACTER(len=max_cqt_name_length) :: thisCQTName   !< Name of the current CQT
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_conserved_quantities_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1027,12 +1029,13 @@ CONTAINS
 
       IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
-      ! Loop over all variables in the memory of the process and count number of vars for each used type
+      ! Loop over all variables in the memory of the current process to identify all CQTs used and to
+      ! count the number of variables associated to this CQT.
       mem => this%mem(iproc)%p
-      DO i=1,mem%no_of_vars
+      DO i = 1,mem%no_of_vars
 
         ! Check those variables that have a conservative quantity type
-        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+        IF (mem%vars(i)%p%is_conserved_quan) THEN
           id = mem%vars(i)%p%cons_quan_type_id
 
           ! Check if this type is already accounted for
@@ -1040,23 +1043,26 @@ CONTAINS
           DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
+              ! Increase the CQ variable counter for this CQT
               this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
               EXIT
             END IF
           END DO
 
           IF (.NOT. consQuanTypeInUse) THEN
-            ! Needs to be one of those in mo_jsb_cqt_class
+            ! This CQT has so far not been found and therefore needs to be added to the list of CQTs.
             thisCQTName = Get_cqt_name(id)
             IF (debug_on())  CALL message(TRIM(routine), '... vars of type '//TRIM(thisCQTName))
 
             this%nr_of_cqts = this%nr_of_cqts + 1
 
+            ! Create a new container for this CQT
             ALLOCATE(consQuanType)
             this%conserved_quantities(this%nr_of_cqts)%p => consQuanType
             this%conserved_quantities(this%nr_of_cqts)%p%type_id = id
+            ! And count its first member -> TODO: no need to do + 1 -- would be clearer to directly set it to 1!
             this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
-          ENDIF
+          END IF
 
         END IF
       END DO
@@ -1066,56 +1072,67 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Collects the pointers to the variables that are conserved quantities on the given tile
+  !> Collects the pointers to conserved quantity variables on the given tile to make these variables
+  !> available in the conserved quantities type ([[t_jsb_consQuan_p:mo_jsb_cqt_class]]).
   !>
   SUBROUTINE Collect_conserved_variables_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_util,                ONLY: int2string
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< Tile for which the conserved quantities are collected
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER  :: mem
-    INTEGER                       :: iproc, i, id, ind, last_index, nrOfConsQuans
-    LOGICAL                       :: consQuanTypeInUse
+    CLASS(t_jsb_memory), POINTER  :: mem     !< Pointer to the process memory currently checked
+    LOGICAL :: &
+      & consQuanTypeInUse !< True: the selected CQT was found in the 'conserved_quantities' structure
+    INTEGER :: &
+      & iproc,          & !< Looping index for the tile's processes
+      & i,              & !< Looping index for variables in process memory
+      & id,             & !< CQT ID (from [[mo_jsb_cqt_class]])
+      & ind,            & !< Looping index for CQT in conserved_quantities collection
+      & last_index,     & !< Current index of CQ in container (last indexed CQ)
+      & nrOfConsQuans     !< Number of CQ variables associated to the current CQT on this tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
 
     ! Loop over all processes
-    DO iproc=1,max_no_of_processes
+    DO iproc = 1,max_no_of_processes
 
-      ! If the current process is not on the current tile exit DO loop
+      ! If the current process does not run on the current tile ("ON_TILE_"): skip this process
       SELECT CASE (this%process_action(iproc))
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
 
+      ! If this process has no associated memory: skip it
       IF (.NOT. ASSOCIATED(this%mem(iproc)%p)) CYCLE
 
       ! Loop over all variables in the memory of the process
       mem => this%mem(iproc)%p
-      DO i=1,mem%no_of_vars
+      DO i = 1,mem%no_of_vars
 
         ! Only address those variables that have a conservative quantity type
-        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+        IF (mem%vars(i)%p%is_conserved_quan) THEN
           id = mem%vars(i)%p%cons_quan_type_id
           consQuanTypeInUse = .FALSE.
 
-          ! Find container for this type
-          DO ind=1,this%nr_of_cqts
+          ! Find the container for this type
+          DO ind = 1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
               nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
 
               IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars))) THEN
-                ! If this is the first collected variable: allocate collector for var pointers
+                ! If this is the first variable found with the current CQT
+                ! ... allocate a list to collect the ID of the process associated with each variable
                 ALLOCATE(this%conserved_quantities(ind)%p%associated_process(nrOfConsQuans))
+                ! ... allocate a list to collect the pointer to each variable in the according process memory
                 ALLOCATE(this%conserved_quantities(ind)%p%cq_vars(nrOfConsQuans))
-                ! and identify variable dimension
+                ! ... get the dimension of the variable (identical for all variables associated with this CQT)
                 this%conserved_quantities(ind)%p%var_type = mem%vars(i)%p%type
-                ! and transfer property
+                ! ... get the transfer property (identical for all variables associated with this CQT)
                 this%conserved_quantities(ind)%p%transfer_all = mem%vars(i)%p%transfer_all
               ELSE
                 ! Assert that all variables of one type have the same dimension
@@ -1144,7 +1161,7 @@ CONTAINS
               this%conserved_quantities(ind)%p%cq_vars(last_index)%p => mem%vars(i)%p
               this%conserved_quantities(ind)%p%associated_process(last_index) = mem%owner_proc_id
 
-              ! Since the type has been found: exit do loop now
+              ! Since the type has been found: EXIT do loop
               EXIT
             END IF
           END DO
@@ -1161,174 +1178,6 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> Task handler function for tile (HSM message handler)
-  !> Updates only one process on only one tile
-  !>
-  FUNCTION Process_task_on_tile(this, msg_in) RESULT(return_ptr)
-
-    USE mo_util, ONLY: one_of, logical2string, int2string
-    USE mo_jsb_parallel, ONLY: Get_omp_thread, Get_omp_no_of_threads
-    USE mo_jsb_control,  ONLY: timer_on, timer_process_task
-    USE mo_timer,        ONLY: timer_start, timer_stop
-    ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile),  INTENT(inout) :: this
-    CLASS(t_Message),   INTENT(in)    :: msg_in
-    CLASS(t_Message),   POINTER       :: return_ptr
-    ! -------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model), POINTER :: model
-    !CLASS(t_jsb_task_msg), POINTER :: msg
-    TYPE(t_Message), POINTER :: msg
-    LOGICAL :: l_debug
-
-    CLASS(t_jsb_process_task), POINTER :: task
-
-    INTEGER :: iblk, no_omp_thread
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Process_task_on_tile'
-    ! -------------------------------------------------------------------------------------------------- !
-    no_omp_thread = Get_omp_thread()
-
-    ! Start timer
-    IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
-
-    ! Build local variable msg
-    ALLOCATE(msg)
-    msg%name = msg_in%name
-    msg%action = msg_in%action
-
-    model => this%model
-
-    iblk = model%options(no_omp_thread)%iblk
-    ! Debug messages only on the first block
-    l_debug = debug_on('hsm') .AND. iblk == 1
-
-    task => model%current_task(no_omp_thread)%p
-
-    ! Write debug messages
-    IF (l_debug) THEN
-        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name)//&
-          &                         '(visited='//logical2string(this%visited(no_omp_thread))//')')
-    ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
-      IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-        CALL message(TRIM(routine), 'Processing task '//TRIM(task%name)//'/action '//&
-          &                         TRIM(msg%action%name)//' on tile '//TRIM(this%name))
-      END IF
-    END IF
-
-    !> Here the naviagtion through the tile tree is handled.
-    !> 1. INTEGRATE: On the way downward [from the top tile] to leave level all INTEGRATE actions are performed
-    !> this%visited TRUE marks the pathway downwards
-    !> INTEGRATE can also be performed 'on_tile'
-    !> After the last leave [of one sibling] is reached the direction is reversed [-> upward]
-    !> 2. AGGREGATE: On the way upward [to top tile] all AGGREATE actions are performed on parents
-    !> 1. and 2. are repeated until all siblings have been aggregated [no next_sibling -> finish]
-    !> FINISH: Setting return_ptr=>NULL marks return to state machine
-    SELECT CASE (TRIM(msg%action%name))
-    CASE ('START')      !< Is not used, model starts with 'INTEGRATE' instead
-      IF (.NOT. this%visited(no_omp_thread)) THEN ! i.e. on the way down
-        IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-          IF (this%Has_children() .AND. &
-            & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
-            & this%process_action(task%process_id) /= ON_TILE_) THEN
-            CALL model%Start_state(this%first_child_tile)
-          END IF
-        ELSE IF (ASSOCIATED(this%next_sibling_tile)) THEN
-          CALL model%Start_state(this%next_sibling_tile)
-        END IF
-      END IF
-    CASE ('INTEGRATE')
-      !@TODO: this test on "if we should do anything?" could be 'more' save/obvious e.g. using a function or the like
-      !       ++ is this == AGGREGATE_?
-      IF (this%process_action(task%process_id) >= AGGREGATE_) THEN
-        IF (this%Has_children() .AND. &
-          & this%process_action(task%process_id) /= ON_SUBTREE_ .AND. &
-          & this%process_action(task%process_id) /= ON_TILE_) THEN
-          CALL model%Goto(this%first_child_tile, l_debug)
-        ELSE
-          CALL task%Do_it(msg, this, model%options(no_omp_thread))
-          IF (ASSOCIATED(this%next_sibling_tile)) THEN
-              CALL model%Goto(this%next_sibling_tile, l_debug)
-          ELSE IF (ASSOCIATED(this%parent_tile)) THEN
-            msg%action = model%Get_action('AGGREGATE')
-            CALL model%Goto(this%parent_tile, l_debug)
-          ELSE
-            this%visited(no_omp_thread) = .FALSE.
-            IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-            msg => NULL()
-          END IF
-        END IF
-      ELSE !< this%process_action(task%process_id) < AGGREGATE_ ; e.g. SKIP_ or INHERIT_
-        IF (ASSOCIATED(this%next_sibling_tile)) THEN
-            CALL model%Goto(this%next_sibling_tile, l_debug)
-        ELSE IF (ASSOCIATED(this%parent_tile)) THEN
-          msg%action = model%Get_action('AGGREGATE')
-          CALL model%Goto(this%parent_tile, l_debug)
-        ELSE
-          this%visited(no_omp_thread) = .FALSE.
-          IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-          msg => NULL()
-        END IF
-      END IF
-    CASE ('AGGREGATE')
-      IF (this%process_action(task%process_id) >= AGGREGATE_ .AND. this%visited(no_omp_thread)) THEN
-        CALL task%Do_it(msg, this, model%options(no_omp_thread))
-      END IF
-      IF (ASSOCIATED(this%next_sibling_tile)) THEN
-        msg%action = model%Get_action('INTEGRATE')
-        CALL model%Goto(this%next_sibling_tile, l_debug)
-      ELSE IF (this == model%top) THEN
-        this%visited(no_omp_thread) = .FALSE.
-        IF (ASSOCIATED(msg)) DEALLOCATE(msg)
-        msg => NULL()
-      ELSE
-        msg%action = model%Get_action('AGGREGATE')
-        CALL model%Goto(this%parent_tile, l_debug)
-      END IF
-    END SELECT
-
-    IF (ASSOCIATED(msg)) THEN !< Return message to state machine
-      return_ptr => msg
-    ELSE
-      return_ptr => NULL() !< else FINISH
-    END IF
-
-    !> Debug option: only output at 2. or 3. level
-    !> l_debug is TRUE if user-chosen debug level is 'hsm'
-    !> [3. level] Write info about action and openmp threat
-    !> [2. level] Write entry info for first block only
-    IF (l_debug) THEN
-      IF (ASSOCIATED(msg)) THEN
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished (new message action is '//TRIM(msg%action%name)//')'//&
-            &                                               ', thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished (new message action is '//TRIM(msg%action%name)//')')
-        END IF
-      ELSE
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished (new message is NULL)'//', thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished (new message is NULL)')
-        END IF
-      END IF
-    ELSE IF (debug_on('detail') .AND. iblk == 1) THEN
-      IF (one_of(msg_in%action%name, (/'ENTER','START','EXIT '/)) < 0) THEN
-        IF (Get_omp_no_of_threads() > 1) THEN
-          CALL message(TRIM(routine),'Finished, thread '//TRIM(int2string(no_omp_thread)))
-        ELSE
-          CALL message(TRIM(routine),'Finished')
-        END IF
-      END IF
-    END IF
-
-    ! Stop timer
-    IF (timer_on('detail')) CALL timer_stop(timer_process_task(this%owner_model_id)) !< Stop the timer
-
-  END FUNCTION Process_task_on_tile
-
-  ! ======================================================================================================= !
-  !>
   !> Routine that prints information about the tile to the log-file
   !>
   SUBROUTINE Print_tile(this)
@@ -1342,7 +1191,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Print_tile'
     ! -------------------------------------------------------------------------------------------------- !
     ! Print for basic type
-    CALL this%Print_state() ! print position of the tile in the whole hierarchical tree of tiles as a series of integers
+    CALL this%Print_node() ! print position of the tile in the whole hierarchical tree of tiles as a series of integers
 
     IF (this%fract_filename /= '') THEN
       CALL message('     fract_filename', TRIM(this%fract_filename))

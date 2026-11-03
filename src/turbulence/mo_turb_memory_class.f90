@@ -14,7 +14,7 @@
 MODULE mo_turb_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,  ONLY: t_jsb_model
@@ -70,13 +70,11 @@ CONTAINS
 
   SUBROUTINE Init_turb_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC , MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-#ifndef __NO_QUINCY__
+    USE mo_jsb_varlist,         ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_quincy_output_class, ONLY: unitless
-#endif
 
     CLASS(t_turb_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),     INTENT(in)    :: prefix
@@ -107,7 +105,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
 
       CALL mem%Add_var( 'km', mem%km,                                                      &
         & hgrid, surface,                                                                  &
@@ -116,7 +114,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
 
       CALL mem%Add_var( 'interp_fac_2m', mem%interp_fac_2m,                                &
         & hgrid, surface,                                                                  &
@@ -125,7 +123,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
 
       CALL mem%Add_var( 'interp_fac_10m', mem%interp_fac_10m,                              &
         & hgrid, surface,                                                                  &
@@ -134,7 +132,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
 
       CALL mem%Add_var( 'interp_fac_tsfc', mem%interp_fac_tsfc,                            &
         & hgrid, surface,                                                                  &
@@ -143,7 +141,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
 
       CALL mem%Add_var( 'ch', mem%ch,                                                      &
         & hgrid, surface,                                                                  &
@@ -152,7 +150,7 @@ CONTAINS
         & prefix, suffix,                                                                  &
         & lrestart=.FALSE.,                                                                &
         & output_level=FULL,                                                               &
-        & initval_r=0.01_wp )
+        & initval_r=0.01_lp )
     END IF
 
     CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
@@ -162,7 +160,7 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE.,                                                                 &
       & output_level=FULL,                                                               &
-      & initval_r=1.0_wp )
+      & initval_r=1.0_lp )
 
     CALL mem%Add_var( 'rough_h', mem%rough_h,                                    &
       & hgrid, surface,                                                          &
@@ -171,7 +169,7 @@ CONTAINS
       & prefix, suffix,                                                          &
       & lrestart=.TRUE.,                                                         &
       & output_level=FULL,                                                       &
-      & initval_r=1.0_wp )
+      & initval_r=1.0_lp )
 
     CALL mem%Add_var( 'rough_m_star', mem%rough_m_star,                          &
       & hgrid, surface,                                                          &
@@ -180,7 +178,7 @@ CONTAINS
       & prefix, suffix,                                                          &
       & lrestart=.FALSE.,                                                        &
       & loutput=.FALSE.,                                                         &
-      & initval_r=1.0_wp )
+      & initval_r=1.0_lp )
 
     CALL mem%Add_var( 'rough_h_star', mem%rough_h_star,                          &
       & hgrid, surface,                                                          &
@@ -189,7 +187,7 @@ CONTAINS
       & prefix, suffix,                                                          &
       & lrestart=.FALSE.,                                                        &
       & loutput=.FALSE.,                                                         &
-      & initval_r=1.0_wp )
+      & initval_r=1.0_lp )
 
     CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                        &
       & hgrid, surface,                                                    &
@@ -197,7 +195,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=FULL,                                                 &
-      & initval_r=0.5_wp )
+      & initval_r=0.5_lp )
 
     CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
       & hgrid, surface,                                                    &
@@ -205,7 +203,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=FULL,                                                 &
-      & initval_r=0.5_wp )
+      & initval_r=0.5_lp )
 
     CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
       & hgrid, surface,                                                    &
@@ -213,7 +211,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=FULL,                                                 &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
   END SUBROUTINE Init_turb_memory
 

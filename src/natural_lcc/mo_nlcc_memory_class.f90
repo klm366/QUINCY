@@ -14,7 +14,7 @@
 MODULE mo_nlcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
@@ -42,14 +42,6 @@ MODULE mo_nlcc_memory_class
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & temp_sum_day, &
-      & temp_sum_month, &
-      & min_mmtemp_of_yr, &
-      & max_mmtemp_of_yr, &
-      & min_mmtemp20, &
-      & max_mmtemp20, &
-      & gdd_sum_year, &
-      & gdd_prev_year, &
       & bare_fpc, &
       & sum_green_bio_memory, &
       & desert_fpc
@@ -105,77 +97,13 @@ CONTAINS
     surface   => Get_vgrid('surface')
     pft_vgrid => Get_vgrid('pfts')
 
-    CALL mem%Add_var('temp_sum_day', mem%temp_sum_day,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('temp_sum_day', 'sum of air temperature in day', 'temperature sum day'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('temp_sum_month', mem%temp_sum_month,                    &
-      & hgrid, surface,                                                       &
-      & t_cf('temp_sum_month', 'sum of air temperature in month', 'temperature sum month'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('min_mmtemp_of_yr', mem%min_mmtemp_of_yr,                &
-      & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp_of_yr', 'min temperature of year', 'temperature min'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=1000.0_wp )
-
-    CALL mem%Add_var('max_mmtemp_of_yr', mem%max_mmtemp_of_yr,                &
-      & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp_of_yr', 'max temperature of year', 'temperature max'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=-1000.0_wp )
-
-    CALL mem%Add_var('min_mmtemp20', mem%min_mmtemp20,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('min_mmtemp20', 'min temperature climatology', 'temp min climate'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
-      & initval_r=1000.0_wp )
-
-    CALL mem%Add_var('max_mmtemp20', mem%max_mmtemp20,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('max_mmtemp20', 'max temperature climatology', 'temp max climate'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
-      & initval_r=-1000.0_wp )
-
-    CALL mem%Add_var('gdd_sum_year', mem%gdd_sum_year,                        &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_sum_year', 'gdd current year', 'gdd sum year'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=NONE,                                                    &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('gdd_prev_year', mem%gdd_prev_year,                      &
-      & hgrid, surface,                                                       &
-      & t_cf('gdd_prev_year', 'gdd previous year', 'gdd prev year'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-      & prefix, suffix,                                                       &
-      & output_level=FULL,                                                   &
-      & initval_r=0.0_wp )
-
     CALL mem%Add_var('act_fpc', mem%act_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
       & t_cf('act_fpc', 'actual foliage projective cover', 'act fpc'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('bare_fpc', mem%bare_fpc,                                &
       & hgrid, surface,                                                       &
@@ -183,7 +111,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('pot_fpc', mem%pot_fpc,                                  &
       & hgrid, pft_vgrid,                                                     &
@@ -191,7 +119,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                  &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,                  &
       & hgrid, pft_vgrid,                                                     &
@@ -199,7 +127,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('bio_exist', mem%bio_exist,                              &
       & hgrid, pft_vgrid,                                                     &
@@ -207,7 +135,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=MEDIUM,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('sum_green_bio_memory', mem%sum_green_bio_memory,        &
       & hgrid, surface,                                                       &
@@ -215,7 +143,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=NONE,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     CALL mem%Add_var('desert_fpc', mem%desert_fpc,                            &
       & hgrid, surface,                                                       &
@@ -223,7 +151,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
     ! diagnostic output variables
     CALL mem%Add_var('cover_fract', mem%cover_fract,                          &
@@ -232,7 +160,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & output_level=BASIC,                                                   &
-      & initval_r=0.0_wp )
+      & initval_r=0.0_lp )
 
   END SUBROUTINE Init_nlcc_memory
 

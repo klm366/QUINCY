@@ -19,9 +19,9 @@
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
 MODULE mo_veg_util
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                  ONLY: wp
+  USE mo_kind,                  ONLY: lp
   USE mo_jsb_control,           ONLY: debug_on
   USE mo_exception,             ONLY: message, finish, message_text
   USE mo_jsb_math_constants,    ONLY: zero, eps8, eps1
@@ -201,7 +201,7 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
         DO ic = 1, nc
           seed_bed_growth_mt(ix_elem,ic)     = zero
@@ -214,7 +214,7 @@ CONTAINS
             veg_pp_flux_harvest_mt(ix_elem,ic) = zero
           END IF
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
     END DO
 
@@ -364,15 +364,15 @@ CONTAINS
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season       !< growing_season LOGICAL
     LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl    !< growing_season LOGICAL, at vgrid_canopy_q_assimi
     LOGICAL                                 :: l_hlp                  !< helper
-    REAl(wp)                                :: hlp_r                  !< helper
-    REAl(wp)                                :: mavg_period_hlp        !< helper
+    REAl(lp)                                :: hlp_r                  !< helper
+    REAl(lp)                                :: mavg_period_hlp        !< helper
     INTEGER                                 :: ic                     !< looping over chunk
     INTEGER                                 :: icanopy                !< looping
     INTEGER                                 :: ncanopy                !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc     !< dimensions
-    REAL(wp)                                :: dtime                  !< timestep
-    REAL(wp)                                :: lctlib_tau_mycorrhiza  !< lctlib parameter (tau of mycorrhiza)
-    REAL(wp)                                :: lctlib_tau_fine_root   !< lctlib parameter (tau of fine roots)
+    REAL(lp)                                :: dtime                  !< timestep
+    REAL(lp)                                :: lctlib_tau_mycorrhiza  !< lctlib parameter (tau of mycorrhiza)
+    REAL(lp)                                :: lctlib_tau_fine_root   !< lctlib parameter (tau of fine roots)
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_mt2L2D :: veg_pool_mt
@@ -742,20 +742,20 @@ CONTAINS
         ELSE
           ! if there was no daylight during the previous day, just leave previous values for most variables
           DO icanopy = 1, ncanopy
-            fleaf_sunlit_daytime_cl(ic,icanopy) = 0.0_wp
+            fleaf_sunlit_daytime_cl(ic,icanopy) = 0.0_lp
           END DO
         END IF
         ! zero the accumulation variables after daily average has been calculated
         ! 1D
-        t_air_daytime_dacc(ic)                 = 0.0_wp
-        press_srf_daytime_dacc(ic)             = 0.0_wp
-        co2_mixing_ratio_daytime_dacc(ic)      = 0.0_wp
-        ga_daytime_dacc(ic)                    = 0.0_wp
-        beta_sinklim_ps_daytime_dacc(ic)       = 0.0_wp
-        t_jmax_opt_daytime_dacc(ic)            = 0.0_wp
+        t_air_daytime_dacc(ic)                 = 0.0_lp
+        press_srf_daytime_dacc(ic)             = 0.0_lp
+        co2_mixing_ratio_daytime_dacc(ic)      = 0.0_lp
+        ga_daytime_dacc(ic)                    = 0.0_lp
+        beta_sinklim_ps_daytime_dacc(ic)       = 0.0_lp
+        t_jmax_opt_daytime_dacc(ic)            = 0.0_lp
         ! 2D
         DO icanopy = 1, ncanopy
-          fleaf_sunlit_daytime_dacc_cl(ic,icanopy)     = 0.0_wp
+          fleaf_sunlit_daytime_dacc_cl(ic,icanopy)     = 0.0_lp
         END DO
       END IF
     END DO
@@ -849,10 +849,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF (growth_req_n(ic) > 0._wp) THEN
-        hlp_r = 1._wp / growth_req_n(ic)
+      IF (growth_req_n(ic) > 0._lp) THEN
+        hlp_r = 1._lp / growth_req_n(ic)
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_cn_tcnl_mavg(ic)  = calc_time_mavg(dtime, growth_cn_tcnl_mavg(ic), hlp_r, &
         &                                       mavg_period_tcnl,  do_calc=l_growing_season(ic))
@@ -862,10 +862,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF (growth_req_p(ic) > 0._wp) THEN
-        hlp_r = 1._wp / growth_req_p(ic)
+      IF (growth_req_p(ic) > 0._lp) THEN
+        hlp_r = 1._lp / growth_req_p(ic)
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_np_tcnl_mavg(ic)  = calc_time_mavg(dtime, growth_np_tcnl_mavg(ic), hlp_r,   &
         &                                       mavg_period_tcnl,  do_calc=l_growing_season(ic))
@@ -954,10 +954,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF(growth_req_n(ic) > 0._wp) THEN
-        hlp_r = 1._wp / growth_req_n(ic)
+      IF(growth_req_n(ic) > 0._lp) THEN
+        hlp_r = 1._lp / growth_req_n(ic)
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_cn_talloc_mavg(ic) = calc_time_mavg(dtime, growth_cn_talloc_mavg(ic), hlp_r, &
         &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
@@ -967,10 +967,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF(growth_req_n(ic) > 0._wp .AND. growth_req_p(ic) > 0._wp) THEN
-        hlp_r = 1._wp / (growth_req_n(ic) * growth_req_p(ic))
+      IF(growth_req_n(ic) > 0._lp .AND. growth_req_p(ic) > 0._lp) THEN
+        hlp_r = 1._lp / (growth_req_n(ic) * growth_req_p(ic))
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_cp_talloc_mavg(ic) = calc_time_mavg(dtime, growth_cp_talloc_mavg(ic), hlp_r, &
         &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
@@ -980,10 +980,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF(growth_req_p(ic) > 0._wp) THEN
-        hlp_r = 1._wp / growth_req_p(ic)
+      IF(growth_req_p(ic) > 0._lp) THEN
+        hlp_r = 1._lp / growth_req_p(ic)
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_np_talloc_mavg(ic) = calc_time_mavg(dtime, growth_np_talloc_mavg(ic), hlp_r, &
         &                                        mavg_period_hlp, do_calc=l_growing_season(ic))
@@ -993,10 +993,10 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(hlp_r)
     DO ic = 1, nc
-      IF(labile_nitrogen_talloc_mavg(ic) > 0._wp .AND. labile_phosphorus_talloc_mavg(ic) > 0._wp) THEN
+      IF(labile_nitrogen_talloc_mavg(ic) > 0._lp .AND. labile_phosphorus_talloc_mavg(ic) > 0._lp) THEN
         hlp_r = growth_req_p_tuptake_mavg(ic) * (labile_nitrogen_talloc_mavg(ic)/labile_phosphorus_talloc_mavg(ic))
       ELSE
-        hlp_r = 0._wp
+        hlp_r = 0._lp
       END IF
       growth_p_limit_based_on_n_mavg(ic) = &
         & calc_time_mavg(dtime, growth_p_limit_based_on_n_mavg(ic), hlp_r, mavg_period_hlp, do_calc=l_growing_season(ic))
@@ -1022,7 +1022,7 @@ CONTAINS
           l_hlp = .TRUE.
         END IF
       ELSE
-        hlp_r   = 0._wp
+        hlp_r   = 0._lp
       END IF
 
       leaf2root_troot_mavg(ic)         = calc_time_mavg(dtime, leaf2root_troot_mavg(ic), hlp_r, &
@@ -1047,7 +1047,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) &
     !$ACC   PRIVATE(l_hlp)
     DO ic = 1, nc
-      IF (lai(ic) > 0.1_wp) THEN
+      IF (lai(ic) > 0.1_lp) THEN
         l_hlp = .TRUE.
       ELSE
         l_hlp = .FALSE.
@@ -1121,14 +1121,14 @@ CONTAINS
     dsl4jsb_Use_config(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile           !< one tile with data structure for one lct
-    REAL(wp),                   INTENT(in)    :: dtime          !< timestep length
+    REAL(lp),                   INTENT(in)    :: dtime          !< timestep length
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER :: model                  !< the model
     TYPE(t_jsb_grid),         POINTER :: grid
     INTEGER                           :: iblk, ics, ice, nc, ic !< dimensions
-    REAL(wp),             ALLOCATABLE :: q_total_c_new(:)       !< helper variable
-    REAL(wp),                 POINTER :: lat(:,:)               !< Grid cell center latitude [deg.]
-    REAL(wp),                 POINTER :: lon(:,:)               !< Grid cell center longitude [deg.]
+    REAL(lp),             ALLOCATABLE :: q_total_c_new(:)       !< helper variable
+    REAL(lp),                 POINTER :: lat(:,:)               !< Grid cell center latitude [deg.]
+    REAL(lp),                 POINTER :: lon(:,:)               !< Grid cell center longitude [deg.]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':test_carbon_conservation'
     ! ----------------------------------------------------------------------------------------------------- !
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1183,7 +1183,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
 
       ! Only test conservation if the variable does not carry the initialisation value anymore
-      IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_wp))) THEN
+      IF (.NOT. (ALL(q_c_conservation_test(:) == -999.0_lp))) THEN
         DO ic = 1, nc
           ! vegetation and soil carbon
           q_total_c_new(ic) = veg_pool_total_c(ic) + SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
@@ -1196,16 +1196,16 @@ CONTAINS
           IF (model%config%flag_slow_sb_pool_spinup_accelerator .AND. executed_quincy_sb_accelerator_previous_timestep) THEN
             ! The SB_ slow-pool spinup-accelerator does not conserve matter
             ! therefore set conservation test to zero in the timestep after it ran
-            q_c_conservation_test(ic) = 0.0_wp
+            q_c_conservation_test(ic) = 0.0_lp
           ELSE
-            q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_wp)
+            q_c_conservation_test(ic) = q_total_c_new(ic) - q_total_c(ic) - (net_biosphere_production(ic) * dtime / 1000000.0_lp)
           END IF
 
           IF (dsl4jsb_Config(VEG_)%flag_log_c_conservation) THEN
-            IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_wp) .AND. (ABS(q_total_c(ic)) > 0.0_wp)) THEN
+            IF ((ABS(q_c_conservation_test(ic)) > 1.e-11_lp) .AND. (ABS(q_total_c(ic)) > 0.0_lp)) THEN
               WRITE(message_text,*) 'Failed carbon conservation test: ', q_c_conservation_test(ic), NEW_LINE('a'),   &
                 & '; new total c: ', q_total_c_new(ic), '; old total c: ', q_total_c(ic),                            &
-                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_wp), NEW_LINE('a'),                   &
+                & '; nbp ',  (net_biosphere_production(ic) * dtime / 1000000.0_lp), NEW_LINE('a'),                   &
                 & ' on lat =',    lat(ic,iblk), ' and lon =', lon(ic,iblk), NEW_LINE('a'),                           &
                 & ' with veg ', veg_pool_total_c(ic), ' and sb sum ', SUM(sb_pool_total_c(ic,:) * soil_depth_sl(ic,:))
                IF (dsl4jsb_Config(VEG_)%l_use_product_pools) THEN
@@ -1218,7 +1218,7 @@ CONTAINS
           q_total_c(ic) = q_total_c_new(ic)
         END DO
       ELSE
-        q_c_conservation_test(:) = 0.0_wp
+        q_c_conservation_test(:) = 0.0_lp
       END IF
     END DO
 

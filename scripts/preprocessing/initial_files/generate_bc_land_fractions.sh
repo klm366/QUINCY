@@ -310,22 +310,40 @@ for year in ${year_list}; do
         # The sum of the LUH state variables (c3crops c4crops nat pastr urban) equals one for all
         # non-glacier land cells. Bare land is part of natural.
         if [[ ! -f ${atmGridID}_LUH3_states_${year}.nc ]]; then
-          ${cdo} mul -remap,${icon_grid},wgt025.nc -setmisstodis ${luh3_states_root}_${year}.nc \
-                     non-glac-land-mask.nc  ${atmGridID}_LUH3_states_${year}.nc
 
-          ${cdo} -selvar,c3crops ${atmGridID}_LUH3_states_${year}.nc LUH3_c3crops_${year}.nc
-          ${cdo} -selvar,c4crops ${atmGridID}_LUH3_states_${year}.nc LUH3_c4crops_${year}.nc
-          ${cdo} -selvar,pastr   ${atmGridID}_LUH3_states_${year}.nc LUH3_pastr_${year}.nc
-          ${cdo} -selvar,urban   ${atmGridID}_LUH3_states_${year}.nc LUH3_urban_${year}.nc
-          ${cdo} -selvar,nat     ${atmGridID}_LUH3_states_${year}.nc LUH3_nat_${year}.nc
+          if [[ ${year} != 'natveg' ]]; then
 
-          # With jsbach we also need the maximum possible fractions of anthropogenic types, i.e. as
-          # if there was no natural land cover.
-          ${cdo} maxc,${small_fract} -expr,"anthro=1.-nat" ${atmGridID}_LUH3_states_${year}.nc LUH3_anthro_${year}.nc
-          ${cdo} -div LUH3_c3crops_${year}.nc LUH3_anthro_${year}.nc LUH3_c3crops_max_${year}.nc
-          ${cdo} -div LUH3_c4crops_${year}.nc LUH3_anthro_${year}.nc LUH3_c4crops_max_${year}.nc
-          ${cdo} -div LUH3_pastr_${year}.nc   LUH3_anthro_${year}.nc LUH3_pastr_max_${year}.nc
-          ${cdo} -div LUH3_urban_${year}.nc   LUH3_anthro_${year}.nc LUH3_urban_max_${year}.nc
+            ${cdo} mul -remap,${icon_grid},wgt025.nc -setmisstodis ${luh3_states_root}_${year}.nc \
+                       non-glac-land-mask.nc  ${atmGridID}_LUH3_states_${year}.nc
+
+            ${cdo} -selvar,c3crops ${atmGridID}_LUH3_states_${year}.nc LUH3_c3crops_${year}.nc
+            ${cdo} -selvar,c4crops ${atmGridID}_LUH3_states_${year}.nc LUH3_c4crops_${year}.nc
+            ${cdo} -selvar,pastr   ${atmGridID}_LUH3_states_${year}.nc LUH3_pastr_${year}.nc
+            ${cdo} -selvar,urban   ${atmGridID}_LUH3_states_${year}.nc LUH3_urban_${year}.nc
+            ${cdo} -selvar,nat     ${atmGridID}_LUH3_states_${year}.nc LUH3_nat_${year}.nc
+
+            # With jsbach we also need the maximum possible fractions of anthropogenic types, i.e. as
+            # if there was no natural land cover.
+            ${cdo} maxc,${small_fract} -expr,"anthro=1.-nat" ${atmGridID}_LUH3_states_${year}.nc LUH3_anthro_${year}.nc
+
+            ${cdo} -div LUH3_c3crops_${year}.nc LUH3_anthro_${year}.nc LUH3_c3crops_max_${year}.nc
+            ${cdo} -div LUH3_c4crops_${year}.nc LUH3_anthro_${year}.nc LUH3_c4crops_max_${year}.nc
+            ${cdo} -div LUH3_pastr_${year}.nc   LUH3_anthro_${year}.nc LUH3_pastr_max_${year}.nc
+            ${cdo} -div LUH3_urban_${year}.nc   LUH3_anthro_${year}.nc LUH3_urban_max_${year}.nc
+
+          else
+            # Natural vegetation only: LUH3 data is ignored and anthropogenic fractions are set to zero
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_c3crops_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_c4crops_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_pastr_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_urban_${year}.nc
+            ${cdo} mulc,1. non-glac-land-mask.nc  LUH3_nat_${year}.nc
+
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_c3crops_max_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_c4crops_max_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_pastr_max_${year}.nc
+            ${cdo} mulc,0. non-glac-land-mask.nc  LUH3_urban_max_${year}.nc
+          fi
         fi
 
         # Potential vegetation
@@ -819,8 +837,10 @@ for year in ${year_list}; do
         ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
 
     # Add global attributes from LUH and esacci pre-preocessed files
-    ncks -A -x -h ${prep_esacci_file}            ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
-    ncks -A -x -h ${luh3_states_root}_${year}.nc ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
+    ncks -A -x -h ${prep_esacci_file}              ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
+    if [[ ${year} != "natveg" ]]; then
+      ncks -A -x -h ${luh3_states_root}_${year}.nc ${path_bc}/${file_bc_frac}_${pft_tag}_${year}.nc
+    fi
 
     echo "${prog}:     ${file_bc_frac}_${pft_tag}_${year}.nc done"
 

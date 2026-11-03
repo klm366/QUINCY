@@ -30,7 +30,7 @@ CONTAINS
   !> Orchestrates setting up the ICON-Land model structure
 
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
-    USE mo_kind,                ONLY: wp
+    USE mo_kind,                ONLY: lp
     USE mo_util,                ONLY: separator
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
@@ -44,7 +44,6 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Register_vgrid, Get_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE, ZAXIS_GENERIC
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters
-#ifndef __NO_QUINCY__
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT
     USE mo_rad_parameters,      ONLY: init_rad_parameters
     USE mo_atmland_constants,   ONLY: init_atmland_constants
@@ -56,7 +55,6 @@ CONTAINS
     USE mo_q_pheno_parameters,  ONLY: init_q_pheno_parameters
     USE mo_turb_constants,      ONLY: init_turb_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
-#endif
     !>
     !> 1. Setup the ICON-Land models
     !>
@@ -66,12 +64,14 @@ CONTAINS
     !>     1b. Host model (ICON):    icon: src/drivers/mo_atmo_model.f90: construct_atmo_model
     !>
 
-    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, &
+    dsl4jsb_Use_processes SEB_, ASSIMI_, PHENO_, TURB_, SSE_, HYDRO_, RAD_, CLIMBUF_, NLCC_, &
       &                   CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, Q_SYL_, VEG_, ALCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(CLIMBUF_)
+    dsl4jsb_Use_config(NLCC_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -80,16 +80,16 @@ CONTAINS
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
     dsl4jsb_Use_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Use_config(Q_SYL_)
     dsl4jsb_Use_config(VEG_)
-#endif
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename !< icon_master.namelist - which models to run, which calendar, ...
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(CLIMBUF_)
+    dsl4jsb_Def_config(NLCC_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -98,10 +98,8 @@ CONTAINS
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
     dsl4jsb_Def_config(ALCC_)
-#ifndef __NO_QUINCY__
     dsl4jsb_Def_config(Q_SYL_)
     dsl4jsb_Def_config(VEG_)
-#endif
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -165,7 +163,6 @@ CONTAINS
          CALL finish(routine, 'Only one model_scheme allowed!')
       END IF
 
-#ifndef __NO_QUINCY__
       !>
       !> 5. Set the bgcm index var used in the scientific routines.
       !>   It depends on the model config and is identical across models,
@@ -174,13 +171,8 @@ CONTAINS
       IF (model_idx == 1) THEN
         CALL set_bgcm_element_idx(model%config%elements_index_map)
       END IF
-#else
-      IF (model_scheme == MODEL_QUINCY) THEN
-        CALL finish(routine, 'The model scheme QUINCY can only be run if compiled with --enable-quincy!')
-      END IF
-#endif
 
-      !> 6. Set parameter init and test for `--enable-quincy` compile flag
+      !> 6. Set parameter init
       !>
       IF (model_idx == 1) THEN
         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
@@ -188,7 +180,6 @@ CONTAINS
         SELECT CASE (model_scheme)
         CASE (MODEL_QUINCY)
           CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
-#ifndef __NO_QUINCY__
            CALL init_rad_parameters
            CALL init_q_assimi_parameters
            CALL init_q_agr_constants
@@ -198,7 +189,6 @@ CONTAINS
            CALL init_sb_constants
            CALL init_q_pheno_parameters
            CALL init_atmland_constants
-#endif
         CASE (MODEL_JSBACH)
           CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
           CALL init_pheno_parameters
@@ -212,9 +202,8 @@ CONTAINS
         CALL init_time()
       END IF
 
-      CALL model%Set_mode(model%config%hsm_mode)
       ! Disable multi-queue processing for QUINCY while it's not ready
-      CALL model%Set_multi_queues(model_scheme /= MODEL_QUINCY)
+      model%use_multiple_queues = model_scheme /= MODEL_QUINCY
 
       !>
       !> 8. Create and register surface grid, other grids are created by the processes that needs them.
@@ -269,7 +258,7 @@ CONTAINS
       ! dimension is needed in setups with changing PFT fractions.
       IF (model%Do_fractions_change()) THEN
         pft_layer => new_vgrid('pfts', ZAXIS_GENERIC, model%config%npft, &
-          & levels=(/ (REAL(i,kind=wp),i=1,model%config%npft) /), units='')
+          & levels=(/ (REAL(i,kind=lp),i=1,model%config%npft) /), units='')
         CALL register_vgrid(pft_layer)
       END IF
       CALL model%Set_options(npft=model%config%npft)
@@ -287,6 +276,8 @@ CONTAINS
       !>     10c. Configure JSABCH processes (CARBON, FUEL, DISTURB, FAGE, WLCC, FLCC)
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
+        dsl4jsb_Get_config(CLIMBUF_)
+        dsl4jsb_Get_config(NLCC_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
@@ -332,7 +323,6 @@ CONTAINS
         model%processes(ASSIMI_)%p%config%active = .FALSE.
         model%processes(PHENO_)%p%config%active = .FALSE.
 
-#ifndef __NO_QUINCY__
         ! The Q_SYL_ process requires the PPLCC process to be active
         dsl4jsb_Get_config(Q_SYL_)
         IF (dsl4jsb_Config(Q_SYL_)%active) THEN
@@ -361,7 +351,6 @@ CONTAINS
             dsl4jsb_Config(Q_SYL_)%active = .FALSE.
           END IF
         END IF
-#endif
 
       CASE (MODEL_JSBACH)
 
@@ -372,6 +361,18 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since natural lcc is active')
+        END IF
+        IF (model%Is_process_enabled(NLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since natural lcc process is active')
+        END IF
         IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
@@ -388,8 +389,12 @@ CONTAINS
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
+        IF (model%Is_process_enabled(CARBON_) .AND. .NOT. model%Is_process_enabled(CLIMBUF_)) THEN
+          dsl4jsb_Config(CLIMBUF_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on climate buffer process since carbon process is active')
+        END IF
 
-        IF(model%Is_process_enabled(FAGE_) &
+        IF (model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -491,6 +496,8 @@ CONTAINS
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
+      ! The tile tree is complete: collect its tiles once for all later loops over tiles
+      CALL model%Build_tile_lists()
     ELSE
       ! Explicit model configuration through namelist
       !>

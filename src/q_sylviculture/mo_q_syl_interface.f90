@@ -16,9 +16,9 @@
 !>#### definition and init of tasks for the quincy sylviculture process
 !>
 MODULE mo_q_syl_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
-  USE mo_kind,                ONLY: wp
+  USE mo_kind,                ONLY: lp
   USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_math_constants,  ONLY: eps8
   USE mo_exception,           ONLY: message, finish, message_text
@@ -116,14 +116,14 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                         :: ic, iblk, ics, ice, nc !< loop counter / dimensions
-    REAL(wp)                        :: dtime                  !< timestep length
+    REAL(lp)                        :: dtime                  !< timestep length
     INTEGER                         :: number_of_days         !< number of days in this year
     INTEGER                         :: current_year           !< the current year
-    REAL(wp)                        :: fract_sum              !< sum of allocation fractions to different pools
-    REAL(wp), DIMENSION(options%nc) :: cover_fraction         !< cover fraction of given tile
-    REAL(wp), DIMENSION(options%nc) :: fact_harvest_share     !< factor to determine the harvest share of this tile
+    REAL(lp)                        :: fract_sum              !< sum of allocation fractions to different pools
+    REAL(lp), DIMENSION(options%nc) :: cover_fraction         !< cover fraction of given tile
+    REAL(lp), DIMENSION(options%nc) :: fact_harvest_share     !< factor to determine the harvest share of this tile
                                                               !< depends on cover fraction and total area with PFTs with trees
-    REAL(wp), DIMENSION(options%nc) :: fract_harvest_box      !< total area relative to grid cell harvest from all forested PFTS
+    REAL(lp), DIMENSION(options%nc) :: fract_harvest_box      !< total area relative to grid cell harvest from all forested PFTS
     TYPE(t_jsb_model), POINTER      :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_sylviculture'
@@ -150,12 +150,12 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! Since harvest only is happening daily or annually (or in QS even just once at the stand replacing year)
     ! the default would be that nothing is harvested in this timestep
-    fract_forest_harvest(:) = 0._wp
+    fract_forest_harvest(:) = 0._lp
 
     ! Check if some harvest is to be done or if we can RETURN here
     IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest) THEN
       IF (dsl4jsb_Config(Q_SYL_)%flag_stand_harvest_event) THEN
-        fract_forest_harvest(:) =  1._wp
+        fract_forest_harvest(:) =  1._lp
       ELSE
         ! If we run QS and use stand replacing harvest nothing needs to be done
         IF (debug_on() .AND. iblk==1) CALL message(routine, 'Returned.')
@@ -212,7 +212,7 @@ CONTAINS
         IF (tree_fract_box_tile(ic) > eps8) THEN
           fact_harvest_share(ic) = cover_fraction(ic) / tree_fract_box_tile(ic)
         ELSE
-          fact_harvest_share(ic) = 0.0_wp
+          fact_harvest_share(ic) = 0.0_lp
         END IF
       END DO
 #endif
@@ -221,7 +221,7 @@ CONTAINS
         ! In case of daily harvest the harvest needs to be distributed over the number of days in this year
         current_year  = get_year(options%current_datetime)
         number_of_days = get_year_length(current_year)
-        fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, wp)
+        fact_harvest_share(:) = fact_harvest_share(:) / REAL(number_of_days, lp)
       END IF
 
       ! Now the grid-cell harvest fraction for this tile can be determined
@@ -233,7 +233,7 @@ CONTAINS
         !         !NOTE: i.e. not including the slash fraction!
         fract_sum = fract_wood_to_pp_fuel + fract_wood_to_pp_paper + fract_wood_to_pp_fiberboard   &
           &         + fract_wood_to_pp_oirw + fract_wood_to_pp_pv + fract_wood_to_pp_sawnwood
-        IF (ABS(fract_sum - 1._wp) >= eps8) THEN
+        IF (ABS(fract_sum - 1._lp) >= eps8) THEN
           WRITE(message_text,*) 'A sum of allocation fractions to different pools does not sum up to one, but was: ', &
             &                    fract_sum,'! Please check!'
           CALL finish(TRIM(routine),message_text)
@@ -241,7 +241,7 @@ CONTAINS
       END IF
       DO ic = 1,nc
         ! Assert: harvest fraction should not be negative
-        IF (fract_forest_harvest(ic) < 0._wp) THEN
+        IF (fract_forest_harvest(ic) < 0._lp) THEN
           WRITE(message_text,*) 'The harvested fraction (', fract_forest_harvest(ic), &
             &                    ') should not be negative. Please check!'
           CALL finish(TRIM(routine),message_text)

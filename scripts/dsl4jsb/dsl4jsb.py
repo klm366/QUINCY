@@ -112,11 +112,11 @@ macros = {
     ],
     "real2d_onchunk": [
         re.compile(r"dsl4jsb_Real2D_onChunk", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:)",
+        r"REAL(lp), POINTER, DIMENSION(:)",
     ],
     "real3d_onchunk": [
         re.compile(r"dsl4jsb_Real3D_onChunk", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "get_var2d_onchunk": [
         re.compile(r"dsl4jsb_Get_var2D_onChunk *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
@@ -164,11 +164,11 @@ macros = {
     ],
     "real2d_ondomain": [
         re.compile(r"dsl4jsb_Real2D_onDomain", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "real3d_ondomain": [
         re.compile(r"dsl4jsb_Real3D_onDomain", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "get_var2d_ondomain": [
         re.compile(
@@ -208,49 +208,21 @@ macros = {
         re.compile(r"dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)", re.IGNORECASE),
         r"\1__mem%\2%ptr",
     ],
-    "def_pool": [
-        re.compile(r"dsl4jsb_Def_pool *\((.*?) *\)", re.IGNORECASE),
-        r"TYPE(\1), POINTER",
-    ],
-    "get_pool": [
-        re.compile(
-            r"dsl4jsb_Get_pool *\((.*?)_ *, *(.*?) *, *(.*?) *\)", re.IGNORECASE
-        ),
-        r"\3 => \1__mem%\2",
-    ],
-    "get_pool_var2d_onchunk": [
-        re.compile(
-            r"dsl4jsb_Get_pool_var2D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
-            re.IGNORECASE,
-        ),
-        r"\3 => \1__mem%\2%\3%ptr(ics:ice,iblk)",
-    ],
-    "get_pool_var3d_onchunk": [
-        re.compile(
-            r"dsl4jsb_Get_pool_var3D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)",
-            re.IGNORECASE,
-        ),
-        r"\3 => \1__mem%\2%\3%ptr(ics:ice,:,iblk)",
-    ],
-    "pool": [
-        re.compile(r"dsl4jsb_pool *\((.*?)_ *, *(.*?) * *\)", re.IGNORECASE),
-        r"\1__mem%pools%\2",
-    ],
     "def_mt1l2d": [
         re.compile(r"dsl4jsb_Def_mt1L2D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:)",
     ],
     "def_mt1l3d": [
         re.compile(r"dsl4jsb_Def_mt1L3D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "def_mt2l2d": [
         re.compile(r"dsl4jsb_Def_mt2L2D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:)",
     ],
     "def_mt2l3d": [
         re.compile(r"dsl4jsb_Def_mt2L3D", re.IGNORECASE),
-        r"REAL(wp), POINTER, DIMENSION(:,:,:,:)",
+        r"REAL(lp), POINTER, DIMENSION(:,:,:,:)",
     ],
     "get_mt1l2d": [
         re.compile(r"dsl4jsb_Get_mt1L2D *\((.*?) *, *(.*?) *\)", re.IGNORECASE),

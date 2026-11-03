@@ -16,10 +16,10 @@
 !>#### definition and init of tasks for the phenology process incl. update and aggregate routines
 !>
 MODULE mo_q_pheno_interface
-#ifndef __NO_QUINCY__
+#ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_exception,          ONLY: message, finish
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
