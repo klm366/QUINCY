@@ -251,8 +251,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,precip_15d_yDay)        ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_sum_year)           ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)          ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_of_yr)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_of_yr)         ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_thaw_prev_year)     ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_wind_of_day)        ! inout
@@ -261,6 +259,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d)          ! inout
     dsl4jsb_Get_var2D_onChunk(CLIMBUF_,q_rel_air_14d_yDay)     ! inout
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_of_yr)           ! inout
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)       ! inout
       dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d)            ! inout
       dsl4jsb_Get_var3D_onChunk(CLIMBUF_,t_soil_sl_15d_yDay)       ! inout
       dsl4jsb_Get_var3D_onChunk(CLIMBUF_,wtr_soil_rel_sl_15d)      ! inout
@@ -303,17 +303,27 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
-    CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-      &                  rain, snow, wind_10m, q_rel_air, snow_depth, thaw_depth, &
-      &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-      &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
-      &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-      &                  gdd_sum_year, gdd_prev_year, &
-      &                  max_snow_of_yr, max_snow_prev_year, max_thaw_of_yr, max_thaw_prev_year, &
-      &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-      &                  q_rel_air_14d, q_rel_air_14d_yDay)
-
-    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+    IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
+        &                  rain, snow, wind_10m, q_rel_air, thaw_depth, &
+        &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+        &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
+        &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
+        &                  gdd_sum_year, gdd_prev_year, &
+        &                  max_thaw_of_yr, max_thaw_prev_year, &
+        &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+        &                  q_rel_air_14d, q_rel_air_14d_yDay)
+    ELSE
+      CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
+        &                  rain, snow, wind_10m, q_rel_air, thaw_depth, &
+        &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+        &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
+        &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
+        &                  gdd_sum_year, gdd_prev_year, &
+        &                  max_thaw_of_yr, max_thaw_prev_year, &
+        &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+        &                  q_rel_air_14d, q_rel_air_14d_yDay, &
+        &                  snow_depth, max_snow_of_yr, max_snow_prev_year)
       CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
         &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
         &                  max_t_soil_sl_year, permafrost_period_sl)

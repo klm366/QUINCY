@@ -35,9 +35,11 @@ MODULE mo_sse_memory_class
 
   ! Use of processes in this module
   dsl4jsb_Use_processes SSE_
+  dsl4jsb_Use_processes CARBON_
 
   ! Use process configurations
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(CARBON_)
 
   IMPLICIT NONE
   PRIVATE
@@ -117,6 +119,7 @@ CONTAINS
     INTEGER,             INTENT(in)            :: model_id   !< ID of the current model instance
 
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(CARBON_)
 
     TYPE(t_jsb_model), POINTER :: model                      !< This instance of ICON-Land
     TYPE(t_jsb_grid),  POINTER :: hgrid                      !< Horizontal grid
@@ -130,6 +133,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_Config(SSE_)
+    dsl4jsb_Get_Config(CARBON_)
 
     table = tables(1)
 
@@ -341,33 +345,35 @@ CONTAINS
         & initval_r = 0.0_lp)
     END SELECT
 
-    CALL mem%Add_var( 'n_thaw_cycle', mem%n_thaw_cycle,                      &
-      & hgrid, surface,                                                      &
-      & t_cf('n_thaw_cycle', '', 'Number of freeze-thaw cycles'),            &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_lp,                                  &
-      & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL mem%Add_var( 'n_thaw_cycle', mem%n_thaw_cycle,                      &
+        & hgrid, surface,                                                      &
+        & t_cf('n_thaw_cycle', '', 'Number of freeze-thaw cycles'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, initval_r = 0.0_lp,                                  &
+        & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
-    CALL mem%Add_var( 'n_thaw_cycle_prev', mem%n_thaw_cycle_prev,            &
-      & hgrid, surface,                                                      &
-      & t_cf('n_thaw_cycle_prev', '', 'Number of freeze-thaw cycles in previous year'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_lp,                                  &
-      & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
+      CALL mem%Add_var( 'n_thaw_cycle_prev', mem%n_thaw_cycle_prev,            &
+        & hgrid, surface,                                                      &
+        & t_cf('n_thaw_cycle_prev', '', 'Number of freeze-thaw cycles in previous year'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, initval_r = 0.0_lp,                                  &
+        & output_level=FULL, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
-    CALL mem%Add_var( 't_soil_sl_max', mem%t_soil_sl_max,                    &
-      & hgrid, soil_e,                                                       &
-      & t_cf('soil_temperature_max', 'K', 'soil temperature daily maximum'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_lp,                                  &
-      & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
+      CALL mem%Add_var( 't_soil_sl_max', mem%t_soil_sl_max,                    &
+        & hgrid, soil_e,                                                       &
+        & t_cf('soil_temperature_max', 'K', 'soil temperature daily maximum'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, initval_r = 0.0_lp,                                  &
+        & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
 
-    CALL mem%Add_var( 't_soil_sl_min', mem%t_soil_sl_min,                    &
-      & hgrid, soil_e,                                                       &
-      & t_cf('soil_temperature_min', 'K', 'soil temperature daily minimum'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix, initval_r = 0.0_lp,                                  &
-      & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
+      CALL mem%Add_var( 't_soil_sl_min', mem%t_soil_sl_min,                    &
+        & hgrid, soil_e,                                                       &
+        & t_cf('soil_temperature_min', 'K', 'soil temperature daily minimum'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix, initval_r = 0.0_lp,                                  &
+        & output_level=NONE, lrestart=.TRUE., lrestart_cont=.TRUE.)
+    END IF
 
   END SUBROUTINE Init_sse_memory
 

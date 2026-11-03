@@ -39,9 +39,10 @@ MODULE mo_sse_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes, configuration and memory in this module
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, CARBON_
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
@@ -151,6 +152,7 @@ CONTAINS
     ! Declare pointers to process configuration and memory
     dsl4jsb_Def_config(SSE_)     !< Configurable soil and snow energy parameters
     dsl4jsb_Def_config(HYDRO_)   !< Configurable hydrology parameters
+    dsl4jsb_Def_config(CARBON_)  !< Configurable carbon parameters
     dsl4jsb_Def_memory(SSE_)     !< Memory of the soil and snow energy process
     dsl4jsb_Def_memory(SEB_)     !< Memory of the surface energy balance process
     dsl4jsb_Def_memory(HYDRO_)   !< Memory of the hydrology process
@@ -234,6 +236,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
 
     soil_e => Get_vgrid('soil_depth_energy')
     nsoil = soil_e%n_levels
@@ -285,10 +288,12 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_srf)           ! in
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle)    ! out
-    dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle_prev) ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_max)   ! out
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_min)   ! out
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle)    ! out
+      dsl4jsb_Get_var2D_onChunk(SSE_,   n_thaw_cycle_prev) ! out
+      dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_max)   ! out
+      dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl_min)   ! out
+    END IF
 
     lstart = is_time_experiment_start(options%current_datetime)
     l_uniform_snow = dsl4jsb_Config(SSE_)%l_uniform_snow
@@ -584,12 +589,14 @@ CONTAINS
       !$ACC EXIT DATA DELETE(ws_max_sl) ASYNC(acc_stream)
       DEALLOCATE(ws_max_sl)
 
-      CALL get_num_thaw_cycles(               &
-        & nc, nsoil, lstart,                  &
-        & new_year, new_day,                  &
-        & t_soil_sl,                          &
-        & t_soil_sl_max, t_soil_sl_min,       &
-        & n_thaw_cycle, n_thaw_cycle_prev)
+      IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+        CALL get_num_thaw_cycles(               &
+          & nc, nsoil, lstart,                  &
+          & new_year, new_day,                  &
+          & t_soil_sl,                          &
+          & t_soil_sl_max, t_soil_sl_min,       &
+          & n_thaw_cycle, n_thaw_cycle_prev)
+      END IF
 
       CALL calc_snow_abcoeff(     &
         ! in
@@ -654,6 +661,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model                    !< Current instance of the model
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -672,6 +680,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -697,10 +706,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle_prev,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_min,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_max,         weighted_by_fract)
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle,          weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   n_thaw_cycle_prev,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_min,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_sl_max,         weighted_by_fract)
+    END IF
 
     CALL weighted_by_fract%EndAggregate()
 

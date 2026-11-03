@@ -283,21 +283,6 @@ CONTAINS
         & lrestart=.TRUE., initval_r=0.0_lp)
     END IF
 
-    CALL mem%Add_var('max_snow_of_yr', mem%max_snow_of_yr,                                &
-      & hgrid, surface,                                                                   &
-      & t_cf('max_snow_of_yr', 'm', 'Maximum snow depth in current year'),                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & lrestart=.TRUE., initval_r=0.0_lp)
-
-    CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,                        &
-      & hgrid, surface,                                                                   &
-      & t_cf('max_snow_prev_year', 'm', 'Maximum snow depth in previous year'),           &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & output_level=MEDIUM,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_lp)
-
     CALL mem%Add_var('max_thaw_of_yr', mem%max_thaw_of_yr,                                &
       & hgrid, surface,                                                                   &
       & t_cf('max_thaw_of_yr', 'm', 'Maximum thaw depth in current year'),                &
@@ -315,6 +300,21 @@ CONTAINS
       & lrestart=.TRUE., initval_r=max_depth)
 
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL mem%Add_var('max_snow_of_yr', mem%max_snow_of_yr,                                &
+        & hgrid, surface,                                                                   &
+        & t_cf('max_snow_of_yr', 'm', 'Maximum snow depth in current year'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
+      CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,                        &
+        & hgrid, surface,                                                                   &
+        & t_cf('max_snow_prev_year', 'm', 'Maximum snow depth in previous year'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
       CALL mem%Add_var('t_soil_sl_15d', mem%t_soil_sl_15d,                                  &
         & hgrid, soil_e,                                                                    &
         & t_cf('soil_temperature_15d', 'K',                                                 &

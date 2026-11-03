@@ -539,7 +539,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)                      ! out
     END IF
 
-    dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)          ! in
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,     n_thaw_cycle_prev)        ! in
+    END IF
 
     lstart   = is_time_experiment_start(options%current_datetime)
     lresume  = is_time_restart(options%current_datetime)
