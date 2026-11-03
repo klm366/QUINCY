@@ -2,7 +2,7 @@ This folder contains scripts to pre-process land-use harmonisation (**LUH**, htt
 - for use in the icon land init file preprocessing
 - for use with quincy in icon land
 Currently the scripts are called (submitted to the cluster) independently of each other.
- 
+
 #### aggregate_LUH_states.sh
 Script to aggregate LUH type states for later use in the icon land init file preprocessing together with
 esacci land cover maps.
@@ -28,6 +28,12 @@ from the LUH transitions file are aggregated to one common harvest map.
 - The fertilisation data is derived separately for c3crops and c4crops using the management and the state file.
 The script produces one file for each year in the demanded year range.
 
+#### aggregate_LUH_transitions.sh
+Script to aggregate transition rates of different LUH land cover types in broader categories (natural,
+pasture, crop/c3crop/c4crop) to be read in ICON-Land in ALCC's transition scheme.
+**The script should not be called interactively but should be submitted with sbatch.**
+Please particularly check/set the in- and output paths (i.e. replace YOUROUTPUTFOLDER).
+
 #### calculate_mean_LUH_harvest.sh
 Script to calculate mean LUH type harvest, to be read in ICON-Land for the QUINCY wood harvest process.
 (Required for spin-up and S0 type simulations)
@@ -40,7 +46,7 @@ The script produces one file with the mean of the demanded year range.
 
 #### generate_static_LUH.sh
 Script to prepare static land-use input files for the ICON-Land model with QUINCY.
-It performs interpolation of crop types and forest harvest slash fractions to the selected grid 
+It performs interpolation of crop types and forest harvest slash fractions to the selected grid
 and produces a merged NetCDF file for use in ICON-Land with QUINCY simulations.
 **The script should not be called interactively but should be submitted with sbatch.**
 The script can be setup in the header section (grid, in- and output paths and files).
