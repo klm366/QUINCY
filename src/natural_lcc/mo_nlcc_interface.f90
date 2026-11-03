@@ -19,8 +19,8 @@ MODULE mo_nlcc_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
-  USE mo_kind,            ONLY: wp
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -125,29 +125,29 @@ CONTAINS
     LOGICAL  :: lstart, init_running_means
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
-    REAL(wp) :: accelerate_nlcc
-    REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
+    REAL(lp) :: accelerate_nlcc
+    REAL(lp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
-    REAL(wp), POINTER  ::  var_collect(:,:)
+    REAL(lp), POINTER  ::  var_collect(:,:)
     LOGICAL, ALLOCATABLE  :: is_woody(:,:)
     LOGICAL, ALLOCATABLE  :: is_grass(:,:)
     LOGICAL, ALLOCATABLE  :: is_pasture(:,:)
     LOGICAL, ALLOCATABLE  :: is_crop(:,:)
     LOGICAL, ALLOCATABLE  :: is_dynamic(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_temprange(:,:)
-    REAL(wp), POINTER  ::  bclimit_min_gdd(:,:)
-    REAL(wp), POINTER  ::  tau_c_woods(:,:)
-    REAL(wp), POINTER  ::  NPP_mean_5year(:,:)
-    REAL(wp), POINTER  ::  burned_fract(:,:)
-    REAL(wp), POINTER  ::  damaged_fract(:,:)
-    REAL(wp), POINTER  ::  max_green_bio(:,:)
-    REAL(wp), POINTER  ::  sla(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
-    REAL(wp), ALLOCATABLE  ::  cover_fract_sum(:)
-    REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
+    REAL(lp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
+    REAL(lp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
+    REAL(lp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
+    REAL(lp), POINTER  ::  bclimit_min_temprange(:,:)
+    REAL(lp), POINTER  ::  bclimit_min_gdd(:,:)
+    REAL(lp), POINTER  ::  tau_c_woods(:,:)
+    REAL(lp), POINTER  ::  NPP_mean_5year(:,:)
+    REAL(lp), POINTER  ::  burned_fract(:,:)
+    REAL(lp), POINTER  ::  damaged_fract(:,:)
+    REAL(lp), POINTER  ::  max_green_bio(:,:)
+    REAL(lp), POINTER  ::  sla(:,:)
+    REAL(lp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
+    REAL(lp), ALLOCATABLE  ::  cover_fract_sum(:)
+    REAL(lp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
@@ -175,7 +175,6 @@ CONTAINS
 
     ! Local variables
     LOGICAL :: new_year, new_day, init_nlcc
-    LOGICAL, SAVE :: nlcc_initialized = .FALSE.
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -266,7 +265,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
 
-    IF (.NOT. nlcc_initialized .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+    IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
+        & .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
       init_nlcc = .TRUE.
     ELSE
       init_nlcc = .FALSE.
@@ -280,7 +280,7 @@ CONTAINS
     new_day = is_newday(options%current_datetime, options%dtime)
 
     ALLOCATE (cover_fract_sum(nc))
-    cover_fract_sum(:) = 0._wp
+    cover_fract_sum(:) = 0._lp
     DO itile = 1,no_children
       ! Point to the correct pft
       IF (itile == 1) THEN
@@ -293,7 +293,7 @@ CONTAINS
       cover_fract_sum(:) = cover_fract_sum(:) + cover_fract(:,itile)
     END DO ! itile
     ! scale cover_fract to fractions relative to the veg_tile
-    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_wp)
+    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_lp)
 !!$    WRITE (*,*) 'sum of cover_fract: ',SUM(cover_fract(:,:),DIM=2)
 
     ! allocate more local variables
@@ -303,7 +303,7 @@ CONTAINS
     ! initialize act_fpc, bare fpc, and pot_fpc
     IF (lstart) THEN
        act_fpc(:,:) = cover_fract(:,:)
-       bare_fpc(:) = 0._wp
+       bare_fpc(:) = 0._lp
        CALL scale_fpc(routine, nc, iblk, no_children, is_dynamic, act_fpc, bare_fpc)
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
@@ -345,10 +345,10 @@ CONTAINS
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
                                sum_green_bio_memory(:), desert_fpc(:))
-!!$ TR          fract_fpc_max(:) = MAX(1.e-10_wp,1._wp - desert_fpc(:))
+!!$ TR          fract_fpc_max(:) = MAX(1.e-10_lp,1._lp - desert_fpc(:))
           !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
           ALLOCATE(fract_fpc_max(nc,no_children))
-          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_wp,1._wp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
+          fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_lp,1._lp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
           CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
        ENDIF ! not lstart
     ENDIF ! new_year
@@ -359,8 +359,6 @@ CONTAINS
                       NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
-
-    nlcc_initialized = .TRUE.
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &

@@ -15,7 +15,7 @@
 MODULE mo_fage_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind, ONLY: lp
   USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
@@ -106,7 +106,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
         & output_level=BASIC,                                                   &
-        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_lp )
 
       CALL mem%Add_var('fract_per_age', mem%fract_per_age,                     &
         & hgrid, forest_age,                                                   &
@@ -114,7 +114,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=FULL,                                                   &
-        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+        & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp )
 
     END IF
 

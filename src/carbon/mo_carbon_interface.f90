@@ -22,7 +22,7 @@ MODULE mo_carbon_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on, acc_stream
-  USE mo_kind,            ONLY: wp
+  USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -165,21 +165,21 @@ CONTAINS
     INTEGER                      :: iblk, ics, ice, nc, ic
     INTEGER                      :: tmp_timesteps_per_day
     INTEGER                      :: lctlib_PhenologyType
-    REAL(wp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
-    REAL(wp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
-    REAL(wp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
-    REAL(wp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
-    REAL(wp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
-    REAL(wp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
-    REAL(wp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_LeafLit_coef_humus
-    REAL(wp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
-    REAL(wp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
-    REAL(wp)                     :: lctlib_WoodLit_coef_humus
+    REAL(lp)                     :: lctlib_fract_npp_2_woodPool, lctlib_fract_NPP_2_reservePool
+    REAL(lp)                     :: lctlib_fract_NPP_2_exudates, lctlib_fract_green_2_herbivory
+    REAL(lp)                     :: lctlib_tau_c_woods, lctlib_LAI_shed_constant, lctlib_MaxLAI
+    REAL(lp)                     :: lctlib_WoodLitterSize, lctlib_Max_C_content_woods
+    REAL(lp)                     :: lctlib_specificLeafArea_C, lctlib_reserveC2leafC
+    REAL(lp)                     :: lctlib_LeafLit_coef_acid, lctlib_LeafLit_coef_water
+    REAL(lp)                     :: lctlib_LeafLit_coef_ethanol, lctlib_LeafLit_coef_nonsoluble
+    REAL(lp)                     :: lctlib_LeafLit_coef_humus
+    REAL(lp)                     :: lctlib_WoodLit_coef_acid, lctlib_WoodLit_coef_water
+    REAL(lp)                     :: lctlib_WoodLit_coef_ethanol, lctlib_WoodLit_coef_nonsoluble
+    REAL(lp)                     :: lctlib_WoodLit_coef_humus
     CHARACTER(len=*), PARAMETER  :: routine = modname//':update_C_NPP_pot_allocation'
-    REAL(wp)                     :: dtime
-    REAL(wp), DIMENSION(options%nc) :: MaxLai
-    REAL(wp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
+    REAL(lp)                     :: dtime
+    REAL(lp), DIMENSION(options%nc) :: MaxLai
+    REAL(lp), DIMENSION(options%nc) :: old_c_state_sum_ta, current_fluxes
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
@@ -449,10 +449,10 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      co2flux_npp_2_atm_yday_ta(ic)  = 0._wp
-      co2flux_npp_2_atm_ta(ic)       = 0._wp
-      co2flux_soilresp_2_atm_ta(ic)  = 0._wp
-      co2flux_herb_2_atm_ta(ic)      = 0._wp
+      co2flux_npp_2_atm_yday_ta(ic)  = 0._lp
+      co2flux_npp_2_atm_ta(ic)       = 0._lp
+      co2flux_soilresp_2_atm_ta(ic)  = 0._lp
+      co2flux_herb_2_atm_ta(ic)      = 0._lp
     END DO
     !$ACC END LOOP
 
@@ -460,10 +460,10 @@ CONTAINS
       ! Reset annual sums if newyear or if the simulation just started
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        c_decomp_humus_1_sum(ic) =  0._wp
-        c_decomp_humus_2_sum(ic) =  0._wp
-        c_into_humus_1_sum(ic)   =  0._wp
-        c_into_humus_2_sum(ic)   =  0._wp
+        c_decomp_humus_1_sum(ic) =  0._lp
+        c_decomp_humus_2_sum(ic) =  0._lp
+        c_into_humus_1_sum(ic)   =  0._lp
+        c_into_humus_2_sum(ic)   =  0._lp
       END DO
       !$ACC END LOOP
     END IF
@@ -973,14 +973,14 @@ CONTAINS
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    REAL(wp),                   INTENT(in)            :: oldRefArea(:),  &
+    REAL(lp),                   INTENT(in)            :: oldRefArea(:),  &
                                                          newRefArea(:)
 
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
-    REAL(wp)                    :: refarea_scaling
+    REAL(lp)                    :: refarea_scaling
     INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green
@@ -1268,48 +1268,48 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)            :: options
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_green(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_woods(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_reserve(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_crop_harvest(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_green(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_woods(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_reserve(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_crop_harvest(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_acid_ag1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_water_ag1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_acid_bg1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_water_bg1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg1(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_acid_ag2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_water_ag2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_ethanol_ag2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_ag2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_acid_bg2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_water_bg2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_ethanol_bg2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_nonsoluble_bg2(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_1(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_humus_2(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_1_sum(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_decomp_humus_2_sum(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_1_sum(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: c_into_humus_2_sum(:)
 
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
-    REAL(wp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_green_2_soil(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_dist_woods_2_soil(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: co2flux_fire_all_2_atm(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: soil_respiration(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_pot_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_act_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: NPP_flux_correction(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: GPP_yDayMean(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_c_greenwood_2_litter(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: root_exudates(:)
+    REAL(lp),                   INTENT(in), OPTIONAL  :: cflux_c_green_2_herb(:)
 
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)
@@ -1510,11 +1510,11 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
-    REAL(wp),                   INTENT(out)        :: current_c_state_sum_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_veg_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg_ta(:)
-    REAL(wp), OPTIONAL,         INTENT(out)        :: c_sum_humus_ta(:)
+    REAL(lp),                   INTENT(out)        :: current_c_state_sum_ta(:)
+    REAL(lp), OPTIONAL,         INTENT(out)        :: c_sum_veg_ta(:)
+    REAL(lp), OPTIONAL,         INTENT(out)        :: c_sum_litter_ag_ta(:)
+    REAL(lp), OPTIONAL,         INTENT(out)        :: c_sum_litter_bg_ta(:)
+    REAL(lp), OPTIONAL,         INTENT(out)        :: c_sum_humus_ta(:)
 
     dsl4jsb_Def_memory(CARBON_)
 
@@ -1665,9 +1665,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
     INTEGER :: ic, k, i_pool, i_passive, i_litter_coefficient, nc, ics, ice, iblk
 
-    REAL(wp) :: litter_coefficient, fraction, this_fract
-    REAL(wp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
-    REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
+    REAL(lp) :: litter_coefficient, fraction, this_fract
+    REAL(lp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
+    REAL(lp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
 
     dsl4jsb_Def_config(CARBON_)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1689,8 +1689,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Collect matter from potential active variables -- here unfortunately explicit
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
-      non_woody_litter(ic) = 0._wp
-      woody_litter(ic) = 0._wp
+      non_woody_litter(ic) = 0._lp
+      woody_litter(ic) = 0._lp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1702,14 +1702,14 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Usually green, reserve and wood are distributed to ag and bg pools according to given fractions
     this_fract_green_aboveGround = fract_green_aboveGround
     this_fract_wood_aboveGround = fract_wood_aboveGround
-    IF(lcc_relocations%name .EQ. 'flcc_lcc') THEN
+    IF (lcc_relocations%name .EQ. 'flcc_lcc') THEN
       ! In case of fire there is no C transferred from green and reserve pools to ag litter pools, since it burned.
-      this_fract_green_aboveGround = 0.0_wp
+      this_fract_green_aboveGround = 0.0_lp
       ! Besides, part of the ag wood C is burned and has already been added to the atmosphere flux (vg: where????)
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
-      not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
-      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
-    ENDIF
+      not_burned_AG_fract = (1.0_lp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
+      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_lp - fract_wood_aboveGround))
+    END IF
 
     ! Distribution of the litter to the different yasso carbon pools
     DO i_pool = 1, nr_of_yasso_pools
@@ -1748,10 +1748,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
         fraction = this_fract
       ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'bg') > 0) THEN
         ! Pool name contains 'bg' => below ground C pool => 1 - fraction to above ground pool
-        fraction = 1.0_wp - this_fract
+        fraction = 1.0_lp - this_fract
       ELSE IF (INDEX(carbon_required_passive_vars(i_pool), 'humus') > 0) THEN
         ! Pool name contains 'humus' => humus C pool
-        fraction = 1.0_wp
+        fraction = 1.0_lp
       ELSE
         CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
           & // ' did not contain "ag", "bg" or "humus" which are key to identifiy above vs below'     &
@@ -1781,9 +1781,9 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract),   INTENT(inout), TARGET :: tile
     TYPE(t_jsb_task_options),        INTENT(in)         :: options
-    REAL(wp), DIMENSION(options%nc), INTENT(in)         :: old_veg_fract_correction
+    REAL(lp), DIMENSION(options%nc), INTENT(in)         :: old_veg_fract_correction
     ! -------------------------------------------------------------------------------------------------- !
-    REAL(wp) :: veg_fract_corr_scaling
+    REAL(lp) :: veg_fract_corr_scaling
     INTEGER  :: iblk, ics, ice, nc, ic
 
     dsl4jsb_Def_memory(CARBON_)
@@ -1842,7 +1842,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: target     !< target age class
     CLASS(t_jsb_tile_abstract),      INTENT(inout) :: source     !< source age class
     TYPE(t_jsb_task_options),        INTENT(in)    :: options    !< Additional run-time parameters
-    REAL(wp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
+    REAL(lp), DIMENSION(options%nc), INTENT(in)    :: moved_area !< area moved from source to target ac
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER  :: iblk, ics, ice
 
@@ -1868,7 +1868,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_source
     dsl4jsb_Real2D_onChunk :: veg_carbon_at_max_green_target
 
-    REAL(wp), DIMENSION(options%nc) :: target_fract
+    REAL(lp), DIMENSION(options%nc) :: target_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':merge_carbon_vars_upon_ageing'
     ! -------------------------------------------------------------------------------------------------- !
@@ -1941,10 +1941,10 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(in), TARGET :: tile
     TYPE(t_jsb_task_options),   INTENT(in)         :: options
-    REAL(wp),                   INTENT(in)         :: old_c_state_sum_ta(:)
-    REAL(wp),                   INTENT(in)         :: cflux_ta(:)
+    REAL(lp),                   INTENT(in)         :: old_c_state_sum_ta(:)
+    REAL(lp),                   INTENT(in)         :: cflux_ta(:)
         ! Note: cflux is not really a flux, but already multiplied with time unit!
-    REAL(wp),                   INTENT(inout)      :: Cconserve(:)
+    REAL(lp),                   INTENT(inout)      :: Cconserve(:)
 
     ! Local variables
     INTEGER :: ic, nc
@@ -1990,7 +1990,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     TYPE(t_jsb_grid),  POINTER      :: grid
     TYPE(t_jsb_task_options)        :: options
 
-    REAL(wp), ALLOCATABLE :: C_flux_yday(:)
+    REAL(lp), ALLOCATABLE :: C_flux_yday(:)
     INTEGER               :: ic, ics, ice, iblk, nc
 
     dsl4jsb_Get_memory(L2A_)
@@ -2029,7 +2029,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
 
       ! Do not test as long as carbon_conservation_test still carries the initialisation value
-      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
+      IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_lp)) THEN
 
         ! CO2 flux due to npp, soil respiration and herbivory
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -2062,7 +2062,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
         DO ic = 1, nc
-          carbon_conservation_test(ic) = 0._wp
+          carbon_conservation_test(ic) = 0._lp
         END DO
         !$ACC END PARALLEL LOOP
       ENDIF
@@ -2090,7 +2090,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     USE mo_util,                    ONLY: scaled_global_sum_2D
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile                   !< Current tile
-    REAL(wp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
+    REAL(lp),                   INTENT(in) :: land_area_scaling(:,:) !< Land area scaling factor (accounting for halo cells)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(CARBON_)
 
@@ -2105,14 +2105,14 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Real2D_onDomain :: GPP_yDayMean_ta
     dsl4jsb_Real2D_onDomain :: soil_respiration_ta
 
-    REAL(wp), POINTER       :: C_sum_veg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_ag_gsum(:)
-    REAL(wp), POINTER       :: C_sum_litter_bg_gsum(:)
-    REAL(wp), POINTER       :: C_sum_humus_gsum(:)
-    REAL(wp), POINTER       :: C_sum_natural_gsum(:)
-    REAL(wp), POINTER       :: NPP_act_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: GPP_yDayMean_gsum(:)
-    REAL(wp), POINTER       :: soil_respiration_gsum(:)
+    REAL(lp), POINTER       :: C_sum_veg_gsum(:)
+    REAL(lp), POINTER       :: C_sum_litter_ag_gsum(:)
+    REAL(lp), POINTER       :: C_sum_litter_bg_gsum(:)
+    REAL(lp), POINTER       :: C_sum_humus_gsum(:)
+    REAL(lp), POINTER       :: C_sum_natural_gsum(:)
+    REAL(lp), POINTER       :: NPP_act_yDayMean_gsum(:)
+    REAL(lp), POINTER       :: GPP_yDayMean_gsum(:)
+    REAL(lp), POINTER       :: soil_respiration_gsum(:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_var2D_onDomain(CARBON_,  C_sum_veg_ta)                ! in
@@ -2140,40 +2140,40 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !  => Conversion from [mol(C)/m^2] to [GtC]
     !     1 mol C = molarMassC_kg kg C   => 1 mol C = molarMassC_kg * e-12 Gt C
     IF (CARBON__mem%C_sum_veg_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_veg_gsum, C_sum_veg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_veg_gsum, C_sum_veg_ta, land_area_scaling, molarMassC_kg * 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_veg_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_litter_ag_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_litter_ag_gsum, C_sum_litter_ag_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_litter_ag_gsum, C_sum_litter_ag_ta, land_area_scaling, molarMassC_kg * 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_ag_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_litter_bg_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_litter_bg_gsum, C_sum_litter_bg_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_litter_bg_gsum, C_sum_litter_bg_ta, land_area_scaling, molarMassC_kg * 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_litter_bg_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_humus_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_humus_gsum, C_sum_humus_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_humus_gsum, C_sum_humus_ta, land_area_scaling, molarMassC_kg * 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_humus_gsum%ptr(:))
     END IF
     IF (CARBON__mem%C_sum_natural_gsum%is_in_output) THEN
-      CALL scaled_global_sum_2D(C_sum_natural_gsum, C_sum_natural_ta, land_area_scaling, molarMassC_kg * 1.e-12_wp, acc_stream)
+      CALL scaled_global_sum_2D(C_sum_natural_gsum, C_sum_natural_ta, land_area_scaling, molarMassC_kg * 1.e-12_lp, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%C_sum_natural_gsum%ptr(:))
     END IF
 
     ! ... fluxes * sec_per_year
     IF (CARBON__mem%NPP_act_yDayMean_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(NPP_act_yDayMean_gsum, NPP_act_yDayMean_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_lp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%NPP_act_yDayMean_gsum%ptr(:))
     END IF
     IF (CARBON__mem%GPP_yDayMean_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(GPP_yDayMean_gsum, GPP_yDayMean_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_lp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%GPP_yDayMean_gsum%ptr(:))
     END IF
     IF (CARBON__mem%soil_respiration_gsum%is_in_output) THEN
       CALL scaled_global_sum_2D(soil_respiration_gsum, soil_respiration_ta, land_area_scaling, &
-          & molarMassC_kg * 1.e-12_wp * sec_per_year, acc_stream)
+          & molarMassC_kg * 1.e-12_lp * sec_per_year, acc_stream)
       !$ACC UPDATE ASYNC(acc_stream) DEVICE(CARBON__mem%soil_respiration_gsum%ptr(:))
     END IF
 

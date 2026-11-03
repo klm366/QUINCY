@@ -22,9 +22,10 @@ MODULE mo_climbuf_interface
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
 
-  USE mo_kind,               ONLY: wp
+  USE mo_kind,               ONLY: lp
   USE mo_jsb_control,        ONLY: debug_on, acc_stream
-  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, &
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_time_restart, &
+    &                              is_newyear, is_newmonth, is_newday, &
     &                              get_day_length, get_previous_month_length
   USE mo_exception,          ONLY: message
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -130,16 +131,14 @@ CONTAINS
       & ic,                  & !< Looping index for grid cells
       & nc                     !< Number of grid cells in block
 
-    REAL(wp) :: &
+    REAL(lp) :: &
       & seconds_day,         & !< Number of seconds per day
       & seconds_month,       & !< Number of seconds in previous month
       & dtime                  !< Time step length [s]
 
-    REAL(wp), ALLOCATABLE :: &
+    REAL(lp), ALLOCATABLE :: &
       & q_rel_air(:)           !< Relative humidity of the lowest level of the atmosphere [%]
 
-    LOGICAL, SAVE :: &
-      & climbuf_initialized = .FALSE.    !< Climate buffer has been initialized
     LOGICAL :: &
       & use_tmx                !< Use tmx scheme; needed as local variable on GPUs
 
@@ -229,7 +228,8 @@ CONTAINS
     ! Generally, the climate buffer is initialized at model initialization (is_time_experiment_start).
     ! There is however the possibility to initialize it in restarted simulations by namelist parameter
     ! 'init_climbuf'. We here make sure, the buffer is initialized only at the first time step of the run.
-    IF (.NOT. climbuf_initialized .AND. dsl4jsb_Config(CLIMBUF_)%init_climbuf) THEN
+    IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
+        & .AND. dsl4jsb_Config(CLIMBUF_)%init_climbuf) THEN
       init_climbuf = .TRUE.
     ELSE
       init_climbuf = .FALSE.
@@ -265,7 +265,6 @@ CONTAINS
       &               gdd_sum_year, gdd_prev_year, &
       &               max_wind_of_day, max_wind_yDay, max_wind_4yr, &
       &               q_rel_air_14d, q_rel_air_14d_yDay)
-    climbuf_initialized = .TRUE.
 
     !$ACC END DATA
     DEALLOCATE (q_rel_air)

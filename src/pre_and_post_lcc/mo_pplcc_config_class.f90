@@ -1,4 +1,4 @@
-!> pplcc (pre- and post lcc) config
+!> Configuration of the pre and post land cover change (PPLCC) process
 !>
 !> ICON-Land
 !>
@@ -11,9 +11,10 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!>#### Could contain namelist info for pplcc, but currently of no use beyond infrastructural requirements
+!>### Module intended for namelist information on the PPLCC process
 !>
-!> currently of no use beyond being required by the infrastructure
+!> Currently, no namelist parameters have been specifically defined for the pre and post land cover
+!> change (PPLCC) process. The module is however required by the ICON-Land infrastructure.
 !>
 MODULE mo_pplcc_config_class
 #ifndef __NO_JSBACH__
@@ -38,24 +39,24 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Initialize pplcc process
+  !> Initialization of the pre and post land cover change (PPLCC) process
   !
   SUBROUTINE Init_pplcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_pplcc_config), INTENT(inout) :: config !<Configuration type of process (t_pplcc_config)
+    CLASS(t_pplcc_config), INTENT(inout) :: config !< Type containing namelist parameters of the process
     ! -------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active, lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     ! -------------------------------------------------------------------------------------------------- !
 
-    NAMELIST /jsb_pplcc_nml/      &
-         active,                      &
-         lrestart_cont,               &
-         ic_filename,                 &
-         bc_filename
+    NAMELIST /jsb_pplcc_nml/    &
+      & active,                 &
+      & lrestart_cont,          &
+      & ic_filename,            &
+      & bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat
 
