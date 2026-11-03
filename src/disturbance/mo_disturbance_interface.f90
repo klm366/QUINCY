@@ -266,11 +266,6 @@ CONTAINS
               & burned_fract(:)                                  & ! out
               & )
 
-          CASE (2) !! Arora & Boer algorithm
-            CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
-          CASE (3)
-            CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
-          CASE (4) !! Read burned_fract
           CASE DEFAULT
             CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
@@ -787,11 +782,6 @@ CONTAINS
               CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
                 & cflux(:), cconservation_fire(:))
 
-            CASE (2) !! Arora & Boer algorithm
-              CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
-            CASE (3)
-              CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
-            CASE (4) !! Read burned_fract
             CASE DEFAULT
               CALL finish('disturbed_fract','Unknown fire algorithm')
           END SELECT

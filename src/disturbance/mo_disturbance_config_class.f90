@@ -28,8 +28,7 @@ MODULE mo_disturb_config_class
   PUBLIC :: t_disturb_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_disturb_config
-    INTEGER           :: fire_algorithm      ! Select fire algorithm: 0 : none, 1 : jsbach (default),
-                                             ! 2 : Arora and Boer (2005) (not yet), 3 : Thonicke et al.(2001)
+    INTEGER           :: fire_algorithm      ! Select fire algorithm: 0 : none, 1 : jsbach (default)
     INTEGER           :: windbreak_algorithm ! Select windbreak algorithm: 0 : none, 1 : jsbach (default)
     LOGICAL           :: lburn_pasture
     REAL(lp)          :: wnd_threshold, &    ! factor by which the previous day maximum wind speed

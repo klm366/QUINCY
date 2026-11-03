@@ -202,11 +202,6 @@ CONTAINS
             & fuel(:)                  & ! out
             & )
 
-        CASE (2) !! Arora & Boer algorithm
-          CALL finish(TRIM(routine),'Arora & Boer fuel algorithm not implemented yet.')
-        CASE (3)
-          CALL finish(TRIM(routine),'Thornicke/spitfire fuel algorithm not implemented yet.')
-        CASE (4) !! Read GFED
         CASE DEFAULT
           CALL finish(TRIM(routine),'Unknown fuel algorithm')
       END SELECT

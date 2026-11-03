@@ -28,8 +28,7 @@ MODULE mo_fuel_config_class
   PUBLIC :: t_fuel_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_fuel_config
-    INTEGER :: fuel_algorithm  ! Select fuel algorithm: 1 : jsbach (default), 2 : Arora and Boer (2005),
-                               !                        3 : Thonicke et al.(2001), 4 : Read/GFED
+    INTEGER :: fuel_algorithm  ! Select fuel algorithm: 1 : jsbach (default)
   CONTAINS
      PROCEDURE :: Init => Init_fuel_config
   END type t_fuel_config

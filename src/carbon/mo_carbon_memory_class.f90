@@ -113,8 +113,6 @@ MODULE mo_carbon_memory_class
       cflux_dist_woods_2_soil,    & ! R: should be later renamed to C_2_WoodLitterPools
 
       co2flux_fire_all_2_atm,     & ! CO2 flux from fire per tile [kg(CO2)/m^2(canopy) s]
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
 
   !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
       current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
@@ -191,9 +189,6 @@ MODULE mo_carbon_memory_class
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
       cflux_dist_green_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
       cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
-
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
 
       ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]
       ! .. positive for emission to atmosphere

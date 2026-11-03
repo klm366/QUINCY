@@ -331,9 +331,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  co2flux_herb_2_atm_ta      ! .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
 
 
-    ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Real2D_onChunk :: fract_litter_wood_new
-    !
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: LAI
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
@@ -532,9 +529,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(CARBON_,  max_layer_sl)             ! inout
     END IF
 
-    ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,  fract_litter_wood_new )
-    !
     dsl4jsb_Get_var2D_onChunk(PHENO_,   veg_fract_correction )      ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   LAI )                       ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max )             ! in
@@ -1097,7 +1091,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, root_exudates_ta,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_c_green_2_herb_ta,  weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_littergreen_ta, weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(CARBON_, fract_litter_wood_new_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cconservation_calcCpools, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_soilresp_2_atm_ta, weighted_by_fract)
