@@ -287,12 +287,14 @@ CONTAINS
       CALL mem%bgc_material%Set_paths()
 
       ! add variables to bgc_material
+      ! output: one variable per component and element; fast litterfall (already part of the veg litterfall)
+      ! and seed bed fast litterfall (never set) stay off
       CALL mem%t_jsb_memory_add_bgcm(mem%dinsect_bgcm_main%dinsectbvegextract, &
         & hgrid, surface, vgrid_canopy_q_assimi,                                                       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -319,7 +321,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -328,7 +330,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -337,7 +339,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -346,7 +348,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -355,7 +357,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -364,7 +366,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
         & output_level = BASIC,                                                                        &
-        & loutput = .FALSE.,                                                                           &
+        & loutput = .TRUE.,                                                                            &
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
@@ -379,7 +381,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -390,7 +392,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -401,7 +403,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -412,7 +414,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -423,7 +425,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -434,10 +436,11 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
+      ! no output: never set
       CALL mem%Add_var('dinsect_year_since_start', mem%dinsect_year_since_start, &
         & hgrid, surface, &
         & t_cf('dinsect_year_since_start', 'years', 'dinsect_year_since_start'), &
@@ -456,7 +459,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & output_level = BASIC, &
-        & loutput = .FALSE., &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
@@ -515,6 +518,7 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
+      ! no output: work array for the C mass balance check (sum of the insect C pools written above)
       CALL mem%Add_var('dinsect_pool_total_c', mem%dinsect_pool_total_c, &
         & hgrid, surface, &
         & t_cf('dinsect_pool_total_c', 'mol C m-2 timestep-1', 'Total Carbon from insect pools'), &
