@@ -999,7 +999,8 @@ CONTAINS
           & km_slow_po4(ic, isoil), &
           & Qmax_AlFe_cor(ic, isoil), &
           & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,isoil)), &
-          & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume))
+          & -1._lp, dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume), &
+          & flag_available_pore_volume=dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume)
       ENDDO
     ENDDO
     !! nh4

@@ -1946,7 +1946,7 @@ CONTAINS
             & km_slow_po4(ic, is, iblk), &
             & Qmax_AlFe_cor(ic, is, iblk), &
             & mineral_mass_density_sl=MERGE(rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,is,iblk)), &
-            & -1._lp, flag_available_pore_volume))           ! inout
+            & -1._lp, flag_available_pore_volume), flag_available_pore_volume=flag_available_pore_volume)
         END DO
       END DO
     END DO

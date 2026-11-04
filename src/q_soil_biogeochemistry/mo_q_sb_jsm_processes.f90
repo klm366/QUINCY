@@ -1951,21 +1951,23 @@ CONTAINS
   !>
   !>  Output: km of the combined sorption pool
   !>
-  ELEMENTAL FUNCTION calc_km_qmax_correction( &
+  IMPURE ELEMENTAL FUNCTION calc_km_qmax_correction( &
     & solute, &
     & qmax1, &
     & qmax2, &
     & km1, &
     & km2, &
-    & w_soil) &
+    & w_soil, l_pore_volume) &
     & RESULT (km)
 
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     REAL(lp),           INTENT(in) :: solute          !< po4 concentration of the soil layer [mol P / m3]
     REAL(lp),           INTENT(in) :: qmax1           !< maximum po4 sorption capacity of the 1st pool [mol P/ m3]
     REAL(lp),           INTENT(in) :: qmax2           !< maximum po4 sorption capacity of the 2nd pool [mol P/ m3]
     REAL(lp),           INTENT(in) :: km1             !< km of the 1st pool [mol P/ m3]
     REAL(lp),           INTENT(in) :: km2             !< km of the 2nd pool [mol P/ m3]
     REAL(lp), OPTIONAL, INTENT(in) :: w_soil          !< water content of the soil layer [L / m3]
+    LOGICAL, OPTIONAL, INTENT(in) :: l_pore_volume    !< guarded whole-layer slope matching [-]
     REAL(lp)                       :: km              !< km of the combined pool [mol P/ m3]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)                    :: hlp
@@ -1973,8 +1975,47 @@ CONTAINS
     REAL(lp)                    :: dq2
     REAL(lp)                    :: sol1
     REAL(lp)                    :: sol2
+    REAL(lp) :: total_capacity !< sum of the two surface capacities [mol P m-3 layer]
+    REAL(lp) :: target_sorbed  !< two-surface sorbed concentration at current solute [mol P m-3 layer]
+    REAL(lp) :: discriminant   !< dimensionless quadratic discriminant [-]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_km_qmax_correction'
     ! ----------------------------------------------------------------------------------------------------- !
+
+    ! Match Q*K/(K+S)^2 = SUM(Q_i*K_i/(K_i+S)^2), not the full two-surface isotherm.
+    ! All concentrations are per total layer volume; no further water conversion is allowed.
+    ! At S=0 this gives the capacity-weighted harmonic affinity. For S>0 choose the
+    ! positive root whose sorbed amount is closest to the two-surface value. Recover
+    ! the small root from K_low=S^2/K_high to avoid subtractive cancellation.
+    ! QS reference: feature/pore-soil-volume-analytical, 7f14042a8 (provisional closure).
+    IF (PRESENT(l_pore_volume)) THEN
+      IF (l_pore_volume) THEN
+        IF (PRESENT(w_soil)) CALL finish(TRIM(routine), 'Pore Km requires preconverted affinities.')
+        IF (.NOT. ALL(ieee_is_finite([qmax1, qmax2, solute, km1, km2]))) &
+          & CALL finish(TRIM(routine), 'Non-finite pore-volume Langmuir inputs.')
+        IF (MIN(qmax1, qmax2, solute) < 0._lp .OR. MIN(km1, km2) <= 0._lp) &
+          & CALL finish(TRIM(routine), 'Invalid pore-volume Langmuir inputs.')
+        IF (qmax1 <= 0._lp) THEN
+          km = km2
+          RETURN
+        ELSE IF (qmax2 <= 0._lp .OR. km1 == km2) THEN
+          km = km1
+          RETURN
+        END IF
+        total_capacity = qmax1 + qmax2
+        hlp = qmax1 * km1 / (km1 + solute)**2 + qmax2 * km2 / (km2 + solute)**2
+        hlp = total_capacity / hlp
+        discriminant = MAX(0._lp, 1._lp - 4._lp * solute / hlp)
+        sol1 = 0.5_lp * hlp * (1._lp + SQRT(discriminant)) - solute
+        sol2 = solute * (solute / sol1)
+        target_sorbed = qmax1 * solute / (km1 + solute) + qmax2 * solute / (km2 + solute)
+        km = sol1
+        IF (solute > 0._lp) THEN
+          IF (ABS(total_capacity * solute / (sol2 + solute) - target_sorbed) < &
+            & ABS(total_capacity * solute / (sol1 + solute) - target_sorbed)) km = sol2
+        END IF
+        RETURN
+      END IF
+    END IF
 
     !>1.0 calculate the change of sorbed P pool given the solute concentration
     !>
@@ -2787,11 +2828,12 @@ CONTAINS
     & bulk_dens_sl, volume_min_sl, po4_solute, &
     & qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &             ! inout
     & qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor, &    ! inout
-    & mineral_mass_density_sl)
+    & mineral_mass_density_sl, flag_available_pore_volume)
 
     USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
       & km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
-      & km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
+      & km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb, carbon_per_dryweight_SOM, rho_bulk_org
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
     USE mo_sb_util,        ONLY: calc_qmax_texture
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL,      INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
@@ -2805,8 +2847,8 @@ CONTAINS
     REAL(lp),     INTENT(in)    :: bulk_dens_sl                 !< soil bulk density [kg/m3]
     REAL(lp),     INTENT(in)    :: volume_min_sl                !< soil mineral volumetric content [m3/m3]
     REAL(lp),     INTENT(in)    :: po4_solute                   !< soluble P concentration of soil layer [mol P/m3]
-    REAL(lp),     INTENT(inout) :: qmax_po4_min_sl              !< maximium po4 sorption capacity for mineral soil [mol P/m3]
-    REAL(lp),     INTENT(inout) :: qmax_po4_om_sl               !< maximium po4 sorption capacity for OM soil [mol P/m3]
+    REAL(lp),     INTENT(inout) :: qmax_po4_min_sl              !< mineral specific capacity [mol P/kg mineral]
+    REAL(lp),     INTENT(inout) :: qmax_po4_om_sl               !< organic specific capacity [mol P/kg OM]
     REAL(lp),     INTENT(inout) :: qmax_po4                     !< maximium po4 sorption capacity for soil layer [mol P/m3]
     REAL(lp),     INTENT(inout) :: km_adsorpt_po4_sl            !< half-saturation po4 concentration [mol P/m3]
     REAL(lp),     INTENT(inout) :: qmax_fast_po4                !< maximium po4 sorption capacity of fast associated pool [mol P/m3]
@@ -2815,10 +2857,16 @@ CONTAINS
     REAL(lp),     INTENT(inout) :: km_slow_po4                  !< half-saturation po4 concentration of slow associated pool [mol P/m3]
     REAL(lp),     INTENT(inout) :: Qmax_AlFe_cor                !< qmax correlation factor of Al/Fe content [-]
     REAL(lp), OPTIONAL, INTENT(in) :: mineral_mass_density_sl    !< dry mineral mass per layer volume [kg/m3]
+    LOGICAL, OPTIONAL, INTENT(in) :: flag_available_pore_volume !< use explicit-mass single Langmuir [-]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)  :: hlp1, hlp2, hlp3, hlp4
     REAL(lp)  :: mineral_mass_density
     REAL(lp)  :: sand_sl
+    REAL(lp) :: organic_mass_density !< uncapped reactive organic dry mass [kg m-3 layer]
+    LOGICAL :: l_pore_volume !< available-pore formulation selected [-]
+    ! Inherited mineral-Km conversion used 0.33 water and 1560 kg/m3 soil.
+    ! QS 7f14042a8 reference convention, not a newly calibrated aqueous affinity.
+    REAL(lp), PARAMETER :: reference_mineral_density = 1560._lp !< fixed affinity reference [kg m-3]
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_Psorption_parameter'
     ! ----------------------------------------------------------------------------------------------------- !
 
@@ -2827,6 +2875,33 @@ CONTAINS
     sand_sl = 1._lp - clay_sl - silt_sl
     mineral_mass_density = -1.0_lp
     IF (PRESENT(mineral_mass_density_sl)) mineral_mass_density = mineral_mass_density_sl
+
+    l_pore_volume = .FALSE.
+    IF (PRESENT(flag_available_pore_volume)) l_pore_volume = flag_available_pore_volume
+    ! Q_i=q_i*rho_i [mol P/m3 layer]. ICON has no stone geometry: callers supply
+    ! rho_mineral=rho_particle_mineral*(1-V_pore). Reactive C retains the existing
+    ! bulk-C eligibility and L1 burial (DOM included, soluble/polymeric/woody litter
+    ! excluded). Do not replace actual mass by capped physical POC/MAOC volumes.
+    ! Affinities use fixed reference masses, not live mineral/OM densities. The OM
+    ! coefficient is interpreted here as mol/kg OM despite its historical litre
+    ! annotation; these are provisional equivalent layer affinities. No Al/Fe or
+    ! pH correction is added to single Langmuir. The explicit double/legacy paths
+    ! below retain their previous formulas. Existing P pools are not repartitioned.
+    IF (l_pore_volume .AND. .NOT. flag_sb_double_langmuir) THEN
+      IF (mineral_mass_density < 0._lp .OR. bulk_soil_carbon_sl < 0._lp) &
+        & CALL finish(TRIM(routine), 'Pore phosphate capacity requires nonnegative explicit masses.')
+      organic_mass_density = bulk_soil_carbon_sl * molar_mass_C / 1000._lp / carbon_per_dryweight_SOM
+      qmax_po4_min_sl = calc_qmax_texture(qmax_po4_mineral, 0._lp, 1._lp)
+      qmax_po4_om_sl = qmax_po4_min_sl * min_fraction_default_sb
+      qmax_fast_po4 = qmax_po4_om_sl * organic_mass_density
+      qmax_slow_po4 = qmax_po4_min_sl * mineral_mass_density
+      qmax_po4 = qmax_fast_po4 + qmax_slow_po4
+      km_fast_po4 = km_adsorpt_OM_po4 * rho_bulk_org
+      km_slow_po4 = km_adsorpt_mineral_po4 * reference_mineral_density
+      km_adsorpt_po4_sl = calc_km_qmax_correction(po4_solute, qmax_fast_po4, qmax_slow_po4, &
+        & km_fast_po4, km_slow_po4, l_pore_volume=.TRUE.)
+      RETURN
+    END IF
 
     !>0.9 set Qmax_AlFe_cor zero if lower eps8
     !>

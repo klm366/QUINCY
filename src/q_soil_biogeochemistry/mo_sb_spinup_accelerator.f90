@@ -2321,6 +2321,8 @@ CONTAINS
       & 0._lp, qmax_org_min_sl, qmax_org, &
       & mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl))
     ! Refresh nutrient sorption too: replay must not use previous-year mineral mass.
+    ! This also replaces restart-stored phosphate Qmax/Km by the current formulation
+    ! before replay entry, without imposing equilibrium on existing inorganic pools.
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
       & 0._lp, qmax_nh4_min_sl, qmax_nh4, &
       & mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl))
@@ -2335,7 +2337,8 @@ CONTAINS
           & bulk_dens_sl(ic,is), volume_min_sl(ic,is), po4_solute(ic,is), &
           & qmax_po4_min_sl(ic,is), qmax_po4_om_sl(ic,is), qmax_po4(ic,is), km_adsorpt_po4_sl(ic,is), &
           & qmax_fast_po4(ic,is), qmax_slow_po4(ic,is), km_fast_po4(ic,is), km_slow_po4(ic,is), &
-          & Qmax_AlFe_cor(ic,is), mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,is)))
+          & Qmax_AlFe_cor(ic,is), mineral_mass_density_sl=rho_particle_mineral * (1._lp - volume_pore_total_sl(ic,is)), &
+          & flag_available_pore_volume=.TRUE.)
       END DO
     END DO
     max_residual = 0._lp
