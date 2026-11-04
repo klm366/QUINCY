@@ -107,6 +107,8 @@ CONTAINS
   !>
   SUBROUTINE update_climbuf(tile, options)
 
+    USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,               ONLY: Get_vgrid
     USE mo_climbuf_process,        ONLY: calc_climbuf_2d, calc_climbuf_3d, get_relative_humidity_air
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -117,6 +119,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER  ::  model                 !< Current instance of the ICON-Land
+    TYPE(t_jsb_vgrid), POINTER  ::  soil_w                !< Soil water grid
 
     LOGICAL :: &
       & lstart,              & !< This is the first time step of a simulation
@@ -133,7 +136,9 @@ CONTAINS
       & ics,                 & !< First grid cell of the block
       & ice,                 & !< Last grid cell of the block
       & ic,                  & !< Looping index for grid cells
-      & nc                     !< Number of grid cells in block
+      & is,                  & !< Soil layer index
+      & nc,                  & !< Number of grid cells in block
+      & nsoil                  !< Number of soil layers
 
     REAL(lp) :: &
       & seconds_day,         & !< Number of seconds per day
@@ -209,6 +214,8 @@ CONTAINS
     dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
+    soil_w => Get_vgrid('soil_depth_water')
+    nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(CLIMBUF_)
     dsl4jsb_Get_config(CARBON_)
@@ -304,29 +311,45 @@ CONTAINS
 
     init_running_means = dsl4jsb_Config(CLIMBUF_)%init_running_means
     IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
-      CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-        &                  rain, snow, wind_10m, q_rel_air, thaw_depth, &
-        &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-        &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
-        &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-        &                  gdd_sum_year, gdd_prev_year, &
-        &                  max_thaw_of_yr, max_thaw_prev_year, &
-        &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-        &                  q_rel_air_14d, q_rel_air_14d_yDay)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air(ic), &
+          &                  rain(ic), snow(ic), wind_10m(ic), q_rel_air(ic), thaw_depth(ic), &
+          &                  seconds_day, seconds_month, temp_sum_day(ic), temp_sum_month(ic), &
+          &                  min_mmtemp_of_yr(ic), max_mmtemp_of_yr(ic), min_mmtemp_20yr(ic), max_mmtemp_20yr(ic), &
+          &                  temp_15d(ic), temp_15d_yDay(ic), precip_15d(ic), precip_15d_yDay(ic), &
+          &                  gdd_sum_year(ic), gdd_prev_year(ic), &
+          &                  max_thaw_of_yr(ic), max_thaw_prev_year(ic), &
+          &                  max_wind_of_day(ic), max_wind_yDay(ic), max_wind_4yr(ic), &
+          &                  q_rel_air_14d(ic), q_rel_air_14d_yDay(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
-      CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
-        &                  rain, snow, wind_10m, q_rel_air, thaw_depth, &
-        &                  seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-        &                  min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
-        &                  temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-        &                  gdd_sum_year, gdd_prev_year, &
-        &                  max_thaw_of_yr, max_thaw_prev_year, &
-        &                  max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-        &                  q_rel_air_14d, q_rel_air_14d_yDay, &
-        &                  snow_depth, max_snow_of_yr, max_snow_prev_year)
-      CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl, wtr_soil_rel_sl, seconds_day, &
-        &                  t_soil_sl_15d, t_soil_sl_15d_yDay, wtr_soil_rel_sl_15d, wtr_soil_rel_sl_15d_yDay, &
-        &                  max_t_soil_sl_year, permafrost_period_sl)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        CALL calc_climbuf_2d(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air(ic), &
+          &                  rain(ic), snow(ic), wind_10m(ic), q_rel_air(ic), thaw_depth(ic), &
+          &                  seconds_day, seconds_month, temp_sum_day(ic), temp_sum_month(ic), &
+          &                  min_mmtemp_of_yr(ic), max_mmtemp_of_yr(ic), min_mmtemp_20yr(ic), max_mmtemp_20yr(ic), &
+          &                  temp_15d(ic), temp_15d_yDay(ic), precip_15d(ic), precip_15d_yDay(ic), &
+          &                  gdd_sum_year(ic), gdd_prev_year(ic), &
+          &                  max_thaw_of_yr(ic), max_thaw_prev_year(ic), &
+          &                  max_wind_of_day(ic), max_wind_yDay(ic), max_wind_4yr(ic), &
+          &                  q_rel_air_14d(ic), q_rel_air_14d_yDay(ic), &
+          &                  snow_depth(ic), max_snow_of_yr(ic), max_snow_prev_year(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          CALL calc_climbuf_3d(lstart, new_day, new_year, dtime, t_soil_sl(ic,is), wtr_soil_rel_sl(ic,is), seconds_day, &
+            &                  t_soil_sl_15d(ic,is), t_soil_sl_15d_yDay(ic,is), &
+            &                  wtr_soil_rel_sl_15d(ic,is), wtr_soil_rel_sl_15d_yDay(ic,is), &
+            &                  max_t_soil_sl_year(ic,is), permafrost_period_sl(ic,is))
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC END DATA

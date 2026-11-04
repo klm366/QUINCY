@@ -380,9 +380,6 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
-    !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, bulk_density_org)
-
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
@@ -396,21 +393,14 @@ CONTAINS
 
     nlcc_is_enabled = model%Is_process_enabled(NLCC_)     ! workaround currently needed for DWD NEC
 
-    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_memory(ASSIMI_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
-
-    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
-    ! climbuf, as the pointer name is appended to the climate buffer variables below.
-    climbuf => tile%parent_tile
-    ! Make sure this is the veg tile
-    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Setup ERROR: expected parent tile to be the veg tile.')
-    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Prepare soil grid information for vertical yasso
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
@@ -421,10 +411,24 @@ CONTAINS
       ALLOCATE(layer_thick(nsoil))
       layer_depth(:) = soil_c%levels
       layer_thick(:) = soil_c%ubounds-soil_c%lbounds
-
       ALLOCATE(soil_depth_thaw(nc))
       ALLOCATE(thaw_depth(nc))
     END IF
+
+    !$ACC DATA ASYNC(acc_stream) &
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, bulk_density_org) &
+    !$ACC   CREATE(cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos) &
+    !$ACC   CREATE(LeafLit_coef, WoodLit_coef, MiscPar)
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      !$ACC ENTER DATA COPYIN(layer_depth, layer_thick) ASYNC(acc_stream)
+    END IF
+
+    ! The climate buffer is calculated on the veg tile, we thus need a pointer to the veg tile. We call it
+    ! climbuf, as the pointer name is appended to the climate buffer variables below.
+    climbuf => tile%parent_tile
+    ! Make sure this is the veg tile
+    IF (TRIM(climbuf%name) /= 'veg') CALL finish(routine, 'Setup ERROR: expected parent tile to be the veg tile.')
+    dsl4jsb_Get_memory_tile(CLIMBUF_, climbuf)
 
     ! Set process variables
     dsl4jsb_Get_var2D_onChunk_tile_name(CLIMBUF_, temp_15d_yDay, climbuf)      ! in
@@ -615,6 +619,7 @@ CONTAINS
       soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
       max_layer_sl = soil_depth_to_layers(soil_depth_thaw, layer_thick)
       thaw_depth = max_thaw_prev_year_climbuf
+      !$ACC ENTER DATA COPYIN(soil_depth_thaw, thaw_depth) ASYNC(acc_stream)
     END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output
@@ -726,6 +731,8 @@ CONTAINS
         CALL finish(TRIM(routine), 'ROOT_DIST_BETA is required in lctlib file for simulations ' // &
           & 'using vertically stratified yasso scheme')
       END IF
+
+      !$ACC UPDATE DEVICE(LeafLit_coef, WoodLit_coef, MiscPar) ASYNC(acc_stream)
 
       ! Calculate current carbon sum before the update - for C conservation test
       CALL recalc_carbon_per_tile_vars(tile, options)
@@ -850,7 +857,11 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
       !! ============== Include decay of crop harvest in soil respiration =============
-      soil_respiration = soil_respiration + cflux_crop_harvest_2_atmos
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        soil_respiration(ic) = soil_respiration(ic) + cflux_crop_harvest_2_atmos(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
 
       ! determine annual maximum content of green pool for NLCC process
       IF (model%Is_process_enabled(NLCC_)) THEN
@@ -989,11 +1000,15 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      !$ACC EXIT DATA DELETE(layer_depth, layer_thick, soil_depth_thaw, thaw_depth) ASYNC(acc_stream)
+    END IF
     !$ACC END DATA
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
       DEALLOCATE(layer_depth)
       DEALLOCATE(layer_thick)
       DEALLOCATE(soil_depth_thaw)
+      DEALLOCATE(thaw_depth)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2231,7 +2246,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
           & this_litter(ic), fraction, litter_coefficient)
       END DO
     END DO
-    !$ACC WAIT(1)
+    !$ACC WAIT(acc_stream)
     !$ACC END DATA
 
   END SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk

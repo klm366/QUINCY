@@ -169,6 +169,9 @@ CONTAINS
     config%fire_fract_wood_2_atmos  = fire_fract_wood_2_atmos
 
     IF (vertical_yasso) THEN
+#ifdef _OPENACC
+      CALL finish(TRIM(routine), 'The vertically resolved yasso scheme is not yet supported on GPUs.')
+#endif
       input_file = jsb_netcdf_open_input(ic_filename)
 
       ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom

@@ -53,6 +53,8 @@ CONTAINS
     & q_rel_air_14d, q_rel_air_14d_yDay, &
     & snow_depth, max_snow_of_yr, max_snow_prev_year)
 
+    !$ACC ROUTINE SEQ
+
     LOGICAL, INTENT(in) ::      &
       & lstart,                 & !< This is the first time step in a simulation
       & init_running_means,     & !< Initialize the min/max temperature climatology
@@ -63,7 +65,9 @@ CONTAINS
     REAL(lp), INTENT(in) ::     &
       & dtime,                  & !< Time step length [s]
       & seconds_day,            & !< Length of a day [s]
-      & seconds_month,          & !< Length of the previous month [s]
+      & seconds_month             !< Length of the previous month [s]
+
+    REAL(lp), INTENT(in) ::     &
       & t_air,                  & !< Near surface air temperature [K]
       & rain,                   & !< Liquid precipitation [kg m-2 s-1]
       & snow,                   & !< Solid precipitation [kg m-2 s-1]
@@ -224,10 +228,16 @@ CONTAINS
   !> 3D (e.g. layered) data.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
-  ELEMENTAL PURE SUBROUTINE calc_climbuf_3d ( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_climbuf_3d ( &
     & lstart, new_day, new_year, dtime, t_soil, wtr_soil_rel, seconds_day, &
     & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay, &
     & max_t_soil_year, permafrost_period)
+
+    !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL, INTENT(in) :: &

@@ -900,7 +900,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream) &
     !$ACC   PRIVATE(Cflx_soil_respiration_pool, Cflx_humus_gain, Cflx_humus_loss) &
     !$ACC   PRIVATE(d_temp, d_moist, d_depth, f_roots)
     DO is = 1, nsoil
@@ -983,6 +983,7 @@ CONTAINS
       CALL remove_C_below_bedrock(soil_depth(ic), layer_thick(:), c_humus_2_sl(ic,:))
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC END DATA
 
     ! Provide all variables as sum, too, not just on levels
     CALL sum_up_carbon_layers(nc, nsoil, c_acid_bg1_sl(:,:)      , c_acid_bg1(:)       )
@@ -1382,6 +1383,7 @@ CONTAINS
   ELEMENTAL &
 #endif
   FUNCTION get_modifier_temp(temp_soil, use_Q10) RESULT(d_temp)
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants,       ONLY: Q10, temp_p1, temp_p2
     USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -1407,6 +1409,7 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   FUNCTION get_modifier_water(water_soil) RESULT(d_water)
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants,  ONLY: moist_p_a, moist_p_b, moist_p_d
 
     REAL(lp), INTENT(in)  :: water_soil
@@ -1420,6 +1423,7 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   FUNCTION get_modifier_depth(layer_depth) RESULT(d_depth)
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants,  ONLY: ref_dep
 
     REAL(lp), INTENT(in)  :: layer_depth
@@ -1442,6 +1446,7 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   FUNCTION get_modifier_precip(precip) RESULT(d_precip)
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants,       ONLY: precip_p1, sec_per_year
 
     REAL(lp), INTENT(in)  :: precip
@@ -1453,6 +1458,7 @@ CONTAINS
 
   ! ---------------------------------------------------------------------------------------------------------
   SUBROUTINE vertical_C_transport(act_depth_sl, diff_coeff, delta_time_C, dz, permafrost_period_sl, cpool_bg_sl)
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
     REAL(lp), INTENT(in)    :: act_depth_sl(:)         !< actual layer thickness, considering soil and active layer depth [m]
@@ -1484,9 +1490,8 @@ CONTAINS
     REAL(lp) :: src_C_conc(size(act_depth_sl))
 
     ! Right hand side vector for Crank-Nicholson scheme equations
-    ! This is overwritten with solution by dgtsv tridiagonal solver
+    ! This is overwritten with solution by the tridiagonal solver
     REAL(lp) :: rhs(size(act_depth_sl))
-    INTEGER  :: info             ! dgtsv status variable
 
     REAL(lp) :: C_before, C_after
 
@@ -1584,15 +1589,16 @@ CONTAINS
       ! Semi-implicit case -- whenever implicit_contrib > 0.1,
       ! fully explicit case is solved already ( = rhs)
       IF (implicit_contrib >= 0.1_lp) THEN
-        !------------------------------------------------------------
-        ! solve tridiagonal system using dgtsv from NETLIB
-        CALL dgtsv(nsoil_loc, 1, left(2:nsoil_loc), diag, &
-          &        right(1:nsoil_loc-1), rhs, nsoil_loc, info)
-  !       IF (PRESENT(lissue)) lissue = info /= 0
-  !      IF (info /= 0) THEN
-  !        WRITE(message_text,*) 'dgtsv info ', info
-  !        CALL message(routine, message_text, all_print=.TRUE., level=em_warn)
-  !      END IF
+        ! Solve the tridiagonal system with the Thomas algorithm.
+        DO is = 2, nsoil_loc
+          dz_factor = left(is) / diag(is - 1)
+          diag(is) = diag(is) - dz_factor * right(is - 1)
+          rhs(is) = rhs(is) - dz_factor * rhs(is - 1)
+        END DO
+        rhs(nsoil_loc) = rhs(nsoil_loc) / diag(nsoil_loc)
+        DO is = nsoil_loc - 1, 1, -1
+          rhs(is) = (rhs(is) - right(is) * rhs(is + 1)) / diag(is)
+        END DO
       END IF
 
       ! solution is ALWAYS written into the rhs vector, also in the fully explicit case
@@ -1629,6 +1635,7 @@ CONTAINS
   SUBROUTINE set_diffusivity(nsoil, soil_depth, soil_depth_sl, thaw_depth, layer_depth, t_soil_sl, &
     &                        wtr_rel_sl, n_thaw_cycle, permafrost_period_sl, diff_coeff)
 
+    !$ACC ROUTINE SEQ
     USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
 
@@ -1691,6 +1698,7 @@ CONTAINS
       &    c_acid_bg2_sl, c_water_bg2_sl, c_ethanol_bg2_sl, c_nonsoluble_bg2_sl, &
       &    c_humus_1_sl,  c_humus_2_sl)
 
+    !$ACC ROUTINE SEQ
     USE mo_carbon_constants, ONLY: C_2_biomass_ratio, rho_org_ag, rho_org_bg, molarMassC_kg, &
       &                            permafrost_threshold
 
@@ -1834,6 +1842,7 @@ CONTAINS
   !> This routine is a safeguard against that.
   !>
   SUBROUTINE remove_C_below_bedrock(soil_depth, layer_thick, c_pool_bg)
+    !$ACC ROUTINE SEQ
     REAL(lp), INTENT(in)     :: soil_depth
     REAL(lp), INTENT(in)     :: layer_thick(:)
     REAL(lp), INTENT(inout)  :: c_pool_bg(:)

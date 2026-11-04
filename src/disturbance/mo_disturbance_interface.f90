@@ -21,7 +21,7 @@ MODULE mo_disturb_interface
   ! Used variables of module
 
   ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
+  USE mo_jsb_control,     ONLY: debug_on, acc_stream
   USE mo_kind,            ONLY: lp
   USE mo_exception,       ONLY: message, finish
 
@@ -231,7 +231,7 @@ CONTAINS
     IF (newday) THEN ! only once per day
 
       ! Initialization (on all tiles)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         burned_fract(ic) = 0._lp
         damaged_fract(ic) = 0._lp
@@ -295,7 +295,7 @@ CONTAINS
 
     ! Init diagnostic carbon fluxes
     IF (tile%Has_process_memory(CARBON_) .AND. newday) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
       DO ic = 1, nc
         co2flux_fire_all_2_atm(ic) = 0._lp
         cflux_dist_green_2_soil(ic) = 0._lp
@@ -304,7 +304,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     END IF
 
-    !$ACC WAIT(1)
+    !$ACC WAIT(acc_stream)
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_damaged_area
@@ -633,7 +633,7 @@ CONTAINS
 
               ! Check conservation of carbon windthrow carbon relocations
               ! Note: Windthrow does not lead to an immediate flux to the atmosphere, therefore cflux = 0._lp
-              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
               DO ic = 1, nc
                 cflux(ic) = 0._lp
               END DO
@@ -650,7 +650,7 @@ CONTAINS
         ! (If FLCC is active, carbon relocation due to fire is calculated in separate FLCC process routines.)
         IF (.NOT. model%processes(FLCC_)%p%config%active) THEN
 
-          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
           DO ic = 1, nc
             co2flux_fire_all_2_atm(ic) = 0._lp
           END DO
@@ -773,7 +773,7 @@ CONTAINS
               ! Check conservation of carbon relocations due to fire
               ! Note: co2flux_fire_all_2_atm_ta is currently positve. It needs to be turned negative
               !      (flux away from land) and converted from CO2 flux per second to C flux per day.
-              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+              !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
               DO ic = 1, nc
                 cflux(ic) = -co2flux_fire_all_2_atm_ta(ic) * sec_per_day / molarMassCO2_kg
               END DO
@@ -787,7 +787,7 @@ CONTAINS
           END SELECT
         ENDIF
 
-        !$ACC WAIT(1)
+        !$ACC WAIT(acc_stream)
         !$ACC END DATA
 
       ENDIF ! CARBON active
