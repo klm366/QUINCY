@@ -63,7 +63,7 @@ CONTAINS
     dsl4jsb_Def_mt2L2D :: dinsect_fast_litter_mt
     dsl4jsb_Def_mt2L2D :: dinsect_slow_litter_mt
     dsl4jsb_Real2D_onChunk :: dinsect_pool_total_c          ! total C from insect pools [mol C/m2]
-    dsl4jsb_Real2D_onChunk :: dinsect_total_mort_dt         ! fraction of mortality rate caused by insect disturbances [fraction/timestep]
+    dsl4jsb_Real2D_onChunk :: dinsect_total_mort_dt         ! fraction of mortality rate caused by insect disturbances; currently bark beetles only [fraction/timestep]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(Q_DINSECT_)
     ! ----------------------------------------------------------------------------------------------------- !

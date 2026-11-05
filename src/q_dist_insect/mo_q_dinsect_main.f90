@@ -118,8 +118,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   dsl4jsb_Real2D_onChunk      :: mortality_rate                ! global used mortality rate
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
-  dsl4jsb_Real2D_onChunk      :: dinsect_df_mort_dt            ! disturbed fraction caused by defoliator [fraction/timestep]
-  dsl4jsb_Real2D_onChunk      :: dinsect_total_mort_dt         ! total disturbed fraction caused by insects [fraction/timestep]
+  dsl4jsb_Real2D_onChunk      :: dinsect_df_mort_dt            ! fraction of the leaf pool removed by defoliators, not tree mortality [fraction/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]
@@ -174,7 +173,6 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
   ! Q_DINSECT_ 2D
   dsl4jsb_Get_var2D_onChunk(VEG_, mortality_rate)  !inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_df_mort_dt) ! inout
-  dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_total_mort_dt) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, defoliated_state) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_year_since_start) ! inout
   dsl4jsb_Get_var2D_onChunk(Q_DINSECT_, dinsect_defoliator_resp_c) ! inout
@@ -253,8 +251,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
 
   !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
-  ! include defoliator mortality rate into total mortality rate
-  dinsect_total_mort_dt = dinsect_total_mort_dt + dinsect_df_mort_dt
+  ! Defoliation removes leaves only (see calc_defoliator_effects); it does not add to tree mortality.
 END SUBROUTINE update_dinsect_defoliator
 
 
@@ -332,7 +329,7 @@ SUBROUTINE update_dinsect_barkbeetle(tile, options)
   dsl4jsb_Real2D_onChunk      :: defoliated_state              ! defoliation on or off
   dsl4jsb_Real2D_onChunk      :: dinsect_year_since_start      ! the number of years since the start of insect disturbance
   dsl4jsb_Real2D_onChunk      :: dinsect_bb_mort_dt            ! mortality rate caused by bark beetle [fraction/timestep]
-  dsl4jsb_Real2D_onChunk      :: dinsect_total_mort_dt         ! total mortality rate caused by insect outbreaks [fraction/timestep]
+  dsl4jsb_Real2D_onChunk      :: dinsect_total_mort_dt         ! total mortality rate caused by insect outbreaks; currently bark beetles only [fraction/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c     ! defoliator respiration C flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c13   ! defoliator respiration C13 flux [mol/m2/timestep]
   dsl4jsb_Real2D_onChunk      :: dinsect_defoliator_resp_c14   ! defoliator respiration C14 flux [mol/m2/timestep]

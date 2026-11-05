@@ -74,8 +74,8 @@ MODULE mo_q_dinsect_memory_class
                                     dinsect_barkbeetle_labile_c14          !< the defence used labile C14 from bark beetle attack [mol C14/m2/timestep]
     TYPE(t_jsb_var_real2d)          :: &
                                     dinsect_bb_mort_dt, &                  !< Disturbance fraction mortality caused by bark beetle [fraction/timestep]
-                                    dinsect_df_mort_dt, &                  !< Disturbance fraction mortality caused by defoliators [fraction/timestep]
-                                    dinsect_total_mort_dt                  !< Disturbance fraction mortality caused by all insects disturbances [fraction/timestep]
+                                    dinsect_df_mort_dt, &                  !< Fraction of the leaf pool removed by defoliators, not tree mortality [fraction/timestep]
+                                    dinsect_total_mort_dt                  !< Disturbance fraction mortality caused by insects; currently bark beetles only [fraction/timestep]
     TYPE(t_jsb_var_real2d)          :: &
                                     dinsect_pool_total_c                   !< Total carbon from insect pools [mol C/m2/timestep]
     TYPE(t_jsb_var_real3d)          :: &
