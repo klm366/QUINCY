@@ -26,25 +26,37 @@ set -e
 #   - Deprecated variable maxmoist calculated.
 
 # Variables exported from master script create_icon-land_ini_files.sh
+## extpar
 extpar_file=${extpar_file}
-
 icon_grid=${icon_grid}
+## grid
 atmGridID=${atmGridID}
-
+## directories
 path_bc=${bc_file_dir}
 work_dir=${work_dir}
+scripts_dir=${scripts_dir}
+
+# Variables exported from script create_icon-land_ic_bc_files.sh
 pool_prepare=${pool_prepare}
 
+# Directory for input data specific to IQJ (QUINCY)
+quincyInputDataDirPath="/work/mj0143/icon_land_data_pool/preprocessing/bc_soil_quincy"
+
+# set defaults for major commandline tools
 cdo=${cdo}
 rm=$rm
 cp=$cp
+# set QUINCY specific cdo command options (silent, create no history and use double precision)
+cdoQ="cdo -s --no_history -b 64"
 
 # Local variables
 prog=$(basename $0)
 file_bc_soil=bc_land_soil
 clean_up=true  # Remove intermediate files
 
+
 cd ${work_dir}
+
 # ----------------------------------------------------------------------------
 #  Soil data file
 # -----------------------------
@@ -57,7 +69,8 @@ var_list="FR_SAND FR_SILT FR_CLAY SUB_FR_SAND SUB_FR_SILT SUB_FR_CLAY \
  heat_conductivity_mineral hyd_cond_sat hyd_cond_sat_mineral moisture_pot \
  moisture_pot_mineral pore_size_index pore_size_index_mineral soil_porosity \
  soil_porosity_mineral wilting_point wilting_point_mineral residual_water \
- residual_water_mineral fao"
+ residual_water_mineral fao BLDFIE PHIHOX AWCtS \
+ Labile_Inorganic_P Seconday_Mineral__P Occluded_P Apatite_P TAXOUSDA_10km TAXNWRB qmax_org"
 
 # Preparations that need to be done outside the parallel loop
 ${cdo} splitvar ${pool_prepare}/05/soil_parameter_05_apr2024.nc   05_
@@ -79,7 +92,12 @@ if [[ ${var_list} == *"soil_depth"* || ${var_list} == *"root_depth"* ]]; then
   $cp ${atmGridID}_root_depth.nc ${atmGridID}_root_depth.keep
 fi
 
+# averaging of input values for input variables: bulk density, ph, awc
+python ${scripts_dir}/generate_bc_land_soil_hlp.py ${quincyInputDataDirPath} ${work_dir}
+cp ${scripts_dir}/generate_bc_land_soil_hlp.py ${path_bc}/scripts/
+echo ">> calculations (weighted average, medians in grid cells etc) were successfully performed by generate_bc_land_soil_hlp.py"
 
+# main loop over var_list (runs variable processing in parallel, see '&' after closing '}')
 for var in ${var_list}; do
   {
   echo "   ${var} ..."
@@ -201,6 +219,97 @@ for var in ${var_list}; do
           ${atmGridID}_fao.nc
       ;;
   # ----------------------
+    BLDFIE )
+  # ----------------------
+      # bulk density: SPREAD(sse_init_vars%bulk_density) -> bulk_dens_sl
+      # *.tmp file provided by generate_bc_land_soil_hlp.py
+      # default value
+      bdDefaultVal=1500
+      ${cdoQ} -setmisstoc,${bdDefaultVal} BLDFIE_3600_1800.tmp ${atmGridID}_${var}.tmp2
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp2 ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    PHIHOX )
+  # ----------------------
+      # soil ph: SPREAD(sb_init_vars%soil_ph) -> soil_ph_sl
+      # *.tmp file provided by generate_bc_land_soil_hlp.py
+      # default value
+      phDefaultVal=65
+      ${cdoQ} -setmisstoc,${phDefaultVal} PHIHOX.soilgrid.3600.1800.tmp ${atmGridID}_${var}.tmp2
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp2 ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    AWCtS )
+  # ----------------------
+      # saturated water content (volumetric fraction): not used in ICON-Land at the moment
+      # *.tmp file provided by generate_bc_land_soil_hlp.py
+      # default value
+      awcDefaultVal=300
+      ${cdoQ} -setmisstoc,${awcDefaultVal} AWCtS.soilgrid.3600.1800.tmp ${atmGridID}_${var}.tmp2
+      ${cdoQ} -remapcon,"${icon_grid}" ${atmGridID}_${var}.tmp2 ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    Labile_Inorganic_P )
+  # ----------------------
+      # soil P labile inorganic: sb_init_vars%soil_p_labile
+      # default value
+      pLabileDefaultVal=50
+      ${cdoQ} -setmisstoc,${pLabileDefaultVal} ${quincyInputDataDirPath}/Labile_Inorganic_P.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    Seconday_Mineral__P )
+  # ----------------------
+      # soil P slow (secondary mineral P): sb_init_vars%soil_p_slow
+      # default value
+      pSlowDefaultVal=70
+      ${cdoQ} -setmisstoc,${pSlowDefaultVal} ${quincyInputDataDirPath}/Seconday_Mineral__P.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    Occluded_P )
+  # ----------------------
+      # soil P occluded: sb_init_vars%soil_p_occluded
+      # default value
+      pOcclDefaultVal=150
+      ${cdoQ} -setmisstoc,${pOcclDefaultVal} ${quincyInputDataDirPath}/Occluded_P.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    Apatite_P )
+  # ----------------------
+      # soil P primary (apatite P): sb_init_vars%soil_p_primary
+      # default value
+      pPrimDefaultVal=100
+      ${cdoQ} -setmisstoc,${pPrimDefaultVal} ${quincyInputDataDirPath}/Apatite_P.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remapcon,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    TAXOUSDA_10km )
+  # ----------------------
+      # USDA taxonomy soil class: sb_init_vars%usda_taxonomy_class (REAL) -> sb_init_vars%usda_taxonomy_class_int (INTEGER)
+      # categorial data, not used at the moment
+      # default value
+      usdaTaxDefaultVal=1
+      ${cdoQ} -setmisstoc,${usdaTaxDefaultVal} ${quincyInputDataDirPath}/TAXOUSDA_10km.soilgrid.3600.1800.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remaplaf,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    TAXNWRB )
+  # ----------------------
+      # NWRB taxonomy soil class: sb_init_vars%nwrb_taxonomy_class (REAL) -> sb_init_vars%nwrb_taxonomy_class_int (INTEGER)
+      # categorial data, used to calculate 'qmax_org'
+      # default value
+      nwrbTaxDefaultVal=1
+      ${cdoQ} -setmisstoc,${nwrbTaxDefaultVal} ${quincyInputDataDirPath}/TAXNWRB.soilgrid.3600.1800.nc ${atmGridID}_${var}.tmp
+      ${cdoQ} -remaplaf,${icon_grid} ${atmGridID}_${var}.tmp ${atmGridID}_${var}.nc
+      ;;
+  # ----------------------
+    qmax_org )
+  # ----------------------
+      # qmax organic fine particle calculated below
+      ;;
+  # ----------------------
     * )
   # ----------------------
       echo "ERROR: Variable ${var} not known to be a bc_land_soil file variable."
@@ -211,8 +320,9 @@ for var in ${var_list}; do
 done
 wait
 
+
 # Further process soil texture data (needs to be done outside the above parallel loop)
-#                -------------------
+# --------
 if [[ ${var_list} == *"FR_SAND"* || ${var_list} == *"FR_SILT"* || ${var_list} == *"FR_CLAY"* ]]; then
   if [[ -f ${atmGridID}_SUB_FR_SAND_MASK.nc \
      && -f ${atmGridID}_SUB_FR_SILT_MASK.nc \
@@ -277,10 +387,24 @@ ${cdo} -setattribute,maxmoist@long_name="Maximum amount of soil moisture" -setat
     -setname,maxmoist -mul ${atmGridID}_root_depth.nc ${atmGridID}_soil_field_cap.nc \
     ${atmGridID}_maxmoist.nc
 
+# qmax organic fine particle
+# --------
+# sb_init_vars%qmax_org_fine_particle
+# create based on NWRB taxonomy soil class (TAXNWRB)
+qmaxVarName=qmax_org   # needs to be member of 'var_list', see below variable merging into output file
+qmaxInputFile=${quincyInputDataDirPath}/TAXNWRB.soilgrid.3600.1800.nc
+qmaxDefaultVal=6.5537
+# set values based on category as documented in https://gitlab.dkrz.de/quincy-community/quincy-model-developers/qs-development/-/blob/develop/contrib/forcing_scripts/qmax_org_values_per_nwrb_category_20180515.csv
+${cdoQ} -setvals,1,3.66601005727987,2,3.66601005727987,3,3.66601005727987,4,3.66601005727987,5,3.66601005727987,6,3.66601005727987,7,6.5537123684561,8,6.5537123684561,9,6.5537123684561,10,6.5537123684561,11,6.5537123684561,12,12.7381110963101,13,12.7381110963101,14,12.7381110963101,15,6.24417210603436,16,6.24417210603436,17,6.24417210603436,18,6.24417210603436,19,6.24417210603436,20,6.24417210603436,21,6.5537123684561,22,6.5537123684561,23,6.5537123684561,24,6.5537123684561,25,6.5537123684561,26,3.66601005727987,27,6.5537123684561,28,6.5537123684561,29,6.5537123684561,30,6.5537123684561,31,6.5537123684561,32,6.5537123684561,33,6.5537123684561,34,6.5537123684561,35,6.5537123684561,36,6.5537123684561,37,6.5537123684561,38,6.5537123684561,39,6.24417210603436,40,6.24417210603436,41,6.24417210603436,42,3.66601005727987,43,3.66601005727987,44,3.66601005727987,45,3.66601005727987,46,3.66601005727987,47,3.66601005727987,48,6.5537123684561,49,6.5537123684561,50,6.5537123684561,51,6.5537123684561,52,6.5537123684561,53,6.24417210603436,54,6.24417210603436,55,6.24417210603436,56,6.24417210603436,57,6.24417210603436,58,6.24417210603436,59,6.5537123684561,60,6.5537123684561,61,6.24417210603436,62,6.24417210603436,63,6.24417210603436,64,6.24417210603436,65,6.24417210603436,66,6.5537123684561,67,6.5537123684561,68,6.5537123684561,69,6.5537123684561,70,6.5537123684561,71,6.5537123684561,72,6.5537123684561,73,3.66601005727987,74,3.66601005727987,75,3.66601005727987,76,6.5537123684561,77,6.5537123684561,78,6.5537123684561,79,6.5537123684561,80,6.5537123684561,81,6.5537123684561,82,6.5537123684561,83,6.5537123684561,84,6.5537123684561,85,3.66601005727987,86,3.66601005727987,87,6.5537123684561,88,6.5537123684561,89,6.5537123684561,90,6.5537123684561,91,6.5537123684561,92,6.5537123684561,93,6.5537123684561,94,6.5537123684561,95,3.66601005727987,96,3.66601005727987,97,6.5537123684561,98,6.5537123684561,99,6.5537123684561,100,6.5537123684561,101,6.5537123684561,102,6.5537123684561,103,6.5537123684561,104,6.5537123684561,105,6.5537123684561,106,6.5537123684561,107,6.5537123684561,108,6.5537123684561,109,6.5537123684561,110,6.5537123684561,111,6.5537123684561,112,6.24417210603436,113,6.5537123684561,114,6.5537123684561,115,6.5537123684561,116,6.5537123684561,117,6.5537123684561,118,6.5537123684561 "${qmaxInputFile}" "Q_max_org_values.tmp"
+${cdoQ} -setmisstoc,${qmaxDefaultVal} "Q_max_org_values.tmp" "Q_max_org_values.tmp2"
+${cdoQ} -chname,TAXNWRB,${qmaxVarName} -remaplaf,"${icon_grid}" "Q_max_org_values.tmp2" ${atmGridID}_${qmaxVarName}.nc
 
-# Merge newly calculated variables to the bc soil file
-# -------------
+
+# Merge newly calculated variables (*.nc files) to the bc soil file
+# --------
+# remove temporary file_bc_soil file (from previous runs)
 [[ -f ${file_bc_soil}.tmp ]] && ${rm} ${file_bc_soil}.tmp
+# loop over variable list
 for var in ${var_list}; do
   if [[ ! -f ${file_bc_soil}.tmp ]]; then
     # first variable
@@ -296,6 +420,8 @@ ${cdo} --no_history setattribute,history="${history_att}" ${file_bc_soil}.tmp \
        ${path_bc}/${file_bc_soil}.nc
 
 # Clean up
+# --------
+# remove tmp files from current directory (${work_dir})
 if [[ ${clean_up} == true ]]; then
   ${rm} *.tmp*
 fi

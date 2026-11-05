@@ -21,6 +21,13 @@
 #-----------------------------------------------------------------------------
 set -e
 
+# Which of the initial files should be generated [true,false]?
+generate_bc_land_frac=false
+generate_bc_land_soil=true
+generate_bc_land_phys=false
+generate_bc_land_sso=false
+generate_ic_land_soil=false
+
 # File names and paths exported from master script create_icon-land_ini_files.sh
 path_extpar=${extpar_dir}        # Directory name of the extpar file
 extpar_file=${extpar_file}       # Extpar file name
@@ -44,13 +51,6 @@ cdo="$cdo -f nc4 -b F64"
 export rm=/usr/bin/rm
 export cp=/usr/bin/cp
 
-# Which of the initial files should be generated?
-generate_bc_land_frac=true
-generate_bc_land_soil=true
-generate_bc_land_phys=true
-generate_bc_land_sso=true
-generate_ic_land_soil=true
-
 # Information for history attribute
 #vg git_repo=$(git remote -v | head -1 | cut -f2 | cut -f1 -d' ')
 #vg git_rev=$(git rev-parse --short HEAD)
@@ -65,6 +65,7 @@ year=${start_year}
 [[ -d ${path_bc} ]]   || mkdir -p ${path_bc}
 [[ -d ${work_dir} ]]  || mkdir -p ${work_dir}
 cd ${work_dir}
+
 echo '------------------------------------------------------------------'
 echo "${prog}: Working directory: $(pwd)"
 echo "${prog}: Output  directory: ${path_bc}"

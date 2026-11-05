@@ -24,8 +24,8 @@ The master script `create_icon-land_ini_files.sh` makes use of the following scr
    - run extpar to generate soil texture data as well as albedo, roughness
      length, forest fraction and LAI and vegetation fraction climatologies.
 
-3. `bc_files_from_extpar.sh`
-   Generate ICON-Land ic/bc files based on extpar and other sources.
+3. `create_icon-land_ic_bc_files.sh`
+   Create ICON-Land ic/bc files based on extpar and other sources.
    The script calls sub-scripts for the different boundary data files
    - generate_bc_land_fractions.sh
    - generate_bc_land_phys.sh
