@@ -533,6 +533,10 @@ CONTAINS
 
     IF (.NOT. ALLOCATED(model%tiles)) CALL finish(TRIM(routine), 'Tile tree not set up')
 
+    ! Open the IFS initial file once for all tiles; it is closed after the tile loop
+    IF (model%config%init_from_ifs) &
+      & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
+
     ! Loop over the tiles in pre-order, i.e. parent tiles are initialized before their children
     DO itile=1,SIZE(model%tiles)
       tile => model%tiles(itile)%p
@@ -566,9 +570,6 @@ CONTAINS
       !>
       !>     2.3 Initialize processes on each tile
       !>
-      IF (model%config%init_from_ifs) &
-        & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
-
       ! TBD: Loop over processes instead of explicit
 
       IF (tile%Is_process_active(RAD_)) THEN
