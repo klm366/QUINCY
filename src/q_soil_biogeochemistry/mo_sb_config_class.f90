@@ -85,8 +85,7 @@ MODULE mo_sb_config_class
     REAL(lp)              :: soil_p_primary
     REAL(lp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
 
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename    !< IQ (QUINCY) soil input data
-    CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQ. Note: should NOT include an ending "_"
+    CHARACTER(len=filename_max) :: deposition_filename_prefix !< IQJ. Note: should NOT include an ending "_"
 
     ! parameter calibration
     LOGICAL          :: flag_apply_nml_parameters  !< replace values of sb_constants parameters by the values of the below nml_* variables
@@ -157,7 +156,6 @@ CONTAINS
     LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    CHARACTER(len=filename_max) :: bc_quincy_soil_filename
     CHARACTER(len=filename_max) :: deposition_filename_prefix
     CHARACTER(15)               :: sb_model_scheme
     CHARACTER(15)               :: sb_nloss_scheme
@@ -204,7 +202,6 @@ CONTAINS
                       lrestart_cont             , &
                       ic_filename               , &
                       bc_filename               , &
-                      bc_quincy_soil_filename   , &
                       deposition_filename_prefix, &
                       sb_model_scheme           , &
                       sb_nloss_scheme           , &
@@ -258,7 +255,6 @@ CONTAINS
     lrestart_cont               = .FALSE.           ! TRUE: Continue even if SB variables are missing in restart file
     ic_filename                 = 'ic_land_sb.nc'
     bc_filename                 = 'bc_land_srf.nc'
-    bc_quincy_soil_filename     = 'bc_quincy_soil.nc'
     deposition_filename_prefix  = 'bc_land_npdep_quincy'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
@@ -312,7 +308,6 @@ CONTAINS
     config%lrestart_cont                   = lrestart_cont
     config%ic_filename                     = ic_filename
     config%bc_filename                     = bc_filename
-    config%bc_quincy_soil_filename         = bc_quincy_soil_filename
     config%deposition_filename_prefix      = deposition_filename_prefix
     config%sb_model_scheme                 = TRIM(sb_model_scheme)
     config%sb_nloss_scheme                 = TRIM(sb_nloss_scheme)
