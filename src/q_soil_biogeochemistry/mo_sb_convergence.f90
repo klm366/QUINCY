@@ -256,9 +256,9 @@ CONTAINS
         ELSE
           pending(c,b)=1._lp
         END IF
-        ! All nonpassing cells are identified once per sampled year, not per task.
-        ! all_print retains messages from non-root MPI ranks; no halo duplication.
-        IF (passed(c,b) == 0._lp) THEN
+        ! Global counts remain unconditional below. Per-cell inventories and
+        ! nonpassing coordinates are detailed spinup diagnostics, not fatal errors.
+        IF (model%config%flag_spinup_debug .AND. passed(c,b) == 0._lp) THEN
           WRITE(text,*) 'SOC monitor cell: model/year/ic/iblk/lon/lat=',model_id,year,c,b, &
             & grid%lon(c,b),grid%lat(c,b),'; history/event-affected/threshold-pass=', &
             & has_history,event_affected,stock_pass,'; stocks g/m2 C,N,P,SIN,SIP=',stocks(c,:,b), &

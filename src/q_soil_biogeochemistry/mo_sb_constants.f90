@@ -480,8 +480,10 @@ CONTAINS
     vmax_mic_uptake               = 3495.18053_lp / &                             ! ???
                                     one_year / one_day * 1.e6_lp * 10._lp
     km_mic_uptake                 = 1.02404788_lp / molar_mass_C * 1000._lp       ! COMISSION, Ahrens et al. 2015
-    vmax_depolymerisation_residue = 0.2316605_lp / one_year / one_day             ! calibrated, from Yu et al. 2020
-    vmax_depolymerisation_litter  = 0.1849_lp / one_year / one_day                ! calibrated, from Yu et al. 2020
+    ! Provisional global replay experiment (2026-11-06): twice the Yu et al. 2020
+    ! calibrated baseline; retain its time conversion. Shared by forward JSM and analytical targets.
+    vmax_depolymerisation_residue = 2._lp * 0.2316605_lp / one_year / one_day
+    vmax_depolymerisation_litter  = 2._lp * 0.1849_lp / one_year / one_day
     km_depolymerisation           = 0.4438_lp / molar_mass_C                      ! calibrated, from Yu et al. 2020
     enzyme_frac_total             = 0.05_lp
     min_persistent_enzyme         = 5.e-7_lp                                      ! provisional extracellular-enzyme floor [mol C/m3]

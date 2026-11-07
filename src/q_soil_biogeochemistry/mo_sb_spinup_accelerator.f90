@@ -39,12 +39,18 @@ MODULE mo_sb_spinup_accelerator
   PUBLIC :: apply_sb_coupled_pore_calibration
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_spinup_accelerator'
+  ! Replay-only stability margin: leave 5% of the dissolved donor for other sinks.
+  REAL(lp), PARAMETER :: max_replay_export_fraction = 0.95_lp !< Gross down + lateral fraction per substep [-]
   INTEGER, PARAMETER :: sb_spinup_debug_years(10) = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 10000]
 
   !> Event-local climatology reconstructed from restart-safe accumulated sums.
   TYPE :: t_sb_spinup_forcing_climatology
     INTEGER :: n_forcing_bins = 0
     INTEGER :: n_daily_bins = 0 !< 365, or 360 for the host 360-day calendar [-]
+    INTEGER, ALLOCATABLE :: daily_steps(:) !< Whole replay substeps per climatological day
+    INTEGER :: nominal_steps, active_layers, peak_day, peak_layer
+    INTEGER, ALLOCATABLE :: litter_slot(:) !< Zero: nominal monthly partition; otherwise refined cache index
+    REAL(lp), ALLOCATABLE :: refined_litter_rate(:,:,:,:,:) !< Same units as partitioned_litter_rate, per variant
     INTEGER :: n_soil_layers = 0
     INTEGER :: n_litter_sources = 0
     INTEGER :: n_elements = 0
@@ -54,8 +60,9 @@ MODULE mo_sb_spinup_accelerator
     REAL(lp), ALLOCATABLE :: partitioned_litter_rate(:,:,:,:,:)
       !< Combined pool/element/cell/layer/month litter [mol m-3 s-1]
     REAL(lp) :: litter_partition_timestep = 0._lp
-      !< Substep used for PFT-specific partitioning; must match replay [s]
-    REAL(lp), ALLOCATABLE :: litter_to_uptake_n(:), litter_to_uptake_p(:) !< coupled reference ratios [-]
+      !< Nominal partition timestep used by the analytical seed [s]
+    REAL(lp), ALLOCATABLE :: uptake_to_litter_n(:), uptake_to_litter_p(:) !< Reference uptake/litter [-]
+    LOGICAL, ALLOCATABLE :: reference_valid_n(:), reference_valid_p(:) !< Positive reference litter [-]
     ! Keep original budget integrals for the combined-column adapter: averaging
     ! litter/uptake ratios would not conserve either reference budget.
     REAL(lp), ALLOCATABLE :: reference_litter_n(:), reference_litter_p(:) !< Window inputs [mol m-2]
@@ -130,6 +137,19 @@ MODULE mo_sb_spinup_accelerator
 
 CONTAINS
 
+  !> Remove roundoff at the full-cover boundary in replay scratch weights only.
+  !! The host area and restart stay untouched. Use the same weight for the
+  !! forcing and inventory so their area means describe the same column.
+  PURE FUNCTION replay_area_fraction(raw) RESULT(area)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: raw !< Absolute tile fraction from the host [-]
+    REAL(lp) :: area
+    area = raw
+    IF (.NOT. ieee_is_finite(raw)) RETURN
+    ! Use the existing combined-column relative closure allowance at unity.
+    IF (raw > 1._lp .AND. raw <= 1._lp + 1.e-12_lp) area = 1._lp
+  END FUNCTION replay_area_fraction
+
   !> Construct one cell's shared forcing without writing any process memory.
   !> Geometry and sampling coverage must agree: mixing unlike columns or
   !> unmatched climatological windows would not conserve their source budgets.
@@ -167,8 +187,11 @@ CONTAINS
     REAL(lp) :: nactive(1), area, old_weight, new_weight, dt, root_stock
     REAL(lp) :: reference_litter(2), reference_uptake(2), reference_ratio(2)
     INTEGER :: it, j, first, c, block, ns, nb, ne, nv, np, nt, b, s, e, v, entry, lib
+    INTEGER :: day, slot, variants
+    INTEGER, ALLOCATABLE :: first_day(:) !< Representative day for each distinct refined month/step-count pair
     LOGICAL :: valid, interactive(2)
     CHARACTER(len=16) :: uptake_scheme !< Existing ECA/simple_1d kernel selection [-]
+    CHARACTER(len=256) :: driver_detail
 
     accepted = .FALSE.
     reason = 'Combined forcing requires a single cell and at least one active PFT.'
@@ -197,10 +220,14 @@ CONTAINS
     area = 0._lp
     DO j = 1,nt
       it = members(j)
-      fraction(1,j) = model%tiles(it)%p%fract(c,block)
+      fraction(1,j) = replay_area_fraction(model%tiles(it)%p%fract(c,block))
       reason = 'Combined forcing: invalid active PFT area.'
       IF (.NOT. ieee_is_finite(fraction(1,j))) RETURN
-      IF (fraction(1,j) <= 0._lp) RETURN
+      IF (fraction(1,j) <= 0._lp .OR. fraction(1,j) > 1._lp) THEN
+        WRITE(reason,'(3A,ES24.16E3)') 'Combined forcing: invalid area on ',TRIM(model%tiles(it)%p%name), &
+          & '; raw fraction=',model%tiles(it)%p%fract(c,block)
+        RETURN
+      END IF
       SELECT TYPE (mem => model%tiles(it)%p%mem(HYDRO_)%p)
       TYPE IS (t_hydro_memory)
         hydro => mem
@@ -267,18 +294,44 @@ CONTAINS
     reference_uptake = [shared%reference_uptake_n(1),shared%reference_uptake_p(1)]
     interactive = [conf%flag_sb_interactive_n,conf%flag_sb_interactive_p]
     reference_ratio = 0._lp
+    shared%reference_valid_n = .FALSE.
+    shared%reference_valid_p = .FALSE.
     DO e = 1,2
       IF (.NOT. interactive(e)) CYCLE
-      reason = 'Combined forcing: invalid or one-sided inactive litter/uptake budget.'
+      reason = 'Combined forcing: invalid litter/uptake budget or unrepresentable uptake/litter ratio.'
       IF (.NOT. ieee_is_finite(reference_litter(e)) .OR. .NOT. ieee_is_finite(reference_uptake(e))) RETURN
       IF (MIN(reference_litter(e),reference_uptake(e)) < 0._lp) RETURN
-      IF (MAX(reference_litter(e),reference_uptake(e)) <= eps8) CYCLE
-      IF (MIN(reference_litter(e),reference_uptake(e)) <= eps8) RETURN
-      reference_ratio(e) = reference_litter(e)/reference_uptake(e)
+      IF (reference_litter(e) == 0._lp) CYCLE
+      IF (reference_litter(e) < 1._lp) THEN
+        IF (reference_uptake(e) > HUGE(1._lp)*reference_litter(e)) RETURN
+      END IF
+      reference_ratio(e) = reference_uptake(e)/reference_litter(e)
+      IF (e == 1) shared%reference_valid_n = .TRUE.
+      IF (e == 2) shared%reference_valid_p = .TRUE.
     END DO
-    shared%litter_to_uptake_n = reference_ratio(1)
-    shared%litter_to_uptake_p = reference_ratio(2)
-    dt = one_day/REAL(MAX(1,CEILING(1._lp/conf%sb_model_spinup_accelerator_timestep_days)),lp)
+    shared%uptake_to_litter_n = reference_ratio(1)
+    shared%uptake_to_litter_p = reference_ratio(2)
+    CALL build_replay_schedule(shared,NINT(nactive(1)),conf%sb_model_spinup_accelerator_timestep_days)
+    dt = one_day/REAL(shared%nominal_steps,lp)
+    ! Litter N thresholds operate on increments, not rates. Cache partitions
+    ! only for distinct refined step sizes actually used within a seasonal bin.
+    ALLOCATE(shared%litter_slot(shared%n_daily_bins),first_day(shared%n_daily_bins))
+    shared%litter_slot=0
+    variants=0
+    DO day=1,shared%n_daily_bins
+      IF (shared%daily_steps(day)==shared%nominal_steps) CYCLE
+      b=(day-1)*nb/shared%n_daily_bins+1
+      DO slot=1,variants
+        IF ((first_day(slot)-1)*nb/shared%n_daily_bins+1==b .AND. &
+          & shared%daily_steps(first_day(slot))==shared%daily_steps(day)) EXIT
+      END DO
+      IF (slot>variants) THEN
+        variants=slot
+        first_day(slot)=day
+      END IF
+      shared%litter_slot(day)=slot
+    END DO
+    IF (variants>0) ALLOCATE(shared%refined_litter_rate(np,ne,1,ns,variants))
     shared%litter_partition_timestep = dt
     ALLOCATE(shared%partitioned_litter_rate(np,ne,1,ns,nb),shared%uptake_drivers(nb))
     shared%root_fraction = 0._lp
@@ -323,9 +376,11 @@ CONTAINS
           potential(1,s) = shared%wtr_pot(1,b+nb*(s-1))
         END DO
         CALL prepare_combined_plant_uptake(uptake_scheme,drivers%fraction,drivers%roots, &
-          & drivers%temperature,potential,drivers%phi_leaf_min,drivers%vmax,drivers%demand,checked_uptake,valid)
-        reason = 'Combined forcing: invalid grouped root uptake drivers.'
-        IF (.NOT. valid) RETURN
+          & drivers%temperature,potential,drivers%phi_leaf_min,drivers%vmax,drivers%demand,checked_uptake,valid,driver_detail)
+        IF (.NOT. valid) THEN
+          WRITE(reason,'(A,I0,2A)') 'Grouped root uptake forcing month=',b,': ',TRIM(driver_detail)
+          RETURN
+        END IF
       END ASSOCIATE
       DO s = 1,ns
         entry = b+nb*(s-1)
@@ -339,10 +394,92 @@ CONTAINS
         & sla,growthform,roots,litter,seed,shared%partitioned_litter_rate(:,:,:,:,b),valid)
       reason = 'Combined forcing: per-PFT litter partition or elemental budget rejected.'
       IF (.NOT. valid) RETURN
+      DO slot=1,variants
+        day=first_day(slot)
+        IF ((day-1)*nb/shared%n_daily_bins+1/=b) CYCLE
+        CALL combine_sb_litter_inputs(1,ns,np,ne,nv,nt,one_day/REAL(shared%daily_steps(day),lp), &
+          & conf%sb_model_scheme,fraction,nactive,depth,sla,growthform,roots,litter,seed, &
+          & shared%refined_litter_rate(:,:,:,:,slot),valid)
+        IF (.NOT. valid) RETURN
+      END DO
     END DO
     accepted = .TRUE.
     reason = 'Combined forcing prepared for transactional shared-state execution.'
   END SUBROUTINE prepare_combined_sb_forcing
+
+  !> Split days on which explicit down + lateral export would consume the donor reserve.
+  !! Both rates act on the same pre-transport solute. Returned lateral material is not
+  !! available to fund gross export. Using equal substeps partitions one day exactly.
+  SUBROUTINE build_replay_schedule(forcing,nactive,requested_days)
+    USE mo_jsb_math_constants, ONLY: one_day
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(inout) :: forcing
+    INTEGER, INTENT(in) :: nactive
+    REAL(lp), INTENT(in) :: requested_days
+    INTEGER :: day,layer,entry
+    REAL(lp) :: down,lateral,rate,peak,limit
+    CHARACTER(len=*), PARAMETER :: routine=modname//':build_replay_schedule'
+
+    IF (.NOT.ieee_is_finite(requested_days)) CALL finish(routine,'Nonfinite requested replay timestep.')
+    IF (requested_days<=1._lp/REAL(HUGE(1)-1,lp)) CALL finish(routine,'Invalid requested replay timestep.')
+    IF (nactive<0 .OR. nactive>forcing%n_soil_layers .OR. forcing%n_daily_bins<1 .OR. &
+      & SIZE(forcing%wtr_down,1)/=1) CALL finish(routine,'Invalid replay column dimensions.')
+    forcing%nominal_steps=MAX(1,CEILING(1._lp/requested_days))
+    forcing%active_layers=nactive
+    forcing%peak_layer=0
+    forcing%peak_day=0
+    peak=0._lp
+    limit=REAL(HUGE(1)-1,lp)*max_replay_export_fraction/one_day
+    ALLOCATE(forcing%daily_steps(forcing%n_daily_bins))
+    forcing%daily_steps=forcing%nominal_steps
+    DO layer=1,nactive
+      DO day=1,forcing%n_daily_bins
+        entry=day+(layer-1)*forcing%n_daily_bins
+        down=forcing%wtr_down(1,entry)
+        lateral=forcing%wtr_lat_loss(1,entry)
+        IF (.NOT.ieee_is_finite(down) .OR. .NOT.ieee_is_finite(lateral)) CALL finish(routine,'Nonfinite transport rate.')
+        IF (MIN(down,lateral)<0._lp .OR. down>limit-lateral) CALL finish(routine,'Invalid transport rate.')
+        rate=down+lateral
+        forcing%daily_steps(day)=MAX(forcing%daily_steps(day),CEILING(one_day*rate/max_replay_export_fraction))
+        IF (rate>peak) THEN
+          peak=rate
+          forcing%peak_layer=layer
+          forcing%peak_day=day
+        END IF
+      END DO
+    END DO
+  END SUBROUTINE build_replay_schedule
+
+  !> One record per attempted column/event, not per internal replay year.
+  SUBROUTINE report_replay_schedule(tile,options,event,mode,forcing)
+    USE mo_jsb_math_constants, ONLY: one_day
+    USE, INTRINSIC :: iso_fortran_env, ONLY: int64
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: event
+    CHARACTER(len=*), INTENT(in) :: mode
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_jsb_model), POINTER :: model
+    CHARACTER(len=512) :: text
+    INTEGER :: entry
+    REAL(lp) :: peak_nominal_export !< Maximum donor fraction before adaptive subdivision [-]
+    model => Get_model(tile%owner_model_id)
+    ! Retain adaptive-step summaries normally; unrefined columns are debug detail.
+    IF (.NOT.model%config%flag_spinup_debug .AND. &
+      & ALL(forcing%daily_steps<=forcing%nominal_steps)) RETURN
+    peak_nominal_export=0._lp
+    IF (forcing%peak_layer>0) THEN
+      entry=forcing%peak_day+(forcing%peak_layer-1)*forcing%n_daily_bins
+      peak_nominal_export=(forcing%wtr_down(1,entry)+forcing%wtr_lat_loss(1,entry))*one_day/REAL(forcing%nominal_steps,lp)
+    END IF
+    WRITE(text,'(a,i0,4a,7(a,i0),a,f12.4,2(a,i0),a,es16.8)') 'SB replay transport schedule: event=',event, &
+      & ' mode=',TRIM(mode),' tile=',TRIM(tile%name),' block=',options%iblk,' cell=',options%ics, &
+      & ' refined_days=',COUNT(forcing%daily_steps>forcing%nominal_steps),' forcing_days=',forcing%n_daily_bins, &
+      & ' nominal_steps_per_day=',forcing%nominal_steps,' peak_steps_per_day=',MAXVAL(forcing%daily_steps), &
+      & ' steps_per_replay_year=',SUM(INT(forcing%daily_steps,int64)),' min_dt_s=',one_day/REAL(MAXVAL(forcing%daily_steps),lp), &
+      & ' peak_day=',forcing%peak_day,' peak_layer=',forcing%peak_layer,' peak_nominal_export=',peak_nominal_export
+    CALL message(modname,TRIM(text),all_print=.TRUE.)
+  END SUBROUTINE report_replay_schedule
 
   ! ===================================================================================================== !
   !> Identify the next accelerator event and whether its preceding forcing window is currently active.
@@ -940,11 +1077,14 @@ CONTAINS
   !! Live forcing is restored after every tile/year because physics memory may
   !! be inherited/shared between PFTs. The driver cannot checkpoint inside this call.
   SUBROUTINE execute_sb_grid_replay(model, options)
+    USE mo_jsb_grid, ONLY: Get_grid
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     USE mo_sb_replay_state, ONLY: t_sb_replay_checkpoint, capture_sb_replay_state, &
       & restore_sb_replay_state, release_sb_replay_state
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_
     USE mo_hydro_interface, ONLY: update_soil_properties
+    USE mo_hydro_memory_class, ONLY: t_hydro_memory
     USE mo_q_sb_rate_modifier, ONLY: update_sb_rate_modifier
     USE mo_sb_config_class, ONLY: t_sb_config
     USE mo_sb_util, ONLY: reset_sb_fluxes
@@ -964,6 +1104,7 @@ CONTAINS
     INTEGER :: it, event, index, n, y, consecutive
     LOGICAL :: pending, converged, balanced, any_pending
     LOGICAL :: shared_ready, combined_done !< Shared preparation and validated execution
+    TYPE(t_jsb_grid), POINTER :: grid
     CHARACTER(len=512) :: shared_reason !< One diagnostic per event, including field values and bounds
     CHARACTER(len=1024) :: text
     CHARACTER(len=32) :: tile_action !< Event-level integration decision, not a yearly trace
@@ -1002,7 +1143,11 @@ CONTAINS
     selected = .FALSE.
     DO it = 1, SIZE(model%tiles)
       IF (.NOT. context(it)%pending) CYCLE
-      selected(it) = model%tiles(it)%p%fract(options%ics,options%iblk) > 0._lp
+      tile => model%tiles(it)%p
+      ! Bare soil can store substantial CNP, but has no vegetation forcing
+      ! for accelerated years. Freeze its stocks; only its event clock advances.
+      selected(it) = tile%fract(options%ics,options%iblk) > 0._lp .AND. &
+        & .NOT. model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag
     END DO
     CALL capture_sb_replay_state(model,options,selected,checkpoint)
     ! Replay precedes the coupled task queue, including soil_properties. Its derived
@@ -1028,6 +1173,7 @@ CONTAINS
       ! Fractions are absolute grid-cell fractions, not renormalized PFT weights.
       IF (model%config%flag_spinup_debug) THEN
         tile_action='participating in event'
+        IF (model%lctlib(tile%lcts(1)%lib_id)%BareSoilFlag) tile_action='skipped: frozen bare soil'
         IF (tile%fract(options%ics,options%iblk) <= 0._lp) tile_action='skipped: nonpositive area'
         WRITE(text,*) 'Replay tile decision: model/year/event/ic/iblk=',model%id, &
           & get_year(options%current_datetime),event,options%ics,options%iblk, &
@@ -1035,8 +1181,9 @@ CONTAINS
           & '; action=',TRIM(tile_action)
         CALL message(modname,TRIM(text),all_print=.TRUE.)
       END IF
-      IF (tile%fract(options%ics,options%iblk) <= 0._lp) CYCLE
+      IF (.NOT. selected(it)) CYCLE
       context(it)%active=.TRUE.
+      IF (conf%sb_model_scheme == 'jsm') CALL report_replay_ammonium(tile,options,event,'entry')
       ! In particular rmm_sorption is diagnostic, not restart state, and is used
       ! when the analytical seed refreshes nutrient sorption capacities. Rebuild
       ! it from live physics before preparing the seed; replay steps subsequently
@@ -1059,9 +1206,11 @@ CONTAINS
     ! snapshots, event schedule or convergence accounting. No restart state changes.
     shared_ready=.FALSE.
     shared_reason='Per-PFT replay explicitly selected.'
-    WRITE(text,*) 'SB replay requested mode: event/cell/block=',event,options%ics,options%iblk, &
-      & '; mode=',TRIM(conf%sb_model_spinup_accelerator_replay_mode)
-    CALL message(modname,TRIM(text),all_print=.TRUE.)
+    IF (model%config%flag_spinup_debug) THEN
+      WRITE(text,*) 'SB replay requested mode: event/cell/block=',event,options%ics,options%iblk, &
+        & '; mode=',TRIM(conf%sb_model_spinup_accelerator_replay_mode)
+      CALL message(modname,TRIM(text),all_print=.TRUE.)
+    END IF
     IF (conf%sb_model_spinup_accelerator_replay_mode == 'combined') &
       & CALL prepare_combined_sb_forcing(model,options,context,shared_forcing,shared_ready,shared_reason)
     IF (model%config%flag_spinup_debug) THEN
@@ -1072,9 +1221,11 @@ CONTAINS
     IF (shared_ready) THEN
       CALL try_combined_sb_replay(model,options,context,shared_forcing,checkpoint,event, &
         & stocks,previous,relative,y,converged,combined_done,shared_reason)
-      WRITE(text,*) 'Combined replay outcome: event/cell/block/accepted=',event,options%ics,options%iblk, &
-        & combined_done,'; ',TRIM(shared_reason)
-      CALL message(modname,TRIM(text),all_print=.TRUE.)
+      IF (model%config%flag_spinup_debug) THEN
+        WRITE(text,*) 'Combined replay outcome: event/cell/block/accepted=',event,options%ics,options%iblk, &
+          & combined_done,'; ',TRIM(shared_reason)
+        CALL message(modname,TRIM(text),all_print=.TRUE.)
+      END IF
       IF (.NOT. combined_done) THEN
         ! Candidate rejection is atomic. Recreate the original derived physics
         ! before the existing per-PFT fallback (including restarted entry).
@@ -1089,19 +1240,36 @@ CONTAINS
         END DO
       END IF
     END IF
-    IF (.NOT. combined_done) THEN
-      WRITE(text,*) 'SB replay realized mode: per_pft; event/cell/block=',event,options%ics,options%iblk, &
-        & '; ',TRIM(shared_reason)
-      CALL message(modname,TRIM(text),all_print=.TRUE.)
+    IF (.NOT. ANY(selected)) THEN
+      ! Even a bare-only grid must consume this pending event on restart.
+      y=0
+      stocks=initial
+      converged=.FALSE.
+    ELSE IF (.NOT. combined_done) THEN
+      grid=>Get_grid(model%grid_id)
+      IF (model%config%flag_spinup_debug .OR. conf%sb_model_spinup_accelerator_replay_mode=='combined') THEN
+        WRITE(text,*) 'SB replay realized mode: per_pft; event/cell/block=',event,options%ics,options%iblk, &
+          & '; lon/lat=',grid%lon(options%ics,options%iblk),grid%lat(options%ics,options%iblk),'; ',TRIM(shared_reason)
+        CALL message(modname,TRIM(text),all_print=.TRUE.)
+      END IF
       DO it=1,SIZE(model%tiles)
         IF (.NOT. context(it)%active) CYCLE
         tile => model%tiles(it)%p
+        SELECT TYPE(h => tile%mem(HYDRO_)%p)
+        TYPE IS(t_hydro_memory)
+          CALL build_replay_schedule(context(it)%forcing,NINT(h%num_sl_above_bedrock%ptr(options%ics,options%iblk)), &
+            & conf%sb_model_spinup_accelerator_timestep_days)
+        CLASS DEFAULT
+          CALL finish(modname,'Missing per-PFT replay layer geometry.')
+        END SELECT
+        CALL report_replay_schedule(tile,options,event,'per_pft',context(it)%forcing)
         CALL seed_sb_replay_analytically(tile,options,context(it)%forcing,event)
         ALLOCATE(context(it)%balance%litter_n(1),context(it)%balance%litter_p(1), &
           & context(it)%balance%uptake_n(1),context(it)%balance%uptake_p(1), &
           & context(it)%balance%scale_n(1),context(it)%balance%scale_p(1))
         context(it)%balance%scale_n=1._lp
         context(it)%balance%scale_p=1._lp
+        CALL initialize_replay_demand_balance(context(it)%forcing,context(it)%balance)
         CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
         IF (model%config%flag_spinup_debug) THEN
           CALL write_sb_spinup_forcing_debug(tile,options,event,context(it)%forcing)
@@ -1159,6 +1327,7 @@ CONTAINS
       IF (context(it)%active) THEN
         CALL reset_sb_fluxes(tile,options)
         CALL finalize_sb_spinup_accelerator(tile,options,context(it)%live)
+        IF (conf%sb_model_scheme == 'jsm') CALL report_replay_ammonium(tile,options,event,'exit')
         IF (model%config%flag_spinup_debug) THEN
           CALL write_sb_spinup_snapshot_debug(tile,options,event,y)
           CALL snapshot_sb_spinup_pools(tile,options,after)
@@ -1173,18 +1342,75 @@ CONTAINS
     CALL release_sb_replay_state(checkpoint)
     CALL CPU_TIME(clock_end)
     executed_sb_model_spinup_accelerator_this_timestep=.TRUE.
-    WRITE(text,*) 'Grid replay: model/year/event/ic/iblk=',model%id,get_year(options%current_datetime), &
-      & event,options%ics,options%iblk,'; mode/N/tolerance=',TRIM(conf%sb_model_spinup_accelerator_convergence_mode), &
-      & n,tolerance,'; internal years/SOC pass=',y,converged,'; before/after C,N,P,SIN,SIP mol/m2=',initial,stocks, &
-      & '; CPU seconds=',clock_end-clock_start,'; returning to unchanged global timestamp.'
-    CALL message(modname,TRIM(text),all_print=.TRUE.)
-    IF (y > 0) THEN
-      WRITE(text,*) 'Grid replay final diagnostic: signed stock changes=',stocks-previous, &
-        & '; relative changes C,N,P,SIN,SIP=',relative, &
-        & '; cycle-window comparison valid=',y >= n,'; nutrient diagnostics do not gate SOC.'
+    ! Keep a compact execution/convergence/runtime record for working cells.
+    ! Bare-only no-work events and full inventories are debug-only diagnostics.
+    IF (y>0 .OR. model%config%flag_spinup_debug) THEN
+      WRITE(text,*) 'SB replay summary: model/year/event/cell/block=',model%id,get_year(options%current_datetime), &
+        & event,options%ics,options%iblk,'; combined=',combined_done,'; internal years/SOC pass=',y,converged, &
+        & '; cycle-window valid=',y>=n,'; CPU seconds=',clock_end-clock_start
       CALL message(modname,TRIM(text),all_print=.TRUE.)
     END IF
+    IF (model%config%flag_spinup_debug) THEN
+      WRITE(text,*) 'Grid replay: model/year/event/ic/iblk=',model%id,get_year(options%current_datetime), &
+        & event,options%ics,options%iblk,'; mode/N/tolerance=',TRIM(conf%sb_model_spinup_accelerator_convergence_mode), &
+        & n,tolerance,'; internal years/SOC pass=',y,converged,'; before/after C,N,P,SIN,SIP mol/m2=',initial,stocks, &
+        & '; CPU seconds=',clock_end-clock_start,'; returning to unchanged global timestamp.'
+      CALL message(modname,TRIM(text),all_print=.TRUE.)
+      IF (y > 0) THEN
+        WRITE(text,*) 'Grid replay final diagnostic: signed stock changes=',stocks-previous, &
+          & '; relative changes C,N,P,SIN,SIP=',relative, &
+          & '; cycle-window comparison valid=',y >= n,'; nutrient diagnostics do not gate SOC.'
+        CALL message(modname,TRIM(text),all_print=.TRUE.)
+      END IF
+    END IF
   END SUBROUTINE execute_sb_grid_replay
+
+  !> Report invalid native ammonium parent/tracer pairs at the coupled/replay boundary.
+  !> No clipping: matching lon/lat, PFT and layer across events brackets the origin.
+  SUBROUTINE report_replay_ammonium(tile,options,event,phase)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_grid, ONLY: Get_grid
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_process_class, ONLY: SB_, HYDRO_
+    USE mo_sb_memory_class, ONLY: t_sb_memory
+    USE mo_hydro_memory_class, ONLY: t_hydro_memory
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    INTEGER, INTENT(in) :: event
+    CHARACTER(len=*), INTENT(in) :: phase
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid), POINTER :: grid
+    INTEGER :: c,b,s,k,ns
+    REAL(lp) :: parent(2),n15(2)
+    CHARACTER(len=512) :: text
+    CHARACTER(len=8), PARAMETER :: groups(2)=['solute  ','sorbed  ']
+    c=options%ics
+    b=options%iblk
+    SELECT TYPE(h => tile%mem(HYDRO_)%p)
+    TYPE IS(t_hydro_memory)
+      ns=NINT(h%num_sl_above_bedrock%ptr(c,b))
+    CLASS DEFAULT
+      RETURN
+    END SELECT
+    SELECT TYPE(m => tile%mem(SB_)%p)
+    TYPE IS(t_sb_memory)
+      DO s=1,ns
+        parent=[m%nh4_solute%ptr(c,s,b),m%nh4_assoc%ptr(c,s,b)]
+        n15=[m%nh4_n15_solute%ptr(c,s,b),m%nh4_n15_assoc%ptr(c,s,b)]
+        DO k=1,2
+          IF (ieee_is_finite(parent(k)) .AND. ieee_is_finite(n15(k))) THEN
+            IF (n15(k)>=0._lp .AND. n15(k)<=parent(k)) CYCLE
+          END IF
+          model=>Get_model(tile%owner_model_id)
+          grid=>Get_grid(model%grid_id)
+          WRITE(text,'(5A,I0,A,I0,A,2F12.6,3A,2ES23.14)') 'NH4 boundary ',phase,' tile=',TRIM(tile%name), &
+            & ' event=',event,' layer=',s,' lon/lat=',grid%lon(c,b),grid%lat(c,b),' ',TRIM(groups(k)), &
+            & ' total N/N15 [mol m-3]=',parent(k),n15(k)
+          CALL message(modname,TRIM(text),all_print=.TRUE.)
+        END DO
+      END DO
+    END SELECT
+  END SUBROUTINE report_replay_ammonium
 
   !> Lease one existing SB leaf as scratch execution storage, then restore ALL
   !> owners and stage the complete redistribution. No parent diagnostic tile is
@@ -1195,7 +1421,7 @@ CONTAINS
     USE mo_sb_constants, ONLY: min_fine_mineral_volume
     USE mo_sb_combined_state, ONLY: t_sb_combined_state, read_sb_combined_state, &
       & write_sb_combined_state, reconstruct_sb_combined_state, &
-      & redistribute_sb_combined_state, valid_sb_combined_inventory
+      & redistribute_sb_combined_state, valid_sb_combined_inventory, redistribute_organic_headroom
     USE mo_sb_replay_state, ONLY: t_sb_replay_checkpoint, restore_sb_replay_state
     USE mo_sb_convergence_kernel, ONLY: update_replay_convergence
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_, SSE_
@@ -1206,7 +1432,10 @@ CONTAINS
     USE mo_q_sb_rate_modifier, ONLY: update_sb_rate_modifier
     USE mo_q_sb_jsm_processes, ONLY: solve_pore_volume_for_bulk_density, calc_available_pore_carbon_components, &
       & sb_density_solution_found, sb_density_target_above_maximum, sb_density_target_below_minimum
-    USE mo_lnd_bgcm_idx, ONLY: ix_dom_assoc, ix_residue_assoc, ixC
+    USE mo_lnd_bgcm_idx, ONLY: ix_dom_assoc, ix_residue_assoc, ixC, ix_soluable_litter, &
+      & ix_polymeric_litter, ix_mycorrhiza, ix_microbial, ix_residue
+    USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_sb_constants, ONLY: carbon_per_dryweight_SOM, rho_solid_maoc, rho_bulk_org
     USE mo_lnd_bgcm_store_class, ONLY: SB_BGCM_POOL_ID
     TYPE(t_jsb_model), POINTER, INTENT(in) :: model
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -1228,7 +1457,11 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: tile
     REAL(lp), POINTER :: pool(:,:,:,:)
     REAL(lp), ALLOCATABLE :: depth(:,:),fraction(:),lower(:,:),upper(:,:),history(:,:),bulk(:,:)
+    REAL(lp), ALLOCATABLE :: nh4_cap(:,:), assoc(:), tracer(:)
+    REAL(lp), ALLOCATABLE :: org_cap(:,:), solid_cap(:), layer_weight(:)
+    REAL(lp) :: maoc_conversion, poc_conversion !< Organic volume per C [m3 mol-1 C]
     REAL(lp) :: area,tolerance,maoc,poc,lo,hi,solved,density,residual,weighted(5),target_stocks(5)
+    REAL(lp) :: frozen(5), frozen_area, veg_area !< Frozen stocks per frozen area, and absolute area fractions
     INTEGER, ALLOCATABLE :: members(:)
     INTEGER :: j,it,rep,ns,nt,c,b,n,consecutive,s,status
     INTEGER :: failed_member !< Input PFT index for reconstruction rejection; zero means shared state
@@ -1283,7 +1516,7 @@ CONTAINS
       depth(:,j)=hydro%soil_depth_sl%ptr(c,1:ns,b)
       ! Each owner's geometry was validated at event entry, before the snapshots were constructed.
       bulk(:,j)=sse%bulk_dens_sl%ptr(c,1:ns,b)
-      fraction(j)=model%tiles(it)%p%fract(c,b)
+      fraction(j)=replay_area_fraction(model%tiles(it)%p%fract(c,b))
       reason='Combined replay requires common soil-physics properties.'
       IF (ANY(bulk(:,j) /= bulk(:,1))) RETURN
       ! Equal soil properties may have different memory owners. Water and
@@ -1313,13 +1546,27 @@ CONTAINS
       & balance%scale_n(1),balance%scale_p(1))
     balance%scale_n = 1._lp
     balance%scale_p = 1._lp
+    CALL initialize_replay_demand_balance(forcing,balance)
     ! Load shared physics BEFORE refreshing capacities and seeding. Each normal
     ! replay substep subsequently loads its own climatology bin as usual.
-    CALL load_sb_spinup_forcing_bin(tile,options,forcing,1,1,balance)
+    BLOCK
+      USE mo_jsb_math_constants, ONLY: one_day
+      TYPE(t_jsb_task_options) :: first_step
+      first_step=options
+      first_step%dtime=one_day/REAL(forcing%daily_steps(1),lp)
+      CALL load_sb_spinup_forcing_bin(tile,first_step,forcing,1,1,balance)
+    END BLOCK
+    CALL report_replay_schedule(tile,options,event,'combined',forcing)
     CALL update_sb_rate_modifier(tile,options)
     CALL calibrate_sb_pore_volume(tile,options,0,l_refresh_only=.TRUE.)
     CALL seed_sb_replay_analytically(tile,options,forcing,event)
     CALL grid_replay_stocks(model,options,stocks,area,only_tile=rep)
+    target_stocks=stocks
+    ! The leased column is per vegetated area. Keep bare stocks fixed in
+    ! whole-grid convergence diagnostics, never in the redistribution target.
+    CALL grid_replay_stocks(model,options,frozen,frozen_area,mask=.NOT.context%active)
+    veg_area=SUM(fraction)
+    IF (frozen_area>0._lp) stocks=(veg_area*stocks+frozen_area*frozen)/(veg_area+frozen_area)
     n=conf%sb_convergence_cycle_years
     tolerance=conf%sb_model_spinup_accelerator_convergence_rel_tol
     ALLOCATE(history(5,0:n),SOURCE=0._lp)
@@ -1330,6 +1577,8 @@ CONTAINS
       CALL calibrate_sb_pore_volume(tile,options,years)
       CALL update_replay_plant_np_demand_balance(tile,options,forcing,balance,event,years,balanced)
       CALL grid_replay_stocks(model,options,stocks,area,only_tile=rep)
+      target_stocks=stocks
+      IF (frozen_area>0._lp) stocks=(veg_area*stocks+frozen_area*frozen)/(veg_area+frozen_area)
       CALL update_replay_convergence(conf%sb_model_spinup_accelerator_convergence_mode, &
         & n,years,tolerance,stocks,history,consecutive,converged,previous,relative)
       IF (model%config%flag_spinup_debug .AND. is_sb_spinup_debug_year(years)) &
@@ -1338,15 +1587,16 @@ CONTAINS
     END DO
     years=MIN(years,conf%sb_model_spinup_accelerator_max_relaxation_years)
     CALL read_sb_combined_state(tile,options,target)
-    target_stocks=stocks
     ! Restore every owner BEFORE writing any individual redistribution. This
     ! restores PFT forcing, independent chemistry and shared physics exactly.
     CALL restore_sb_replay_state(checkpoint)
     lower=0._lp
     upper=1._lp-min_fine_mineral_volume
-    CALL redistribute_sb_combined_state(fraction,depth,before,target,lower,upper,after,valid)
-    reason='Combined redistribution rejected: parent shares, isotopes or mineral structure.'
+    CALL redistribute_sb_combined_state(fraction,depth,before,target,lower,upper,after,valid,reason)
     IF (.NOT. valid) RETURN
+    ALLOCATE(nh4_cap(ns,nt),assoc(nt),tracer(nt),org_cap(ns,nt),solid_cap(nt),layer_weight(nt))
+    maoc_conversion=molar_mass_C/(1000._lp*carbon_per_dryweight_SOM*rho_solid_maoc)
+    poc_conversion=molar_mass_C/(1000._lp*carbon_per_dryweight_SOM*rho_bulk_org)
     DO j=1,nt
       tile => model%tiles(members(j))%p
       CALL write_sb_combined_state(tile,options,after(j))
@@ -1356,6 +1606,67 @@ CONTAINS
       TYPE IS(t_sb_memory)
         soil => mem
       END SELECT
+      nh4_cap(:,j)=soil%qmax_nh4%ptr(c,1:ns,b)
+      org_cap(:,j)=soil%qmax_org%ptr(c,1:ns,b)
+    END DO
+    ! Repair recipient allocation only: do not alter the shared replay target,
+    ! geometry, mineral inventory, or bare soil. MAOC has priority in pore space.
+    ! Use full physical/chemical capacities, without an extra redistribution margin.
+    DO s=1,ns
+      layer_weight=fraction*depth(s,:)
+      DO j=1,nt
+        solid_cap(j)=MIN(org_cap(s,j),after(j)%pore(s)/maoc_conversion)
+      END DO
+      CALL redistribute_organic_headroom(after,s,[ix_dom_assoc,ix_residue_assoc], &
+        & layer_weight,solid_cap,valid)
+      IF (.NOT.valid) THEN
+        WRITE(reason,'(A,I0)') 'MAOC capacity redistribution infeasible: layer=',s
+        CALL restore_sb_replay_state(checkpoint)
+        RETURN
+      END IF
+      ! Surface excess is aboveground litter, not a forbidden pore occupancy.
+      IF (s==1) CYCLE
+      DO j=1,nt
+        maoc=SUM(after(j)%organic([ix_dom_assoc,ix_residue_assoc],ixC,s))
+        solid_cap(j)=MAX(0._lp,after(j)%pore(s)-maoc*maoc_conversion)/poc_conversion
+      END DO
+      CALL redistribute_organic_headroom(after,s,[ix_soluable_litter,ix_polymeric_litter, &
+        & ix_mycorrhiza,ix_microbial,ix_residue],layer_weight,solid_cap,valid)
+      IF (.NOT.valid) THEN
+        WRITE(reason,'(A,I0)') 'POC capacity redistribution infeasible: layer=',s
+        CALL restore_sb_replay_state(checkpoint)
+        RETURN
+      END IF
+    END DO
+    DO s=1,ns
+      DO j=1,nt
+        assoc(j)=after(j)%inorganic(2,1,s)
+        tracer(j)=after(j)%inorganic(2,2,s)
+      END DO
+      IF (.NOT.ANY(assoc>nh4_cap(s,:))) CYCLE
+      CALL fit_sorbed_nh4(fraction,nh4_cap(s,:),assoc,tracer,valid)
+      IF (.NOT.valid) THEN
+        WRITE(reason,'(A,I0,A,2ES20.10)') 'Sorbed NH4 redistribution infeasible: layer=',s, &
+          & '; weighted stock/capacity=',SUM(fraction*assoc)/SUM(fraction),SUM(fraction*nh4_cap(s,:))/SUM(fraction)
+        CALL restore_sb_replay_state(checkpoint)
+        RETURN
+      END IF
+      DO j=1,nt
+        after(j)%inorganic(2,1,s)=assoc(j)
+        after(j)%inorganic(2,2,s)=tracer(j)
+      END DO
+    END DO
+    DO j=1,nt
+      tile => model%tiles(members(j))%p
+      CALL write_sb_combined_state(tile,options,after(j))
+      CALL update_sb_rate_modifier(tile,options)
+      CALL calibrate_sb_pore_volume(tile,options,years,l_refresh_only=.TRUE.)
+      SELECT TYPE(mem => tile%mem(SB_)%p)
+      TYPE IS(t_sb_memory)
+        soil => mem
+      END SELECT
+      soil%nh4_assoc%ptr(c,1:ns,b)=after(j)%inorganic(2,1,:)
+      soil%nh4_n15_assoc%ptr(c,1:ns,b)=after(j)%inorganic(2,2,:)
       pool => tile%bgcm_store%Get_matrix_from_store_2l_3d(SB_BGCM_POOL_ID,c,c,b,tile%name)
       DO s=1,ns
         CALL calc_available_pore_carbon_components(pool,1,s,maoc,poc)
@@ -1373,10 +1684,19 @@ CONTAINS
         ! independent inventory bound on the slow/occluded/primary P pools.
         valid=valid .AND. after(j)%inorganic(7,1,s) <= soil%qmax_po4%ptr(c,s,b)*(1._lp+1.e-12_lp)
         IF (.NOT. valid) THEN
-          WRITE(reason,'(A,2I6,A,3ES12.4,A,2ES12.4)') 'Redistribution rejected PFT/layer=',members(j),s, &
-            & '; pore/bounds=',after(j)%pore(s),lo,hi, &
-            & '; MAOC/POC excess=',soil%volume_pore_maoc_excess_sl%ptr(c,s,b), &
-            & soil%volume_pore_poc_excess_sl%ptr(c,s,b)
+          ! Report all comparisons: multiple bounds can fail for the same candidate.
+          WRITE(reason,'(3A,I0,A,I0,A,7L2,A,3ES16.8,A,2ES16.8,3(A,2ES16.8))') &
+            & 'Physical redistribution tile=',TRIM(tile%name),' layer=',s,' solver status=',status, &
+            & ' pass(poreLo,poreHi,MAvol,POvol,MAcap,NH4cap,PO4cap)=', &
+            & after(j)%pore(s)>=lo,after(j)%pore(s)<=hi,soil%volume_pore_maoc_excess_sl%ptr(c,s,b)<=1.e-12_lp, &
+            & s==1 .OR. soil%volume_pore_poc_excess_sl%ptr(c,s,b)<=1.e-12_lp, &
+            & maoc<=soil%qmax_org%ptr(c,s,b)*(1._lp+1.e-12_lp), &
+            & after(j)%inorganic(2,1,s)<=soil%qmax_nh4%ptr(c,s,b)*(1._lp+1.e-12_lp), &
+            & after(j)%inorganic(7,1,s)<=soil%qmax_po4%ptr(c,s,b)*(1._lp+1.e-12_lp), &
+            & ' pore/lo/hi=',after(j)%pore(s),lo,hi,' excess MA/PO=',soil%volume_pore_maoc_excess_sl%ptr(c,s,b), &
+            & soil%volume_pore_poc_excess_sl%ptr(c,s,b),' MAOC/cap=',maoc,soil%qmax_org%ptr(c,s,b), &
+            & ' NH4/cap=',after(j)%inorganic(2,1,s),soil%qmax_nh4%ptr(c,s,b), &
+            & ' PO4/cap=',after(j)%inorganic(7,1,s),soil%qmax_po4%ptr(c,s,b)
           CALL restore_sb_replay_state(checkpoint)
           RETURN
         END IF
@@ -1388,21 +1708,51 @@ CONTAINS
         RETURN
       END IF
     END DO
-    CALL grid_replay_stocks(model,options,weighted,area)
+    CALL grid_replay_stocks(model,options,weighted,area,mask=context%active)
     reason='Combined redistribution stock-conservation rejection.'
     IF (ANY(ABS(weighted-target_stocks) > 1.e-12_lp*MAX(ABS(target_stocks),TINY(1._lp)))) THEN
       CALL restore_sb_replay_state(checkpoint)
       RETURN
     END IF
     stocks=weighted
+    IF (frozen_area>0._lp) stocks=(area*weighted+frozen_area*frozen)/(area+frozen_area)
     accepted=.TRUE.
     reason='Combined JSM replay accepted; all PFT redistributions validated.'
   END SUBROUTINE try_combined_sb_replay
 
+  !> Move excess sorbed NH4 only within this layer, weighted by receiving
+  !! headroom. Identical layer thickness cancels in the area inventory.
+  !! Each donor exports its own 15N fraction. No pool is borrowed from bare soil.
+  PURE SUBROUTINE fit_sorbed_nh4(f,cap,n,h,ok)
+    REAL(lp), INTENT(in) :: f(:),cap(:)
+    REAL(lp), INTENT(inout) :: n(:),h(:)
+    LOGICAL, INTENT(out) :: ok
+    REAL(lp), DIMENSION(SIZE(f)) :: excess,room,moved,hnew,nnew
+    REAL(lp) :: give,space,heavy
+    ok=.FALSE.
+    IF (ANY(cap<0._lp) .OR. ANY(h<0._lp) .OR. ANY(h>n)) RETURN
+    excess=MAX(0._lp,n-cap)
+    room=MAX(0._lp,cap-n)
+    give=SUM(f*excess)
+    space=SUM(f*room)
+    IF (give>space .OR. space<=0._lp) RETURN
+    moved=0._lp
+    WHERE (excess>0._lp) moved=excess*(h/n)
+    heavy=SUM(f*moved)
+    nnew=MIN(n,cap)+room*(give/space)
+    hnew=h-moved+room*(heavy/space)
+    IF (ANY(hnew<0._lp) .OR. ANY(hnew>nnew)) RETURN
+    IF (ABS(SUM(f*(nnew-n)))>1.e-12_lp*MAX(TINY(1._lp),SUM(f*n))) RETURN
+    IF (ABS(SUM(f*(hnew-h)))>1.e-12_lp*MAX(TINY(1._lp),SUM(f*h))) RETURN
+    n=nnew
+    h=hnew
+    ok=.TRUE.
+  END SUBROUTINE fit_sorbed_nh4
+
   !> Actual BG soil inventory, depth integrated BEFORE weighting calculated tiles.
   !! Reuse the ordinary diagnostic definition; exclude first-layer litter only.
   !! Called after each tile has restored live physics to avoid inherited forcing leakage.
-  SUBROUTINE grid_replay_stocks(model,options,stocks,fraction,only_tile)
+  SUBROUTINE grid_replay_stocks(model,options,stocks,fraction,only_tile,mask)
     USE mo_jsb_process_class, ONLY: SB_, HYDRO_
     USE mo_sb_memory_class, ONLY: t_sb_memory
     USE mo_hydro_memory_class, ONLY: t_hydro_memory
@@ -1412,6 +1762,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER, INTENT(in) :: model
     TYPE(t_jsb_task_options), INTENT(in) :: options
     INTEGER, OPTIONAL, INTENT(in) :: only_tile !< Temporary shared-column owner; no area/clock mutation
+    LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< Select replay participants or the unchanged complement
     REAL(lp), INTENT(out) :: stocks(5) !< Active-soil-area C, N, P, SIN, SIP [mol m-2]
     REAL(lp), INTENT(out) :: fraction !< Sum of calculated soil tile fractions [-]
     CLASS(t_jsb_tile_abstract), POINTER :: tile
@@ -1427,6 +1778,9 @@ CONTAINS
     DO it=1,SIZE(model%tiles)
       IF (PRESENT(only_tile)) THEN
         IF (it /= only_tile) CYCLE
+      END IF
+      IF (PRESENT(mask)) THEN
+        IF (.NOT. mask(it)) CYCLE
       END IF
       tile => model%tiles(it)%p
       IF (.NOT. tile%Is_process_calculated(SB_)) CYCLE
@@ -1536,7 +1890,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onChunk(SB_, sb_spinup_accelerator_execution_count)
     IF (ALL(sb_spinup_accelerator_execution_count <= 0._lp)) THEN
-      CALL message(modname//':analytical_seed', 'Conditioning replay: analytical seed skipped on '//TRIM(tile%name))
+      IF (model%config%flag_spinup_debug) &
+        & CALL message(modname//':analytical_seed', 'Conditioning replay: analytical seed skipped on '//TRIM(tile%name))
       RETURN
     END IF
     ! The analytical equations omit fungal/priming pathways: retain replay rather than a false solution.
@@ -1555,7 +1910,7 @@ CONTAINS
     ns = SIZE(sb_pool_mt,4)
     lctlib => model%lctlib(tile%lcts(1)%lib_id)
     is_jsm = dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm'
-    ! Same rounded substep as run_sb_climatological_year, not the host timestep.
+    ! Analytical targets retain the nominal litter partition; daily refinement is replay-only.
     dt = one_day/REAL(MAX(1,CEILING(1._lp/dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_timestep_days)),lp)
     IF (is_jsm) THEN
       pool_indices = [ix_soluable_litter,ix_woody_litter,ix_polymeric_litter,ix_microbial, &
@@ -1985,18 +2340,22 @@ CONTAINS
       & forcing%ice_soil(n_cells, SIZE(sb_spinup_accelerator_ice_soil_sum, 2)), &
       & forcing%wtr_pot(n_cells, SIZE(sb_spinup_accelerator_wtr_pot_sum, 2)))
 
-    ALLOCATE(forcing%litter_to_uptake_n(n_cells), forcing%litter_to_uptake_p(n_cells))
+    ALLOCATE(forcing%uptake_to_litter_n(n_cells), forcing%uptake_to_litter_p(n_cells), &
+      & forcing%reference_valid_n(n_cells), forcing%reference_valid_p(n_cells))
     forcing%reference_litter_n = sb_spinup_accelerator_litter_n_sum
     forcing%reference_litter_p = sb_spinup_accelerator_litter_p_sum
     forcing%reference_uptake_n = sb_spinup_accelerator_plant_uptake_n_sum
     forcing%reference_uptake_p = sb_spinup_accelerator_plant_uptake_p_sum
     forcing%daily_time = sb_spinup_accelerator_daily_time
+    ! Diagnose zero/undefined references; finite positive uptake has no activation cutoff.
+    ! This is per-PFT preparation, before combined forcing is constructed.
+    CALL report_replay_reference_status(tile, options, forcing, sb_spinup_accelerator_forcing_time)
     CALL diagnose_replay_reference_ratio(sb_spinup_accelerator_litter_n_sum, &
       & sb_spinup_accelerator_plant_uptake_n_sum, dsl4jsb_Config(SB_)%flag_sb_interactive_n, &
-      & forcing%litter_to_uptake_n, 'N')
+      & forcing%uptake_to_litter_n, forcing%reference_valid_n, 'N')
     CALL diagnose_replay_reference_ratio(sb_spinup_accelerator_litter_p_sum, &
       & sb_spinup_accelerator_plant_uptake_p_sum, dsl4jsb_Config(SB_)%flag_sb_interactive_p, &
-      & forcing%litter_to_uptake_p, 'P')
+      & forcing%uptake_to_litter_p, forcing%reference_valid_p, 'P')
 
     forcing%forcing_time = sb_spinup_accelerator_forcing_time
     forcing%fine_root_c = sb_spinup_accelerator_fine_root_c_sum / forcing%forcing_time
@@ -2421,8 +2780,7 @@ CONTAINS
     INTEGER :: forcing_bin, daily_bin
     INTEGER :: i_step
     INTEGER :: n_steps_per_bin
-    REAL(lp) :: bin_duration
-    REAL(lp) :: requested_dtime
+    INTEGER :: slot !< Combined litter cache index on this day
     TYPE(t_sb_plant_uptake), ALLOCATABLE :: combined_uptake !< Absent on the ordinary PFT path
     REAL(lp), ALLOCATABLE :: combined_litter(:,:,:,:) !< Shared litter increments [mol m-3 timestep-1]
     REAL(lp), ALLOCATABLE :: effective_demand(:,:,:) !< N/P,cell,PFT after annual budget scaling [-]
@@ -2446,15 +2804,8 @@ CONTAINS
       ALLOCATE(combined_uptake)
     END IF
 
-    requested_dtime = dsl4jsb_Config(SB_)%sb_model_spinup_accelerator_timestep_days * one_day
-    bin_duration = one_day
-    n_steps_per_bin = MAX(1, CEILING(bin_duration / requested_dtime))
-
     replay_options = options
-    replay_options%dtime = bin_duration / REAL(n_steps_per_bin, lp)
     IF (ALLOCATED(forcing%partitioned_litter_rate)) THEN
-      IF (forcing%litter_partition_timestep /= replay_options%dtime) &
-        & CALL finish(routine, 'Combined litter timestep differs from replay.')
       IF (SIZE(forcing%partitioned_litter_rate,5) /= forcing%n_forcing_bins) &
         & CALL finish(routine, 'Combined litter does not cover every seasonal bin.')
     END IF
@@ -2468,8 +2819,16 @@ CONTAINS
     uptake_bin = 0
     DO daily_bin = 1, forcing%n_daily_bins
       forcing_bin = (daily_bin - 1) * forcing%n_forcing_bins / forcing%n_daily_bins + 1
-      IF (ALLOCATED(forcing%partitioned_litter_rate)) &
-        & combined_litter = forcing%partitioned_litter_rate(:,:,:,:,forcing_bin)*replay_options%dtime
+      n_steps_per_bin=forcing%daily_steps(daily_bin)
+      replay_options%dtime=one_day/REAL(n_steps_per_bin,lp)
+      IF (ALLOCATED(forcing%partitioned_litter_rate)) THEN
+        slot=forcing%litter_slot(daily_bin)
+        IF (slot==0) THEN
+          combined_litter=forcing%partitioned_litter_rate(:,:,:,:,forcing_bin)*replay_options%dtime
+        ELSE
+          combined_litter=forcing%refined_litter_rate(:,:,:,:,slot)*replay_options%dtime
+        END IF
+      END IF
       DO i_step = 1, n_steps_per_bin
         CALL load_sb_spinup_forcing_bin(tile, replay_options, forcing, forcing_bin, daily_bin, balance)
         CALL reset_sb_fluxes(tile, replay_options)
@@ -2642,10 +3001,11 @@ CONTAINS
       daily_profile_entry = daily_bin + forcing%n_daily_bins * (i_soil - 1)
       ! Do not silently clip an unstable daily removal: that would change export.
       ! Transport consumes true rate * dtime; restore HYDRO's native factor 1000.
-      IF (ANY((forcing%wtr_down(:, daily_profile_entry) + forcing%wtr_lat_loss(:, daily_profile_entry)) &
-        & * options%dtime > 1.0_lp + eps8)) THEN
-        WRITE(message_text,*) 'Replay transport removal exceeds one; day/layer/dtime = ', &
-          & daily_bin, i_soil, options%dtime, '; reduce sb_model_spinup_accelerator_timestep_days.'
+      IF (i_soil<=forcing%active_layers .AND. &
+        & ANY((forcing%wtr_down(:, daily_profile_entry) + forcing%wtr_lat_loss(:, daily_profile_entry)) &
+        & * options%dtime > max_replay_export_fraction + eps8)) THEN
+        WRITE(message_text,*) 'Adaptive replay violated transport bound; day/layer/dtime = ', &
+          & daily_bin, i_soil, options%dtime
         CALL finish(TRIM(routine), TRIM(message_text))
       END IF
       frac_wtr_transp_down_sl(:, i_soil) = forcing%wtr_down(:, daily_profile_entry) * 1000.0_lp
@@ -2715,38 +3075,140 @@ CONTAINS
 
   END SUBROUTINE accumulate_replay_nutrient_budget
 
-  !> Diagnose a dimensionless coupled litter/uptake reference from integrated mol m-2 budgets.
-  !> Zero denotes an inactive reference, not a replacement ratio. Retain its recorded demand.
-  SUBROUTINE diagnose_replay_reference_ratio(litter, uptake, interactive, ratio, element_name)
+  !> Report zero/undefined references and invalid budgets once during event preparation.
+  !! Zero references are informational; negative/non-finite budgets remain fatal.
+  !! Local block/cell indices are not global grid indices;
+  !! longitude/latitude identify the same location across MPI decompositions.
+  SUBROUTINE report_replay_reference_status(tile, options, forcing, sampling_time)
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
-    USE mo_jsb_math_constants, ONLY: eps8
+    USE mo_jsb_grid, ONLY: Get_grid
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_time, ONLY: get_year
+    USE mo_jsb_process_class, ONLY: SB_
+    USE mo_sb_config_class, ONLY: t_sb_config
+    USE mo_sb_memory_class, ONLY: t_sb_memory
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    TYPE(t_jsb_task_options), INTENT(in) :: options
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    REAL(lp), INTENT(in) :: sampling_time(:,:) !< Monthly sampled time [s]
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid), POINTER :: grid
+    INTEGER :: ic, c, b, e, year, window
+    LOGICAL :: interactive(2), rejected
+    REAL(lp) :: litter(2), uptake(2), seconds
+    CHARACTER(len=1), PARAMETER :: nutrient(2) = ['N', 'P']
+    CHARACTER(len=80) :: reason
+    CHARACTER(len=2048) :: text
+    CHARACTER(len=*), PARAMETER :: routine = modname//':reference_status'
+
+    model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+    SELECT TYPE (conf => model%processes(SB_)%p%config)
+    TYPE IS (t_sb_config)
+      interactive = [conf%flag_sb_interactive_n, conf%flag_sb_interactive_p]
+      window = conf%sb_model_spinup_accelerator_forcing_years
+    CLASS DEFAULT
+      CALL finish(routine, 'Missing SB configuration for reference diagnostics.')
+      RETURN
+    END SELECT
+    year = get_year(options%current_datetime)
+    b = options%iblk
+    DO ic = 1, SIZE(forcing%reference_litter_n)
+      c = options%ics + ic - 1
+      litter = [forcing%reference_litter_n(ic), forcing%reference_litter_p(ic)]
+      uptake = [forcing%reference_uptake_n(ic), forcing%reference_uptake_p(ic)]
+      seconds = SUM(sampling_time(ic,:))
+      DO e = 1, 2
+        IF (.NOT. interactive(e)) CYCLE
+        rejected = .TRUE.
+        IF (.NOT. ieee_is_finite(litter(e)) .OR. .NOT. ieee_is_finite(uptake(e))) THEN
+          reason = 'non-finite budget'
+        ELSE IF (MIN(litter(e), uptake(e)) < 0._lp) THEN
+          reason = 'negative budget'
+        ELSE IF (litter(e) > 0._lp .AND. uptake(e) == 0._lp) THEN
+          reason = 'valid zero-uptake reference; zero replay target'
+        ELSE IF (litter(e) == 0._lp) THEN
+          reason = 'undefined zero-litter reference; retain recorded demand'
+        ELSE
+          rejected = .FALSE.
+        END IF
+        IF (.NOT. rejected) CYCLE
+        ! Expected inactive references are detail, not errors. Invalid budgets
+        ! remain visible regardless of debug selection and still fail downstream.
+        IF (.NOT.model%config%flag_spinup_debug) THEN
+          IF (reason=='valid zero-uptake reference; zero replay target' .OR. &
+            & reason=='undefined zero-litter reference; retain recorded demand') CYCLE
+        END IF
+        ! Use local text, not shared message_text, in this OpenMP entry path.
+        !$OMP CRITICAL (sb_reference_diagnostic)
+        WRITE(text,*) 'phase=per-PFT preparation; tile=', TRIM(tile%name), &
+          & '; lib_id=', tile%lcts(1)%lib_id, '; model/grid=', model%id, model%grid_id, &
+          & '; local cell/block=', c, b, '; lon/lat [deg]=', grid%lon(c,b), grid%lat(c,b), &
+          & '; tile fraction=', tile%fract(c,b), '; element=', nutrient(e), '; reason=', TRIM(reason)
+        CALL message(routine, TRIM(text), all_print=.TRUE.)
+        WRITE(text,*) 'tile=', TRIM(tile%name), '; local cell/block=', c, b, '; element=', nutrient(e), &
+          & '; event year/window first/last=', year, year-window, year-1, &
+          & '; sampled seconds=', seconds, '; litter/uptake [mol m-2 per tile over window]=', litter(e), uptake(e), &
+          & '; exact zero litter/uptake=', litter(e)==0._lp, uptake(e)==0._lp
+        CALL message(routine, TRIM(text), all_print=.TRUE.)
+        SELECT TYPE (mem => tile%mem(SB_)%p)
+        TYPE IS (t_sb_memory)
+          WRITE(text,*) 'tile=', TRIM(tile%name), '; local cell/block=', c, b, &
+            & '; completed events=', mem%sb_spinup_accelerator_execution_count%ptr(c,b), &
+            & '; recorded event=', mem%sb_spinup_accelerator_forcing_event%ptr(c,b), &
+            & '; fine-root C time integral [mol C m-2 s]=', &
+            & SUM(mem%sb_spinup_accelerator_fine_root_c_sum%ptr(c,:,b)), &
+            & '; N/P demand time integrals [s]=', SUM(mem%sb_spinup_accelerator_f_n_demand_sum%ptr(c,:,b)), &
+            & SUM(mem%sb_spinup_accelerator_f_p_demand_sum%ptr(c,:,b))
+          CALL message(routine, TRIM(text), all_print=.TRUE.)
+        END SELECT
+        !$OMP END CRITICAL (sb_reference_diagnostic)
+      END DO
+    END DO
+  END SUBROUTINE report_replay_reference_status
+
+  !> Diagnose uptake/litter [-] from integrated budgets [mol m-2 of tile].
+  !> Positive litter with zero uptake is valid (e.g. woody decay after root loss).
+  !> Zero litter leaves demand unregulated; validity is separate from the numeric ratio.
+  SUBROUTINE diagnose_replay_reference_ratio(litter, uptake, interactive, ratio, valid, element_name)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
     REAL(lp), INTENT(in) :: litter(:), uptake(:)
     LOGICAL, INTENT(in) :: interactive
     REAL(lp), INTENT(out) :: ratio(:)
+    LOGICAL, INTENT(out) :: valid(:)
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: element_name !< nutrient label for rejection diagnostics
     INTEGER :: ic
-    CHARACTER(len=512) :: text
     CHARACTER(len=*), PARAMETER :: routine = modname//':diagnose_replay_reference_ratio'
 
     ratio = 0.0_lp
+    valid = .FALSE.
     IF (.NOT. interactive) RETURN
     DO ic = 1, SIZE(litter)
       IF (.NOT. ieee_is_finite(litter(ic)) .OR. .NOT. ieee_is_finite(uptake(ic))) &
         & CALL finish(routine, 'Non-finite coupled litter/uptake reference.')
       IF (litter(ic) < 0.0_lp .OR. uptake(ic) < 0.0_lp) &
         & CALL finish(routine, 'Negative coupled litter/uptake reference.')
-      IF (litter(ic) <= eps8 .AND. uptake(ic) <= eps8) CYCLE
-      IF (litter(ic) <= eps8 .OR. uptake(ic) <= eps8) THEN
-        WRITE(text,*) 'One-sided zero coupled reference at chunk cell ', ic, '; litter, uptake [mol m-2]: ', &
-          & litter(ic), uptake(ic)
-        IF (PRESENT(element_name)) text = TRIM(text)//'; element='//element_name
-        CALL finish(routine, TRIM(text))
+      IF (litter(ic) == 0._lp) CYCLE
+      IF (litter(ic) < 1._lp) THEN
+        IF (uptake(ic) > HUGE(1._lp)*litter(ic)) THEN
+          IF (PRESENT(element_name)) CALL message(routine, 'Reference nutrient: '//element_name)
+          CALL finish(routine, 'Unrepresentable coupled uptake/litter ratio.')
+        END IF
       END IF
-      ratio(ic) = litter(ic) / uptake(ic)
+      ratio(ic) = uptake(ic) / litter(ic)
+      valid(ic) = .TRUE.
     END DO
   END SUBROUTINE diagnose_replay_reference_ratio
 
-  !> Adjust next replay year's plant demand to the coupled litter/uptake ratio, independently for N/P.
+  !> Apply valid zero targets before the first replay substep, not only after its first year.
+  SUBROUTINE initialize_replay_demand_balance(forcing, balance)
+    TYPE(t_sb_spinup_forcing_climatology), INTENT(in) :: forcing
+    TYPE(t_sb_replay_nutrient_balance), INTENT(inout) :: balance
+    WHERE (forcing%reference_valid_n .AND. forcing%uptake_to_litter_n == 0._lp) balance%scale_n = 0._lp
+    WHERE (forcing%reference_valid_p .AND. forcing%uptake_to_litter_p == 0._lp) balance%scale_p = 0._lp
+  END SUBROUTINE initialize_replay_demand_balance
+
+  !> Adjust next replay year's plant demand to coupled uptake/litter, independently for N/P.
   !> This changes a demand multiplier, not pools or nutrient supply. Actual uptake remains process-limited.
   SUBROUTINE update_replay_plant_np_demand_balance(tile, options, forcing, balance, &
       & execution_index, represented_year, l_balanced)
@@ -2771,7 +3233,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: po4_solute, po4_assoc_fast, po4_assoc_slow
     TYPE(t_jsb_model), POINTER :: model
     INTEGER :: ics, ice, iblk, ic, element
-    LOGICAL :: interactive(2)
+    LOGICAL :: interactive(2), valid(2)
     REAL(lp) :: litter(2), uptake(2), reference(2), scale(2), stock(2) ! [mol m-2], ratios [-]
     REAL(lp) :: target, error, max_error, tolerance ! target [mol m-2 yr-1], errors [-]
     CHARACTER(len=1024) :: text
@@ -2797,17 +3259,22 @@ CONTAINS
     DO ic = 1, SIZE(balance%scale_n)
       litter = [balance%litter_n(ic), balance%litter_p(ic)]
       uptake = [balance%uptake_n(ic), balance%uptake_p(ic)]
-      reference = [forcing%litter_to_uptake_n(ic), forcing%litter_to_uptake_p(ic)]
+      reference = [forcing%uptake_to_litter_n(ic), forcing%uptake_to_litter_p(ic)]
+      valid = [forcing%reference_valid_n(ic), forcing%reference_valid_p(ic)]
       scale = [balance%scale_n(ic), balance%scale_p(ic)]
       stock(1) = SUM((nh4_solute(ic,:) + nh4_assoc(ic,:) + no3_solute(ic,:)) * soil_depth_sl(ic,:))
       stock(2) = SUM((po4_solute(ic,:) + po4_assoc_fast(ic,:) + po4_assoc_slow(ic,:)) * soil_depth_sl(ic,:))
       DO element = 1, 2
-        IF (.NOT. interactive(element) .OR. reference(element) == 0.0_lp) CYCLE
+        IF (.NOT. interactive(element) .OR. .NOT. valid(element)) CYCLE
         IF (.NOT. ieee_is_finite(litter(element)) .OR. .NOT. ieee_is_finite(uptake(element))) &
           & CALL finish(routine, 'Non-finite annual replay nutrient budget.')
         IF (litter(element) < 0.0_lp .OR. uptake(element) < 0.0_lp) &
           & CALL finish(routine, 'Negative annual replay nutrient budget.')
-        target = litter(element) / reference(element)
+        IF (reference(element) > 1._lp) THEN
+          IF (litter(element) > HUGE(1._lp)/reference(element)) &
+            & CALL finish(routine, 'Unrepresentable replay uptake target.')
+        END IF
+        target = litter(element) * reference(element)
         error = ABS(uptake(element) - target) / MAX(ABS(uptake(element)), ABS(target), eps8)
         max_error = MAX(max_error, error)
         IF (stock(element) <= eps8 .AND. uptake(element) < target * (1.0_lp - tolerance)) THEN
@@ -2816,10 +3283,15 @@ CONTAINS
             & '; stock, uptake, target [mol m-2] = ', stock(element), uptake(element), target
           CALL finish(routine, TRIM(text))
         END IF
-        IF (uptake(element) > eps8) THEN
+        IF (target == 0._lp) THEN
+          scale(element) = 0._lp
+        ELSE IF (uptake(element) > 0._lp .AND. scale(element) > 0._lp) THEN
           ! The multiplier may exceed one; only effective demand is capped to [0,1] when loaded.
-          scale(element) = MAX(0.0_lp, scale(element) * target / uptake(element))
+          ! Log-space arithmetic avoids overflowing an intermediate target/uptake ratio.
+          scale(element) = EXP(MIN(LOG(HUGE(1._lp))-1._lp, &
+            & MAX(LOG(TINY(1._lp)), LOG(scale(element))+LOG(target)-LOG(uptake(element)))))
         ELSE
+          ! Positive target but no realized uptake: retry recorded demand, without dividing by zero.
           scale(element) = 1.0_lp
         END IF
       END DO

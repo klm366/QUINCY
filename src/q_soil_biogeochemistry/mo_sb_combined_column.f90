@@ -75,7 +75,8 @@ CONTAINS
   !! This is only the arithmetic step: caller MUST check pore/sorption/isotope
   !! admissibility on the entire candidate before committing any live state.
   !! Nonparticipants are copied unchanged. On rejection, discard the candidate.
-  PURE SUBROUTINE redistribute_sb_columns(fraction, thickness, before, target, parent, candidate, accepted)
+  PURE SUBROUTINE redistribute_sb_columns(fraction, thickness, before, target, parent, candidate, accepted, reason)
+    CHARACTER(len=*), OPTIONAL, INTENT(out) :: reason
     REAL(lp), INTENT(in) :: fraction(:) !< Absolute participating tile areas [-]
     REAL(lp), INTENT(in) :: thickness(:,:) !< Active layer thickness: layer,tile [m]
     REAL(lp), INTENT(in) :: before(:,:,:,:) !< Pre-event pool,element,layer,tile [mol element m-3]
@@ -91,6 +92,7 @@ CONTAINS
     INTEGER :: it, layer, pool !< Indices [-]
     LOGICAL :: valid !< Aggregation input validation [-]
 
+    IF (PRESENT(reason)) reason='invalid dimensions, geometry, aggregate or target inventory'
     candidate = before
     accepted = .FALSE.
     IF (parent < 1 .OR. parent > SIZE(before,2)) RETURN
@@ -106,18 +108,37 @@ CONTAINS
           IF (weights(it) == 0._lp) CYCLE
           old_parent = before(pool,parent,layer,it)
           ! Do not silently erase nutrients/isotopes from carbon-free material.
-          IF (old_parent == 0._lp .AND. ANY(before(pool,:,layer,it) > 0._lp)) RETURN
-          IF (target(pool,parent,layer) == 0._lp .AND. ANY(target(pool,:,layer) > 0._lp)) RETURN
+          IF (old_parent == 0._lp .AND. ANY(before(pool,:,layer,it) > 0._lp)) THEN
+            IF (PRESENT(reason)) WRITE(reason,'(A,3I5,A,3ES15.6)') &
+              & 'old zero parent with nonzero component: member/layer/pool=',it,layer,pool, &
+              & ' old/mean/target parent=',old_parent,mean_parent,target(pool,parent,layer)
+            RETURN
+          END IF
+          IF (target(pool,parent,layer) == 0._lp .AND. ANY(target(pool,:,layer) > 0._lp)) THEN
+            IF (PRESENT(reason)) WRITE(reason,'(A,3I5,A,3ES15.6)') &
+              & 'target zero parent with nonzero component: member/layer/pool=',it,layer,pool, &
+              & ' old/mean/target parent=',old_parent,mean_parent,target(pool,parent,layer)
+            RETURN
+          END IF
           scale = 1._lp
           IF (mean_parent > 0._lp) THEN
             ! Guard division/multiplication before they can trigger trapping FP.
             IF (mean_parent < 1._lp) THEN
-              IF (old_parent > HUGE(1._lp) * mean_parent) RETURN
+              IF (old_parent > HUGE(1._lp) * mean_parent) THEN
+                IF (PRESENT(reason)) WRITE(reason,'(A,3I5,A,3ES15.6)') &
+                  & 'parent share overflow: member/layer/pool=',it,layer,pool, &
+                  & ' old/mean/target parent=',old_parent,mean_parent,target(pool,parent,layer)
+                RETURN
+              END IF
             END IF
             scale = old_parent / mean_parent
           END IF
           IF (scale > 1._lp) THEN
-            IF (ANY(target(pool,:,layer) > HUGE(1._lp) / scale)) RETURN
+            IF (ANY(target(pool,:,layer) > HUGE(1._lp) / scale)) THEN
+              IF (PRESENT(reason)) WRITE(reason,'(A,3I5,A,3ES15.6)') 'scaled target overflow: member/layer/pool=', &
+                & it,layer,pool,' old/mean/target parent=',old_parent,mean_parent,target(pool,parent,layer)
+              RETURN
+            END IF
           END IF
           candidate(pool,:,layer,it) = target(pool,:,layer) * scale
         END DO
@@ -190,7 +211,8 @@ CONTAINS
   !! Reject the WHOLE candidate if any PFT violates them. Do not redistribute
   !! only the feasible PFTs or clip independently: either loses the shared target.
   PURE SUBROUTINE redistribute_sb_structure(weights, pore_before, shared_pore, lower, upper, &
-    & pore_candidate, accepted)
+      & pore_candidate, accepted, reason)
+    CHARACTER(len=*), OPTIONAL, INTENT(out) :: reason
     REAL(lp), INTENT(in) :: weights(:) !< Participating areas, normalized internally [-]
     REAL(lp), INTENT(in) :: pore_before(:,:) !< Pre-event layer,tile pore fraction [m3 m-3]
     REAL(lp), INTENT(in) :: shared_pore(:) !< Final combined layer pore fraction [m3 m-3]
@@ -202,6 +224,7 @@ CONTAINS
     INTEGER :: layer, it !< Layer and tile indices [-]
 
     accepted = .FALSE.
+    IF (PRESENT(reason)) reason='invalid weights, geometry, pore bounds or mineral share'
     pore_candidate = pore_before
     IF (SIZE(pore_before,2) /= SIZE(weights)) RETURN
     IF (SIZE(shared_pore) /= SIZE(pore_before,1)) RETURN
@@ -236,10 +259,16 @@ CONTAINS
       DO it = 1, SIZE(weights)
         IF (weights(it) == 0._lp) CYCLE
         new_solid = scale * (1._lp - pore_before(layer,it))
-        IF (new_solid > 1._lp) RETURN
+        IF (new_solid > 1._lp) THEN
+          IF (PRESENT(reason)) WRITE(reason,'(A,2I5,A,ES16.8)') 'solid > 1: member/layer=',it,layer,' solid=',new_solid
+          RETURN
+        END IF
         pore_candidate(layer,it) = 1._lp - new_solid
-        IF (pore_candidate(layer,it) < lower(layer,it)) RETURN
-        IF (pore_candidate(layer,it) > upper(layer,it)) RETURN
+        IF (pore_candidate(layer,it) < lower(layer,it) .OR. pore_candidate(layer,it) > upper(layer,it)) THEN
+          IF (PRESENT(reason)) WRITE(reason,'(A,2I5,A,3ES16.8)') 'pore outside bounds: member/layer=', &
+            & it,layer,' pore/lo/hi=',pore_candidate(layer,it),lower(layer,it),upper(layer,it)
+          RETURN
+        END IF
       END DO
     END DO
     accepted = .TRUE.

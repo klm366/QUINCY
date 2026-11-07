@@ -139,6 +139,7 @@ CONTAINS
     REAL(lp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init_ic_bc'
     CHARACTER(len=512) :: mortality_report !< One initialization record of the scientific policy [-]
+    REAL(lp), PARAMETER :: experimental_qmax_org_factor = 3._lp !< Provisional 2026-11-06 JSM capacity multiplier [-]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
@@ -539,6 +540,10 @@ CONTAINS
     !>3.0 jsm - Jena Soil Model (described in https://doi.org/10.5194/gmd-13-783-2020)
     !>
     CASE("jsm")
+      ! Experimental capacity per kg fine mineral: scale both file and namelist inputs
+      ! before initialization derives texture-specific mineral capacity and initial pools.
+      ! Restart loading occurs later and may restore old capacities: use a fresh experiment.
+      CALL message(routine, 'Experimental JSM: organic Qmax x3; litter/residue depolymerisation Vmax x2.')
       CALL sb_init_jsm( &
         & nproma, &                                   ! in
         & nsoil_w, &
@@ -549,7 +554,7 @@ CONTAINS
         & dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
         & dsl4jsb_Config(SB_)%flag_sb_jsm_available_pore_volume, &
         & model%config%l_read_quincy_soil_3d, &
-        & sb_init_vars%qmax_org_fine_particle(:,:,:), &
+        & experimental_qmax_org_factor * sb_init_vars%qmax_org_fine_particle(:,:,:), &
         & sb_init_vars%soil_p_labile(:,:,:), &
         & sb_init_vars%soil_p_slow(:,:,:), &
         & sb_init_vars%soil_p_occluded(:,:,:), &

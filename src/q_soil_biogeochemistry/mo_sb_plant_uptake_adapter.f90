@@ -66,7 +66,8 @@ CONTAINS
   !! Annual litter/uptake feedback must be applied to each input demand BEFORE
   !! aggregation and bounded to [0,1], not multiplied into potential capacity.
   PURE SUBROUTINE prepare_combined_plant_uptake(scheme, fraction, roots, temperature, water_potential, &
-    & phi_leaf_min, vmax, demand, uptake, accepted)
+      & phi_leaf_min, vmax, demand, uptake, accepted, detail)
+    CHARACTER(len=*), OPTIONAL, INTENT(out) :: detail !< First rejected grouped uptake driver
     CHARACTER(len=*), INTENT(in) :: scheme !< Existing soil/adsorption scheme [-]
     REAL(lp), INTENT(in) :: fraction(:,:) !< Cell,PFT absolute participating area [-]
     REAL(lp), INTENT(in) :: roots(:,:,:) !< Cell,layer,PFT root C [mol C m-3]
@@ -82,6 +83,7 @@ CONTAINS
     LOGICAL :: eca !< Shared-kinetic rather than PFT-Vmax formulation [-]
 
     accepted = .FALSE.
+    IF (PRESENT(detail)) detail='unsupported scheme, incompatible dimensions or invalid area fractions'
     SELECT CASE (scheme)
     CASE ('eca_part','eca_full')
       eca = .TRUE.
@@ -110,20 +112,68 @@ CONTAINS
     DO ic = 1, nc
       area = SUM(fraction(ic,:))
       IF (area <= 0._lp) CYCLE
-      IF (.NOT. ALL(ieee_is_finite(water_potential(ic,:)))) RETURN
+      IF (.NOT. ALL(ieee_is_finite(water_potential(ic,:)))) THEN
+        IF (PRESENT(detail)) THEN
+          il=FINDLOC(.NOT.ieee_is_finite(water_potential(ic,:)),.TRUE.,DIM=1)
+          WRITE(detail,'(A,2I5,A,ES22.14)') 'water potential member/layer=',0,il,' value=',water_potential(ic,il)
+        END IF
+        RETURN
+      END IF
       DO it = 1, nt
         IF (fraction(ic,it) == 0._lp) CYCLE
-        IF (.NOT. ALL(ieee_is_finite(roots(ic,:,it)))) RETURN
-        IF (ANY(roots(ic,:,it) < 0._lp)) RETURN
-        IF (.NOT. ALL(ieee_is_finite(temperature(ic,:,it)))) RETURN
-        IF (ANY(temperature(ic,:,it) < 0._lp)) RETURN
-        IF (.NOT. ieee_is_finite(phi_leaf_min(it))) RETURN
-        IF (phi_leaf_min(it) >= 0._lp) RETURN
-        IF (.NOT. ALL(ieee_is_finite(demand(:,ic,it)))) RETURN
-        IF (ANY(demand(:,ic,it) < 0._lp) .OR. ANY(demand(:,ic,it) > 1._lp)) RETURN
+        IF (.NOT. ALL(ieee_is_finite(roots(ic,:,it)))) THEN
+          IF (PRESENT(detail)) THEN
+            il=FINDLOC(.NOT.ieee_is_finite(roots(ic,:,it)),.TRUE.,DIM=1)
+            WRITE(detail,'(A,2I5,A,ES22.14)') 'root C member/layer=',it,il,' value=',roots(ic,il,it)
+          END IF
+          RETURN
+        END IF
+        IF (ANY(roots(ic,:,it) < 0._lp)) THEN
+          IF (PRESENT(detail)) THEN
+            il=FINDLOC(roots(ic,:,it)<0._lp,.TRUE.,DIM=1)
+            WRITE(detail,'(A,2I5,A,ES22.14)') 'root C member/layer=',it,il,' value=',roots(ic,il,it)
+          END IF
+          RETURN
+        END IF
+        IF (.NOT. ALL(ieee_is_finite(temperature(ic,:,it)))) THEN
+          IF (PRESENT(detail)) THEN
+            il=FINDLOC(.NOT.ieee_is_finite(temperature(ic,:,it)),.TRUE.,DIM=1)
+            WRITE(detail,'(A,2I5,A,ES22.14)') 'temperature modifier member/layer=',it,il,' value=',temperature(ic,il,it)
+          END IF
+          RETURN
+        END IF
+        IF (ANY(temperature(ic,:,it) < 0._lp)) THEN
+          IF (PRESENT(detail)) THEN
+            il=FINDLOC(temperature(ic,:,it)<0._lp,.TRUE.,DIM=1)
+            WRITE(detail,'(A,2I5,A,ES22.14)') 'temperature modifier member/layer=',it,il,' value=',temperature(ic,il,it)
+          END IF
+          RETURN
+        END IF
+        IF (.NOT. ieee_is_finite(phi_leaf_min(it))) THEN
+          IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'phi_leaf_min member=',it,' value=',phi_leaf_min(it)
+          RETURN
+        END IF
+        IF (phi_leaf_min(it) >= 0._lp) THEN
+          IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'phi_leaf_min member=',it,' value=',phi_leaf_min(it)
+          RETURN
+        END IF
+        IF (.NOT. ALL(ieee_is_finite(demand(:,ic,it)))) THEN
+          IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'N/P demand member=',it,' value=',demand(:,ic,it)
+          RETURN
+        END IF
+        IF (ANY(demand(:,ic,it) < 0._lp) .OR. ANY(demand(:,ic,it) > 1._lp)) THEN
+          IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'N/P demand member=',it,' value=',demand(:,ic,it)
+          RETURN
+        END IF
         IF (.NOT. eca) THEN
-          IF (.NOT. ALL(ieee_is_finite(vmax(:,it)))) RETURN
-          IF (ANY(vmax(:,it) < 0._lp)) RETURN
+          IF (.NOT. ALL(ieee_is_finite(vmax(:,it)))) THEN
+            IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'N/P Vmax member=',it,' value=',vmax(:,it)
+            RETURN
+          END IF
+          IF (ANY(vmax(:,it) < 0._lp)) THEN
+            IF (PRESENT(detail)) WRITE(detail,'(A,I5,A,2ES22.14)') 'N/P Vmax member=',it,' value=',vmax(:,it)
+            RETURN
+          END IF
         END IF
         weight = fraction(ic,it) / area
         DO il = 1, nl
@@ -152,6 +202,10 @@ CONTAINS
       END DO
     END DO
     accepted = valid_sb_plant_uptake(uptake,nc,nl,scheme)
+    IF (.NOT. accepted .AND. PRESENT(detail)) THEN
+      WRITE(detail,'(A,4ES23.15)') 'grouped output: min root/activity, min/max demand=', &
+        & MINVAL(uptake%root),MINVAL(uptake%activity),MINVAL(uptake%demand),MAXVAL(uptake%demand)
+    END IF
   END SUBROUTINE prepare_combined_plant_uptake
 
   !> Validate an optional adapter before any model memory is modified.

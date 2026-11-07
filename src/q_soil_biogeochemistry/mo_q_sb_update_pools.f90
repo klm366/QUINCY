@@ -105,6 +105,9 @@ CONTAINS
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: p_deposition_sl      !< ..
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: f_myc_sl             !< ..
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: hlp1, hlp2, hlp3     !< ..
+    REAL(lp) :: next_sol, next_assoc, next_sol15, next_assoc15
+    LOGICAL :: bounded_nh4, feasible
+    CHARACTER(len=512) :: nh4_report
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km_adsorpt_po4_act, qmax_po4_mineral_act, &
                                              km_fast_po4_act, qmax_fast_po4_act, &
                                              km_slow_po4_act, qmax_slow_po4_act, &
@@ -1046,15 +1049,13 @@ CONTAINS
                    lateral_loss_nh4_solute_sl(:,:) ) * dtime / 1.e6_lp
       hlp1(:,1) = hlp1(:,1) + (nhx_deposition(:) + fertiliser_nh4(:)) &
         &                     / 1.e6_lp / soil_depth_sl(:,1) * dtime
-      hlp2(:,:) = -transport_nh4_assoc(:,:) * dtime / 1.e6_lp
+      bounded_nh4 = dsl4jsb_Config(SB_)%sb_model_scheme == 'jsm' .AND. dsl4jsb_Config(SB_)%flag_sb_interactive_n
 
       CALL calc_langmuir_kinetics(dtime, hlp1(:,:), nh4_solute(:,:),nh4_assoc(:,:), &
                                                    km_adsorpt_nh4_act(:,:), qmax_nh4_mineral_act(:,:), &
                                                    partition_coef(:,:))
 
-      nh4_solute(:,:)        = nh4_solute(:,:) + partition_coef(:,:) * hlp1(:,:)
-      nh4_assoc(:,:)         = nh4_assoc(:,:)  + (1._lp - partition_coef(:,:)) * hlp1(:,:)
-      fast_exchange_nh4(:,:) = (partition_coef(:,:) * hlp1(:,:) + hlp2(:,:)) * 1.e6_lp / dtime
+      hlp3 = partition_coef ! Parent proposal; retain pre-update pools until both proposals exist.
 
       hlp2(:,:) = (net_mineralisation_nh4_n15(:,:) + transport_nh4_n15_solute(:,:) - &
                    lateral_loss_nh4_n15_solute_sl(:,:) - &
@@ -1073,8 +1074,32 @@ CONTAINS
         &   km_adsorpt_nh4_act(:,:) * ATM_STANDARD_N15, &
         &   qmax_nh4_mineral_act(:,:) * ATM_STANDARD_N15, &
         &   partition_coef(:,:))
-      nh4_n15_solute(:,:) = nh4_n15_solute(:,:) + partition_coef(:,:) * hlp2(:,:)
-      nh4_n15_assoc(:,:)  = nh4_n15_assoc(:,:)  + (1._lp - partition_coef(:,:)) * hlp2(:,:)
+      IF (bounded_nh4) THEN
+        DO ic=1,nc
+          DO is=1,NINT(num_sl_above_bedrock(ic))
+            CALL partition_nh4_inventory(nh4_solute(ic,is),nh4_assoc(ic,is),nh4_n15_solute(ic,is),nh4_n15_assoc(ic,is), &
+              & hlp1(ic,is),hlp2(ic,is),hlp3(ic,is),partition_coef(ic,is),qmax_nh4_mineral_act(ic,is), &
+              & next_sol,next_assoc,next_sol15,next_assoc15,feasible)
+            IF (.NOT.feasible) THEN
+              WRITE(nh4_report,'(3A,3I7,A,6ES20.10)') 'NH4 donor budget infeasible on ',TRIM(tile%name), &
+                & ' block/cell/layer=',iblk,ics+ic-1,is,' sol/assoc/sol15/assoc15/dN/d15=',nh4_solute(ic,is), &
+                & nh4_assoc(ic,is),nh4_n15_solute(ic,is),nh4_n15_assoc(ic,is),hlp1(ic,is),hlp2(ic,is)
+              CALL finish(routine,TRIM(nh4_report))
+            END IF
+            fast_exchange_nh4(ic,is)=(next_sol-nh4_solute(ic,is))*1.e6_lp/dtime-transport_nh4_assoc(ic,is)
+            nh4_solute(ic,is)=next_sol
+            nh4_assoc(ic,is)=next_assoc
+            nh4_n15_solute(ic,is)=next_sol15
+            nh4_n15_assoc(ic,is)=next_assoc15
+          END DO
+        END DO
+      ELSE
+        nh4_solute = nh4_solute + hlp3*hlp1
+        nh4_assoc = nh4_assoc + (1._lp-hlp3)*hlp1
+        fast_exchange_nh4 = (hlp3*hlp1-transport_nh4_assoc*dtime/1.e6_lp)*1.e6_lp/dtime
+        nh4_n15_solute = nh4_n15_solute + partition_coef*hlp2
+        nh4_n15_assoc = nh4_n15_assoc + (1._lp-partition_coef)*hlp2
+      END IF
     ENDIF
 
     !> 10.3 update mineral P pools if not prescibed
@@ -1723,6 +1748,34 @@ CONTAINS
     END IF  ! IF (PRESENT(assoc_slow))
 
   END SUBROUTINE calc_langmuir_kinetics
+
+  !> Project only infeasible Langmuir proposals onto the physical phase bounds.
+  !! All inventories/increments are mol N per m3 of total soil. A negative
+  !! layer total is a flux-budget error, not something sorption can repair.
+  PURE SUBROUTINE partition_nh4_inventory(s,a,i,j,dn,di,p,pi,cap,s1,a1,i1,j1,ok)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    REAL(lp), INTENT(in) :: s,a,i,j,dn,di,p,pi,cap
+    REAL(lp), INTENT(out) :: s1,a1,i1,j1
+    LOGICAL, INTENT(out) :: ok
+    REAL(lp) :: n,h,tol,itol
+    n=(s+a)+dn
+    h=(i+j)+di
+    tol=SPACING(MAX(ABS(s),ABS(a),ABS(dn)))
+    itol=SPACING(MAX(ABS(i),ABS(j),ABS(di)))
+    ok=ALL(ieee_is_finite([n,h,p,pi,cap])) .AND. cap>=0._lp .AND. n>=-tol .AND. h>=-itol .AND. h<=n+MAX(tol,itol)
+    IF (.NOT.ok) RETURN
+    s1=s+p*dn
+    a1=a+(1._lp-p)*dn
+    i1=i+pi*di
+    j1=j+(1._lp-pi)*di
+    IF (MIN(s1,a1,i1,j1)>=0._lp .AND. a1<=cap .AND. i1<=s1 .AND. j1<=a1) RETURN
+    n=MAX(n,0._lp)
+    h=MAX(0._lp,MIN(h,n))
+    a1=MAX(0._lp,MIN(a1,n,cap))
+    s1=n-a1
+    j1=MIN(a1,h,MAX(0._lp,h-s1,j1))
+    i1=MIN(s1,h-j1)
+  END SUBROUTINE partition_nh4_inventory
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task to calc_langmuir_kinetics

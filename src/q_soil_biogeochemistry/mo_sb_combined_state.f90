@@ -29,6 +29,7 @@ MODULE mo_sb_combined_state
   PUBLIC :: t_sb_combined_state, read_sb_combined_state, write_sb_combined_state
   PUBLIC :: reconstruct_sb_combined_state, redistribute_sb_combined_state
   PUBLIC :: valid_sb_combined_inventory
+  PUBLIC :: redistribute_organic_headroom
 
   ! Registry layout (not restart variable IDs):
   !  1:11 parent inorganic pools; 12:17 their six N15 pools;
@@ -54,6 +55,74 @@ MODULE mo_sb_combined_state
     REAL(lp), POINTER :: p(:) => NULL() !< Non-owning one-cell process field
   END TYPE t_layer_reference
 CONTAINS
+  !> Redistribute one solid-organic group within one layer, never vertically.
+  !! weight is tile area times layer thickness [m]; cap is group C [mol m-3].
+  !! Export each donor's pool/element mixture, including isotopes, unchanged.
+  !! Allocate the exported inventory by recipient C headroom. This preserves
+  !! every pool and element, not just group C; capacities must already include
+  !! the requested safety margin. Infeasible targets leave the state unchanged.
+  SUBROUTINE redistribute_organic_headroom(state, layer, pools, weight, cap, ok)
+    TYPE(t_sb_combined_state), INTENT(inout) :: state(:)
+    INTEGER, INTENT(in) :: layer, pools(:)
+    REAL(lp), INTENT(in) :: weight(:), cap(:)
+    LOGICAL, INTENT(out) :: ok
+    REAL(lp) :: carbon(SIZE(state)), excess(SIZE(state)), room(SIZE(state))
+    REAL(lp) :: exported(SIZE(pools),SIZE(state(1)%organic,2))
+    REAL(lp) :: retained(SIZE(pools),SIZE(state(1)%organic,2),SIZE(state))
+    REAL(lp) :: original(SIZE(pools),SIZE(state(1)%organic,2))
+    REAL(lp) :: final(SIZE(pools),SIZE(state(1)%organic,2))
+    REAL(lp) :: give, space, fraction
+    INTEGER :: j, p
+
+    ok = .FALSE.
+    IF (.NOT.ALL(ieee_is_finite(weight)) .OR. .NOT.ALL(ieee_is_finite(cap))) RETURN
+    DO j = 1, SIZE(state)
+      IF (.NOT.ALL(ieee_is_finite(state(j)%organic(pools,:,layer)))) RETURN
+      carbon(j) = SUM(state(j)%organic(pools,ixC,layer))
+    END DO
+    IF (ANY(weight < 0._lp) .OR. ANY(cap < 0._lp) .OR. ANY(carbon < 0._lp)) RETURN
+    excess = MAX(0._lp, carbon - cap)
+    room = MAX(0._lp, cap - carbon)
+    give = SUM(weight * excess)
+    space = SUM(weight * room)
+    IF (give == 0._lp) THEN
+      ok = .TRUE.
+      RETURN
+    END IF
+    IF (give > space .OR. space <= 0._lp) RETURN
+    exported = 0._lp
+    original = 0._lp
+    DO j = 1, SIZE(state)
+      fraction = 0._lp
+      IF (carbon(j) > 0._lp) fraction = excess(j) / carbon(j)
+      DO p = 1, SIZE(pools)
+        original(p,:) = original(p,:) + weight(j)*state(j)%organic(pools(p),:,layer)
+        exported(p,:) = exported(p,:) + &
+          & weight(j) * fraction * state(j)%organic(pools(p),:,layer)
+        retained(p,:,j) = (1._lp - fraction) * state(j)%organic(pools(p),:,layer)
+      END DO
+    END DO
+    DO j = 1, SIZE(state)
+      IF (weight(j) <= 0._lp) CYCLE
+      DO p = 1, SIZE(pools)
+        retained(p,:,j) = retained(p,:,j) + exported(p,:) * room(j) / space
+      END DO
+    END DO
+    final = 0._lp
+    DO j = 1, SIZE(state)
+      final = final + weight(j)*retained(:,:,j)
+    END DO
+    ! Check each native-unit inventory, including pmol C14, before committing.
+    IF (ANY(ABS(final-original) > 1.e-12_lp*MAX(TINY(1._lp),ABS(original)))) RETURN
+    DO j = 1, SIZE(state)
+      IF (weight(j) <= 0._lp) CYCLE
+      DO p = 1, SIZE(pools)
+        state(j)%organic(pools(p),:,layer) = retained(p,:,j)
+      END DO
+    END DO
+    ok = .TRUE.
+  END SUBROUTINE redistribute_organic_headroom
+
   !> One explicit registry for both directions prevents mismatched read/write lists.
   SUBROUTINE state_references(tile, options, refs)
     CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
@@ -215,7 +284,7 @@ CONTAINS
     ALLOCATE(organic(np,ne,ns,nt),inorg(11,2,ns,nt),pore(ns,nt),capacity(3,ns,nt), &
       & biology(21,ns,nt),microbial(ns,nt),weights(nt))
     DO j=1,nt
-      IF (.NOT. valid_sb_combined_inventory(before(j),detail)) THEN
+      IF (.NOT. valid_sb_combined_inventory(before(j),detail,at_entry=.TRUE.)) THEN
         IF (PRESENT(reason)) reason=detail
         IF (PRESENT(failed_member)) failed_member=j
         RETURN
@@ -251,7 +320,10 @@ CONTAINS
 
   !> Propose all PFT states without mutation. Caller must recompute forward
   !> physics and check capacity/volume admissibility before accepting ANY PFT.
-  SUBROUTINE redistribute_sb_combined_state(fraction,depth,before,target,lower,upper,after,accepted)
+  SUBROUTINE redistribute_sb_combined_state(fraction,depth,before,target,lower,upper,after,accepted,reason)
+    CHARACTER(len=*), INTENT(out) :: reason !< First failed redistribution step
+    CHARACTER(len=256) :: detail
+    INTEGER :: loc(3)
     REAL(lp), INTENT(in) :: fraction(:),depth(:,:),lower(:,:),upper(:,:)
       !< Areas [-], thickness [m], existing per-PFT pore bounds [-]
     TYPE(t_sb_combined_state), INTENT(in) :: before(:),target
@@ -264,7 +336,10 @@ CONTAINS
       !< Reaggregated native-unit inventories and normalized area weights [-]
     INTEGER :: nt,ns,np,ne,j
     accepted=.FALSE.
-    IF (.NOT. valid_sb_combined_inventory(target)) RETURN
+    IF (.NOT. valid_sb_combined_inventory(target,detail)) THEN
+      reason='Post-replay shared target: '//TRIM(detail)
+      RETURN
+    END IF
     nt = SIZE(before)
     ns = SIZE(target%organic,3)
     np = SIZE(target%organic,1)
@@ -278,13 +353,25 @@ CONTAINS
       inorganic_before(:,:,:,j)=before(j)%inorganic
       pore(:,j)=before(j)%pore
     END DO
-    CALL redistribute_sb_columns(fraction,depth,old,target%organic,ixC,new,accepted)
-    IF (.NOT. accepted) RETURN
+    reason='Redistribution: organic parent shares.'
+    CALL redistribute_sb_columns(fraction,depth,old,target%organic,ixC,new,accepted,detail)
+    IF (.NOT. accepted) THEN
+      reason='Redistribution organic shares: '//TRIM(detail)
+      RETURN
+    END IF
+    reason='Redistribution: inorganic parent shares.'
     CALL redistribute_sb_columns(fraction,depth,inorganic_before,target%inorganic,1, &
-      & inorganic_candidate,accepted)
-    IF (.NOT. accepted) RETURN
-    CALL redistribute_sb_structure(fraction/SUM(fraction),pore,target%pore,lower,upper,result,accepted)
-    IF (.NOT. accepted) RETURN
+      & inorganic_candidate,accepted,detail)
+    IF (.NOT. accepted) THEN
+      reason='Redistribution inorganic shares: '//TRIM(detail)
+      RETURN
+    END IF
+    reason='Redistribution: mineral-solid shares or pore bounds.'
+    CALL redistribute_sb_structure(fraction/SUM(fraction),pore,target%pore,lower,upper,result,accepted,detail)
+    IF (.NOT. accepted) THEN
+      reason='Redistribution mineral structure: '//TRIM(detail)
+      RETURN
+    END IF
     after=before
     DO j=1,nt
       after(j)%organic=new(:,:,:,j)
@@ -294,29 +381,41 @@ CONTAINS
       after(j)%biology=target%biology
       ! Restore individual forcing histories and specific mineral properties.
       ! Their post-event reset is performed only by the scheduler on commit.
-      IF (.NOT. valid_sb_combined_inventory(after(j))) THEN
+      IF (.NOT. valid_sb_combined_inventory(after(j),detail)) THEN
+        WRITE(reason,'(A,I0,A,A)') 'Redistributed inventory member=',j,': ',TRIM(detail)
         accepted=.FALSE.
         RETURN
       END IF
     END DO
     ! Every pool, layer and isotope must close, not merely the five aggregated
     ! convergence diagnostics. Reuse the approved normalized roundoff allowance.
+    reason='Redistribution: organic reaggregation.'
     CALL combine_sb_columns(fraction,depth,new,weights,mean,accepted)
     IF (.NOT. accepted) RETURN
     IF (ANY(ABS(mean-target%organic) > 1.e-12_lp*MAX(ABS(target%organic),TINY(1._lp)))) THEN
+      loc=FINDLOC(ABS(mean-target%organic) > 1.e-12_lp*MAX(ABS(target%organic),TINY(1._lp)),.TRUE.)
+      WRITE(reason,'(A,3(1X,I0),A,2ES18.9)') 'organic closure pool/component/layer=',loc, &
+        & '; redistributed/target=',mean(loc(1),loc(2),loc(3)),target%organic(loc(1),loc(2),loc(3))
       accepted=.FALSE.
       RETURN
     END IF
+    reason='Redistribution: inorganic reaggregation.'
     CALL combine_sb_columns(fraction,depth,inorganic_candidate,weights,inorganic_mean,accepted)
     IF (.NOT. accepted) RETURN
-    IF (ANY(ABS(inorganic_mean-target%inorganic) > 1.e-12_lp*MAX(ABS(target%inorganic),TINY(1._lp)))) &
-      & accepted=.FALSE.
+    IF (ANY(ABS(inorganic_mean-target%inorganic) > 1.e-12_lp*MAX(ABS(target%inorganic),TINY(1._lp)))) THEN
+      loc=FINDLOC(ABS(inorganic_mean-target%inorganic) > 1.e-12_lp*MAX(ABS(target%inorganic),TINY(1._lp)),.TRUE.)
+      WRITE(reason,'(A,3(1X,I0),A,2ES18.9)') 'inorganic closure pool/component/layer=',loc, &
+        & '; redistributed/target=',inorganic_mean(loc(1),loc(2),loc(3)),target%inorganic(loc(1),loc(2),loc(3))
+      accepted=.FALSE.
+      RETURN
+    END IF
   END SUBROUTINE redistribute_sb_combined_state
 
   !> Inventory-only checks. Capacity and occupancy require forward refresh.
-  LOGICAL FUNCTION valid_sb_combined_inventory(state,reason) RESULT(valid)
+  LOGICAL FUNCTION valid_sb_combined_inventory(state,reason,at_entry) RESULT(valid)
     TYPE(t_sb_combined_state), INTENT(in) :: state
     CHARACTER(len=*), OPTIONAL, INTENT(out) :: reason !< First failure, indices and value/bound
+    LOGICAL, OPTIONAL, INTENT(in) :: at_entry !< Report both NH4 reservoirs before replay or seeding
     INTEGER :: s,p !< Layer and pool/group indices
     REAL(lp) :: isotope_c !< Sum of carbon isotopes in parent-carbon units [mol m-3]
     valid=.FALSE.
@@ -394,8 +493,16 @@ CONTAINS
       CHARACTER(len=*), INTENT(in) :: label
       INTEGER, INTENT(in) :: layer,field,component
       REAL(lp), INTENT(in) :: value,bound
+      CHARACTER(len=144) :: nh4_detail
       IF (PRESENT(reason)) WRITE(reason,'(A,A,3(I0,1X),A,2(ES24.16E3,1X))') &
         & TRIM(label),'; layer/field/component=',layer,field,component,'; value/bound=',value,bound
+      IF (.NOT. PRESENT(reason) .OR. .NOT. PRESENT(at_entry)) RETURN
+      IF (.NOT. at_entry .OR. INDEX(label,'inorganic') /= 1 .OR. field < 1 .OR. field > 2) RETURN
+      ! Distinguish invalid phase partitioning from an invalid combined NH4
+      ! inventory without changing either parent or tracer [mol N m-3].
+      WRITE(nh4_detail,'(A,4(1X,ES16.8E3))') '; entry sol(N,15N)/assoc(N,15N)=', &
+        & state%inorganic(1,:,layer),state%inorganic(2,:,layer)
+      reason=TRIM(reason)//TRIM(nh4_detail)
     END SUBROUTINE reject
   END FUNCTION valid_sb_combined_inventory
 #endif

@@ -88,6 +88,7 @@ CONTAINS
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp1             !< helper, Dimension: (nc, nsoil_w)
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp2             !< helper, Dimension: (nc, nsoil_w)
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: arr_hlp3             !< helper, Dimension: (nc, nsoil_w)
+    REAL(lp) :: donor_n, donor_n15, isotope_flux(6) !< Stocks [mol m-3], sink rates [umol m-3 s-1]
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: fine_root_carbon_sl                      !<
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km1_uptake_act                           !<
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: km2_uptake_act                           !<
@@ -831,6 +832,8 @@ CONTAINS
       END DO
     END DO
     arr_hlp1(:,:)        = po4_solute(:,:) + po4_assoc_fast(:,:)
+    arr_hlp3 = transport_po4_solute + transport_po4_assoc_fast - lateral_loss_po4_solute_sl - &
+      & (mycorrhiza_uptake_po4_sl + MAX(0._lp,slow_exchange_po4))*dtime/1.e6_lp
     arr_hlp2(:,:)        = 1._lp
     km_array(:,:)        = km_adsorpt_po4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._lp, qmax_po4(:,:) - po4_assoc_fast(:,:))
@@ -848,7 +851,7 @@ CONTAINS
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
       &   km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &  ! in
       &   arr_hlp2(:,:), km_array(:,:), avail_soil_surface_sorption_capacity_sl(:,:), &                    ! in
-      &   solute_available = arr_hlp1(:,:), &                        ! in
+      &   solute_available = arr_hlp1(:,:), donor_change = arr_hlp3, &
       &   microbial_uptake = microbial_uptake_po4_sl(:,:), &         ! inout
       &   plant_uptake     = plant_uptake_po4_sl(:,:), &             ! out
       &   plant_uptake_pot = unit_uptake_p_pot_sl(:,:), &            ! out
@@ -880,6 +883,8 @@ CONTAINS
       END DO
     END DO
     arr_hlp1(:,:)        = nh4_solute(:,:) + nh4_assoc(:,:)
+    arr_hlp3 = transport_nh4_solute + transport_nh4_assoc - lateral_loss_nh4_solute_sl - &
+      & mycorrhiza_uptake_nh4_sl*dtime/1.e6_lp
     arr_hlp2(:,:)        = 1._lp - anaerobic_volume_fraction_sl(:,:)
     km_array(:,:)        = km_adsorpt_nh4_sl(:,:)
     avail_soil_surface_sorption_capacity_sl(:,:) = MAX(0._lp, qmax_nh4(:,:) - nh4_assoc(:,:))
@@ -897,7 +902,7 @@ CONTAINS
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &        ! in
       &   km_denitrification_c, km_denitrification_no3, rtm_nitrification(:,:), rmm_nitrification(:,:), &  ! in
       &   arr_hlp2(:,:), km_array(:,:), avail_soil_surface_sorption_capacity_sl(:,:), &                    ! in
-      &   solute_available   = arr_hlp1(:,:), &                      ! in
+      &   solute_available = arr_hlp1(:,:), donor_change = arr_hlp3, &
       &   vmax_nitri_denitri = vmax_nitrification, &                 ! OPTIONAL(in)
       &   solute_alternative = no3_solute(:,:), &                    ! OPTIONAL(in)
       &   microbial_uptake   = microbial_uptake_nh4_sl(:,:), &       ! inout
@@ -948,7 +953,8 @@ CONTAINS
       &   rtm_plant_uptake(:,:), rmm_plant_uptake(:,:), km1_uptake_act(:,:), km2_uptake_act(:,:), &          ! in
       &   km_denitrification_c, km_denitrification_no3, rtm_denitrification(:,:), arr_hlp1(:,:), &           ! in
       &   anaerobic_volume_fraction_sl(:,:), km_array(:,:), avail_soil_surface_sorption_capacity_sl(:,:), &  ! in
-      &   solute_available   = no3_solute(:,:), &                    ! in
+      &   solute_available = no3_solute(:,:), donor_change = transport_no3_solute - lateral_loss_no3_solute_sl - &
+      &     mycorrhiza_uptake_no3_sl*dtime/1.e6_lp, &
       &   vmax_nitri_denitri = vmax_denitrification, &               ! OPTIONAL(in)
       &   solute_alternative = nh4_solute(:,:), &                    ! OPTIONAL(in)
       &   microbial_uptake   = microbial_uptake_no3_sl(:,:), &       ! inout
@@ -1031,6 +1037,45 @@ CONTAINS
       & denitrification_n2o_n15(:,:), &       ! output var that get unit coverted
       & denitrification_n2_n15(:,:) )         ! output var that get unit coverted
 
+    ! Reconcile fractionated withdrawals before crediting growth or N products.
+    ! Transport here is already a molar increment (including net lateral export);
+    ! the isotope calculator has returned rates. Do not mix the two units.
+    IF (dsl4jsb_Config(SB_)%flag_sb_interactive_n) THEN
+      DO ic=1,nc
+        DO is=1,NINT(num_sl_above_bedrock(ic))
+          donor_n = nh4_solute(ic,is)+nh4_assoc(ic,is)+transport_nh4_solute(ic,is)+transport_nh4_assoc(ic,is) &
+            & - lateral_loss_nh4_solute_sl(ic,is)
+          donor_n15 = nh4_n15_solute(ic,is)+nh4_n15_assoc(ic,is)+transport_nh4_n15_solute(ic,is) &
+            & + transport_nh4_n15_assoc(ic,is)-lateral_loss_nh4_n15_solute_sl(ic,is)
+          isotope_flux=[plant_uptake_nh4_n15_sl(ic,is),mycorrhiza_uptake_nh4_n15_sl(ic,is), &
+            & microbial_uptake_nh4_n15_sl(ic,is),nitrification_no3_n15(ic,is),nitrification_noy_n15(ic,is), &
+            & nitrification_n2o_n15(ic,is)]
+          CALL bound_isotope_withdrawals(dtime,donor_n,donor_n15,[plant_uptake_nh4_sl(ic,is), &
+            & mycorrhiza_uptake_nh4_sl(ic,is),microbial_uptake_nh4_sl(ic,is),nitrification_no3(ic,is), &
+            & nitrification_noy(ic,is),nitrification_n2o(ic,is)],isotope_flux)
+          plant_uptake_nh4_n15_sl(ic,is)=isotope_flux(1)
+          mycorrhiza_uptake_nh4_n15_sl(ic,is)=isotope_flux(2)
+          microbial_uptake_nh4_n15_sl(ic,is)=isotope_flux(3)
+          nitrification_no3_n15(ic,is)=isotope_flux(4)
+          nitrification_noy_n15(ic,is)=isotope_flux(5)
+          nitrification_n2o_n15(ic,is)=isotope_flux(6)
+          donor_n=no3_solute(ic,is)+transport_no3_solute(ic,is)-lateral_loss_no3_solute_sl(ic,is)
+          donor_n15=no3_n15_solute(ic,is)+transport_no3_n15_solute(ic,is)-lateral_loss_no3_n15_solute_sl(ic,is)
+          isotope_flux=[plant_uptake_no3_n15_sl(ic,is),mycorrhiza_uptake_no3_n15_sl(ic,is), &
+            & microbial_uptake_no3_n15_sl(ic,is),denitrification_n2_n15(ic,is),denitrification_noy_n15(ic,is), &
+            & denitrification_n2o_n15(ic,is)]
+          CALL bound_isotope_withdrawals(dtime,donor_n,donor_n15,[plant_uptake_no3_sl(ic,is), &
+            & mycorrhiza_uptake_no3_sl(ic,is),microbial_uptake_no3_sl(ic,is),denitrification_n2(ic,is), &
+            & denitrification_noy(ic,is),denitrification_n2o(ic,is)],isotope_flux)
+          plant_uptake_no3_n15_sl(ic,is)=isotope_flux(1)
+          mycorrhiza_uptake_no3_n15_sl(ic,is)=isotope_flux(2)
+          microbial_uptake_no3_n15_sl(ic,is)=isotope_flux(3)
+          denitrification_n2_n15(ic,is)=isotope_flux(4)
+          denitrification_noy_n15(ic,is)=isotope_flux(5)
+          denitrification_n2o_n15(ic,is)=isotope_flux(6)
+        END DO
+      END DO
+    END IF
     !>8.0 co-metabolisation of polymeric litter & residues
     !>
     ! Persistent capacity is retained only for beta=1; nonlinear mortality uses microbial enzymes alone.
@@ -1175,6 +1220,22 @@ CONTAINS
     DEALLOCATE(asymb_n_fixation_rel_rate_sl)
 
   END SUBROUTINE update_sb_jsm
+
+  !> Preserve realized parent fluxes and their fractionation wherever both
+  !! isotopes can supply them. Cut excess heavy withdrawal proportionally,
+  !! or replace unavailable light N in proportion to each sink's light share.
+  PURE SUBROUTINE bound_isotope_withdrawals(dt,stock,heavy,parent,flux)
+    REAL(lp), INTENT(in) :: dt,stock,heavy,parent(:)
+    REAL(lp), INTENT(inout) :: flux(:)
+    REAL(lp) :: used,light,available
+    flux=MAX(0._lp,MIN(parent,flux))
+    used=SUM(flux)
+    available=MAX(0._lp,heavy)*1.e6_lp/dt
+    IF (used>available) flux=flux*(available/used)
+    light=SUM(parent-flux)
+    available=MAX(0._lp,stock-heavy)*1.e6_lp/dt
+    IF (light>available) flux=flux+(parent-flux)*((light-available)/light)
+  END SUBROUTINE bound_isotope_withdrawals
 
 #endif
 END MODULE mo_q_sb_jsm_main

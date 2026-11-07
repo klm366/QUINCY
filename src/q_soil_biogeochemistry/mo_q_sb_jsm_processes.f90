@@ -446,7 +446,7 @@ CONTAINS
     &                                        rtm_nit_denit_fication, rmm_nit_denit_fication, &        ! in
     &                                        anaerobic_volume_fraction, km_adsorpt_sl, &              ! in
     &                                        avail_soil_surface_sorption_capacity_sl, &               ! in
-    &                                        solute_available, &                                      ! in
+    &                                        solute_available, donor_change, &                        ! in
     &                                        vmax_nitri_denitri, &      ! OPTIONAL (in)
     &                                        solute_alternative, &      ! OPTIONAL (in)
     &                                        microbial_uptake, &        ! inout
@@ -465,6 +465,7 @@ CONTAINS
     REAL(lp), DIMENSION(nc),                     INTENT(in)        :: num_sl_above_bedrock      !< number of soil layers above bedrock, i.e., with layer thickness > eps8
     REAL(lp),                                    INTENT(in)        :: lctlib_vmax_uptake        !< lctlib uptake paramter, for eca_none
     CHARACTER(len=*),                            INTENT(in)        :: substrate                 !< po4, nh4, no3, determine the specific ECA paramaters
+    REAL(lp), INTENT(in) :: donor_change(nc,nsoil_w) !< Transport minus reserved losses [mol m-3 step-1]
     CHARACTER(len=*),                            INTENT(in)        :: sb_adsorp_scheme          !< eca_full; eca_none; eca_part
     LOGICAL,                                     INTENT(in)        :: flag_sb_interactive_elem  !< FALSE: sinking fluxes not limited by concentration, assuming instant refreshing
     REAL(lp), DIMENSION(nc, nsoil_w),            INTENT(in)        :: microbial_carbon          !< bgcm sb_pool: microbial carbon density (mol / m3)
@@ -731,6 +732,11 @@ CONTAINS
               hlp1 = microbial_uptake(ic,is) + plant_uptake(ic,is) + flux_nitri_denitri(ic,is)
               hlp2 = MAX(0._lp, (solute(ic,is)) / dtime * 1.E6_lp)
           END SELECT
+          ! Do not change concentrations used in the kinetic equations. Cap
+          ! realized sinks by both kinetic supply and post-transport stock;
+          ! desorption cannot release more than the entire fast reservoir.
+          hlp2 = MAX(0._lp, MIN(hlp2 + MIN(0._lp,donor_change(ic,is))*1.e6_lp/dtime, &
+            & (solute_available(ic,is)+donor_change(ic,is))*1.e6_lp/dtime))
           IF (hlp1 > hlp2 .AND. hlp1 > 0._lp) THEN
             microbial_uptake(ic,is)   = microbial_uptake(ic,is)   * hlp2 / hlp1
             plant_uptake(ic,is)       = plant_uptake(ic,is)       * hlp2 / hlp1
