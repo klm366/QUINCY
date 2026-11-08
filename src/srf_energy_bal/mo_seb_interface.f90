@@ -11,6 +11,35 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Interfaces of the surface energy balance process
+!>
+!> The surface energy balance (SEB_) process computes the surface temperature from the balance of
+!> the energy fluxes at the surface,
+!> ```
+!> C dT/dt = R_net + H + LE + G + phase change
+!> ```
+!> with net radiation R_net, sensible and latent heat fluxes H and LE, the heat flux G from the
+!> ground below (`forc_hflx`) and the heat capacity C of the surface layer. All fluxes are positive
+!> downward. The balance is solved implicitly, coupled to the vertical diffusion in the atmosphere
+!> through the Richtmyer-Morton coefficients (`t_acoef`, `t_bcoef`, `q_acoef`, `q_bcoef`) from A2L_
+!> (Schulz et al., 2001, doi:10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2). The science is in
+!> [[mo_seb_land]] (land, including glaciers) and [[mo_seb_lake]] (lakes).
+!>
+!> The process has four tasks; in a time step they run in this order (see
+!> [[mo_jsb_model_init:jsbach_init]]):
+!>
+!> 1. `surface_energy` ([[update_surface_energy]]): new surface temperature, after the HYDRO_ tasks
+!>    `snow_and_wet_fraction` and `soil_properties`,
+!> 2. `surface_fluxes` ([[update_surface_fluxes]]): sensible and latent heat fluxes from the new
+!>    surface state, after the HYDRO_ task `evaporation`,
+!> 3. `asselin_filter` ([[update_asselin]]): time filter of the surface temperature, after all
+!>    other tasks of the physics,
+!> 4. `energy_balance` ([[update_energy_balance]]): diagnostic residual of the energy fluxes,
+!>    directly after `asselin_filter` since it uses the filtered temperature `t`.
+!>
+!> In addition, [[seb_check_temperature_range]] and [[global_seb_diagnostics]] are called from
+!> `jsbach_finish_timestep`.
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -58,42 +87,50 @@ MODULE mo_seb_interface
   PUBLIC :: update_surface_energy, update_asselin, update_surface_fluxes, update_energy_balance
 #endif
 
+  !> Type definition for surface_energy task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_surface_energy
     PROCEDURE, NOPASS :: Aggregate => aggregate_surface_energy
   END TYPE tsk_surface_energy
 
+  !> Constructor interface for surface_energy task
   INTERFACE tsk_surface_energy
     PROCEDURE Create_task_surface_energy
   END INTERFACE tsk_surface_energy
 
+  !> Type definition for asselin_filter task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_asselin_filter
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_asselin
     PROCEDURE, NOPASS :: Aggregate => aggregate_asselin
   END TYPE tsk_asselin_filter
 
+  !> Constructor interface for asselin_filter task
   INTERFACE tsk_asselin_filter
     PROCEDURE Create_task_asselin_filter
   END INTERFACE tsk_asselin_filter
 
+  !> Type definition for surface_fluxes task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_surface_fluxes
     PROCEDURE, NOPASS :: Aggregate => aggregate_surface_fluxes
   END TYPE tsk_surface_fluxes
 
+  !> Constructor interface for surface_fluxes task
   INTERFACE tsk_surface_fluxes
     PROCEDURE Create_task_surface_fluxes
   END INTERFACE tsk_surface_fluxes
 
+  !> Type definition for energy_balance task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_energy_balance
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_energy_balance
     PROCEDURE, NOPASS :: Aggregate => aggregate_energy_balance
   END TYPE tsk_energy_balance
 
+  !> Constructor interface for energy_balance task
   INTERFACE tsk_energy_balance
     PROCEDURE Create_task_energy_balance
   END INTERFACE tsk_energy_balance
@@ -107,14 +144,11 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_energy task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "surface_energy"
-  !!
+  !>
   FUNCTION Create_task_surface_energy(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    INTEGER,                   INTENT(in) :: model_id   !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr !< Instance of process task "surface_energy"
 
     ALLOCATE(tsk_surface_energy::return_ptr)
     CALL return_ptr%Construct(name='surface_energy', process_id=SEB_, owner_model_id=model_id)
@@ -123,14 +157,11 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for asselin_filter task
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "asselin_filter"
-  !!
+  !>
   FUNCTION Create_task_asselin_filter(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    INTEGER,                   INTENT(in) :: model_id   !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr !< Instance of process task "asselin_filter"
 
     ALLOCATE(tsk_asselin_filter::return_ptr)
     CALL return_ptr%Construct(name='asselin_filter', process_id=SEB_, owner_model_id=model_id)
@@ -138,15 +169,12 @@ CONTAINS
   END FUNCTION Create_task_asselin_filter
 
   ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for surface_energy fluxes
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "surface_fluxes"
-  !!
+  !> Constructor for surface_fluxes task
+  !>
   FUNCTION Create_task_surface_fluxes(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    INTEGER,                   INTENT(in) :: model_id   !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr !< Instance of process task "surface_fluxes"
 
     ALLOCATE(tsk_surface_fluxes::return_ptr)
     CALL return_ptr%Construct(name='surface_fluxes', process_id=SEB_, owner_model_id=model_id)
@@ -154,15 +182,12 @@ CONTAINS
   END FUNCTION Create_task_surface_fluxes
 
   ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for energy balance residual computation
-  !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "energy_balance"
-  !!
+  !> Constructor for energy_balance task (energy balance residual)
+  !>
   FUNCTION Create_task_energy_balance(model_id) RESULT(return_ptr)
 
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+    INTEGER,                   INTENT(in) :: model_id   !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr !< Instance of process task "energy_balance"
 
     ALLOCATE(tsk_energy_balance::return_ptr)
     CALL return_ptr%Construct(name='energy_balance', process_id=SEB_, owner_model_id=model_id)
@@ -171,14 +196,11 @@ CONTAINS
 
   ! =======================================================================================================
   !> Register tasks for surface energy process
-  !!
-  !! @param[in,out] this      Instance of surface energy process class
-  !! @param[in]     model_id  Model id
-  !!
+  !>
   SUBROUTINE Register_seb_tasks(this, model_id)
 
-    CLASS(t_jsb_process), INTENT(inout) :: this
-    INTEGER,              INTENT(in)    :: model_id
+    CLASS(t_jsb_process), INTENT(inout) :: this     !< Instance of surface energy process class
+    INTEGER,              INTENT(in)    :: model_id !< Model id
 
     CALL this%Register_task(tsk_surface_energy(model_id))
     CALL this%Register_task(tsk_asselin_filter(model_id))
@@ -189,22 +211,22 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !> Implementation of "update" for task "surface energy"
-  !! Task "update_surface_energy" calculates the new surface temperature from the surface energy balance (sensible and latent heat,
-  !! net radiation, ground heat).
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !>#### Implementation of "update" for task "surface_energy"
+  !>
+  !> Task "surface_energy" calculates the new surface temperature from the surface energy balance
+  !> (net radiation, sensible and latent heat, ground heat, phase changes). Depending on the tile,
+  !> [[mo_seb_lake:update_surface_energy_lake]] or [[mo_seb_land:update_surface_energy_land]] is
+  !> called; with `use_tmx`, the latter is used on all tiles but the lake.
+  !>
   SUBROUTINE update_surface_energy(tile, options)
 
     USE mo_seb_land, ONLY: update_surface_energy_land
     USE mo_seb_lake, ONLY: update_surface_energy_lake
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
@@ -226,24 +248,28 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "surface_energy"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
+  !> Implementation of "aggregate" for task "surface_energy"
+  !>
+  !> Aggregates the surface temperatures, the surface state passed to the atmosphere and the heat
+  !> capacity and heat fluxes of the surface layer, weighted by tile fractions.
+  !>
   SUBROUTINE aggregate_surface_energy(tile, options)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_config(SEB_)
 
-    TYPE(t_jsb_model), POINTER :: model
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model), POINTER :: model                   !< This instance of ICON-Land
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract !< Aggregation method: area weighted means
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: &
+      & iblk, & !< Current block index
+      & ics,  & !< Index of first cell in chunk
+      & ice     !< Index of last cell in chunk
 
     iblk = options%iblk
     ics  = options%ics
@@ -291,21 +317,19 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !> Implementation of "update" for task "asselin_filter"
-  !! Task "asselin_filter" calculates applies the Asselin time filter to the new surface temperature, if applicable
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     config  Vector of process configurations.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !>#### Implementation of "update" for task "asselin_filter"
+  !>
+  !> Task "asselin_filter" applies the Asselin time filter to the new surface temperature, if
+  !> applicable, see [[mo_seb_land:update_asselin_land]]. There is no filter on lake tiles.
+  !>
   SUBROUTINE update_asselin(tile, options)
 
     USE mo_seb_land, ONLY: update_asselin_land
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
@@ -327,23 +351,24 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "asselin_filter"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
+  !> Implementation of "aggregate" for task "asselin_filter"
+  !>
   SUBROUTINE aggregate_asselin(tile, options)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     dsl4jsb_Def_memory(SEB_)
 
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract !< Aggregation method: area weighted means
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
-    INTEGER :: iblk , ics, ice
-    TYPE(t_jsb_model), POINTER :: model
+    INTEGER :: &
+      & iblk, &                         !< Current block index
+      & ics,  &                         !< Index of first cell in chunk
+      & ice                             !< Index of last cell in chunk
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     iblk = options%iblk
     ics  = options%ics
@@ -373,20 +398,21 @@ CONTAINS
 
   ! ================================================================================================================================
   !>
-  !> Implementation of "update" for task "surface fluxes"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
+  !>#### Implementation of "update" for task "surface_fluxes"
+  !>
+  !> Task "surface_fluxes" computes the sensible and latent heat fluxes from the new surface state
+  !> and the evaporation computed by HYDRO_, see [[mo_seb_land:update_surface_fluxes_land]] and
+  !> [[mo_seb_lake:update_surface_fluxes_lake]].
+  !>
   SUBROUTINE update_surface_fluxes(tile, options)
 
     USE mo_seb_land, ONLY: update_surface_fluxes_land
     USE mo_seb_lake, ONLY: update_surface_fluxes_lake
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
@@ -408,24 +434,25 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "surface_fluxes"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
+  !> Implementation of "aggregate" for task "surface_fluxes"
+  !>
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
-    TYPE(t_jsb_model),       POINTER :: model
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+    TYPE(t_jsb_model),       POINTER :: model             !< This instance of ICON-Land
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract !< Aggregation method: area weighted means
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
 
-    INTEGER :: iblk , ics, ice
+    INTEGER :: &
+      & iblk, & !< Current block index
+      & ics,  & !< Index of first cell in chunk
+      & ice     !< Index of last cell in chunk
 
     iblk = options%iblk
     ics  = options%ics
@@ -462,9 +489,14 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !> Implementation of "update" for task "energy balance"
+  !>#### Implementation of "update" for task "energy_balance"
   !>
-  !> This diagnostic computes the balance of the net surface radiation fluxes at the land surface.
+  !> This diagnostic computes `net_srf_rad_balance`, the residual of all energy fluxes into the
+  !> surface: net radiation, sensible and latent heat fluxes, `forc_hflx` and the latent energy of
+  !> phase changes. The change of heat storage is not taken into account, so a large residual does
+  !> not necessarily indicate a problem. If `eb_threshold` > 0, all fluxes are printed for cells
+  !> with a residual above the threshold or a surface temperature outside 50 to 400 K (CPU only).
+  !> Nothing is computed at the first time step of the experiment.
   !>
   SUBROUTINE update_energy_balance(tile, options)
 
@@ -476,8 +508,8 @@ CONTAINS
 
     ! Local variables
     !
-    TYPE(t_jsb_model), POINTER    :: model
-    TYPE(t_jsb_grid),  POINTER    :: grid
+    TYPE(t_jsb_model), POINTER    :: model !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER    :: grid  !< Horizontal grid
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
@@ -503,27 +535,36 @@ CONTAINS
       & net_srf_rad_balance                 !< Net surface radiation balance                       [W m-2]
 
     REAL(lp), POINTER :: &
-      & tile_fract(:), lat(:), lon(:)
+      & tile_fract(:),    & !< Tile fraction []
+      & lat(:),           & !< Latitude of the cells [deg]
+      & lon(:)              !< Longitude of the cells [deg]
 
     ! Locally allocated vectors
     !
 
     REAL(lp), DIMENSION(options%nc) :: &
-      & lw_srf_up,       &
-      & sw_srf_up,       &
-      & sw_srf_down,     &
-      & delta_t_srf
+      & lw_srf_up,       & !< Upward longwave radiation (< 0) [W m-2]
+      & sw_srf_up,       & !< Upward (reflected) shortwave radiation (< 0) [W m-2]
+      & sw_srf_down,     & !< Downward shortwave radiation [W m-2]
+      & delta_t_srf        !< Change of the surface temperature in the time step [K]
 
-    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER :: &
+      & iblk, & !< Current block index
+      & ics,  & !< Index of first cell in chunk
+      & ice,  & !< Index of last cell in chunk
+      & nc,   & !< Number of cells in chunk
+      & ic      !< Cell index
 
-    INTEGER  :: n_cells, ie
-    INTEGER  :: cell_idx(options%nc)
+    INTEGER :: &
+      & n_cells, &                   !< Number of cells exceeding eb_threshold or the temperature range
+      & ie                           !< Index in the list of these cells
+    INTEGER  :: cell_idx(options%nc) !< Indices of these cells in the chunk
 
-    REAL(lp) :: dtime
-    LOGICAL  :: is_experiment_start
+    REAL(lp) :: dtime               !< Time step length [s]
+    LOGICAL  :: is_experiment_start !< First time step of the experiment
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_energy_balance'
-    CHARACTER(len=5000)         :: message_text_long
+    CHARACTER(len=5000)         :: message_text_long !< Text of the diagnostic message
 
     iblk  = options%iblk
     ics   = options%ics
@@ -628,8 +669,10 @@ CONTAINS
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "energy_balance"
-  !!
+  !> Implementation of "aggregate" for task "energy_balance"
+  !>
+  !> The residual is not aggregated but computed with [[update_energy_balance]] on each tile.
+  !>
   SUBROUTINE aggregate_energy_balance(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
@@ -637,7 +680,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_energy_balance'
 
-    INTEGER :: iblk
+    INTEGER :: iblk !< Current block index
 
     iblk = options%iblk
 
@@ -651,11 +694,13 @@ CONTAINS
   END SUBROUTINE aggregate_energy_balance
 
   !-----------------------------------------------------------------------------------------------------
-  !> Make sure temperature is within a realistic range and finish the simulation with a meaningfull
-  !! message if not.
-  !!
-  !! The routine is called at the beginning and at the end of each time step.
-  !!
+  !> Make sure temperature is within a realistic range and finish the simulation with a meaningful
+  !> message if not.
+  !>
+  !> The routine is called at the end of each time step from `jsbach_finish_timestep`, if the SEB_
+  !> process is active. It stops the model if the surface temperature `t` on any tile with
+  !> non-zero fraction is below 50 K or above 400 K.
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE seb_check_temperature_range(model_id)
 
@@ -663,20 +708,26 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
 
     ! Argument
-    INTEGER, INTENT(in) :: model_id
+    INTEGER, INTENT(in) :: model_id !< Model id
 
     ! Local variables
-    TYPE(t_jsb_model), POINTER           :: model
-    TYPE(t_jsb_grid),  POINTER           :: grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    TYPE(t_jsb_model), POINTER           :: model !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER           :: grid  !< Horizontal grid
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile  !< Current tile
 
     dsl4jsb_Def_memory(SEB_)
 
-    INTEGER                       :: iblk, ic, itile
-    REAL(lp), POINTER             :: lat(:,:), lon(:,:), tile_fract(:,:)
+    INTEGER :: &
+      & iblk,  &           !< Current block index
+      & ic,    &           !< Cell index
+      & itile              !< Tile index
+    REAL(lp), POINTER :: &
+      & lat(:,:),        & !< Latitude of the cells [deg]
+      & lon(:,:),        & !< Longitude of the cells [deg]
+      & tile_fract(:,:)    !< Tile fraction []
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':seb_check_temperature_range'
 
-    dsl4jsb_Real2D_onDomain :: t
+    dsl4jsb_Real2D_onDomain :: t !< Surface temperature [K]
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -715,9 +766,11 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculations of diagnostic global land mean output
-  !!
-  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
-  !!
+  !>
+  !> Computes the global land mean surface temperature `t_gmean` on the root tile, if it is in
+  !> the output. The routine is called from `jsbach_finish_timestep`, after the loop over the
+  !> nproma blocks.
+  !>
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE global_seb_diagnostics(tile, global_land_area, land_area_scaling)
 
@@ -731,8 +784,8 @@ CONTAINS
 
     CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
 
-    dsl4jsb_Real2D_onDomain :: t
-    REAL(lp), POINTER       :: t_gmean(:)
+    dsl4jsb_Real2D_onDomain :: t          !< Surface temperature on the root tile [K]
+    REAL(lp), POINTER       :: t_gmean(:) !< Global land mean surface temperature [K]
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_var2D_onDomain(SEB_,  t) ! in

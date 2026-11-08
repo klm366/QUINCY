@@ -1,4 +1,4 @@
-!> Initialization of the the seb memory.
+!> Initialization of the surface energy balance memory.
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,14 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!>#### Initialization of the surface energy balance process
+!>
+!> [[seb_init]] is called from [[mo_jsb_model_init:jsbach_init]] for each tile on which the SEB_
+!> process is active, after the memory has been set up. It sets the boundary conditions (the skin
+!> conductivity, if `l_skin_temp`) and the factors needed for the pseudo soil temperature. Initial
+!> surface temperatures are not set here but in [[mo_sse_init:sse_init_ic]] together with the soil
+!> temperatures.
 !>
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
@@ -34,18 +42,26 @@ MODULE mo_seb_init
 
   PUBLIC :: seb_init
 
+  !> Fields read from the bc file on the root tile and used to initialize all SEB_ tiles;
+  !> deallocated after the last SEB_ tile has been initialized.
   TYPE t_seb_init_vars
-    REAL(lp), ALLOCATABLE :: skin_conductivity(:,:)
+    REAL(lp), ALLOCATABLE :: skin_conductivity(:,:) !< Skin conductivity [W m-2 K-1]
   END TYPE
 
-  TYPE(t_seb_init_vars) :: seb_init_vars
+  TYPE(t_seb_init_vars) :: seb_init_vars !< Fields for the initialization of all SEB_ tiles
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_seb_init'
 
 CONTAINS
 
   !
-  !> Intialize soil process (after memory has been set up)
+  !> Initialize the SEB_ process on a tile (after memory has been set up)
+  !>
+  !> Reads the bc fields (on the root tile), sets the boundary conditions and computes the
+  !> factors of the pseudo soil temperature (see [[mo_seb_land:calc_pseudo_soil_temp]]):
+  !> \( F = \exp(-\Delta t / \tau) \) (`F_pseudo_soil_temp`) and \( N = 1 / (1 - F) \)
+  !> (`N_pseudo_soil_temp`), with time step \(\Delta t\) and memory time \(\tau\) in days;
+  !> \(\tau\) is the phenology parameter `tau_pseudo_soil` (10 days in the QUINCY standalone model).
   !
   SUBROUTINE seb_init(tile)
     USE mo_jsb_time,          ONLY: timestep_in_days
@@ -55,15 +71,15 @@ CONTAINS
 #else
     USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
 #endif
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Tile to be initialized
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init'
 
     dsl4jsb_Real2D_onDomain :: &
-      & F_pseudo_soil_temp,    &
-      & N_pseudo_soil_temp
+      & F_pseudo_soil_temp,    & !< Exponential factor for the pseudo soil temperature []
+      & N_pseudo_soil_temp       !< Normalisation for the pseudo soil temperature []
 
     dsl4jsb_Def_memory(SEB_)
 
@@ -104,18 +120,25 @@ CONTAINS
 
 #ifdef __QUINCY_STANDALONE__
 #else
+  !> Read the bc fields of the SEB_ process into [[seb_init_vars]]
+  !>
+  !> Only `skin_conductivity` is read from `bc_filename`, if `l_skin_temp`; the model stops if
+  !> it is missing in the file.
+  !>
   SUBROUTINE seb_read_init_vars(tile)
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Root tile
 
     dsl4jsb_Def_config(SEB_)
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: grid  !< Horizontal grid
 
-    TYPE(t_input_file) :: input_file
-    INTEGER :: nproma, nblks
+    TYPE(t_input_file) :: input_file !< bc file
+    INTEGER :: &
+      & nproma, &                    !< Block length
+      & nblks                        !< Number of blocks
 
-    REAL(lp), POINTER :: ptr(:,:)
+    REAL(lp), POINTER :: ptr(:,:) !< Pointer to the field read from file
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_read_init_vars'
 
@@ -144,6 +167,7 @@ CONTAINS
   END SUBROUTINE seb_read_init_vars
 #endif
 
+  !> Deallocate the fields in [[seb_init_vars]]
   SUBROUTINE seb_finalize_init_vars
     IF (ALLOCATED(seb_init_vars%skin_conductivity)) DEALLOCATE(seb_init_vars%skin_conductivity)
   END SUBROUTINE seb_finalize_init_vars
@@ -152,14 +176,17 @@ CONTAINS
   !>
   !> SEB_ init bc - quincy standalone
   !>
+  !> Sets a constant skin conductivity of 40 W m-2 K-1 (estimated from the ICON-Land input
+  !> file), if `l_skin_temp`.
+  !>
   SUBROUTINE qs_seb_init_bc(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Tile to be initialized
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':qs_seb_init_bc'
 
@@ -180,14 +207,17 @@ CONTAINS
   !>
   !> SEB_ init bc
   !>
+  !> Sets the skin conductivity from [[seb_init_vars]] on land tiles (all tiles with
+  !> `use_tmx`), if `l_skin_temp`.
+  !>
   SUBROUTINE seb_init_bc(tile)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Tile to be initialized
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_bc'
 
@@ -205,11 +235,16 @@ CONTAINS
 
   END SUBROUTINE seb_init_bc
 
+  !> SEB_ init ic - currently empty and not called
+  !>
+  !> The initial surface temperature is set in [[mo_sse_init:sse_init_ic]] together with the soil
+  !> temperatures.
+  !>
   SUBROUTINE seb_init_ic(tile)
 
     !USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Tile to be initialized
 
     ! TYPE(t_jsb_model),       POINTER :: model
 
