@@ -11,6 +11,27 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
+!>#### Surface energy balance on land
+!>
+!> The module contains the routines of the SEB_ process for the land tile (glaciers included) and,
+!> with `use_tmx`, for the tiles below it:
+!>
+!> - [[update_surface_energy_land]]: new surface (skin) temperature from the implicit solution of
+!>   the surface energy balance, using one of three solvers: [[update_surface_temperature_oneshot]]
+!>   (coupled to the atmosphere without TMX), [[update_surface_temperature_tmx]] (coupled with TMX)
+!>   or [[update_surface_temperature_standalone]] (standalone ICON-Land, forced by atmospheric data).
+!>   Each solver uses [[surface_temp_implicit]] or, with `l_skin_temp`, [[skin_temp_implicit]].
+!> - [[update_asselin_land]]: Asselin time filter of the new surface temperature.
+!> - [[update_surface_fluxes_land]]: sensible and latent heat fluxes.
+!>
+!> The solvers work with the dry static energy s = t2s_conv * T of the surface, where the
+!> conversion factor t2s_conv is the heat capacity of dry air (`cpd`, with TMX `cvd`), in the
+!> standalone model corrected for water vapour.
+!>
+!> In addition, the module updates diagnostics of the air temperature that are needed by the
+!> phenology: the mean, minimum and maximum air temperature of the previous day
+!> ([[calc_previous_day_variables]]) and the pseudo soil temperature ([[calc_pseudo_soil_temp]]).
+!>
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
@@ -54,6 +75,29 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
+  !> Compute the new surface temperature on land from the surface energy balance
+  !>
+  !> The routine
+  !>
+  !> 1. updates the daily air temperature diagnostics and the pseudo soil temperature,
+  !> 2. takes the heat capacity of the surface layer from the top soil layer (`hcap_grnd` of SSE_,
+  !>    previous time step) and sets the heat flux from below, `forc_hflx`, to the ground heat flux
+  !>    (`grnd_hflx` of SSE_, previous time step) plus the remaining latent energy of phase changes
+  !>    from HYDRO_ (`le_pc_remain`),
+  !> 3. computes the frozen surface fraction (snow and, if there is pond ice, ponds) and the
+  !>    latent energy available for freezing or melting ([[get_phasechange_energy_limits]]),
+  !> 4. solves the energy balance for the new dry static energy `s_star` (and `s_srf` of the top
+  !>    soil/snow layer) with the solver for the standalone, TMX or coupled model,
+  !> 5. converts it to temperatures: without TMX in the coupled model, the solution is at the time
+  !>    level of the implicit scheme, `t + alpha dt`, and the new temperature is
+  !>    `T(t+dt) = tpfac2 T* + tpfac3 T(t)`, with `tpfac2 = 1/alpha`, `tpfac3 = 1 - 1/alpha` and the
+  !>    unfiltered temperature `T(t)` of the previous time step (see below Eq. 3.3.1.5 in the ECHAM3
+  !>    manual); otherwise `T(t+dt) = T*`,
+  !> 6. computes the effective temperature `t_eff4` for the atmospheric radiation, i.e. `T*^4`
+  !>    linearised around the reference temperature of the solver (Eq. 6.3 in the ECHAM5 manual).
+  !>
+  !> Cells without land fraction on the tile are set to 280 K for numerical reasons.
+  !>
   SUBROUTINE update_surface_energy_land(tile, options)
 
     USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, qsat_mixed, q_effective, surface_dry_static_energy
@@ -62,11 +106,11 @@ CONTAINS
     USE mo_jsb_grid,               ONLY: Get_grid
     USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
+    TYPE(t_jsb_grid),  POINTER :: grid  !< Horizontal grid
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
@@ -78,92 +122,110 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
 
-    LOGICAL                :: lstart
+    LOGICAL                :: lstart !< First time step of the experiment
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t_air
-    dsl4jsb_Real2D_onChunk :: day_temp_min
-    dsl4jsb_Real2D_onChunk :: day_temp_max
-    dsl4jsb_Real2D_onChunk :: day_temp_sum
-    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
-    dsl4jsb_Real2D_onChunk :: previous_day_temp_min
-    dsl4jsb_Real2D_onChunk :: previous_day_temp_max
-    dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp
-    dsl4jsb_Real2D_onChunk :: N_pseudo_soil_temp
-    dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
-    dsl4jsb_Real2D_onChunk :: skin_conductivity
+    dsl4jsb_Real2D_onChunk :: t_air                  !< Air temperature at lowest atmospheric level (A2L_) [K]
+    dsl4jsb_Real2D_onChunk :: day_temp_min           !< Minimum of air temperatures since midnight [degC]
+    dsl4jsb_Real2D_onChunk :: day_temp_max           !< Maximum of air temperatures since midnight [degC]
+    dsl4jsb_Real2D_onChunk :: day_temp_sum           !< Sum of air temperatures since midnight [degC]
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_mean !< Mean air temperature of the previous day [degC]
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_min  !< Minimum air temperature of the previous day [degC]
+    dsl4jsb_Real2D_onChunk :: previous_day_temp_max  !< Maximum air temperature of the previous day [degC]
+    dsl4jsb_Real2D_onChunk :: F_pseudo_soil_temp     !< Exponential factor for the pseudo soil temperature []
+    dsl4jsb_Real2D_onChunk :: N_pseudo_soil_temp     !< Normalisation for the pseudo soil temperature []
+    dsl4jsb_Real2D_onChunk :: pseudo_soil_temp       !< Pseudo soil temperature [degC]
+    dsl4jsb_Real2D_onChunk :: skin_conductivity      !< Skin conductivity (only if l_skin_temp) [W m-2 K-1]
 
-    dsl4jsb_Real2D_onChunk :: t
-    dsl4jsb_Real2D_onChunk :: t_old
-    dsl4jsb_Real2D_onChunk :: t_unfilt
-    dsl4jsb_Real2D_onChunk :: t_unfilt_old
-    dsl4jsb_Real2D_onChunk :: t_srf
-    dsl4jsb_Real2D_onChunk :: dt_sk_dt_srf
-    dsl4jsb_Real2D_onChunk :: t_eff4
-    dsl4jsb_Real2D_onChunk :: qsat_star
-    dsl4jsb_Real2D_onChunk :: s_star
-    dsl4jsb_Real2D_onChunk :: heat_cap
-    dsl4jsb_Real2D_onChunk :: forc_hflx
-    dsl4jsb_Real2D_onChunk :: le_phase_change
-    dsl4jsb_Real2D_onChunk :: le_pc_remain
-    dsl4jsb_Real2D_onChunk :: press_srf
-    dsl4jsb_Real2D_onChunk :: q_air
-    dsl4jsb_Real2D_onChunk :: fact_qsat_srf
-    dsl4jsb_Real2D_onChunk :: fact_q_air
-    dsl4jsb_Real2D_onChunk :: drag_srf      ! old turb
-    dsl4jsb_Real2D_onChunk :: rad_srf_net
-    dsl4jsb_Real2D_onChunk :: grnd_hflx
-    dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: weq_snow_soil
-    dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: fract_pond
-    dsl4jsb_Real2D_onChunk :: wtr_pond
-    dsl4jsb_Real2D_onChunk :: ice_pond
-    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    dsl4jsb_Real3D_onChunk :: ice_soil_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
-    dsl4jsb_Real2D_onChunk :: wind_air
-    dsl4jsb_Real2D_onChunk :: t_acoef
-    dsl4jsb_Real2D_onChunk :: t_bcoef
-    dsl4jsb_Real2D_onChunk :: q_acoef
-    dsl4jsb_Real2D_onChunk :: q_bcoef
-    dsl4jsb_Real2D_onChunk :: pch
-    dsl4jsb_Real2D_onChunk :: richardson
+    dsl4jsb_Real2D_onChunk :: t                     !< Surface temperature at beginning of time step [K]
+    dsl4jsb_Real2D_onChunk :: t_old                 !< Surface temperature at previous time step [K]
+    dsl4jsb_Real2D_onChunk :: t_unfilt              !< New unfiltered surface temperature [K]
+    dsl4jsb_Real2D_onChunk :: t_unfilt_old          !< Unfiltered surface temperature, previous time step [K]
+    dsl4jsb_Real2D_onChunk :: t_srf                 !< Top soil/snow layer temperature, unfiltered [K]
+    dsl4jsb_Real2D_onChunk :: dt_sk_dt_srf          !< d(skin temperature)/d(surface temperature) [K K-1]
+    dsl4jsb_Real2D_onChunk :: t_eff4                !< Effective surface temperature **4 [K4]
+    dsl4jsb_Real2D_onChunk :: qsat_star             !< Surface saturation specific humidity [kg kg-1]
+    dsl4jsb_Real2D_onChunk :: s_star                !< New surface dry static energy [m2 s-2]
+    dsl4jsb_Real2D_onChunk :: heat_cap              !< Heat capacity of the surface layer [J m-2 K-1]
+    dsl4jsb_Real2D_onChunk :: forc_hflx             !< Heat flux into the surface layer from below [W m-2]
+    dsl4jsb_Real2D_onChunk :: le_phase_change       !< Latent energy of phase changes, > 0: freezing [J m-2]
+    dsl4jsb_Real2D_onChunk :: le_pc_remain          !< Remaining phase change energy (HYDRO_) [J m-2]
+    dsl4jsb_Real2D_onChunk :: press_srf             !< Surface pressure (A2L_) [Pa]
+    dsl4jsb_Real2D_onChunk :: q_air                 !< Specific humidity, lowest atm. level (A2L_) [kg kg-1]
+    dsl4jsb_Real2D_onChunk :: fact_qsat_srf         !< Humidity scaling factor for qsat at surface (TURB_) []
+    dsl4jsb_Real2D_onChunk :: fact_q_air            !< Humidity scaling factor for q_air (TURB_) []
+    dsl4jsb_Real2D_onChunk :: drag_srf              !< Surface drag (A2L_, without TMX)
+    dsl4jsb_Real2D_onChunk :: rad_srf_net           !< Net radiation at the surface (RAD_) [W m-2]
+    dsl4jsb_Real2D_onChunk :: grnd_hflx             !< Ground heat flux (SSE_, previous time step) [W m-2]
+    dsl4jsb_Real2D_onChunk :: hcap_grnd             !< Heat capacity of top soil layer (SSE_) [J m-2 K-1]
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil         !< Snow amount on the soil (HYDRO_) [m water equivalent]
+    dsl4jsb_Real2D_onChunk :: fract_snow            !< Snow area fraction (HYDRO_) []
+    dsl4jsb_Real2D_onChunk :: fract_pond            !< Inundated area fraction (HYDRO_) []
+    dsl4jsb_Real2D_onChunk :: wtr_pond              !< Liquid water in ponds (HYDRO_) [m]
+    dsl4jsb_Real2D_onChunk :: ice_pond              !< Frozen water in ponds (HYDRO_) [m water equivalent]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl           !< Water content in soil layers (HYDRO_) [m]
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl           !< Ice content in soil layers (HYDRO_) [m]
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl !< Potential supercooled water in soil layers (HYDRO_) [m]
+    dsl4jsb_Real2D_onChunk :: wind_air              !< Wind speed at lowest atmospheric level (A2L_) [m s-1]
+    dsl4jsb_Real2D_onChunk :: t_acoef               !< Richtmyer-Morton coef. A, dry static energy []
+    dsl4jsb_Real2D_onChunk :: t_bcoef               !< Richtmyer-Morton coef. B, dry static energy [m2 s-2]
+    dsl4jsb_Real2D_onChunk :: q_acoef               !< Richtmyer-Morton coef. A, specific humidity []
+    dsl4jsb_Real2D_onChunk :: q_bcoef               !< Richtmyer-Morton coef. B, specific humidity [kg kg-1]
+    dsl4jsb_Real2D_onChunk :: pch                   !< Heat transfer coefficient C_h (A2L_, standalone) []
+    dsl4jsb_Real2D_onChunk :: richardson            !< Richardson number (standalone) []
 
     ! VEG_
-    dsl4jsb_Real2D_onChunk :: height
+    dsl4jsb_Real2D_onChunk :: height !< Vegetation height (VEG_, QUINCY) [m]
 
     ! Locally allocated vectors
     !
     REAL(lp), DIMENSION(options%nc)  :: &
-     & s_old,                           &
-     & t_srf_old,                       &
-     & s_srf,                           &
+     & s_old,                           & !< Dry static energy of the surface at previous time step [m2 s-2]
+     & t_srf_old,                       & !< Top soil/snow layer temperature at previous time step [K]
+     & s_srf,                           & !< Dry static energy of the top soil/snow layer [m2 s-2]
      & dQdT,                            & !< Sensitivity of saturated surface specific humidity to temperature
-     & t2s_conv,                        & !< Conversion factor from temperature to dry static energy (C_pd * (1+(delta-1)*q_v))
-     & t_star,                          &
-     & frozen_fract,                    & !< Frozen surface fraction (snow and frozen surface water ponds)
-     & t_radref,                        &
-     & le_freeze_pot,                   & !< Latent energy flux released if all available water freezes [W m-2]
-     & le_melt_pot,                     & !< Latent energy flux required if all available ice melts [W m-2]
-     & veg_height                         !< Vegetation height
+                                          !< [kg kg-1 K-1]
+     & t2s_conv,                        & !< Conversion factor from temperature to dry static energy
+                                          !< (C_pd * (1+(delta-1)*q_v)) [J kg-1 K-1]
+     & t_star,                          & !< New surface temperature at the time level of the implicit
+                                          !< scheme [K]
+     & frozen_fract,                    & !< Frozen surface fraction (snow and frozen surface water ponds) []
+     & t_radref,                        & !< Reference temperature for the linearised thermal radiation [K]
+     & le_freeze_pot,                   & !< Latent energy released if all available water freezes [J m-2]
+     & le_melt_pot,                     & !< Latent energy required if all available ice melts (< 0) [J m-2]
+     & veg_height                         !< Vegetation height (QUINCY only, zero otherwise) [m]
 
     LOGICAL, DIMENSION(options%nc) :: &
-     & is_glacier,                    &
-     & tile_fract_zero
+     & is_glacier,                    & !< Cell is glacier
+     & tile_fract_zero                  !< Cell has no land fraction on this tile
 
     REAL(lp) :: &
-      & qsat_old,                     &
-      & t_air_in_Celcius,             &
-      & cpd_or_cvd
+      & qsat_old,                     & !< Surface saturation specific humidity at previous time step
+                                        !< [kg kg-1]
+      & t_air_in_Celcius,             & !< Air temperature at lowest atmospheric level [degC]
+      & cpd_or_cvd                      !< Heat capacity of dry air at constant pressure or, with TMX,
+                                        !< at constant volume [J kg-1 K-1]
 
-    LOGICAL  :: l_freeze_config, l_supercool_config, use_tmx, l_skin_temp
+    LOGICAL :: &
+      & l_freeze_config,    & !< Freezing and melting of soil water (l_freeze of SSE_)
+      & l_supercool_config, & !< Supercooled soil water (l_supercool of SSE_)
+      & use_tmx,            & !< Coupling to the atmosphere with TMX
+      & l_skin_temp           !< Use the skin temperature formulation
 
-    INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(lp) :: dtime, alpha
-    INTEGER  :: tmp_timesteps_per_day
-    LOGICAL  :: l_is_newday, jsb_standalone
-    INTEGER  :: ilct
+    INTEGER :: &
+      & iblk, &                       !< Current block index
+      & ics,  &                       !< Index of first cell in chunk
+      & ice,  &                       !< Index of last cell in chunk
+      & nc,   &                       !< Number of cells in chunk
+      & ic                            !< Cell index
+    REAL(lp) :: &
+      & dtime, &                      !< Time step length [s]
+      & alpha                         !< Implicitness factor of the atmosphere-surface coupling []
+    INTEGER  :: tmp_timesteps_per_day !< Number of time steps per day
+    LOGICAL :: &
+      & l_is_newday,    &             !< First time step of a new day
+      & jsb_standalone                !< ICON-Land runs standalone
+    INTEGER  :: ilct                  !< Index of land cover type on the tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
@@ -560,6 +622,20 @@ CONTAINS
   END SUBROUTINE update_surface_energy_land
 
 
+  !> Solve the surface energy balance in the standalone model
+  !>
+  !> Without an atmosphere, the surface drag and the Richtmyer-Morton coefficients are computed
+  !> here from the atmospheric forcing with [[mo_phy_schemes:update_drag]].
+  !>
+  !> - With `l_skin_temp`, the skin temperature is solved with [[skin_temp_implicit]] in NUM_ITERS
+  !>   iterations; in each iteration, the drag (including its derivative with respect to the surface
+  !>   temperature), the saturation specific humidity and the thermal radiation are linearised around
+  !>   the current estimate, and the change of the skin temperature is limited to LIMIT_DELTAT.
+  !>   At the first time step of the experiment, the skin temperature equals `t`.
+  !> - Otherwise, a first solution with [[surface_temp_implicit]] is Asselin-filtered and used to
+  !>   compute a drag with a filtered Richardson number (weights `coef_ril_tm1`, `coef_ril_t`,
+  !>   `coef_ril_tp1`), with which the energy balance is solved again.
+  !>
   SUBROUTINE update_surface_temperature_standalone ( &
         & tile, options, cpd_or_cvd, lstart, tile_fract_zero, t_air, q_air, wind_air, rad_srf_net, press_srf, t2s_conv, t, &
         & t_unfilt, frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, veg_height, &
@@ -571,69 +647,112 @@ CONTAINS
     USE mo_phy_schemes, ONLY: heat_transfer_coef, qsat_mixed, update_drag, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: stbo, zemiss_def, tmelt
 
-    INTEGER, PARAMETER :: NUM_ITERS = 10
-    REAL(lp), PARAMETER :: LIMIT_DELTAT = 10._lp
+    INTEGER, PARAMETER :: NUM_ITERS = 10         !< Number of iterations of the skin temperature solver
+    REAL(lp), PARAMETER :: LIMIT_DELTAT = 10._lp !< Maximum change of skin temperature per iteration [K]
 
-    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
-    TYPE(t_jsb_task_options), INTENT(IN) :: options
+    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile      !< Tile for which routine is executed
+    TYPE(t_jsb_task_options), INTENT(IN) :: options        !< Additional run-time parameters
 
-    REAL(lp), INTENT(IN) :: cpd_or_cvd
-    LOGICAL,  INTENT(IN) :: lstart
-    LOGICAL,  INTENT(IN) :: tile_fract_zero(:)
+    REAL(lp), INTENT(IN) :: cpd_or_cvd                     !< Heat capacity of dry air at constant pressure
+                                                           !< (cpd) or volume (cvd, TMX) [J kg-1 K-1]
+    LOGICAL,  INTENT(IN) :: lstart                         !< First time step of the experiment
+    LOGICAL,  INTENT(IN) :: tile_fract_zero(:)             !< Cell has no land fraction on this tile
 
-    REAL(lp), INTENT(IN) :: t_air(:)
-    REAL(lp), INTENT(IN) :: q_air(:)
-    REAL(lp), INTENT(IN) :: wind_air(:)
+    REAL(lp), INTENT(IN) :: t_air(:)                       !< Air temperature at lowest atmospheric level [K]
+    REAL(lp), INTENT(IN) :: q_air(:)                       !< Specific humidity at lowest atmospheric level
+                                                           !< [kg kg-1]
+    REAL(lp), INTENT(IN) :: wind_air(:)                    !< Wind speed at lowest atmospheric level [m s-1]
 
-    REAL(lp), INTENT(IN) :: rad_srf_net(:)
-    REAL(lp), INTENT(IN) :: press_srf(:)
+    REAL(lp), INTENT(IN) :: rad_srf_net(:)                 !< Net radiation at the surface [W m-2]
+    REAL(lp), INTENT(IN) :: press_srf(:)                   !< Surface pressure [Pa]
 
-    REAL(lp), INTENT(IN) :: t2s_conv(:)
-    REAL(lp), INTENT(IN) :: t(:)
-    REAL(lp), INTENT(IN) :: t_unfilt(:)
-    REAL(lp), INTENT(IN) :: frozen_fract(:)
-    REAL(lp), INTENT(IN) :: fact_q_air(:)
-    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(lp), INTENT(IN) :: forc_hflx(:)
-    REAL(lp), INTENT(IN) :: heat_cap(:)
-    REAL(lp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(lp), INTENT(IN) :: le_melt_pot(:)
-    REAL(lp), INTENT(IN) :: veg_height(:)
-    REAL(lp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(lp), INTENT(IN) :: t2s_conv(:)                    !< Conversion factor from temperature to dry static
+                                                           !< energy [J kg-1 K-1]
+    REAL(lp), INTENT(IN) :: t(:)                           !< Surface temperature at the beginning of the time
+                                                           !< step [K]
+    REAL(lp), INTENT(IN) :: t_unfilt(:)                    !< Unfiltered surface temperature at the beginning
+                                                           !< of the time step [K]
+    REAL(lp), INTENT(IN) :: frozen_fract(:)                !< Frozen surface fraction (snow and frozen ponds)
+                                                           !< []
+    REAL(lp), INTENT(IN) :: fact_q_air(:)                  !< Humidity scaling factor for the air specific
+                                                           !< humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)               !< Humidity scaling factor for the surface
+                                                           !< saturation specific humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: forc_hflx(:)                   !< Ground heat flux plus remaining latent energy of
+                                                           !< phase changes [W m-2]
+    REAL(lp), INTENT(IN) :: heat_cap(:)                    !< Heat capacity of the surface layer [J m-2 K-1]
+    REAL(lp), INTENT(IN) :: le_freeze_pot(:)               !< Latent energy released if all available water
+                                                           !< freezes [J m-2]
+    REAL(lp), INTENT(IN) :: le_melt_pot(:)                 !< Latent energy required if all available ice
+                                                           !< melts (< 0) [J m-2]
+    REAL(lp), INTENT(IN) :: veg_height(:)                  !< Vegetation height (QUINCY only, zero otherwise)
+                                                           !< [m]
+    REAL(lp), OPTIONAL, INTENT(IN) :: skin_conductivity(:) !< Skin conductivity (only if l_skin_temp)
+                                                           !< [W m-2 K-1]
 
-    REAL(lp), INTENT(OUT) :: t_acoef(:)
-    REAL(lp), INTENT(OUT) :: t_bcoef(:)
-    REAL(lp), INTENT(OUT) :: q_acoef(:)
-    REAL(lp), INTENT(OUT) :: q_bcoef(:)
+    REAL(lp), INTENT(OUT) :: t_acoef(:)                    !< Richtmyer-Morton coefficient A for dry static
+                                                           !< energy []
+    REAL(lp), INTENT(OUT) :: t_bcoef(:)                    !< Richtmyer-Morton coefficient B for dry static
+                                                           !< energy [m2 s-2]
+    REAL(lp), INTENT(OUT) :: q_acoef(:)                    !< Richtmyer-Morton coefficient A for specific
+                                                           !< humidity []
+    REAL(lp), INTENT(OUT) :: q_bcoef(:)                    !< Richtmyer-Morton coefficient B for specific
+                                                           !< humidity [kg kg-1]
 
-    REAL(lp), INTENT(OUT) :: pch(:)
-    REAL(lp), INTENT(OUT) :: drag_srf(:)
-    REAL(lp), INTENT(INOUT) :: richardson(:)
+    REAL(lp), INTENT(OUT) :: pch(:)                        !< Heat transfer coefficient C_h []
+    REAL(lp), INTENT(OUT) :: drag_srf(:)                   !< Surface drag (rho C_h abs(v) alpha g dtime, see
+                                                           !< heat_transfer_coef)
+    REAL(lp), INTENT(INOUT) :: richardson(:)               !< Richardson number (in: previous time step, for
+                                                           !< filtering) []
 
-    REAL(lp), INTENT(OUT) :: s_star(:)
-    REAL(lp), INTENT(INOUT) :: s_srf(:)
-    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(lp), INTENT(OUT) :: qsat_star(:)
-    REAL(lp), INTENT(OUT) :: dQdT(:)
-    REAL(lp), INTENT(OUT) :: t_radref(:)
-    REAL(lp), INTENT(OUT) :: le_phase_change(:)
+    REAL(lp), INTENT(OUT) :: s_star(:)                     !< New surface (skin) dry static energy at the time
+                                                           !< level of the implicit scheme [m2 s-2]
+    REAL(lp), INTENT(INOUT) :: s_srf(:)                    !< Dry static energy of the top soil/snow layer
+                                                           !< (in: old, out: new) [m2 s-2]
+    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)               !< Derivative of skin temperature w.r.t. surface
+                                                           !< temperature [K K-1]
+    REAL(lp), INTENT(OUT) :: qsat_star(:)                  !< Surface saturation specific humidity consistent
+                                                           !< with s_star [kg kg-1]
+    REAL(lp), INTENT(OUT) :: dQdT(:)                       !< Derivative of surface saturation specific
+                                                           !< humidity w.r.t. temperature [kg kg-1 K-1]
+    REAL(lp), INTENT(OUT) :: t_radref(:)                   !< Reference temperature for the linearised thermal
+                                                           !< radiation [K]
+    REAL(lp), INTENT(OUT) :: le_phase_change(:)            !< Latent energy of phase changes (> 0: freezing,
+                                                           !< < 0: melting) [J m-2]
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(TURB_)
 
-    dsl4jsb_Real2D_onChunk :: rough_h
-    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: rough_h !< Surface roughness length for heat (TURB_) [m]
+    dsl4jsb_Real2D_onChunk :: rough_m !< Surface roughness length for momentum (TURB_) [m]
 
-    INTEGER  :: iblk, ics, ice, nc, ic, iter
-    INTEGER  :: model_scheme
-    REAL(lp) :: alpha, dtime
+    INTEGER :: &
+      & iblk, &              !< Current block index
+      & ics,  &              !< Index of first cell in chunk
+      & ice,  &              !< Index of last cell in chunk
+      & nc,   &              !< Number of cells in chunk
+      & ic,   &              !< Cell index
+      & iter                 !< Iteration counter
+    INTEGER  :: model_scheme !< Model scheme (MODEL_JSBACH or MODEL_QUINCY)
+    REAL(lp) :: &
+      & alpha, &             !< Implicitness factor of the atmosphere-surface coupling []
+      & dtime                !< Time step length [s]
 
-    LOGICAL :: l_skin_temp
+    LOGICAL :: l_skin_temp !< Use the skin temperature formulation
 
-    REAL(lp) :: ddrag_srf(options%nc), t_star(options%nc), s_srf_in(options%nc)
-    REAL(lp) :: s_ref, s_melt, heat_tcoef, dheat_tcoef, eps, rad_net_star
+    REAL(lp) :: &
+      & ddrag_srf(options%nc), & !< Derivative of the surface drag w.r.t. surface temperature
+      & t_star(options%nc),    & !< Current estimate of the new surface temperature [K]
+      & s_srf_in(options%nc)     !< Dry static energy of top soil/snow layer, initial [m2 s-2]
+    REAL(lp) :: &
+      & s_ref,        &          !< Dry static energy at the reference temperature [m2 s-2]
+      & s_melt,       &          !< Dry static energy at the melting point [m2 s-2]
+      & heat_tcoef,   &          !< Heat transfer coefficient rho C_h abs(v) [kg m-2 s-1]
+      & dheat_tcoef,  &          !< Derivative of heat_tcoef w.r.t. surface temperature [kg m-2 s-1 K-1]
+      & eps,          &          !< Asselin filter coefficient []
+      & rad_net_star             !< Net radiation for the current temperature estimate [W m-2]
 
     model => Get_model(tile%owner_model_id)
 
@@ -883,6 +1002,13 @@ CONTAINS
   END SUBROUTINE update_surface_temperature_standalone
 
 
+  !> Solve the surface energy balance in the model coupled to the atmosphere without TMX
+  !>
+  !> The energy balance is solved once with [[surface_temp_implicit]] or, with `l_skin_temp`,
+  !> [[skin_temp_implicit]], using the surface drag and Richtmyer-Morton coefficients from the
+  !> atmosphere and linearising around the temperature `t` at the beginning of the time step.
+  !> At the first time step of the experiment, the surface temperature is kept.
+  !>
   SUBROUTINE update_surface_temperature_oneshot ( &
         & nc, alpha, dtime, cpd_or_cvd, lstart, l_skin_temp, tile_fract_zero, t2s_conv, t, q_air, press_srf, rad_srf_net, &
         & frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef,     &
@@ -892,49 +1018,73 @@ CONTAINS
     USE mo_phy_schemes, ONLY: qsat_mixed, heat_transfer_coef, q_effective, surface_dry_static_energy
     USE mo_jsb_physical_constants, ONLY: tmelt
 
-    INTEGER, INTENT(IN) :: nc
-    REAL(lp), INTENT(IN) :: alpha
-    REAL(lp), INTENT(IN) :: dtime
-    REAL(lp), INTENT(IN) :: cpd_or_cvd
+    INTEGER, INTENT(IN) :: nc                              !< Number of cells in the chunk
+    REAL(lp), INTENT(IN) :: alpha                          !< Implicitness factor of the atmosphere-surface
+                                                           !< coupling []
+    REAL(lp), INTENT(IN) :: dtime                          !< Time step length [s]
+    REAL(lp), INTENT(IN) :: cpd_or_cvd                     !< Heat capacity of dry air at constant pressure
+                                                           !< (cpd) or volume (cvd, TMX) [J kg-1 K-1]
 
-    LOGICAL, INTENT(IN) :: lstart
-    LOGICAL, INTENT(IN) :: l_skin_temp
-    LOGICAL, INTENT(IN) :: tile_fract_zero(:)
+    LOGICAL, INTENT(IN) :: lstart                          !< First time step of the experiment
+    LOGICAL, INTENT(IN) :: l_skin_temp                     !< Use the skin temperature formulation
+    LOGICAL, INTENT(IN) :: tile_fract_zero(:)              !< Cell has no land fraction on this tile
 
-    REAL(lp), INTENT(IN) :: t2s_conv(:)
-    REAL(lp), INTENT(IN) :: t(:)
-    REAL(lp), INTENT(IN) :: q_air(:)
-    REAL(lp), INTENT(IN) :: press_srf(:)
-    REAL(lp), INTENT(IN) :: rad_srf_net(:)
-    REAL(lp), INTENT(IN) :: frozen_fract(:)
-    REAL(lp), INTENT(IN) :: fact_q_air(:)
-    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(lp), INTENT(IN) :: forc_hflx(:)
-    REAL(lp), INTENT(IN) :: heat_cap(:)
-    REAL(lp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(lp), INTENT(IN) :: le_melt_pot(:)
-    REAL(lp), INTENT(IN), OPTIONAL :: skin_conductivity(:)
+    REAL(lp), INTENT(IN) :: t2s_conv(:)                    !< Conversion factor from temperature to dry static
+                                                           !< energy [J kg-1 K-1]
+    REAL(lp), INTENT(IN) :: t(:)                           !< Surface temperature at the beginning of the time
+                                                           !< step [K]
+    REAL(lp), INTENT(IN) :: q_air(:)                       !< Specific humidity at lowest atmospheric level
+                                                           !< [kg kg-1]
+    REAL(lp), INTENT(IN) :: press_srf(:)                   !< Surface pressure [Pa]
+    REAL(lp), INTENT(IN) :: rad_srf_net(:)                 !< Net radiation at the surface [W m-2]
+    REAL(lp), INTENT(IN) :: frozen_fract(:)                !< Frozen surface fraction (snow and frozen ponds)
+                                                           !< []
+    REAL(lp), INTENT(IN) :: fact_q_air(:)                  !< Humidity scaling factor for the air specific
+                                                           !< humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)               !< Humidity scaling factor for the surface
+                                                           !< saturation specific humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: forc_hflx(:)                   !< Ground heat flux plus remaining latent energy of
+                                                           !< phase changes [W m-2]
+    REAL(lp), INTENT(IN) :: heat_cap(:)                    !< Heat capacity of the surface layer [J m-2 K-1]
+    REAL(lp), INTENT(IN) :: le_freeze_pot(:)               !< Latent energy released if all available water
+                                                           !< freezes [J m-2]
+    REAL(lp), INTENT(IN) :: le_melt_pot(:)                 !< Latent energy required if all available ice
+                                                           !< melts (< 0) [J m-2]
+    REAL(lp), INTENT(IN), OPTIONAL :: skin_conductivity(:) !< Skin conductivity (only if l_skin_temp)
+                                                           !< [W m-2 K-1]
 
-    REAL(lp), INTENT(IN) :: t_acoef(:)
-    REAL(lp), INTENT(IN) :: t_bcoef(:)
-    REAL(lp), INTENT(IN) :: q_acoef(:)
-    REAL(lp), INTENT(IN) :: q_bcoef(:)
+    REAL(lp), INTENT(IN) :: t_acoef(:)                     !< Richtmyer-Morton coefficient A for dry static
+                                                           !< energy []
+    REAL(lp), INTENT(IN) :: t_bcoef(:)                     !< Richtmyer-Morton coefficient B for dry static
+                                                           !< energy [m2 s-2]
+    REAL(lp), INTENT(IN) :: q_acoef(:)                     !< Richtmyer-Morton coefficient A for specific
+                                                           !< humidity []
+    REAL(lp), INTENT(IN) :: q_bcoef(:)                     !< Richtmyer-Morton coefficient B for specific
+                                                           !< humidity [kg kg-1]
 
-    REAL(lp), INTENT(IN) :: drag_srf(:)
+    REAL(lp), INTENT(IN) :: drag_srf(:)                    !< Surface drag (rho C_h abs(v) alpha g dtime, see
+                                                           !< heat_transfer_coef)
 
-    REAL(lp), INTENT(OUT) :: s_star(:)
-    REAL(lp), INTENT(INOUT) :: s_srf(:)
-    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(lp), INTENT(OUT) :: qsat_star(:)
-    REAL(lp), INTENT(OUT) :: dQdT(:)
-    REAL(lp), INTENT(OUT) :: t_radref(:)
-    REAL(lp), INTENT(OUT) :: le_phase_change(:)
+    REAL(lp), INTENT(OUT) :: s_star(:)                     !< New surface (skin) dry static energy at the time
+                                                           !< level of the implicit scheme [m2 s-2]
+    REAL(lp), INTENT(INOUT) :: s_srf(:)                    !< Dry static energy of the top soil/snow layer
+                                                           !< (in: old, out: new) [m2 s-2]
+    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)               !< Derivative of skin temperature w.r.t. surface
+                                                           !< temperature [K K-1]
+    REAL(lp), INTENT(OUT) :: qsat_star(:)                  !< Surface saturation specific humidity consistent
+                                                           !< with s_star [kg kg-1]
+    REAL(lp), INTENT(OUT) :: dQdT(:)                       !< Derivative of surface saturation specific
+                                                           !< humidity w.r.t. temperature [kg kg-1 K-1]
+    REAL(lp), INTENT(OUT) :: t_radref(:)                   !< Reference temperature for the linearised thermal
+                                                           !< radiation [K]
+    REAL(lp), INTENT(OUT) :: le_phase_change(:)            !< Latent energy of phase changes (> 0: freezing,
+                                                           !< < 0: melting) [J m-2]
 
-    INTEGER :: ic
+    INTEGER :: ic !< Cell index
 
-    REAL(lp) :: s_ref
-    REAL(lp) :: s_melt
-    REAL(lp) :: heat_tcoef
+    REAL(lp) :: s_ref      !< Dry static energy at the reference temperature [m2 s-2]
+    REAL(lp) :: s_melt     !< Dry static energy at the melting point [m2 s-2]
+    REAL(lp) :: heat_tcoef !< Heat transfer coefficient rho C_h abs(v) [kg m-2 s-1]
 
     IF (lstart) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -1013,6 +1163,16 @@ CONTAINS
   END SUBROUTINE update_surface_temperature_oneshot
 
 
+  !> Solve the surface energy balance in the model coupled to the atmosphere with TMX
+  !>
+  !> The energy balance is solved `niter_tmx` + 1 times with [[surface_temp_implicit]] or, with
+  !> `l_skin_temp` (not yet working with TMX), [[skin_temp_implicit]], using the exchange coefficient
+  !> `ch` of TURB_. Between the iterations, the saturation specific humidity (over ice on glaciers,
+  !> over water elsewhere) and the thermal radiation are linearised around the latest temperature,
+  !> and `ch` is updated with [[mo_turb_interface:update_exchange_coefficients]]. The routine also
+  !> sets the unfiltered temperature `t_unfilt` of SEB_. At the first time step of the experiment,
+  !> the surface temperature is kept.
+  !>
   SUBROUTINE update_surface_temperature_tmx ( &
         & tile, options, cpd_or_cvd, lstart, tile_fract_zero, is_glacier, t2s_conv, t, q_air, press_srf, rad_srf_net, &
         & frozen_fract, fact_q_air, fact_qsat_srf, forc_hflx, heat_cap, le_freeze_pot, le_melt_pot, t_acoef, t_bcoef, &
@@ -1023,57 +1183,94 @@ CONTAINS
     USE mo_turb_interface, ONLY: update_exchange_coefficients
     USE mo_phy_schemes, ONLY: qsat_ice, qsat_water, q_effective, surface_dry_static_energy
 
-    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile
-    TYPE(t_jsb_task_options), INTENT(IN) :: options
+    CLASS(t_jsb_tile_abstract), INTENT(INOUT) :: tile      !< Tile for which routine is executed
+    TYPE(t_jsb_task_options), INTENT(IN) :: options        !< Additional run-time parameters
 
-    REAL(lp), INTENT(IN) :: cpd_or_cvd
+    REAL(lp), INTENT(IN) :: cpd_or_cvd                     !< Heat capacity of dry air at constant pressure
+                                                           !< (cpd) or volume (cvd, TMX) [J kg-1 K-1]
 
-    LOGICAL, INTENT(IN) :: lstart
-    LOGICAL, INTENT(IN) :: tile_fract_zero(:)
-    LOGICAL, INTENT(IN) :: is_glacier(:)
+    LOGICAL, INTENT(IN) :: lstart                          !< First time step of the experiment
+    LOGICAL, INTENT(IN) :: tile_fract_zero(:)              !< Cell has no land fraction on this tile
+    LOGICAL, INTENT(IN) :: is_glacier(:)                   !< Cell is glacier
 
-    REAL(lp), INTENT(IN) :: t2s_conv(:)
-    REAL(lp), INTENT(IN) :: t(:)
-    REAL(lp), INTENT(IN) :: q_air(:)
-    REAL(lp), INTENT(IN) :: press_srf(:)
-    REAL(lp), INTENT(IN) :: rad_srf_net(:)
-    REAL(lp), INTENT(IN) :: frozen_fract(:)
-    REAL(lp), INTENT(IN) :: fact_q_air(:)
-    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)
-    REAL(lp), INTENT(IN) :: forc_hflx(:)
-    REAL(lp), INTENT(IN) :: heat_cap(:)
-    REAL(lp), INTENT(IN) :: le_freeze_pot(:)
-    REAL(lp), INTENT(IN) :: le_melt_pot(:)
-    REAL(lp), OPTIONAL, INTENT(IN) :: skin_conductivity(:)
+    REAL(lp), INTENT(IN) :: t2s_conv(:)                    !< Conversion factor from temperature to dry static
+                                                           !< energy [J kg-1 K-1]
+    REAL(lp), INTENT(IN) :: t(:)                           !< Surface temperature at the beginning of the time
+                                                           !< step [K]
+    REAL(lp), INTENT(IN) :: q_air(:)                       !< Specific humidity at lowest atmospheric level
+                                                           !< [kg kg-1]
+    REAL(lp), INTENT(IN) :: press_srf(:)                   !< Surface pressure [Pa]
+    REAL(lp), INTENT(IN) :: rad_srf_net(:)                 !< Net radiation at the surface [W m-2]
+    REAL(lp), INTENT(IN) :: frozen_fract(:)                !< Frozen surface fraction (snow and frozen ponds)
+                                                           !< []
+    REAL(lp), INTENT(IN) :: fact_q_air(:)                  !< Humidity scaling factor for the air specific
+                                                           !< humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: fact_qsat_srf(:)               !< Humidity scaling factor for the surface
+                                                           !< saturation specific humidity (TURB_) []
+    REAL(lp), INTENT(IN) :: forc_hflx(:)                   !< Ground heat flux plus remaining latent energy of
+                                                           !< phase changes [W m-2]
+    REAL(lp), INTENT(IN) :: heat_cap(:)                    !< Heat capacity of the surface layer [J m-2 K-1]
+    REAL(lp), INTENT(IN) :: le_freeze_pot(:)               !< Latent energy released if all available water
+                                                           !< freezes [J m-2]
+    REAL(lp), INTENT(IN) :: le_melt_pot(:)                 !< Latent energy required if all available ice
+                                                           !< melts (< 0) [J m-2]
+    REAL(lp), OPTIONAL, INTENT(IN) :: skin_conductivity(:) !< Skin conductivity (only if l_skin_temp)
+                                                           !< [W m-2 K-1]
 
-    REAL(lp), INTENT(IN) :: t_acoef(:)
-    REAL(lp), INTENT(IN) :: t_bcoef(:)
-    REAL(lp), INTENT(IN) :: q_acoef(:)
-    REAL(lp), INTENT(IN) :: q_bcoef(:)
+    REAL(lp), INTENT(IN) :: t_acoef(:)                     !< Richtmyer-Morton coefficient A for dry static
+                                                           !< energy []
+    REAL(lp), INTENT(IN) :: t_bcoef(:)                     !< Richtmyer-Morton coefficient B for dry static
+                                                           !< energy [m2 s-2]
+    REAL(lp), INTENT(IN) :: q_acoef(:)                     !< Richtmyer-Morton coefficient A for specific
+                                                           !< humidity []
+    REAL(lp), INTENT(IN) :: q_bcoef(:)                     !< Richtmyer-Morton coefficient B for specific
+                                                           !< humidity [kg kg-1]
 
-    REAL(lp), INTENT(OUT) :: s_star(:)
-    REAL(lp), INTENT(INOUT) :: s_srf(:)
-    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)
-    REAL(lp), INTENT(OUT) :: qsat_star(:)
-    REAL(lp), INTENT(OUT) :: dQdT(:)
-    REAL(lp), INTENT(OUT) :: t_radref(:)
-    REAL(lp), INTENT(OUT) :: le_phase_change(:)
+    REAL(lp), INTENT(OUT) :: s_star(:)                     !< New surface (skin) dry static energy at the time
+                                                           !< level of the implicit scheme [m2 s-2]
+    REAL(lp), INTENT(INOUT) :: s_srf(:)                    !< Dry static energy of the top soil/snow layer
+                                                           !< (in: old, out: new) [m2 s-2]
+    REAL(lp), INTENT(OUT) :: dt_sk_dt_srf(:)               !< Derivative of skin temperature w.r.t. surface
+                                                           !< temperature [K K-1]
+    REAL(lp), INTENT(OUT) :: qsat_star(:)                  !< Surface saturation specific humidity consistent
+                                                           !< with s_star [kg kg-1]
+    REAL(lp), INTENT(OUT) :: dQdT(:)                       !< Derivative of surface saturation specific
+                                                           !< humidity w.r.t. temperature [kg kg-1 K-1]
+    REAL(lp), INTENT(OUT) :: t_radref(:)                   !< Reference temperature for the linearised thermal
+                                                           !< radiation [K]
+    REAL(lp), INTENT(OUT) :: le_phase_change(:)            !< Latent energy of phase changes (> 0: freezing,
+                                                           !< < 0: melting) [J m-2]
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
 
-    dsl4jsb_Real2D_onChunk :: ch
-    dsl4jsb_Real2D_onChunk :: t_unfilt
+    dsl4jsb_Real2D_onChunk :: ch       !< Surface transfer coefficient for heat (TURB_), updated between
+                                       !< iterations [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: t_unfilt !< Unfiltered surface temperature (SEB_, set here) [K]
 
-    INTEGER :: iblk, ics, ice, nc, niter, ic, iter
-    REAL(lp) :: alpha, dtime
+    INTEGER :: &
+      & iblk,  & !< Current block index
+      & ics,   & !< Index of first cell in chunk
+      & ice,   & !< Index of last cell in chunk
+      & nc,    & !< Number of cells in chunk
+      & niter, & !< Number of additional iterations (niter_tmx)
+      & ic,    & !< Cell index
+      & iter     !< Iteration counter
+    REAL(lp) :: &
+      & alpha, & !< Implicitness factor of the atmosphere-surface coupling []
+      & dtime    !< Time step length [s]
 
-    LOGICAL :: l_skin_temp
-    REAL(lp) :: s_ref, s_melt, rad_net_star
-    REAL(lp) :: s_srf_in(options%nc), t_star(options%nc)
+    LOGICAL :: l_skin_temp      !< Use the skin temperature formulation
+    REAL(lp) :: &
+      & s_ref,        &         !< Dry static energy at the reference temperature [m2 s-2]
+      & s_melt,       &         !< Dry static energy at the melting point [m2 s-2]
+      & rad_net_star            !< Net radiation for the current temperature estimate [W m-2]
+    REAL(lp) :: &
+      & s_srf_in(options%nc), & !< Dry static energy of top soil/snow layer, initial [m2 s-2]
+      & t_star(options%nc)      !< Current estimate of the new surface temperature [K]
 
     model => Get_model(tile%owner_model_id)
     iblk = options%iblk
@@ -1212,6 +1409,12 @@ CONTAINS
 
   !> Determine potential energy sinks/sources due to phase change at the surface
   !> as limited by the availability of water/ice.
+  !>
+  !> With snow on the soil (or without soil freezing, `l_freeze` of SSE_), only melting of the snow
+  !> pack is possible. Otherwise, water and ice in the ponds and in the top soil layer can freeze or
+  !> melt (without the potential amount of supercooled water, if `l_supercool` of SSE_). Glaciers
+  !> provide an unlimited amount of ice for melting (1 m water equivalent per time step).
+  !> Energies are positive for freezing (energy released) and negative for melting.
   SUBROUTINE get_phasechange_energy_limits(tile, options, &
     & l_freeze_config, l_supercool_config,                &
     & le_freeze_pot, le_melt_pot,                         &
@@ -1229,7 +1432,8 @@ CONTAINS
     LOGICAL, INTENT(IN) :: l_supercool_config          !< Allow for supercooled soil water
 
     REAL(lp), INTENT(OUT) :: le_freeze_pot(:)          !< Latent energy released if all surface water was freezing [J m-2]
-    REAL(lp), INTENT(OUT) :: le_melt_pot(:)            !< Latent energy needed if all surface ice was melting [J m-2]
+    REAL(lp), INTENT(OUT) :: le_melt_pot(:)            !< Latent energy needed if all surface ice was melting
+                                                       !< (< 0) [J m-2]
 
     REAL(lp), INTENT(IN), OPTIONAL :: wtr_soil_top(:)           !< Amount of water in the top soil layer [m]
     REAL(lp), INTENT(IN), OPTIONAL :: wtr_soil_pot_scool_top(:) !< Potential amount of supercooled water in top soil layer [m]
@@ -1316,26 +1520,37 @@ CONTAINS
 
     REAL(lp), INTENT(in)  :: alpha                !< Implicit scheme factor []
     REAL(lp), INTENT(in)  :: dtime                !< Timestep length [s]
-    REAL(lp), INTENT(in)  :: heat_capacity        !< Specific heat capacity at surface [J kg-1 K-1]
-    REAL(lp), INTENT(in)  :: t_acoef              !< A coefficient for temperature
-    REAL(lp), INTENT(in)  :: t_bcoef              !< B coefficient for temperature
-    REAL(lp), INTENT(in)  :: q_acoef              !< A coefficient for moisture
-    REAL(lp), INTENT(in)  :: q_bcoef              !< B coefficient for moisture
-    REAL(lp), INTENT(in)  :: s_old                !< Previous surface dry static energy [J kg-1]
+    REAL(lp), INTENT(in)  :: heat_capacity        !< Conversion factor from temperature to dry static energy
+                                                  !< (t2s_conv) [J kg-1 K-1]
+    REAL(lp), INTENT(in)  :: t_acoef              !< Richtmyer-Morton coefficient A for dry static energy []
+    REAL(lp), INTENT(in)  :: t_bcoef              !< Richtmyer-Morton coefficient B for dry static energy
+                                                  !< [J kg-1]
+    REAL(lp), INTENT(in)  :: q_acoef              !< Richtmyer-Morton coefficient A for specific humidity []
+    REAL(lp), INTENT(in)  :: q_bcoef              !< Richtmyer-Morton coefficient B for specific humidity
+                                                  !< [kg kg-1]
+    REAL(lp), INTENT(in)  :: s_old                !< Surface dry static energy at the reference temperature
+                                                  !< (previous time step or latest iteration) [J kg-1]
     REAL(lp), INTENT(in)  :: s_melt               !< Surface dry static energy at freezing/melting point [J kg-1]
-    REAL(lp), INTENT(in)  :: qsat_old             !< Previous surface specific humidity [kg kg-1]
-    REAL(lp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [K-1]
+    REAL(lp), INTENT(in)  :: qsat_old             !< Surface saturation specific humidity at the reference
+                                                  !< temperature [kg kg-1]
+    REAL(lp), INTENT(in)  :: dqsat_dT             !< Change in qsat with temperature [kg kg-1 K-1]
     REAL(lp), INTENT(in)  :: net_radiation        !< Net radiation [W m-2]
-    REAL(lp), INTENT(in)  :: ground_heat_flux     !< Ground heat flux [W m-2]
-    REAL(lp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient [W m-2 K-1]
-    REAL(lp), INTENT(in)  :: q_air                !< Air specific humidity [kg kg-1]
-    REAL(lp), INTENT(in)  :: q_sat                !< Surface saturation specific humidity [kg kg-1]
-    REAL(lp), INTENT(in)  :: snow_fraction        !< Snow cover fraction []
-    REAL(lp), INTENT(in)  :: ground_heat_capacity !< Ground heat capacity [J m-2 K-1]
-    REAL(lp), INTENT(IN)  :: le_freeze_pot        !< Energy flux released if all available water freezes [J m-2]
-    REAL(lp), INTENT(IN)  :: le_melt_pot          !< Energy flux required if all available ice melts [J m-2]
-    REAL(lp), INTENT(out) :: s_new                !< New surface dry static energy [J kg-1]
-    REAL(lp), INTENT(out) :: le_phase_change      !< Latent energy flux used for phase change [J m-2]
+    REAL(lp), INTENT(in)  :: ground_heat_flux     !< Heat flux from below (forc_hflx) [W m-2]
+    REAL(lp), INTENT(in)  :: heat_trans_coef      !< Heat transfer coefficient rho C_h abs(v) [kg m-2 s-1]
+    REAL(lp), INTENT(in)  :: q_air                !< Humidity scaling factor for the air specific humidity
+                                                  !< (fact_q_air of TURB_) []
+    REAL(lp), INTENT(in)  :: q_sat                !< Humidity scaling factor for the surface saturation
+                                                  !< specific humidity (fact_qsat_srf of TURB_) []
+    REAL(lp), INTENT(in)  :: snow_fraction        !< Frozen surface fraction (snow and frozen ponds) []
+    REAL(lp), INTENT(in)  :: ground_heat_capacity !< Heat capacity of the surface layer [J m-2 K-1]
+    REAL(lp), INTENT(IN)  :: le_freeze_pot        !< Latent energy released if all available water freezes
+                                                  !< [J m-2]
+    REAL(lp), INTENT(IN)  :: le_melt_pot          !< Latent energy required if all available ice melts (< 0)
+                                                  !< [J m-2]
+    REAL(lp), INTENT(out) :: s_new                !< New surface dry static energy at the time level of the
+                                                  !< implicit scheme [J kg-1]
+    REAL(lp), INTENT(out) :: le_phase_change      !< Latent energy used for phase change
+                                                  !< (> 0: freezing, < 0: melting) [J m-2]
 
     ! Local variables
     REAL(lp) :: dt                     !< Effective timestep = alpha * dtime
@@ -1364,6 +1579,13 @@ CONTAINS
     !> The implicit scheme solves this by linearizing the fluxes around the previous state
     !> and solving the resulting system for s(t+dt). The equations follow the recipe provided
     !> by [Schulz et al. (2001)](https://doi.org/10.1175/1520-0450(2001)040<0642:OTLSAC>2.0.CO;2)
+    !>
+    !> Phase changes: the energy available for phase change is the energy needed to bring the
+    !> surface layer to the melting point minus the energy input by the fluxes at the melting
+    !> point. It is limited by `le_freeze_pot` (freezing) or `le_melt_pot` (melting). If the
+    !> available water or ice suffices, all of this energy goes into phase change and the surface
+    !> stays at the melting point; otherwise, the latent energy of the phase change is included in
+    !> the energy balance and the temperature crosses the melting point.
 
     ! Calculate effective timestep
     dt = alpha * dtime
@@ -1429,6 +1651,18 @@ CONTAINS
 
   END SUBROUTINE surface_temp_implicit
 
+  !> Updates skin and surface dry static energy using an implicit skin temperature scheme
+  !>
+  !> The skin layer has no heat capacity; it is coupled to the top soil/snow layer by the skin
+  !> conductivity `lambda_sk`, and the heat capacity `heat_cap` is that of the top layer. The
+  !> energy balance of the skin and of the top layer are solved together for the change of the
+  !> skin temperature, linearising radiation, sensible and latent heat fluxes (including the
+  !> dependence of the heat transfer coefficient on the skin temperature, `dheat_tcoef`) around
+  !> the reference temperature T_old. Phase changes in the top layer are treated as in
+  !> [[surface_temp_implicit]], but at the melting point of the top layer temperature. With the
+  !> frozen fraction, the skin conductivity is increased towards `LAMBDA_SK_SNOW`, which effectively
+  !> deactivates the skin on snow. See the derivation below.
+  !>
   SUBROUTINE skin_temp_implicit ( &
         & alpha, dtime, t2s_conv, t_acoef, t_bcoef, q_acoef, q_bcoef, s_old, qsat_srf_old,  &
         & dQdT, rad_srf_net, forc_hflx, heat_tcoef, dheat_tcoef, fact_q_air, fact_qsat_srf, &
@@ -1445,106 +1679,118 @@ CONTAINS
       & tmelt, &
       & zemiss_def
 
-    REAL(lp), INTENT(IN) :: alpha
-    REAL(lp), INTENT(IN) :: dtime
-    REAL(lp), INTENT(IN) :: t2s_conv
-    REAL(lp), INTENT(IN) :: t_acoef
-    REAL(lp), INTENT(IN) :: t_bcoef
-    REAL(lp), INTENT(IN) :: q_acoef
-    REAL(lp), INTENT(IN) :: q_bcoef
-    REAL(lp), INTENT(IN) :: s_old
-    REAL(lp), INTENT(IN) :: qsat_srf_old
-    REAL(lp), INTENT(IN) :: dQdT
-    REAL(lp), INTENT(IN) :: rad_srf_net
-    REAL(lp), INTENT(IN) :: forc_hflx
-    REAL(lp), INTENT(IN) :: heat_tcoef
-    REAL(lp), INTENT(IN) :: dheat_tcoef
-    REAL(lp), INTENT(IN) :: fact_q_air
-    REAL(lp), INTENT(IN) :: fact_qsat_srf
-    REAL(lp), INTENT(IN) :: fract_snow
-    REAL(lp), INTENT(IN) :: heat_cap
-    REAL(lp), INTENT(IN) :: le_freeze_pot     !< Energy released if all available water freezes [J m-2]
-    REAL(lp), INTENT(IN) :: le_melt_pot       !< Energy required if all available ice melts [J m-2]
-    REAL(lp), INTENT(IN) :: lambda_sk
-    REAL(lp), INTENT(INOUT) :: s_srf
-    REAL(lp), INTENT(OUT) :: s_star
-    REAL(lp), INTENT(OUT) :: dT_sk_dT_srf
-    REAL(lp), INTENT(OUT) :: le_phase_change  !< Latent energy used for phase change [J m-2]
+    REAL(lp), INTENT(IN) :: alpha            !< Implicitness factor []
+    REAL(lp), INTENT(IN) :: dtime            !< Time step length [s]
+    REAL(lp), INTENT(IN) :: t2s_conv         !< Conversion factor from temperature to dry static energy
+                                             !< [J kg-1 K-1]
+    REAL(lp), INTENT(IN) :: t_acoef          !< Richtmyer-Morton coefficient A for dry static energy []
+    REAL(lp), INTENT(IN) :: t_bcoef          !< Richtmyer-Morton coefficient B for dry static energy
+                                             !< [m2 s-2]
+    REAL(lp), INTENT(IN) :: q_acoef          !< Richtmyer-Morton coefficient A for specific humidity []
+    REAL(lp), INTENT(IN) :: q_bcoef          !< Richtmyer-Morton coefficient B for specific humidity
+                                             !< [kg kg-1]
+    REAL(lp), INTENT(IN) :: s_old            !< Skin dry static energy at the reference temperature T_old
+                                             !< [m2 s-2]
+    REAL(lp), INTENT(IN) :: qsat_srf_old     !< Surface saturation specific humidity at T_old [kg kg-1]
+    REAL(lp), INTENT(IN) :: dQdT             !< Derivative of qsat_srf w.r.t. temperature [kg kg-1 K-1]
+    REAL(lp), INTENT(IN) :: rad_srf_net      !< Net radiation at the surface at T_old [W m-2]
+    REAL(lp), INTENT(IN) :: forc_hflx        !< Heat flux into the top layer from below [W m-2]
+    REAL(lp), INTENT(IN) :: heat_tcoef       !< Heat transfer coefficient rho C_h abs(v) [kg m-2 s-1]
+    REAL(lp), INTENT(IN) :: dheat_tcoef      !< Derivative of heat_tcoef w.r.t. skin temperature
+                                             !< [kg m-2 s-1 K-1]
+    REAL(lp), INTENT(IN) :: fact_q_air       !< Humidity scaling factor for the air specific humidity []
+    REAL(lp), INTENT(IN) :: fact_qsat_srf    !< Humidity scaling factor for the surface saturation
+                                             !< specific humidity []
+    REAL(lp), INTENT(IN) :: fract_snow       !< Frozen surface fraction (snow and frozen ponds) []
+    REAL(lp), INTENT(IN) :: heat_cap         !< Heat capacity of the top soil/snow layer [J m-2 K-1]
+    REAL(lp), INTENT(IN) :: le_freeze_pot    !< Energy released if all available water freezes [J m-2]
+    REAL(lp), INTENT(IN) :: le_melt_pot      !< Energy required if all available ice melts [J m-2]
+    REAL(lp), INTENT(IN) :: lambda_sk        !< Skin conductivity [W m-2 K-1]
+    REAL(lp), INTENT(INOUT) :: s_srf         !< Dry static energy of the top soil/snow layer
+                                             !< (in: old, out: new) [m2 s-2]
+    REAL(lp), INTENT(OUT) :: s_star          !< New skin dry static energy [m2 s-2]
+    REAL(lp), INTENT(OUT) :: dT_sk_dT_srf    !< Derivative of skin temperature w.r.t. top layer temperature
+                                             !< [K K-1]
+    REAL(lp), INTENT(OUT) :: le_phase_change !< Latent energy used for phase change [J m-2]
 
-    REAL(lp), OPTIONAL, INTENT(IN) :: limit_dt
+    REAL(lp), OPTIONAL, INTENT(IN) :: limit_dt !< Maximum change of skin temperature [K]
 
     REAL(lp) :: lambda_sk_eff !< Effective skin conductivity for partially snow-covered surfaces [W/(m^2 K)].
-    REAL(lp) :: tl_impedance !< Pseudo impedance of top layer [K/W].
-    REAL(lp) :: t_old !< Skin temperature at previous time step [K].
-    REAL(lp) :: t_tl_acoef !< Top-layer temperature A coefficient [1].
-    REAL(lp) :: t_tl_bcoef !< Top-layer temperature B coefficient [K].
-    REAL(lp) :: denom
-    REAL(lp) :: L_a
-    REAL(lp) :: L_s
-    REAL(lp) :: t_srf_old !< Initial surface temperature [K].
-    REAL(lp) :: t_star_melt !< Skin temperature for surface temperature @ 0C [K].
-    REAL(lp) :: tmelt_star !< Mixed-time surface temperature such that t_srf(t+1) = tmelt [K].
+    REAL(lp) :: tl_impedance  !< Pseudo impedance of top layer [K/W].
+    REAL(lp) :: t_old         !< Skin temperature at previous time step [K].
+    REAL(lp) :: t_tl_acoef    !< Top-layer temperature A coefficient [1].
+    REAL(lp) :: t_tl_bcoef    !< Top-layer temperature B coefficient [K].
+    REAL(lp) :: denom         !< Derivative of the flux imbalance w.r.t. skin temperature [W m-2 K-1]
+    REAL(lp) :: L_a           !< Effective latent heat for the air specific humidity [J kg-1]
+    REAL(lp) :: L_s           !< Effective latent heat for the surface saturation specific humidity [J kg-1]
+    REAL(lp) :: t_srf_old     !< Initial surface temperature [K].
+    REAL(lp) :: t_star_melt   !< Skin temperature for surface temperature @ 0C [K].
+    REAL(lp) :: tmelt_star    !< Mixed-time surface temperature such that t_srf(t+1) = tmelt [K].
 
 
     REAL(lp) :: dcond_sen !< Differential sensible heat conductivity [W/(m^2 K)].
     REAL(lp) :: dcond_lat !< Differential latent heat conductivity [W/(m^2 K)].
 
-    REAL(lp) :: avail_phc_energy !< Energy flux available for phase change [W m-2]
+    REAL(lp) :: avail_phc_energy !< Energy available for phase change [J m-2]
 
     !> Skin conductivity for snow-covered surface [W/(m^2 K)].
     REAL(lp), PARAMETER :: LAMBDA_SK_SNOW = 1e5_lp
 
 
-    ! Set dT_sk = T_sk - T_old. Instead of solving for T_sk istelf, we solve for this difference.
-    ! Solve G(dT_sk) = Lambda_sk (dT_sk + T_old - T_soil) = RAD(dT_sk) + SH(dT_sk) + LH(dT_sk),
-    ! where RAD(dT_sk) = rad_sw_net + rad_lw_net + stbo emiss T_old**4 - stbo emiss (T_old**4 + 4 T_old**3 * dT_sk)
-    !                  = rad_srf_net - 4 stbo emiss T_old**3 dT_sk,
-    ! SH(T_sk) = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv (T_atm - dT_sk - T_old)
-    !          = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv (t_acoef (dT_sk + T_old) + t_bcoef - dT_sk - T_old)
-    !          = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv [(t_acoef - 1) dT_sk + (t_acoef - 1) T_old + t_bcoef]
-    !          = heat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
-    !            + dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef] dT_sk
-    !            + heat_tcoef t2s_conv (t_acoef - 1) dT_sk + O(dT_sk**2)
-    ! LH(T_sk) = (heat_tcoef + dheat_tcoef dT_sk) [fract_snow Ls (q_atm - qsat_srf)
-    !                                              + (1-fract_snow) Lv (fact_q_air q_atm - fact_qsat_srf qsat_srf)]
-    !          = (heat_tcoef + dheat_tcoef dT_sk) [(fract_snow Ls + (1 - fract_snow) fact_q_air Lv) (q_acoef qsat_srf + q_bcoef) -
-    !                                              (fract_snow Ls + (1 - fract_snow) fact_qsat_srf Lv) qsat_srf]
-    !          = heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) (qsat_srf_old + dQdT dT_sk)]
-    !            + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old] dT_sk + O(dT_sk**2)
-    !          = heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]
-    !            + [heat_tcoef (L_a q_acoef - L_s) dQdT + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]] dT_sk
-    !            + O(dT_sk**2)
-    ! Here, we introduced coefficients L_a = `fract_snow Ls + (1 - fract_snow) fact_q_air Lv` and L_s, analogously.
-    !
-    ! Additionally, we can solve for the top-layer temperature T_soil:
-    ! heat_cap (T_soil - T_soil_old) / dt = Lambda_sk (T_sk - T_soil) + forc_hflx
-    ! (1 + dt Lambda_sk / heat_cap) T_soil = T_soil_old + dt / heat_cap * (Lambda_sk T_sk + forc_hflx)
-    ! T_soil = (T_soil_old + dt forc_hflx / heat_cap) / (1 + dt Lambda_sk / heat_cap)
-    !          + (dt Lambda_sk / heat_cap) / (1 + dt Lambda_sk / heat_cap) T_sk
-    ! T_soil = t_tl_acoef * T_sk + t_tl_bcoef
-    ! G(dT_sk) = Lambda_sk (dT_sk + T_old - t_tl_acoef * (dT_sk + T_old) - t_tl_bcoef)
-    !          = Lambda_sk (1 - t_tl_acoef) dT_sk + Lambda_sk [(1 - t_tl_acoef) T_old - t_tl_bcoef]
-    !
-    ! Thus, we solve for dT_sk:
-    ! {Lambda_sk (1 - t_tl_acoef) + 4 stbo emiss T_old**3
-    !   - heat_tcoef t2s_conv (t_acoef - 1) - dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
-    !   - heat_tcoef (L_a q_acoef - L_s) dQdT - dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]} dT_sk
-    ! = rad_srf_net
-    !   + heat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
-    !   + heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]
-    !   - Lambda_sk [(1 - t_tl_acoef) T_old - t_tl_bcoef]
-    ! The RHS of this equation is the flux imbalance at T_sk = T_old.
-    !
-    ! Finally, we require the derivative d(T_sk) / d(T_soil) to correct the skin temperature for snowmelt later.
-    ! Taking the derivative of the first equation, we get
-    ! Lambda_sk (dT_sk_dT_soil - 1) =
-    !   - 4 stbo emiss T_old**3 dT_sk_dT_soil
-    !   + {heat_tcoef t2s_conv (t_acoef - 1) + dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]} dT_sk_dT_soil
-    !   + {heat_tcoef (L_a q_acoef - L_s) dQdT + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]} dT_sk_dT_soil
-    ! dT_sk_dT_soil = Lambda_sk / {
-    !   Lambda_sk + 4 stbo emiss T_old**3
-    !   - heat_tcoef t2s_conv (t_acoef - 1) - dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
-    !   - heat_tcoef (L_a q_acoef - L_s) dQdT - dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]}
+    !> Derivation:
+    !>
+    !> ```
+    !> Set dT_sk = T_sk - T_old. Instead of solving for T_sk istelf, we solve for this difference.
+    !> Solve G(dT_sk) = Lambda_sk (dT_sk + T_old - T_soil) = RAD(dT_sk) + SH(dT_sk) + LH(dT_sk),
+    !> where RAD(dT_sk) = rad_sw_net + rad_lw_net + stbo emiss T_old**4 - stbo emiss (T_old**4 + 4 T_old**3 * dT_sk)
+    !>                  = rad_srf_net - 4 stbo emiss T_old**3 dT_sk,
+    !> SH(T_sk) = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv (T_atm - dT_sk - T_old)
+    !>          = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv (t_acoef (dT_sk + T_old) + t_bcoef - dT_sk - T_old)
+    !>          = (heat_tcoef + dheat_tcoef dT_sk) t2s_conv [(t_acoef - 1) dT_sk + (t_acoef - 1) T_old + t_bcoef]
+    !>          = heat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
+    !>            + dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef] dT_sk
+    !>            + heat_tcoef t2s_conv (t_acoef - 1) dT_sk + O(dT_sk**2)
+    !> LH(T_sk) = (heat_tcoef + dheat_tcoef dT_sk) [fract_snow Ls (q_atm - qsat_srf)
+    !>                                              + (1-fract_snow) Lv (fact_q_air q_atm - fact_qsat_srf qsat_srf)]
+    !>          = (heat_tcoef + dheat_tcoef dT_sk) [(fract_snow Ls + (1 - fract_snow) fact_q_air Lv) (q_acoef qsat_srf + q_bcoef) -
+    !>                                              (fract_snow Ls + (1 - fract_snow) fact_qsat_srf Lv) qsat_srf]
+    !>          = heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) (qsat_srf_old + dQdT dT_sk)]
+    !>            + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old] dT_sk + O(dT_sk**2)
+    !>          = heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]
+    !>            + [heat_tcoef (L_a q_acoef - L_s) dQdT + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]] dT_sk
+    !>            + O(dT_sk**2)
+    !> Here, we introduced coefficients L_a = `fract_snow Ls + (1 - fract_snow) fact_q_air Lv` and L_s, analogously.
+    !>
+    !> Additionally, we can solve for the top-layer temperature T_soil:
+    !> heat_cap (T_soil - T_soil_old) / dt = Lambda_sk (T_sk - T_soil) + forc_hflx
+    !> (1 + dt Lambda_sk / heat_cap) T_soil = T_soil_old + dt / heat_cap * (Lambda_sk T_sk + forc_hflx)
+    !> T_soil = (T_soil_old + dt forc_hflx / heat_cap) / (1 + dt Lambda_sk / heat_cap)
+    !>          + (dt Lambda_sk / heat_cap) / (1 + dt Lambda_sk / heat_cap) T_sk
+    !> T_soil = t_tl_acoef * T_sk + t_tl_bcoef
+    !> G(dT_sk) = Lambda_sk (dT_sk + T_old - t_tl_acoef * (dT_sk + T_old) - t_tl_bcoef)
+    !>          = Lambda_sk (1 - t_tl_acoef) dT_sk + Lambda_sk [(1 - t_tl_acoef) T_old - t_tl_bcoef]
+    !>
+    !> Thus, we solve for dT_sk:
+    !> {Lambda_sk (1 - t_tl_acoef) + 4 stbo emiss T_old**3
+    !>   - heat_tcoef t2s_conv (t_acoef - 1) - dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
+    !>   - heat_tcoef (L_a q_acoef - L_s) dQdT - dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]} dT_sk
+    !> = rad_srf_net
+    !>   + heat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
+    !>   + heat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]
+    !>   - Lambda_sk [(1 - t_tl_acoef) T_old - t_tl_bcoef]
+    !> The RHS of this equation is the flux imbalance at T_sk = T_old.
+    !>
+    !> Finally, we require the derivative d(T_sk) / d(T_soil) to correct the skin temperature for snowmelt later.
+    !> Taking the derivative of the first equation, we get
+    !> Lambda_sk (dT_sk_dT_soil - 1) =
+    !>   - 4 stbo emiss T_old**3 dT_sk_dT_soil
+    !>   + {heat_tcoef t2s_conv (t_acoef - 1) + dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]} dT_sk_dT_soil
+    !>   + {heat_tcoef (L_a q_acoef - L_s) dQdT + dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]} dT_sk_dT_soil
+    !> dT_sk_dT_soil = Lambda_sk / {
+    !>   Lambda_sk + 4 stbo emiss T_old**3
+    !>   - heat_tcoef t2s_conv (t_acoef - 1) - dheat_tcoef t2s_conv [(t_acoef - 1) T_old + t_bcoef]
+    !>   - heat_tcoef (L_a q_acoef - L_s) dQdT - dheat_tcoef [L_a q_bcoef + (L_a q_acoef - L_s) qsat_srf_old]}
+    !> ```
 
     t_old = s_old / t2s_conv
     t_srf_old = s_srf / t2s_conv
@@ -1631,12 +1877,21 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
+  !> Apply the Asselin time filter to the new surface temperature on land
+  !>
+  !> With the Asselin coefficient eps from the host model, the filtered temperature is
+  !> ```
+  !> t_filt = t_unfilt_old + eps * (t_old - 2 t_unfilt_old + t_unfilt)
+  !> ```
+  !> and the new surface temperature `t` is set to `t_filt` (to `t_unfilt` if eps = 0, which is the
+  !> case with ICON). With TMX, `t_rad4` is also updated.
+  !>
   SUBROUTINE update_asselin_land(tile, options)
 
     USE mo_jsb_time,               ONLY: get_asselin_coef
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     ! Local variables
     !
@@ -1645,20 +1900,25 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & t,           &
-      & t_rad4,      &
-      & t_filt,      &
-      & t_old,       &
-      & t_unfilt,    &
-      & t_unfilt_old
+      & t,           & !< Surface temperature, set to the filtered temperature [K]
+      & t_rad4,      & !< Surface radiative temperature **4 [K4]
+      & t_filt,      & !< Surface temperature, filtered (after Asselin) [K]
+      & t_old,       & !< Surface temperature at previous time step [K]
+      & t_unfilt,    & !< Surface temperature, unfiltered (before Asselin) [K]
+      & t_unfilt_old   !< Unfiltered surface temperature, previous time step [K]
 
     ! Locally allocated variables
     !
-    INTEGER :: iblk, ics, ice, nc, ic
-    REAL(lp) :: eps
-    LOGICAL  :: use_tmx
+    INTEGER :: &
+      & iblk, &         !< Current block index
+      & ics,  &         !< Index of first cell in chunk
+      & ice,  &         !< Index of last cell in chunk
+      & nc,   &         !< Number of cells in chunk
+      & ic              !< Cell index
+    REAL(lp) :: eps     !< Asselin filter coefficient []
+    LOGICAL  :: use_tmx !< Coupling to the atmosphere with TMX
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
@@ -1706,13 +1966,22 @@ CONTAINS
 
   END SUBROUTINE update_asselin_land
 
+  !> Compute the sensible and latent heat fluxes on land
+  !>
+  !> The sensible heat flux is computed from the new surface dry static energy `s_star` and the dry
+  !> static energy of the lowest atmospheric level, obtained by back-substitution with the
+  !> Richtmyer-Morton coefficients, s_air = t_acoef * s_star + t_bcoef, using the heat transfer
+  !> coefficient from the surface drag (with TMX: `ch` of TURB_). The latent heat flux is computed
+  !> from the evapotranspiration of HYDRO_, with the latent heat of sublimation instead of
+  !> vaporisation for the potential evaporation on the frozen surface fraction.
+  !>
   SUBROUTINE update_surface_fluxes_land(tile, options)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: alv, als
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile    !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< Additional run-time parameters
 
     ! Local variables
     !
@@ -1722,33 +1991,40 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     ! Pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: s_star
-    dsl4jsb_Real2D_onChunk :: t_acoef
-    dsl4jsb_Real2D_onChunk :: t_bcoef
-    dsl4jsb_Real2D_onChunk :: drag_srf
-    dsl4jsb_Real2D_onChunk :: ch
-    dsl4jsb_Real2D_onChunk :: latent_hflx
-    dsl4jsb_Real2D_onChunk :: sensible_hflx
-    dsl4jsb_Real2D_onChunk :: latent_hflx_lnd
-    dsl4jsb_Real2D_onChunk :: sensible_hflx_lnd
-    dsl4jsb_Real2D_onChunk :: evapopot
-    dsl4jsb_Real2D_onChunk :: evapotrans
-    dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: fract_pond
-    dsl4jsb_Real2D_onChunk :: ice_pond
+    dsl4jsb_Real2D_onChunk :: s_star            !< New surface dry static energy [m2 s-2]
+    dsl4jsb_Real2D_onChunk :: t_acoef           !< Richtmyer-Morton coef. A, dry static energy []
+    dsl4jsb_Real2D_onChunk :: t_bcoef           !< Richtmyer-Morton coef. B, dry static energy [m2 s-2]
+    dsl4jsb_Real2D_onChunk :: drag_srf          !< Surface drag (A2L_, without TMX)
+    dsl4jsb_Real2D_onChunk :: ch                !< Transfer coefficient for heat (TURB_, TMX) [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: latent_hflx       !< Latent heat flux [W m-2]
+    dsl4jsb_Real2D_onChunk :: sensible_hflx     !< Sensible heat flux [W m-2]
+    dsl4jsb_Real2D_onChunk :: latent_hflx_lnd   !< Latent heat flux, land only (to atmosphere) [W m-2]
+    dsl4jsb_Real2D_onChunk :: sensible_hflx_lnd !< Sensible heat flux, land only (to atmosphere) [W m-2]
+    dsl4jsb_Real2D_onChunk :: evapopot          !< Potential evaporation (HYDRO_) [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: evapotrans        !< Evapotranspiration (HYDRO_) [kg m-2 s-1]
+    dsl4jsb_Real2D_onChunk :: fract_snow        !< Snow area fraction (HYDRO_) []
+    dsl4jsb_Real2D_onChunk :: fract_pond        !< Inundated area fraction (HYDRO_) []
+    dsl4jsb_Real2D_onChunk :: ice_pond          !< Frozen water in ponds (HYDRO_) [m water equivalent]
 
     ! Locally allocated vectors
     !
     REAL(lp), DIMENSION(options%nc) ::                      &
-      & s_air,       &  !< Dry static energy at lowest atmospheric level
-      & heat_tcoef,  &  !< Heat transfer coefficient (rho*C_h*|v|)
-      & frozen_fract
+      & s_air,       &  !< Dry static energy at lowest atmospheric level [m2 s-2]
+      & heat_tcoef,  &  !< Heat transfer coefficient (rho*C_h*|v|) [kg m-2 s-1]
+      & frozen_fract    !< Frozen surface fraction (snow and frozen ponds) []
 
-    INTEGER  :: iblk, ics, ice, nc, ic
-    REAL(lp) :: dtime, alpha
-    LOGICAL  :: use_tmx
+    INTEGER :: &
+      & iblk, &         !< Current block index
+      & ics,  &         !< Index of first cell in chunk
+      & ice,  &         !< Index of last cell in chunk
+      & nc,   &         !< Number of cells in chunk
+      & ic              !< Cell index
+    REAL(lp) :: &
+      & dtime, &        !< Time step length [s]
+      & alpha           !< Implicitness factor of the atmosphere-surface coupling []
+    LOGICAL  :: use_tmx !< Coupling to the atmosphere with TMX
 
-    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model !< This instance of ICON-Land
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
@@ -1840,8 +2116,14 @@ CONTAINS
   END SUBROUTINE update_surface_fluxes_land
 
 
-    ! Updates the mean day temperature ("previous_day_temp_mean(:)") from air temperature and the mean day NPP-rate
-  ! (field previous_day_NPP(:,:)
+  !> Update the mean, minimum and maximum air temperature of the previous day
+  !>
+  !> The air temperature is summed up and its extremes are tracked during the day. At the first
+  !> time step of a new day, the mean, minimum and maximum of the previous day are set and the
+  !> sums are restarted. Note that the update is done globally at the same time step, i.e. at
+  !> different local times for different longitudes. The previous day values are used by the
+  !> phenology.
+  !>
   SUBROUTINE calc_previous_day_variables( &
     & is_newday,                                    & ! Input
     & l_start,                                      & ! Input
@@ -1861,20 +2143,22 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
-    LOGICAL,   intent(in)    :: is_newday
-    LOGICAL,   intent(in)    :: l_start
+    LOGICAL,   intent(in)    :: is_newday          !< First time step of a new day
+    LOGICAL,   intent(in)    :: l_start            !< First time step of the experiment
 
-    REAL(lp),  intent(in)    :: t_air_in_Celcius ! air temperature at current time step in lowest atmospheric layer in Celcius
+    REAL(lp),  intent(in)    :: t_air_in_Celcius   !< Air temperature at lowest atmospheric level [degC]
 
-    INTEGER,  intent(in)     :: time_steps_per_day
+    INTEGER,  intent(in)     :: time_steps_per_day !< Number of time steps per day
 
-    REAL(lp),  intent(inout) :: previous_day_temp_mean, & ! Intent(in) because if it is not calculated new, it should remain
-                                previous_day_temp_min,  & ! as before. Without (in) it would be NaN in the output.
-                                previous_day_temp_max
+    ! Intent(in) because if it is not calculated new, it should remain as before.
+    ! Without (in) it would be NaN in the output.
+    REAL(lp),  intent(inout) :: previous_day_temp_mean, & !< Mean air temperature of previous day [degC]
+                                previous_day_temp_min,  & !< Min. air temperature of previous day [degC]
+                                previous_day_temp_max     !< Max. air temperature of previous day [degC]
 
-    REAL(lp),  intent(inout) :: day_temp_sum,           &
-                                day_temp_min,           &
-                                day_temp_max
+    REAL(lp),  intent(inout) :: day_temp_sum,           & !< Sum of air temperatures since midnight [degC]
+                                day_temp_min,           & !< Minimum of air temperatures since midnight [degC]
+                                day_temp_max              !< Maximum of air temperatures since midnight [degC]
     !-----------------------------------------------------------------------
     !  LOCAL VARIABLES
 
@@ -1908,26 +2192,37 @@ CONTAINS
   END SUBROUTINE calc_previous_day_variables
 
 
-  ! --- update_pseudo_soil_temp() --------------------------------------------------------------------------------------------------
+  ! --- calc_pseudo_soil_temp() ----------------------------------------------------------------------------------------------------
   !
-  ! This routine computes a weighted running mean of the air temperature, which is interpreted here as a pseudo soil temperature:
-  ! (1)   T_ps(t) = N^(-1) * SUM(t'=-infty,t) T(t')*exp(-(t-t')*delta/tau_soil),
-  ! where "T(t)" is the air temperature at time step with number "t", "delta" the length of the time step (in days) and
-  ! "tau_soil" is the characteristic time for loosing the memory of temperature in the soil (also in days; this is a tuning
-  ! parameter! The normalization "N" is
-  ! (2)   N = SUM(t'=-infty,t) exp(-(t-t')*delta/tau_soil) = 1/(1 - exp(-delta/tau_soil)).
-  ! This normalization constant (called "N_pseudo_soil_temp") is computed during initialization of this phenology module.
-  ! Computation of T_ps(t) is performed iteratively: it follows from (1)
-  !                    T(t+1)          delta
-  ! (3)   T_ps(t+1) =  ------ + exp(- --------) * T_ps(t).
-  !                      N            tau_soil
-  ! The exponential factor (called F_pseudo_soil_temp) is computed during initialization of this phenology module.
-  !
-  ! Technically the only effect of this routine is an update of the field "pseudo_soil_temp(:)". The routine has to be called
-  ! once every time step for every grid point.
-  !
-  ! Remark: Instead of air-temperature one could try to use the bottom temperature to compute the pseudo_soil_temp.
-  !
+  !> Update the pseudo soil temperature, a weighted running mean of the air temperature
+  !>
+  !> The routine computes a weighted running mean of the air temperature, which is interpreted here
+  !> as a pseudo soil temperature:
+  !> ```
+  !> (1)   T_ps(t) = N^(-1) * SUM(t'=-infty,t) T(t')*exp(-(t-t')*delta/tau_soil),
+  !> ```
+  !> where "T(t)" is the air temperature at time step with number "t", "delta" the length of the time
+  !> step (in days) and "tau_soil" is the characteristic time for loosing the memory of temperature in
+  !> the soil (also in days; this is a tuning parameter, `tau_pseudo_soil` of the phenology). The
+  !> normalization "N" is
+  !> ```
+  !> (2)   N = SUM(t'=-infty,t) exp(-(t-t')*delta/tau_soil) = 1/(1 - exp(-delta/tau_soil)).
+  !> ```
+  !> This normalization constant (called "N_pseudo_soil_temp") is computed during initialization in
+  !> [[mo_seb_init:seb_init]]. Computation of T_ps(t) is performed iteratively: it follows from (1)
+  !> ```
+  !>                    T(t+1)          delta
+  !> (3)   T_ps(t+1) =  ------ + exp(- --------) * T_ps(t).
+  !>                      N            tau_soil
+  !> ```
+  !> The exponential factor (called F_pseudo_soil_temp) is also computed in [[mo_seb_init:seb_init]].
+  !>
+  !> Technically the only effect of this routine is an update of the field "pseudo_soil_temp(:)". The
+  !> routine has to be called once every time step for every grid point.
+  !>
+  !> Remark: Instead of air-temperature one could try to use the bottom temperature to compute the
+  !> pseudo_soil_temp.
+  !>
   SUBROUTINE calc_pseudo_soil_temp( &
     & t_air_in_Celcius,                       & ! Input
     & N_pseudo_soil_temp,                     & ! Input
@@ -1938,11 +2233,11 @@ CONTAINS
     !$ACC ROUTINE SEQ
 
     REAL(lp), intent(in) :: &
-     & t_air_in_Celcius,    &
-     & N_pseudo_soil_temp,  &
-     & F_pseudo_soil_temp
+     & t_air_in_Celcius,    & !< Air temperature at lowest atmospheric level [degC]
+     & N_pseudo_soil_temp,  & !< Normalisation N []
+     & F_pseudo_soil_temp     !< Exponential factor exp(-delta/tau_soil) []
 
-    REAL(lp),  intent(inout) :: pseudo_soil_temp
+    REAL(lp),  intent(inout) :: pseudo_soil_temp !< Pseudo soil temperature [degC]
 
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 
