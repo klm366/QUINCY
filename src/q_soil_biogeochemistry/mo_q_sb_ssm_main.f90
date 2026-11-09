@@ -606,16 +606,18 @@ CONTAINS
         & nitrification_no3(:,:), &                 ! out
         & denitrification_n2(:,:) )                 ! out
 
-     ! note volatilisation of NH4 only occurs from the first soil layer
-     CALL calc_potential_nh4_volatilisation_rate(&
-        & nc, &                                     ! in
-        & dtime, &
-        & wind_air(:), &
-        & t_air(:), &
-        & pH_sl(:,1), &
-        & t_soil_sl(:,1), &
-        & nh4_solute(:,1), &
-        & volatilisation_nh4(:,1))                  ! out
+     IF (model%config%qmodel_id /= QSOIL) THEN
+       ! note volatilisation of NH4 only occurs from the first soil layer
+       CALL calc_potential_nh4_volatilisation_rate(&
+          & nc, &                                     ! in
+          & dtime, &
+          & wind_air(:), &
+          & t_air(:), &
+          & pH_sl(:,1), &
+          & t_soil_sl(:,1), &
+          & nh4_solute(:,1), &
+          & volatilisation_nh4(:,1))                  ! out
+      END IF
 
       CALL calc_inorganic_transport_rate( &
         & nc, &                                   ! in
