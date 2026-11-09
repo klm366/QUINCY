@@ -56,7 +56,7 @@ CONTAINS
   !> Run agriculture init
   !>
   SUBROUTINE q_agr_init(tile)
-    USE mo_q_agr_constants,       ONLY: qs_def_n_fertiliser, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy, &
+    USE mo_q_agr_constants,       ONLY: def_n_fertiliser_rate, def_n_manure_rate, ix_wheat, ix_tecorn, ix_trcorn, ix_trsoy, &
         &                               frac_fertil_nh4
     USE mo_q_assimi_constants,    ONLY: ic3phot
     dsl4jsb_Use_memory(Q_AGR_)
@@ -76,6 +76,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: no3_fertiliser_c3crops
     dsl4jsb_Real2D_onDomain :: nh4_fertiliser_c4crops
     dsl4jsb_Real2D_onDomain :: no3_fertiliser_c4crops
+    dsl4jsb_Real2D_onDomain :: n_manure_crop
     dsl4jsb_Def_memory(Q_AGR_)
     dsl4jsb_Real2D_onDomain :: crop_type_index
     dsl4jsb_Def_config(Q_AGR_)
@@ -95,6 +96,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, no3_fertiliser_c3crops, box_tile) ! out
     dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, nh4_fertiliser_c4crops, box_tile) ! out
     dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, no3_fertiliser_c4crops, box_tile) ! out
+    dsl4jsb_Get_var2D_onDomain_tile(Q_AGR_, n_manure_crop, box_tile)          ! out
     dsl4jsb_Get_memory(Q_AGR_)
     dsl4jsb_Get_var2D_onDomain(Q_AGR_, crop_type_index)                ! out
     dsl4jsb_Get_config(Q_AGR_)
@@ -128,10 +130,11 @@ CONTAINS
     END IF
 
     ! default fertiliser used in QS (overwritten in IQ with constant or transient data in read_fertiliser_input)
-    nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
-    no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * qs_def_n_fertiliser
-    nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * qs_def_n_fertiliser
-    no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * qs_def_n_fertiliser
+    nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * def_n_fertiliser_rate
+    no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * def_n_fertiliser_rate
+    nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * def_n_fertiliser_rate
+    no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * def_n_fertiliser_rate
+    n_manure_crops(:,:)         = def_n_manure_rate
     ! ----------------------------------------------------------------------------------------------------- !
 #else
     !---- For IQ: Read crop type from bc file (fertiliser is also read but in the time-loop not in the init)
@@ -173,7 +176,7 @@ CONTAINS
     USE mo_jsb_time_iface,            ONLY: t_datetime
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, get_year
     USE mo_jsb_io_netcdf,             ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_q_agr_constants,           ONLY: iq_background_n_fertiliser_rate, frac_fertil_nh4
+    USE mo_q_agr_constants,           ONLY: background_n_fertiliser_rate, frac_fertil_nh4
     USE mo_jsb_physical_constants,    ONLY: molar_mass_N
     USE mo_jsb_math_constants,        ONLY: eps8
 
@@ -228,10 +231,10 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(Q_AGR_)%l_read_fertiliser) THEN
       ! ... use background rate
-      nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-      no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
-      nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-      no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+      nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * background_n_fertiliser_rate
+      no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
+      nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * background_n_fertiliser_rate
+      no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
       ! no backround rate fertiliser on pasture
       nh4_fertiliser_pasture(:,:) = 0.0_lp
       no3_fertiliser_pasture(:,:) = 0.0_lp
@@ -256,9 +259,9 @@ CONTAINS
         CALL input_file%Close()
 
         ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
-        nh4_fertiliser_c3crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
+        nh4_fertiliser_c3crops(:,:) = MAX(background_n_fertiliser_rate, &
                                           nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N)
-        nh4_fertiliser_c4crops(:,:) = MAX(iq_background_n_fertiliser_rate, &
+        nh4_fertiliser_c4crops(:,:) = MAX(background_n_fertiliser_rate, &
                                           nh4_fertiliser_c4crops(:,:) / 10._lp / molar_mass_N)
 
         ! split LUH fertiliser into NH4 and NO3, since it's not known from the data source
@@ -286,14 +289,14 @@ CONTAINS
         hlp1(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
         WHERE (hlp1(:,:) <= eps8)
-          nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * iq_background_n_fertiliser_rate
-          no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * iq_background_n_fertiliser_rate
+          nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * background_n_fertiliser_rate
+          no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
         ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
-        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= iq_background_n_fertiliser_rate * 10._lp * molar_mass_N)
+        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= background_n_fertiliser_rate * 10._lp * molar_mass_N)
           nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / hlp1(:,:) &
-            &                           * iq_background_n_fertiliser_rate
+            &                           * background_n_fertiliser_rate
           no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / hlp1(:,:) &
-            &                           * iq_background_n_fertiliser_rate
+            &                           * background_n_fertiliser_rate
         ELSEWHERE
           ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
           nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N
