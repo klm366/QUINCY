@@ -974,11 +974,6 @@ CONTAINS
     ! 6.1 for lctlib type PASTURE, add manure to applied fertiliser variable
     !>
     IF (lctlib%PastureFlag) THEN
-#ifdef __QUINCY_STANDALONE__
-      n_manure(:) = qs_def_n_manure
-      nh4_fertiliser(:) = 0.0_lp
-      no3_fertiliser(:) = 0.0_lp
-#else
       !> if AGR process is active, manure will be set there, otherwise
       !> set manure to zero
       IF (dsl4jsb_Config(Q_AGR_)%active) THEN
@@ -990,7 +985,7 @@ CONTAINS
         nh4_fertiliser(:) = 0.0_lp
         no3_fertiliser(:) = 0.0_lp
       END IF
-#endif
+
       !> note that these fluxes are returned in micro-mol / m2 / s and don't need to
       !> be converted below (under point 7.0)
       CALL calc_manure_application_on_pasture( &
