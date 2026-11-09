@@ -174,6 +174,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leaching_dom_carbon13
     dsl4jsb_Real2D_onChunk :: leaching_dom_carbon14
     dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
+    dsl4jsb_Real2D_onChunk :: emission_nh3
+    dsl4jsb_Real2D_onChunk :: emission_nh3_n15
     dsl4jsb_Real2D_onChunk :: emission_noy
     dsl4jsb_Real2D_onChunk :: emission_noy_n15
     dsl4jsb_Real2D_onChunk :: emission_n2o
@@ -460,6 +462,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! in
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! in
     dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! in
@@ -1102,7 +1106,7 @@ CONTAINS
       & - SUM((lateral_loss_nh4_solute_sl(:,:) + lateral_loss_no3_solute_sl(:,:))              &
       &        * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_lp                                  &
       & - (leaching_nh4_solute(:) + leaching_no3_solute(:) + leaching_dom_nitrogen(:)          &
-      & + emission_noy(:) + emission_n2o(:) + emission_n2(:)                                   &
+      & + emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:)                 &
       & + SUM(plant_uptake_nh4_sl(:,:) * soil_depth_sl(:,:), DIM=2)                            &
       & + SUM(plant_uptake_no3_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_lp
 
@@ -1138,7 +1142,7 @@ CONTAINS
       & - SUM((lateral_loss_nh4_n15_solute_sl(:,:) + lateral_loss_no3_n15_solute_sl(:,:))        &
       &        * soil_depth_sl(:,:), DIM=2) * dtime / 1.e6_lp                                    &
       & - (leaching_nh4_n15_solute(:) + leaching_no3_n15_solute(:) + leaching_dom_nitrogen15(:)  &
-      & + emission_noy_n15(:) + emission_n2o_n15(:) + emission_n2_n15(:)                         &
+      & + emission_nh3_n15(:) + emission_noy_n15(:) + emission_n2o_n15(:) + emission_n2_n15(:)   &
       & + SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                          &
       & + SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_lp
 
@@ -1180,7 +1184,7 @@ CONTAINS
     !> 14.1 SB_ process
     !>
     ecosystem_total_n_loss(:) = &
-      & emission_noy(:) + emission_n2o(:) + emission_n2(:) &
+      & emission_nh3(:) + emission_noy(:) + emission_n2o(:) + emission_n2(:) &
       & + leaching_dom_nitrogen(:) + leaching_nh4_solute(:) + leaching_no3_solute(:) &
       & + SUM(lateral_loss_dom_nitrogen_sl(:,:) * soil_depth_sl(:,:), DIM=2) &
       & + SUM(lateral_loss_nh4_solute_sl(:,:) * soil_depth_sl(:,:), DIM=2) &

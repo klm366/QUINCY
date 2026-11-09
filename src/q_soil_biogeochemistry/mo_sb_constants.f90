@@ -250,6 +250,18 @@ MODULE mo_sb_constants
       f_denit_noy, &             !< fraction of denitrification lost as NOy [--]
       f_denit_n2o                !< fraction of denitrification lost as N2O [--]
 
+  ! volatilisation parameters (sb_nloss_scheme = dynamic)
+  REAL(lp), SAVE :: &
+      k1_nh3_drag, &   !< drag coefficient for NH3
+      k1_nh3_wind, &   !< parameter determining wind response of NH3 drag
+      k1_nh3_temp, &   !< parameter determining temperature response of NH3 drag
+      k1_nh3_rough, &  !< characteristic length of emitting NH3 surface
+      k1_nh3_henry, &  !< Henry constant for NH3
+      k2_nh3_henry, &  !< parameter affecting temperature sensitivity of Henry constant
+      k3_nh3_henry, &  !< parameter affecting temperature sensitviity of Henry constant
+      k1_nh3_diss, &   !< parameter affecting thermal response of NH3 dissociation
+      k2_nh3_diss      !< parameter affecting thermal response of NH3 dissociation
+
   ! simple_1d model fixed loss and simple_1d leaching parameterisation
   REAL(lp), SAVE :: &
       floss_nmin, &              !< fractional loss of N per unit N mineralisation
@@ -568,6 +580,16 @@ CONTAINS
     ea_gasdiffusion           = 47000._lp                               ! Xu-Ri & Prentice, 2008, to fit their function
     lambda_anvf               = 1.3_lp                                  ! fitted from Zaehle et al. 2011, NatGeo
     k_anvf                    = 3.0_lp                                  ! fitted from Zaehle et al. 2011, NatGeo
+
+    k1_nh3_drag = 0.000612_lp        ! Montes et al. 2009
+    k1_nh3_wind = 0.8_lp             ! Montes et al. 2009
+    k1_nh3_temp = 0.382_lp           ! Montes et al. 2009
+    k1_nh3_rough = 1._lp**(-0.22_lp) ! Montes et al. 2009
+    k1_nh3_henry = 0.2138_lp         ! Montes et al. 2009
+    k2_nh3_henry = 6.123_lp          ! Montes et al. 2009
+    k3_nh3_henry = 1825.0_lp         ! Montes et al. 2009
+    k1_nh3_diss = 0.05_lp            ! Montes et al. 2009
+    k2_nh3_diss = 2788._lp           ! Montes et al. 2009
 
     ! simple_1d model fixed loss and simple_1d leaching parameterisation
     floss_nmin            = 0.05_lp                                 ! ???

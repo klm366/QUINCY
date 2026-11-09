@@ -946,6 +946,7 @@ CONTAINS
       & microbial_uptake_nh4_sl(:,:), &       ! input flux rates that get unit coverted
       & microbial_uptake_no3_sl(:,:), &       ! input flux rates that get unit coverted
       & asymb_n_fixation(:,:), &              ! input flux rates that get unit coverted
+      & volatilisation_nh4(:,:), &            ! input flux rates that get unit coverted
       & nitrification_no3(:,:), &             ! input flux rates that get unit coverted
       & nitrification_noy(:,:), &             ! input flux rates that get unit coverted
       & nitrification_n2o(:,:), &             ! input flux rates that get unit coverted
@@ -961,6 +962,7 @@ CONTAINS
       & microbial_uptake_nh4_n15_sl(:,:), &   ! output var that get unit coverted
       & microbial_uptake_no3_n15_sl(:,:), &   ! output var that get unit coverted
       & asymb_n_fixation_n15(:,:), &          ! output var that get unit coverted
+      & volatilisation_nh4_n15(:,:), &        ! output var that get unit coverted
       & nitrification_no3_n15(:,:), &         ! output var that get unit coverted
       & nitrification_noy_n15(:,:), &         ! output var that get unit coverted
       & nitrification_n2o_n15(:,:), &         ! output var that get unit coverted
