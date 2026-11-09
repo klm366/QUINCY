@@ -567,7 +567,7 @@ MODULE mo_q_agr_process
       !>     the first application day is forced to be the first day after planting to avoid fertilisation
       !>     outside the growing season
       !>
-      hlp1 = nd_crop_season(ic) - MAX(1,FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day1))
+      hlp1 = nd_crop_season(ic) - MAX(1._lp,FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day1))
       hlp2 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day2)
       hlp3 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day3)
       hlp4 = nd_crop_season(ic) - FLOOR(nd_crop_season_mavg(ic)*fcs_fertappl_day4)
