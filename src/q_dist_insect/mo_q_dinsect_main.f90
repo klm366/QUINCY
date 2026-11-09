@@ -233,6 +233,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
     END DO
   ENDIF
 
+  ! No mask: larva death and respiration must continue after the outbreak
   CALL calc_defoliator_effects(&
      & nc                                     , & ! in
      & dtime                                  , & ! in
@@ -246,8 +247,7 @@ SUBROUTINE update_dinsect_defoliator(tile, options)
      & dinsect_slow_litter_mt(:,:,:)          , & ! inout
      & dinsect_defoliator_resp_c(:)           , & ! inout
      & dinsect_defoliator_resp_c13(:)         , & ! inout
-     & dinsect_defoliator_resp_c14(:)         , & ! inout
-     & mask=(dinsect_df_mort_dt(:) > 0.0_wp)) ! optional(in)
+     & dinsect_defoliator_resp_c14(:))            ! inout
 
   !< Used in mass conservation test
   dinsect_pool_total_c(:) = dinsect_pool_total_c(:) + dinsect_larva_mt(ixC,:)
