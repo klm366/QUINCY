@@ -54,7 +54,6 @@ CONTAINS
     USE mo_jsb_process_class,     ONLY: SB_, VEG_, HYDRO_, SSE_, A2L_, Q_AGR_
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_q_agr_constants,       ONLY: qs_def_n_manure
     USE mo_q_sb_jsm_transport,    ONLY: calc_bioturbation_rate
     USE mo_q_sb_litter_processes, ONLY: calc_litter_partitioning
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3678,7 +3677,7 @@ CONTAINS
   !!
   !!   Output: (1) NH4 and NO3 application rates, which are calculated by the combination of NH4 or NO3 added as inorganic fertiliser and organic manure
   !!           (2) N15 isotopes
-  !!           (3) PO4 application by using the fixed NP ratio 
+  !!           (3) PO4 application by using the fixed NP ratio
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_fertiliser_manure_application_on_pasture( &
     & nc, &
@@ -3693,7 +3692,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
-    USE mo_q_agr_constants,        ONLY: frac_manure_nh4, frac_manure_po4, ratio_fertil_po4, eta_manure, eta_fertiliser
+    USE mo_q_agr_constants,        ONLY: frac_manure_nh4, ratio_manure_po4, ratio_fertil_po4, eta_manure, eta_fertiliser
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                 INTENT(in)  :: nc                     !< dimensions
     REAL(lp), DIMENSION(nc), INTENT(in)  :: loc_n_manure           !< local copy of manure application mol / m2 / yr
@@ -3724,7 +3723,7 @@ CONTAINS
         &                      ((1._lp - frac_manure_nh4) * loc_n_manure(ic)) / &
         &                      ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
       fertiliser_po4(ic) = ((loc_nh4_fertiliser(ic) + loc_no3_fertiliser(ic)) * ratio_fertil_po4 + &
-        &                   loc_n_manure(ic) * frac_manure_po4) * hlp1
+        &                   loc_n_manure(ic) * ratio_manure_po4) * hlp1
 
    END DO
 
