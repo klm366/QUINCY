@@ -47,7 +47,7 @@ MODULE mo_q_agr_memory_class
       & gdd_mavg, &                 !< long-term average growing degree days [degC day]
       & nd_crop_season, &           !< number of days in this crop growing season [# days]
       & nd_crop_season_mavg, &      !< long-term average crop growing season length [# days]
-      & crop_season_per_year, &      !< number of crop seasons (agricultural growing seasons) in the current year
+      & crop_season_counter_this_year, & !< number of crop seasons (agricultural growing seasons) in the current year
       & crop_season_per_year_mavg, & !< long-term average number of crop seasons in a year
       & crop_type_index             !< crop type index (1-ncroptypes)
 
@@ -232,9 +232,9 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 30.0_lp)
 
-      CALL mem%Add_var('crop_season_per_year', mem%crop_season_per_year, &
+      CALL mem%Add_var('crop_season_counter_this_year', mem%crop_season_counter_this_year, &
         & hgrid, surface, &
-        & t_cf('crop_season_per_year', '# crop seasons yr-1', 'number of crop seasons in this year'), &
+        & t_cf('crop_season_counter_this_year', '# crop seasons yr-1', 'number of crop seasons in this year'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

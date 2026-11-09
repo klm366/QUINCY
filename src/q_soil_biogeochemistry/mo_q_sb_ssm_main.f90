@@ -77,9 +77,9 @@ CONTAINS
     INTEGER                               :: nsoil_w              !< number of soil layers (water)
     INTEGER                               :: isoil                !< loop over nsoil_w
     INTEGER                               :: ic, is               !< loop over dimensions
-    REAL(lp)                              :: n_manure(options%nc) !< local copy of manure fertiliser application
-    REAL(lp)                              :: nh4_fertiliser(options%nc) !< local copy of nh4 fertiliser application
-    REAL(lp)                              :: no3_fertiliser(options%nc) !< local copy of no3 fertiliser application
+    REAL(lp)                              :: loc_n_manure(options%nc) !< local copy of manure fertiliser application
+    REAL(lp)                              :: loc_nh4_fertiliser(options%nc) !< local copy of nh4 fertiliser application
+    REAL(lp)                              :: loc_no3_fertiliser(options%nc) !< local copy of no3 fertiliser application
     REAL(lp), ALLOCATABLE, DIMENSION(:,:) :: apparent_fast_som_cn      , &
                                              apparent_fast_som_np      , &
                                              fine_root_carbon_sl, &
@@ -977,22 +977,22 @@ CONTAINS
       !> if AGR process is active, manure will be set there, otherwise
       !> set manure to zero
       IF (dsl4jsb_Config(Q_AGR_)%active) THEN
-        n_manure(:)       = n_manure_pasture(:)
-        nh4_fertiliser(:) = nh4_fertiliser_pasture(:)
-        no3_fertiliser(:) = no3_fertiliser_pasture(:)
+        loc_n_manure(:)       = n_manure_pasture(:)
+        loc_nh4_fertiliser(:) = nh4_fertiliser_pasture(:)
+        loc_no3_fertiliser(:) = no3_fertiliser_pasture(:)
       ELSE
-        n_manure(:) = 0.0_lp
-        nh4_fertiliser(:) = 0.0_lp
-        no3_fertiliser(:) = 0.0_lp
+        loc_n_manure(:) = 0.0_lp
+        loc_nh4_fertiliser(:) = 0.0_lp
+        loc_no3_fertiliser(:) = 0.0_lp
       END IF
 
       !> note that these fluxes are returned in micro-mol / m2 / s and don't need to
       !> be converted below (under point 7.0)
-      CALL calc_manure_application_on_pasture( &
+      CALL calc_fertiliser_manure_application_on_pasture( &
         & nc, &
-        & n_manure(:), &
-        & nh4_fertiliser(:), &
-        & no3_fertiliser(:), &
+        & loc_n_manure(:), &
+        & loc_nh4_fertiliser(:), &
+        & loc_no3_fertiliser(:), &
         & fertiliser_nh4(:), &
         & fertiliser_nh4_n15(:), &
         & fertiliser_no3(:), &
@@ -3672,14 +3672,19 @@ CONTAINS
   ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
-  !> Subroutine to deal with pasture manure application
+  !> Subroutine to deal with pasture fertiliser and manure application
   !!
+  !!   Input: NH4 and NO3 fertiliser and manure application rates on pasture
+  !!
+  !!   Output: (1) NH4 and NO3 application rates, which are calculated by the combination of NH4 or NO3 added as inorganic fertiliser and organic manure
+  !!           (2) N15 isotopes
+  !!           (3) PO4 application by using the fixed NP ratio 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_manure_application_on_pasture( &
+  SUBROUTINE calc_fertiliser_manure_application_on_pasture( &
     & nc, &
-    & n_manure, &
-    & nh4_fertiliser, &
-    & no3_fertiliser, &
+    & loc_n_manure, &
+    & loc_nh4_fertiliser, &
+    & loc_no3_fertiliser, &
     & fertiliser_nh4, &
     & fertiliser_nh4_n15, &
     & fertiliser_no3, &
@@ -3688,41 +3693,41 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: one_day, one_year
     USE mo_isotope_util,           ONLY: calc_mixing_ratio_N15N14
-    USE mo_q_agr_constants,        ONLY: frac_manure_nh4, frac_manure_po4, frac_fertil_po4, eta_manure, eta_fertiliser
+    USE mo_q_agr_constants,        ONLY: frac_manure_nh4, frac_manure_po4, ratio_fertil_po4, eta_manure, eta_fertiliser
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                 INTENT(in)  :: nc                     !< dimensions
-    REAL(lp), DIMENSION(nc), INTENT(in)  :: n_manure               !< manure application mol / m2 / yr
-    REAL(lp), DIMENSION(nc), INTENT(in)  :: nh4_fertiliser         !< manure application mol / m2 / yr
-    REAL(lp), DIMENSION(nc), INTENT(in)  :: no3_fertiliser         !< manure application mol / m2 / yr
-    REAL(lp), DIMENSION(nc), INTENT(out) :: fertiliser_nh4, &      !< NH4 manure application [micro-mol / m2 / s]
-        &                                   fertiliser_nh4_n15, &  !< 15NH4 manure application [micro-mol / m2 / s]
-        &                                   fertiliser_no3, &      !< NO3 manure application [micro-mol / m2 / s]
-        &                                   fertiliser_no3_n15, &  !< 15NO3 manure application [micro-mol / m2 / s]
-        &                                   fertiliser_po4         !< PO4 manure application [micro-mol / m2 / s]
+    REAL(lp), DIMENSION(nc), INTENT(in)  :: loc_n_manure           !< local copy of manure application mol / m2 / yr
+    REAL(lp), DIMENSION(nc), INTENT(in)  :: loc_nh4_fertiliser     !< local copy of fertiliser NH4 application on pasture mol / m2 / yr
+    REAL(lp), DIMENSION(nc), INTENT(in)  :: loc_no3_fertiliser     !< local copy of fertiliser NO3 application on pasture mol / m2 / yr
+    REAL(lp), DIMENSION(nc), INTENT(out) :: fertiliser_nh4, &      !< NH4 application from both fertiliser and manure [micro-mol / m2 / s]
+        &                                   fertiliser_nh4_n15, &  !< 15NH4 application from both fertiliser and manure [micro-mol / m2 / s]
+        &                                   fertiliser_no3, &      !< NO3 application from both fertiliser and manure [micro-mol / m2 / s]
+        &                                   fertiliser_no3_n15, &  !< 15NO3 application from both fertiliser and manure [micro-mol / m2 / s]
+        &                                   fertiliser_po4         !< PO4 application from both fertiliser and manure [micro-mol / m2 / s]
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(lp)                             :: hlp1                   !< helper variable
     INTEGER                              :: ic                     !< loop grid cells
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_manure_application_on_pasture'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_fertiliser_manure_application_on_pasture'
     ! ----------------------------------------------------------------------------------------------------- !
     DO ic = 1,nc
 
       ! combination of ammoniunm added as inorganic and organic fertiliser
       hlp1 = 1._lp / one_year / one_day * 1.e6_lp ! unit conversion
-      fertiliser_nh4(ic) = (nh4_fertiliser(ic) + frac_manure_nh4 * n_manure(ic)) * hlp1
-      fertiliser_nh4_n15(ic) = (nh4_fertiliser(ic) / &
+      fertiliser_nh4(ic) = (loc_nh4_fertiliser(ic) + frac_manure_nh4 * loc_n_manure(ic)) * hlp1
+      fertiliser_nh4_n15(ic) = (loc_nh4_fertiliser(ic) / &
         &                      ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-        &                      (frac_manure_nh4 * n_manure(ic))/ &
+        &                      (frac_manure_nh4 * loc_n_manure(ic))/ &
         &                      ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
-      fertiliser_no3(ic) = (no3_fertiliser(ic) +  (1._lp - frac_manure_nh4) * n_manure(ic)) * hlp1
-      fertiliser_no3_n15(ic) = (no3_fertiliser(ic) / &
+      fertiliser_no3(ic) = (loc_no3_fertiliser(ic) +  (1._lp - frac_manure_nh4) * loc_n_manure(ic)) * hlp1
+      fertiliser_no3_n15(ic) = (loc_no3_fertiliser(ic) / &
         &                      ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(eta_fertiliser)) + &
-        &                      ((1._lp - frac_manure_nh4) * n_manure(ic)) / &
+        &                      ((1._lp - frac_manure_nh4) * loc_n_manure(ic)) / &
         &                      ( 1._lp + 1._lp / calc_mixing_ratio_N15N14(eta_manure))) * hlp1
-      fertiliser_po4(ic) = ((nh4_fertiliser(ic) + no3_fertiliser(ic)) * frac_fertil_po4 + &
-        &                   n_manure(ic) * frac_manure_po4) * hlp1
+      fertiliser_po4(ic) = ((loc_nh4_fertiliser(ic) + loc_no3_fertiliser(ic)) * ratio_fertil_po4 + &
+        &                   loc_n_manure(ic) * frac_manure_po4) * hlp1
 
    END DO
 
-  END SUBROUTINE calc_manure_application_on_pasture
+  END SUBROUTINE calc_fertiliser_manure_application_on_pasture
 #endif
 END MODULE mo_q_sb_ssm_main

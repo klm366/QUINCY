@@ -33,10 +33,10 @@ MODULE mo_q_agr_config_class
   !> Q_AGR_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_q_agr_config
-    CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQ. Note: should NOT include an ending "_"
-    CHARACTER(len=filename_max) :: fertiliser_data_source       !< IQ. Note: should NOT include an ending "_"
-    LOGICAL   :: l_read_fertiliser
-    LOGICAL   :: l_read_manure
+    CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQJ. Name of the input file of fertiliser. Note: should NOT include an ending "_"
+    CHARACTER(len=filename_max) :: fertiliser_data_source       !< IQJ. The type of fertiliser data wiht the option of LUH or NMIP. Note: should NOT include an ending "_"
+    LOGICAL   :: l_read_fertiliser                              !< IQJ. T reads fertiliser from the input file; F indicates default minimum fertiliser application rate
+    LOGICAL   :: l_read_manure                                  !< IQJ. T reads fertiliser from the input file; F indicates zero manure application
       !< determines if fertiliser data is to be read from a file (default FALSE) (ignored in QS)
 
   CONTAINS
@@ -63,11 +63,11 @@ CONTAINS
     LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    CHARACTER(len=filename_max) :: fertiliser_filename_prefix
-    CHARACTER(len=filename_max) :: fertiliser_data_source
+    CHARACTER(len=filename_max) :: fertiliser_filename_prefix !< IQJ. Name of the input file of fertiliser
+    CHARACTER(len=filename_max) :: fertiliser_data_source !< IQJ. The type of fertiliser data wiht the option of LUH or NMIP
 
-    LOGICAL   :: l_read_fertiliser
-    LOGICAL   :: l_read_manure
+    LOGICAL   :: l_read_fertiliser !< IQJ. T reads fertiliser from the input file; F indicates default minimum fertiliser application rate
+    LOGICAL   :: l_read_manure  !< IQJ. T reads manure from the input file; F indicates zero manure application
 
     NAMELIST /lnd_q_agr_nml/  &
       & active,                     &

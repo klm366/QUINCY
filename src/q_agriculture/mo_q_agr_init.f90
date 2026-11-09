@@ -190,6 +190,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),   POINTER :: tile
     INTEGER                               :: nproma
     INTEGER                               :: nblks
+    INTEGER                               :: iblk, ic         !< loop dimensions
 
     dsl4jsb_Def_config(Q_AGR_)
     dsl4jsb_Def_memory(Q_AGR_)
@@ -251,6 +252,9 @@ CONTAINS
       WRITE (filename_fertiliser_data,'(a,a,I4.4,a)') &
         & TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_filename_prefix), '_', current_year, ".nc"
 
+      !> The 'LUH' fertiliser data is from LUH3, where the fertiliser is categorized as C3 and C4 fertiliser. No manure data in LUH.
+      !> In constrast, the 'NMIP' data is from HaNi, where the fertiliser is categorized as NH4 and NO3, but no differences for C3 and C4 crops
+      !> The 'NMIP' data also includes manure data, which further categorized as crop manure and pasture manure
       IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source) == 'LUH') THEN
 
         input_file = jsb_netcdf_open_input(TRIM(filename_fertiliser_data), model%grid_id)
@@ -260,9 +264,9 @@ CONTAINS
 
         ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
         nh4_fertiliser_c3crops(:,:) = MAX(background_n_fertiliser_rate, &
-                                          nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N)
+          &                               nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N)
         nh4_fertiliser_c4crops(:,:) = MAX(background_n_fertiliser_rate, &
-                                          nh4_fertiliser_c4crops(:,:) / 10._lp / molar_mass_N)
+          &                               nh4_fertiliser_c4crops(:,:) / 10._lp / molar_mass_N)
 
         ! split LUH fertiliser into NH4 and NO3, since it's not known from the data source
         no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * nh4_fertiliser_c3crops(:,:)
@@ -288,20 +292,24 @@ CONTAINS
         ! The actually applied fertiliser is the maximum of the default and the read fertiliser
         hlp1(:,:) = nh4_fertiliser_c3crops(:,:) + no3_fertiliser_c3crops(:,:)
         ! If fertiliser is zero in the input, applying the minimum fertiliser rate and default NH4/NO3 ratio
-        WHERE (hlp1(:,:) <= eps8)
-          nh4_fertiliser_c3crops(:,:) = frac_fertil_nh4 * background_n_fertiliser_rate
-          no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
-        ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
-        ELSEWHERE (hlp1(:,:) > eps8 .AND. hlp1(:,:) <= background_n_fertiliser_rate * 10._lp * molar_mass_N)
-          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / hlp1(:,:) &
-            &                           * background_n_fertiliser_rate
-          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / hlp1(:,:) &
-            &                           * background_n_fertiliser_rate
-        ELSEWHERE
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            IF (hlp1(ic,iblk) <= eps8) THEN
+              nh4_fertiliser_c3crops(ic,iblk) = frac_fertil_nh4 * background_n_fertiliser_rate
+              no3_fertiliser_c3crops(ic,iblk) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
+            ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
+            ELSE IF (hlp1(ic,iblk) > eps8 .AND. hlp1(ic,iblk) <= background_n_fertiliser_rate * 10._lp * molar_mass_N) THEN
+              nh4_fertiliser_c3crops(ic,iblk) = nh4_fertiliser_c3crops(ic,iblk) / hlp1(ic,iblk) &
+                &                           * background_n_fertiliser_rate
+              no3_fertiliser_c3crops(ic,iblk) = no3_fertiliser_c3crops(ic,iblk) / hlp1(ic,iblk) &
+                &                           * background_n_fertiliser_rate
+            ELSE
           ! Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
-          nh4_fertiliser_c3crops(:,:) = nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N
-          no3_fertiliser_c3crops(:,:) = no3_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N
-        ENDWHERE
+              nh4_fertiliser_c3crops(ic,iblk) = nh4_fertiliser_c3crops(ic,iblk) / 10._lp / molar_mass_N
+              no3_fertiliser_c3crops(ic,iblk) = no3_fertiliser_c3crops(ic,iblk) / 10._lp / molar_mass_N
+            END IF
+          END DO
+        END DO
         ! NMIP does not provide information for C3 vs. C4 crops, assert rates are the same
         ! Clean the temporary nh4_fertiliser_c4crops and use it to represent C4 crop nh4 fertiliser again
         nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:)
@@ -322,7 +330,7 @@ CONTAINS
     !$ACC UPDATE DEVICE(no3_fertiliser_c3crops, no3_fertiliser_c4crops, no3_fertiliser_pasture) ASYNC(1)
     !$ACC WAIT(1)
 
-    IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP'.AND. &
+    IF (TRIM(dsl4jsb_Config(Q_AGR_)%fertiliser_data_source)=='NMIP' .AND. &
         &                             dsl4jsb_Config(Q_AGR_)%l_read_manure) THEN
       ! search a file ending on the current year
       current_year  = get_year(current_datetime)
