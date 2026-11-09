@@ -607,7 +607,10 @@ CONTAINS
         & denitrification_n2(:,:) )                 ! out
 
      IF (model%config%qmodel_id /= QSOIL) THEN
-       ! note volatilisation of NH4 only occurs from the first soil layer
+       ! NH3 volatilisation is only calculated in interactive plant-soil simulation (NOT SOIL)
+       ! as the SOIL model driver does not have sufficient knowledge of current temperature and wind,
+       ! and given that calculation of NH3 is not useful for standalone SOIL model calculation at this point.
+       ! Note also that volatilisation of NH4 only occurs from the first soil layer
        CALL calc_potential_nh4_volatilisation_rate(&
           & nc, &                                     ! in
           & dtime, &
