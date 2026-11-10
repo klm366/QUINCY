@@ -1637,7 +1637,7 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
     USE mo_jsb_physical_constants, ONLY: tmelt
-    USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold
+    USE mo_carbon_constants,       ONLY: minimum_layer_thickness, permafrost_threshold, cryo_max, bio_max
 
     INTEGER,  INTENT(in)    :: nsoil                 !< Number of soil layers in vertical yasso scheme []
     REAL(lp), INTENT(in)    :: soil_depth
@@ -1651,9 +1651,6 @@ CONTAINS
     REAL(lp), INTENT(out)   :: diff_coeff(:)           !< Vertical carbon mixing coefficient [m2 s-1]
     INTEGER :: is, isp1
 
-    REAL(lp), PARAMETER :: cryo_max = 4.7e-12_lp !< Maximum diffusivity for cryoturbation [m^2 s-1]
-    REAL(lp), PARAMETER :: bio_max  = 4.7e-13_lp !< Maximum diffusivity for bioturbation [m^2 s-1]
-
     diff_coeff(:) = 0._lp
 
     IF (thaw_depth < soil_depth) THEN    ! active layer depth < soil depth --> permafrost
@@ -1662,10 +1659,10 @@ CONTAINS
         IF (  (permafrost_period_sl(is)   < permafrost_threshold) .AND. &
           &   (permafrost_period_sl(isp1) < permafrost_threshold) .AND. &
           &   (t_soil_sl(is)          > tmelt)) THEN
-          diff_coeff(is) = cryo_max *                               &
-            &             MIN(1._lp, wtr_rel_sl(is)) *              &
-            &              MIN(1._lp, (n_thaw_cycle / 40._lp))*     &
-            &              (1._lp - layer_depth(is)/thaw_depth)
+          diff_coeff(is) = cryo_max                               &
+            &            * MIN(1._lp, wtr_rel_sl(is))             &
+            &            * MIN(1._lp, (n_thaw_cycle / 40._lp))    &
+            &            * MAX(0._lp, 1._lp - layer_depth(is) / thaw_depth)
         ELSE
           diff_coeff(is) = 0._lp
         END IF
@@ -1674,7 +1671,7 @@ CONTAINS
       DO is = 1,nsoil
         isp1 = MIN(is+1,nsoil)
         IF ((soil_depth_sl(is) > minimum_layer_thickness) .AND. (t_soil_sl(is) > tmelt)) THEN
-          diff_coeff(is) = MAX(0._lp, bio_max *(1._lp - (layer_depth(is)/3._lp)))
+          diff_coeff(is) = MAX(0._lp, bio_max * (1._lp - (layer_depth(is) / 3._lp)))
         ELSE
           diff_coeff(is) = 0._lp
         END IF

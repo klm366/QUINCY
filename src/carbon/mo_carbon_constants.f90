@@ -154,6 +154,11 @@ MODULE mo_carbon_constants
   REAL(lp), PARAMETER   :: moist_p_b = 1.5_lp
   REAL(lp), PARAMETER   :: moist_p_d = 3.0_lp
 
+  ! Parameters for vertical carbon mixing based on Koven et al. 2013 (https://doi.org/10.5194/bg-10-7109-2013)
+  ! They provide 5 cm2 yr-1 for cryoturbation and 0.5 cm 2 yr-1 for bioturbation, which is converted to m2 s-1 below
+  REAL(lp), PARAMETER :: cryo_max = 1.58e-11_lp !< Maximum mixing rate for cryoturbation [m2 s-1]
+  REAL(lp), PARAMETER :: bio_max  = 3.17e-12_lp !< Maximum mixing rate for bioturbation [m2 s-1]
+
   REAL(lp), PARAMETER   :: minimum_layer_thickness = 0.05_lp !< minimum unfrozen soil layer thickness threshold [m]
   REAL(lp), PARAMETER   :: permafrost_threshold    = 1._lp   !< length threshold to consider a layer permafrost [yr]
 
