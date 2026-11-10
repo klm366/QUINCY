@@ -161,9 +161,7 @@ CONTAINS
     USE mo_util,                     ONLY: soil_depth_to_layers
     USE mo_jsb_time,                 ONLY: is_newday, is_newyear, timesteps_per_day, &
       &                                    is_time_experiment_start, is_time_restart
-    USE mo_hydro_constants,          ONLY: vol_porosity_org_top, vol_porosity_org_below
-    USE mo_jsb_physical_constants,   ONLY: dens_org
-    USE mo_carbon_constants,         ONLY: molarMassC_kg, C_2_biomass_ratio
+    USE mo_carbon_constants,         ONLY: molarMassC_kg, C_2_biomass_ratio, rho_org_bg
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -198,7 +196,6 @@ CONTAINS
     REAL(lp), ALLOCATABLE  :: thaw_depth(:)             !< Maximum thaw depth / active layer depth [m]
 
     REAL(lp) :: mass_organic_soil !< mass of organic soil fraction in a soil layer [kg/m2]
-    REAL(lp) :: bulk_density_org  !< bulk density of pure soil organic matter [kg/m3]
 
     ! Pool and parameter transfer for YASSO scheme
     REAL(lp) :: LeafLit_coef(5)    !< Array with leaf litter coefficients []
@@ -416,7 +413,7 @@ CONTAINS
     END IF
 
     !$ACC DATA ASYNC(acc_stream) &
-    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes, bulk_density_org) &
+    !$ACC   CREATE(MaxLai, old_c_state_sum_ta, current_fluxes) &
     !$ACC   CREATE(cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos) &
     !$ACC   CREATE(LeafLit_coef, WoodLit_coef, MiscPar)
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
@@ -933,18 +930,12 @@ CONTAINS
       ! Update relative soil carbon content on soil layers (if not prescribed by map)
       IF (dsl4jsb_Config(CARBON_)%vertical_yasso .AND. dsl4jsb_Config(HYDRO_)%l_organic &
         & .AND. .NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(acc_stream)
-        !$ACC LOOP SEQ
-        DO is = 1, nsoil
-          IF (is == 1) THEN
-            bulk_density_org = dens_org * vol_porosity_org_top
-          ELSE
-            bulk_density_org = dens_org * vol_porosity_org_below
-          END IF
-          ! Accumulated below ground soil carbon content, convert to organic matter mass and
-          ! compute its relative fraction wrt total soil mass.
-          !$ACC LOOP GANG VECTOR PRIVATE(mass_organic_soil)
-          DO ic = 1, nc
+        ! Accumulated below ground soil carbon content, convert to organic matter mass and
+        ! compute its relative fraction wrt total soil mass.
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream) &
+        !$ACC   PRIVATE(mass_organic_soil)
+        DO ic = 1, nc
+          DO is = 1, nsoil
             mass_organic_soil   = molarMassC_kg / C_2_biomass_ratio * (                   &
               &                   c_humus_1_sl(ic,is)        + c_humus_2_sl(ic,is)        &
               &                 + c_acid_bg1_sl(ic,is)       + c_acid_bg2_sl(ic,is)       &
@@ -953,7 +944,7 @@ CONTAINS
               &                 + c_nonsoluble_bg1_sl(ic,is) + c_nonsoluble_bg2_sl(ic,is) &
               &                 ) * veg_fract_correction(ic) * fract_fpc_max(ic)
             fract_org_sl(ic,is) = MAX(0._lp, MIN(1.0_lp, &
-              & (mass_organic_soil / bulk_density_org) / layer_thick(is)))
+              & mass_organic_soil / (rho_org_bg * layer_thick(is))))
           END DO
         END DO
         !$ACC END PARALLEL

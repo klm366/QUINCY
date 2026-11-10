@@ -1725,7 +1725,6 @@ CONTAINS
     REAL(lp), INTENT(inout) :: c_humus_1_sl(:)         !< Soil layer humus carbon pools of woody litter [mol(C) m-2]
     REAL(lp), INTENT(inout) :: c_humus_2_sl(:)         !< Soil layer humus carbon pools of green woody [mol(C) m-2]
 
-    REAL(lp),  PARAMETER :: thresh_frac_org    = 1.25_lp  !< Threshold organic fraction above which C is being moved downwards
     REAL(lp),  PARAMETER :: ag_layer_depth     = 0.13_lp  !< Assumed depth of above ground litter layer [m]
     REAL(lp) :: cpool_tot
     REAL(lp) :: depth_upper
