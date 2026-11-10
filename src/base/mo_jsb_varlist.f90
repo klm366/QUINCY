@@ -1,4 +1,4 @@
-!> Contains routines for var_lists/streams
+!> Wrapper for the host model's var_list routines
 !>
 !> ICON-Land
 !>
@@ -11,7 +11,8 @@
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
 !>
-!> ICON-Land wrapper of the var_list routines provided by the host model (via `mo_jsb_varlist_iface`)
+!> Wrapper for the host model's var_list routines (via `mo_jsb_varlist_iface`), plus the output levels
+!> used to sort variables into output groups.
 !>
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
@@ -51,6 +52,7 @@ MODULE mo_jsb_varlist
     MODULE PROCEDURE jsb_add_var_list_element_r2d
   END INTERFACE jsb_add_var
 
+  !> Output levels of variables, see [[Get_var_group_name]]
   ENUM, BIND(C)
     ENUMERATOR :: NONE=0, MINIMUM, BASIC, MEDIUM, FULL
   END ENUM
@@ -196,6 +198,8 @@ CONTAINS
       group_name = 'medium'
     CASE(FULL)
       group_name = 'full'
+    ! TODO: group_name stays unallocated for NONE or invalid ids (currently prevented by the callers).
+    !       Add a CASE DEFAULT calling finish(routine, ...); this requires a `routine` constant.
     END SELECT
 
   END FUNCTION
