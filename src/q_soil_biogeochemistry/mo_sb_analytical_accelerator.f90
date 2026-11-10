@@ -36,6 +36,9 @@ MODULE mo_sb_analytical_accelerator
   !> Local pool order is S,W,L,B,R,D,AD,AR; concentrations refer to TOTAL soil volume.
   !> Coefficients are prescribed, not additional fitted parameters or nutrient-equilibrium closures.
   TYPE :: t_sb_local_coefficients
+    ! Scratch-only orbit fluxes; never stored in restart or used by forward SESAM.
+    REAL(lp) :: orbit_flux(2) = -1._lp, orbit_peak(2) = 0._lp !< Monthly mean/peak poly,res removal [mol C m-3 s-1]
+    REAL(lp) :: orbit_alpha = 0._lp !< Monthly mean realized polymeric allocation [-]
     REAL(lp) :: dtime = 0.0_lp !< Forward replay timestep [s]
     REAL(lp) :: litter_input_carbon(3) = 0.0_lp !< Soluble, woody, polymeric litter inputs [mol C m-3 s-1]
     REAL(lp) :: transport_dom_inflow = 0.0_lp, dom_export_rate = 0.0_lp !< Target-derived DOM influx [mol C m-3 s-1], export [s-1]
@@ -63,6 +66,8 @@ MODULE mo_sb_analytical_accelerator
 
   !> A valid carbon result still requires column-wide organic element reconstruction before a jump.
   TYPE :: t_sb_local_target
+    REAL(lp) :: entry_alpha = 0._lp, entry_c = 0._lp, entry_c_mavg = 0._lp !< December allocation/target/history [-]
+    INTEGER :: entry_cycles = 0 !< One indicates an accepted periodic entry; zero retains annual seed [-]
     LOGICAL :: l_minimum_microbial_seed = .FALSE. !< Quasi-steady floor branch; microbial growth retained [-]
     INTEGER :: status = 1 !< 0 conditional seed; 1 invalid; 2 no root; 3 limiter; 4 geometry; 5 residual [-]
     CHARACTER(len=192) :: reason = 'Not evaluated' !< Rejection or conditional-success explanation [-]
@@ -136,6 +141,11 @@ MODULE mo_sb_analytical_accelerator
 
   !> Conditional stationary profile; no caller may infer permission to commit from finite pools alone.
   TYPE :: t_sb_column_solution
+    REAL(lp), ALLOCATABLE :: orbit_entry(:,:) !< December actual, instantaneous C target, C history/layer [-]
+    REAL(lp), ALLOCATABLE :: orbit_month(:,:) !< Monthly realized polymeric fraction, layer/month [-]
+    REAL(lp), ALLOCATABLE :: orbit_gap(:,:) !< End minus start actual/history, component/layer [-]
+    REAL(lp), ALLOCATABLE :: orbit_depoly(:,:,:) !< Poly/residue mean flux,layer,month [mol C m-3 s-1]
+    INTEGER :: zero_month_evaluations = 0 !< Rejected trial residuals with zero monthly depolymerization [-]
     LOGICAL :: converged = .FALSE. !< All pool and allocation equations passed numerical tolerances [-]
     LOGICAL :: admissible = .FALSE. !< Converged, geometry and selected finite-step guards passed [-]
     CHARACTER(len=192) :: reason = 'Not solved' !< Outcome; failed candidates remain diagnostic only [-]
@@ -154,7 +164,11 @@ MODULE mo_sb_analytical_accelerator
 
 CONTAINS
 
-  !> Solve nine equations per active layer: eight carbon balances and enzyme allocation closure.
+  !> Solve eight carbon balances and allocation closure per active layer.
+  !! Seasonal refinement replaces annual allocation closure by two periodic
+  !! actual/history equations: integrate monthly SESAM fluxes at EACH candidate
+  !! L/B/R profile, holding annual prescribed CUE/AP fixed. December state is
+  !! a replay handoff, not a substitute for monthly fluxes in the carbon balance.
   !! Newton steps use scaled finite differences, bounded line searches and QR fallback.
   !! Trial states are scratch only. Pools are mol C/m3 TOTAL soil; rates are mol C/m3/s.
   !! Residual tolerance is 1e-18 + 1e-8*gross throughput, allocation tolerance 1e-8.
@@ -163,9 +177,10 @@ CONTAINS
   !! the DOC uptake cap is diagnostic. CUE and AP are prescribed annual means.
   SUBROUTINE solve_analytical_carbon_column(ns, thickness, root_fraction_mean, water_rate, lateral_return, &
     & coefficients, initial_carbon, initial_alpha, solution, max_iterations, include_bioturbation, &
-    & bioturbation_fraction, monthly, monthly_fraction)
+    & bioturbation_fraction, monthly, monthly_fraction, orbit_days)
     USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
-    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    USE mo_sb_constants, ONLY: min_enzyme_fraction, calc_persistent_enzyme_floor
+    USE mo_jsb_math_constants, ONLY: eps8
     INTEGER, INTENT(in) :: ns !< Number of active layers, including partial bottom layer [-]
     REAL(lp), INTENT(in) :: thickness(ns), root_fraction_mean(ns), water_rate(ns,2), lateral_return
     !< Thickness [m], root fractions [-], effective water export [s-1], return fraction [-]
@@ -177,6 +192,10 @@ CONTAINS
     REAL(lp), OPTIONAL, INTENT(in) :: bioturbation_fraction !< Continuation lambda in [0,1], default one [-]
     TYPE(t_sb_monthly_coefficients), OPTIONAL, INTENT(in) :: monthly !< Monthly nonlinear rate coefficients
     REAL(lp), OPTIONAL, INTENT(in) :: monthly_fraction !< Monthly-flux continuation in [0,1] [-]
+    INTEGER, OPTIONAL, INTENT(in) :: orbit_days !< Solve both year-boundary allocation equations when present
+    TYPE(t_sb_monthly_coefficients) :: orbit_bins
+    REAL(lp), ALLOCATABLE :: keys(:,:), ends(:,:), mean_alpha(:)
+    INTEGER :: stride
     TYPE(t_sb_column_residual) :: current, trial !< Scratch residual evaluations
     REAL(lp), ALLOCATABLE :: x(:), trial_x(:), variable_scale(:), lower(:), upper(:)
     REAL(lp), ALLOCATABLE :: residual(:), trial_residual(:), jacobian(:,:), direction(:)
@@ -208,7 +227,18 @@ CONTAINS
       IF (.NOT. ieee_is_finite(coefficients(s)%minimum_microbial_carbon)) RETURN
       IF (initial_carbon(4,s) < coefficients(s)%minimum_microbial_carbon) RETURN
     END DO
-    size_system = 9*ns
+    stride = 9
+    IF (PRESENT(orbit_days)) THEN
+      IF (.NOT. PRESENT(monthly) .OR. solution%monthly_fraction /= 1._lp) RETURN
+      IF (orbit_days <= 0 .OR. .NOT. ALLOCATED(monthly%layer) .OR. .NOT. ALLOCATED(monthly%weight)) RETURN
+      IF (SIZE(monthly%layer,1) /= ns .OR. SIZE(monthly%layer,2) /= SIZE(monthly%weight)) RETURN
+      IF (SIZE(monthly%weight) < 1) RETURN
+      stride = 10
+      orbit_bins = monthly
+      ALLOCATE(keys(5,ns),ends(3,ns),mean_alpha(ns))
+      keys = -HUGE(1._lp)
+    END IF
+    size_system = stride*ns
     ALLOCATE(x(size_system), trial_x(size_system), variable_scale(size_system), &
       & lower(size_system), upper(size_system), residual(size_system), trial_residual(size_system), &
       & jacobian(size_system,size_system), direction(size_system), matrix(size_system,size_system), &
@@ -216,7 +246,7 @@ CONTAINS
     ALLOCATE(solution%norm_history(0:limit), SOURCE=-1._lp)
     ALLOCATE(solution%step_history(limit), SOURCE=0._lp)
     DO s = 1,ns
-      offset = 9*(s-1)
+      offset = stride*(s-1)
       ! Scale to the supplied profile without raising the microbial floor or altering any pool.
       variable_scale(offset+1:offset+8) = MAX(initial_carbon(:,s),1.e-12_lp)
       variable_scale(offset+9) = 1._lp
@@ -228,6 +258,12 @@ CONTAINS
       ! Only a floating-point safety bound, not an ecological maximum pool size.
       upper(offset+1:offset+8) = SQRT(HUGE(1._lp))/MAX(1._lp,variable_scale(offset+1:offset+8))
       upper(offset+9) = 1._lp-min_enzyme_fraction
+      IF (stride == 10) THEN
+        variable_scale(offset+10) = 1._lp
+        x(offset+10) = initial_alpha(s)
+        lower(offset+10) = 0._lp
+        upper(offset+10) = 1._lp
+      END IF
     END DO
     CALL evaluate(x,current,residual,valid,natural_scale=equation_scale)
     IF (.NOT. valid) THEN
@@ -240,8 +276,8 @@ CONTAINS
       solution%iterations = iteration
       solution%total_iterations = iteration
       worst = MAXLOC(ABS(residual),DIM=1)
-      solution%worst_layer = (worst-1)/9+1
-      solution%worst_equation = MOD(worst-1,9)+1
+      solution%worst_layer = (worst-1)/stride+1
+      solution%worst_equation = MOD(worst-1,stride)+1
       IF (max_norm <= 1._lp) THEN
         solution%converged = .TRUE.
         EXIT
@@ -325,10 +361,26 @@ CONTAINS
       solution%step_history(iteration+1) = step
     END DO
     ALLOCATE(solution%carbon(8,ns),solution%alpha_poly(ns))
+    IF (stride == 10 .AND. solution%converged) THEN
+      ALLOCATE(solution%orbit_entry(3,ns))
+      ALLOCATE(solution%orbit_gap(2,ns))
+      solution%orbit_month = orbit_bins%layer%orbit_alpha
+      ALLOCATE(solution%orbit_depoly(2,ns,SIZE(orbit_bins%weight)))
+      DO s=1,ns
+        DO offset=1,SIZE(orbit_bins%weight)
+          solution%orbit_depoly(:,s,offset)=orbit_bins%layer(s,offset)%orbit_flux
+        END DO
+      END DO
+    END IF
     DO s = 1,ns
-      offset = 9*(s-1)
+      offset = stride*(s-1)
       solution%carbon(:,s) = x(offset+1:offset+8)*variable_scale(offset+1:offset+8)
       solution%alpha_poly(s) = x(offset+9)
+      IF (ALLOCATED(solution%orbit_entry)) THEN
+        solution%alpha_poly(s) = mean_alpha(s)
+        solution%orbit_entry(:,s) = ends(:,s)
+        solution%orbit_gap(:,s) = ends([1,3],s)-x(offset+9:offset+10)
+      END IF
     END DO
     solution%diagnostics = current
     IF (.NOT. solution%converged) RETURN
@@ -352,13 +404,58 @@ CONTAINS
       REAL(lp), OPTIONAL, INTENT(in) :: fixed_scale(size_system) !< Frozen search denominators, not tolerances
       REAL(lp), OPTIONAL, INTENT(out) :: natural_scale(size_system) !< Original candidate-based allowances
       REAL(lp) :: pools(8,1,ns), alpha(1,ns), allowance(8)
-      INTEGER :: layer, base
+      REAL(lp) :: key(5), enzyme, floor_e, a, h, instant, am
+      INTEGER :: layer, base, zero_month
+      LOGICAL :: completed
       DO layer = 1,ns
-        base = 9*(layer-1)
+        base = stride*(layer-1)
         pools(:,1,layer) = candidate(base+1:base+8)*variable_scale(base+1:base+8)
         alpha(1,layer) = candidate(base+9)
+        IF (stride == 10) THEN
+          ! The expensive one-year orbit is local. A Jacobian perturbation in another layer
+          ! or a pool other than L/B/R cannot change it. Cache only within this solve.
+          key = [pools([3,4,5],1,layer),candidate(base+9:base+10)]
+          IF (ANY(keys(:,layer) /= key)) THEN
+            a = key(4)
+            h = key(5)
+            instant = h
+            floor_e = calc_persistent_enzyme_floor(coefficients(layer)%mortality_exponent, &
+              & coefficients(layer)%persistent_enzyme_carbon)
+            enzyme = MAX(floor_e,coefficients(layer)%enzyme_frac_total_local * &
+              & (1._lp-coefficients(layer)%enzyme_frac_ap_layer)*key(2))
+            IF (MIN(key(1),key(3)) > eps8 .AND. enzyme > 0._lp) THEN
+              CALL integrate_enzyme_year(key(1),key(3),enzyme,floor_e,orbit_bins%layer(layer,:),monthly%weight, &
+                & orbit_days,a,h,instant,am,completed,zero_month)
+              IF (.NOT. completed) THEN
+                diagnostics%reason = 'Invalid periodic enzyme orbit'
+                IF (zero_month>0) THEN
+                  solution%zero_month_evaluations=solution%zero_month_evaluations+1
+                  WRITE(diagnostics%reason,'(A,I0,A,I0)') &
+                    & 'Zero depolymerization month: layer=',layer,' month=',zero_month
+                END IF
+                keys(:,layer) = -HUGE(1._lp)
+                ok = .FALSE.
+                RETURN
+              END IF
+            ELSE
+              ! No joint substrate signal: keep the seed and use ordinary single-substrate fluxes.
+              orbit_bins%layer(layer,:)%orbit_flux(1) = -1._lp
+              a = initial_alpha(layer)
+              h = a
+              instant = a
+              am = a
+              orbit_bins%layer(layer,:)%orbit_alpha = a
+            END IF
+            keys(:,layer) = key
+            ends(:,layer) = [a,instant,h]
+            mean_alpha(layer) = am
+          END IF
+        END IF
       END DO
-      IF (PRESENT(monthly)) THEN
+      IF (stride == 10) THEN
+        CALL evaluate_analytical_monthly_residual(ns,thickness,root_fraction_mean,water_rate,lateral_return, &
+          & coefficients,pools,alpha,orbit_bins,1._lp,solution%bioturbation_fraction,diagnostics)
+      ELSE IF (PRESENT(monthly)) THEN
         CALL evaluate_analytical_monthly_residual(ns,thickness,root_fraction_mean,water_rate,lateral_return, &
           & coefficients,pools,alpha,monthly,solution%monthly_fraction,solution%bioturbation_fraction,diagnostics)
       ELSE
@@ -372,7 +469,7 @@ CONTAINS
       normalized = 0._lp
       IF (.NOT. ok) RETURN
       DO layer = 1,ns
-        base = 9*(layer-1)
+        base = stride*(layer-1)
         allowance = 1.e-18_lp+1.e-8_lp*diagnostics%throughput(:,1,layer)
         IF (PRESENT(natural_scale)) THEN
           natural_scale(base+1:base+8) = allowance
@@ -385,10 +482,82 @@ CONTAINS
         ELSE
           normalized(base+9) = (alpha(1,layer)-initial_alpha(layer))/1.e-8_lp
         END IF
+        IF (stride == 10) THEN
+          ! Replace annual alpha closure with a(0)=a(T), h(0)=h(T). The annual mean split
+          ! is diagnostic, not a third unknown. Never use the endpoint as a monthly flux.
+          diagnostics%allocation_residual(1,layer) = candidate(base+9)-ends(1,layer)
+          normalized(base+9) = diagnostics%allocation_residual(1,layer)/1.e-8_lp
+          normalized(base+10) = (candidate(base+10)-ends(3,layer))/1.e-8_lp
+          IF (PRESENT(natural_scale)) natural_scale(base+10) = 1.e-8_lp
+        END IF
       END DO
       ok = ALL(ieee_is_finite(normalized))
     END SUBROUTINE evaluate
   END SUBROUTINE solve_analytical_carbon_column
+
+  !> Fixed candidate L/B/R; old history drives actual allocation, then history
+  !! relaxes toward the instantaneous C optimum. Flux means enter the carbon
+  !! equations; maxima retain the original finite-step donor admissibility.
+  !! A zero-removal month rejects the orbit, without an inactive-month workaround.
+  SUBROUTINE integrate_enzyme_year(litter,residue,total,floor_e,bins,weights,days,a,h,instant,mean_a,ok,zero_month)
+    USE, INTRINSIC :: ieee_arithmetic, ONLY: ieee_is_finite
+    USE mo_jsb_math_constants, ONLY: one_day
+    USE mo_lnd_time_averages, ONLY: mavg_period_tenzyme
+    USE mo_sb_constants, ONLY: min_enzyme_fraction
+    USE mo_q_sb_jsm_processes, ONLY: calc_enzyme_allocation
+    REAL(lp), INTENT(in) :: litter,residue,total,floor_e,weights(:)
+    INTEGER, INTENT(in) :: days
+    TYPE(t_sb_local_coefficients), INTENT(inout) :: bins(:)
+    REAL(lp), INTENT(inout) :: a,h,instant
+    REAL(lp), INTENT(out) :: mean_a
+    LOGICAL, INTENT(out) :: ok
+    INTEGER, INTENT(out) :: zero_month !< First month with zero removal; zero for other/no failure [-]
+    REAL(lp) :: w,enzyme(2),flux(2),km
+    INTEGER :: steps(SIZE(weights)),b,i
+    ok = .FALSE.
+    zero_month = 0
+    mean_a = 0._lp
+    IF (days <= 0 .OR. bins(1)%dtime <= 0._lp .OR. mavg_period_tenzyme <= 0._lp) RETURN
+    w = bins(1)%dtime/(one_day*mavg_period_tenzyme)
+    IF (w > 1._lp) RETURN
+    steps = NINT(weights*REAL(days,lp)*one_day/bins(1)%dtime)
+    IF (ANY(steps < 1)) RETURN
+    DO b = 1,SIZE(bins)
+      km = bins(b)%km_depoly_eff
+      IF (MINVAL(bins(b)%vmax_depoly_eff) < 0._lp .OR. km < 0._lp) RETURN
+      IF (MINVAL(bins(b)%vmax_depoly_eff) == 0._lp) THEN
+        zero_month=b
+        RETURN
+      END IF
+      bins(b)%orbit_flux = 0._lp
+      bins(b)%orbit_peak = 0._lp
+      bins(b)%orbit_alpha = 0._lp
+      DO i = 1,steps(b)
+        enzyme = [a*total,MAX((1._lp-a)*total,floor_e)]
+        IF (MINVAL(enzyme) <= 0._lp) THEN
+          zero_month=b
+          RETURN
+        END IF
+        flux = bins(b)%vmax_depoly_eff*(enzyme/(km+enzyme))*[litter,residue]
+        IF (.NOT. ALL(ieee_is_finite(flux))) RETURN
+        IF (MINVAL(flux) <= 0._lp) THEN
+          zero_month=b
+          RETURN
+        END IF
+        bins(b)%orbit_flux = bins(b)%orbit_flux+flux
+        bins(b)%orbit_peak = MAX(bins(b)%orbit_peak,flux)
+        bins(b)%orbit_alpha = bins(b)%orbit_alpha+a
+        mean_a = mean_a+a
+        instant = calc_enzyme_allocation(flux(1),flux(2),km,total)
+        a = MIN(1._lp-min_enzyme_fraction,MAX(min_enzyme_fraction,a+w*(h-a)))
+        h = h+w*(instant-h)
+      END DO
+      bins(b)%orbit_flux = bins(b)%orbit_flux/REAL(steps(b),lp)
+      bins(b)%orbit_alpha = bins(b)%orbit_alpha/REAL(steps(b),lp)
+    END DO
+    mean_a = mean_a/REAL(SUM(steps),lp)
+    ok = ALL(ieee_is_finite([a,h,instant,mean_a]))
+  END SUBROUTINE integrate_enzyme_year
 
   !> Pivoted dense linear solve on the scaled Newton system; singular systems return failure.
   SUBROUTINE solve_column_linear_system(matrix, rhs, solution, ok)
@@ -728,6 +897,7 @@ CONTAINS
         IF (k%mortality_exponent == 1._lp) THEN
           WHERE (pools([3,5]) <= eps8) depoly = 0._lp
         END IF
+        IF (k%orbit_flux(1) >= 0._lp) depoly = k%orbit_flux
         ! Forward SESAM updates carbon allocation only when both substrate removal rates are positive.
         ! An inactive branch is underdetermined, not proof of a unique allocation equilibrium.
         result%allocation_defined(c,s) = ALL(depoly > 0._lp)
@@ -752,6 +922,8 @@ CONTAINS
         result%timestep_warning(c,s,3) = ANY(turnover*dt > pools(1:2)) .OR. &
           & depoly(1)*dt > pools(3) .OR. depoly(2)*dt+adsorption(2) > pools(5) .OR. &
           & SUM(water_rate(c,s,:)*[1._lp,1._lp-lateral_return])*dt > 1._lp
+        IF (k%orbit_flux(1) >= 0._lp) result%timestep_warning(c,s,3) = result%timestep_warning(c,s,3) .OR. &
+          & k%orbit_peak(1)*dt > pools(3) .OR. k%orbit_peak(2)*dt+adsorption(2) > pools(5)
         result%reaction(1:2,c,s) = k%litter_input_carbon(1:2)-turnover
         result%reaction(3,c,s) = k%litter_input_carbon(3)+k%carbon_transfer_fraction(2)*turnover(2)-depoly(1)
         result%reaction(4,c,s) = k%microbial_cue*uptake-mortality
@@ -1008,9 +1180,10 @@ CONTAINS
   !> Build monthly conditional kinetics and solve each complete active soil column.
   !! All layers share acceptance; non-carbon reconstruction is a separate atomic transaction.
   SUBROUTINE diagnose_full_profile_carbon_targets(inputs, carbon_before, lateral_return, targets, solutions, &
-    & include_bioturbation)
+    & include_bioturbation, replay_days)
     USE mo_lnd_bgcm_idx, ONLY: ixC, ix_soluable_litter, ix_woody_litter, ix_polymeric_litter
     USE mo_jsb_physical_constants, ONLY: molar_mass_C
+    USE mo_jsb_math_constants, ONLY: eps8
     USE mo_sb_constants, ONLY: tau_soluable_litter, tau_woody_litter, fc_soluable2dom, &
       & fc_woody2polymeric, f_soluable_residue, k_mort_microbial, min_mic_biomass, &
       & microbial_mortality_exponent, microbial_mortality_reference, calc_persistent_enzyme_floor, &
@@ -1023,6 +1196,8 @@ CONTAINS
     TYPE(t_sb_local_target), ALLOCATABLE, INTENT(out) :: targets(:,:) !< Mapped full-column targets, including failures
     TYPE(t_sb_column_solution), ALLOCATABLE, INTENT(out) :: solutions(:) !< Detailed solver outcomes per cell
     LOGICAL, OPTIONAL, INTENT(in) :: include_bioturbation !< Default true; analytical residual only [-]
+    INTEGER, OPTIONAL, INTENT(in) :: replay_days !< Positive for a following forward replay [days/year]
+    TYPE(t_sb_column_solution) :: refined
     TYPE(t_sb_local_coefficients), ALLOCATABLE :: coefficients(:) !< Conditional layer kinetics
     TYPE(t_sb_monthly_coefficients) :: monthly !< Annual biology with monthly nonlinear kinetics
     REAL(lp), ALLOCATABLE :: alpha(:) !< Historical allocation for local coefficient validation [-]
@@ -1101,6 +1276,21 @@ CONTAINS
       CALL solve_analytical_carbon_profile(n,inputs%depth(c,1:n),inputs%root_fraction_mean(c,1:n), &
         & inputs%water_rate_mean(c,1:n,:),lateral_return,coefficients,solutions(c), &
         & include_bioturbation=include_bioturbation,monthly=monthly)
+      IF (PRESENT(replay_days) .AND. solutions(c)%converged) THEN
+          ! The continuation root is a seed only. Enforce periodicity and the original physical
+          ! acceptance tests on the refined column; failure must not commit the annual seed.
+          CALL solve_analytical_carbon_column(n,inputs%depth(c,1:n),inputs%root_fraction_mean(c,1:n), &
+            & inputs%water_rate_mean(c,1:n,:),lateral_return,coefficients,solutions(c)%carbon, &
+            & solutions(c)%alpha_poly,refined,include_bioturbation=include_bioturbation,monthly=monthly, &
+            & orbit_days=replay_days)
+          refined%total_iterations = refined%total_iterations + solutions(c)%total_iterations
+          refined%evaluations = refined%evaluations + solutions(c)%evaluations
+          CALL MOVE_ALLOC(solutions(c)%continuation,refined%continuation)
+          CALL MOVE_ALLOC(solutions(c)%seed_carbon,refined%seed_carbon)
+          CALL MOVE_ALLOC(solutions(c)%seed_alpha,refined%seed_alpha)
+          CALL MOVE_ALLOC(solutions(c)%seed_status,refined%seed_status)
+          solutions(c) = refined
+      END IF
       DO s = 1,n
         targets(c,s)%status = 5
         targets(c,s)%reason = solutions(c)%reason
@@ -1114,6 +1304,14 @@ CONTAINS
           & targets(c,s)%carbon(4),floor_enzyme)
         targets(c,s)%enzyme_poly = targets(c,s)%alpha_poly*targets(c,s)%enzyme_depoly
         targets(c,s)%enzyme_residue = MAX(targets(c,s)%alpha_residue*targets(c,s)%enzyme_depoly,floor_enzyme)
+        IF (targets(c,s)%status == 0 .AND. ALLOCATED(solutions(c)%orbit_entry)) THEN
+          targets(c,s)%entry_alpha = solutions(c)%orbit_entry(1,s)
+          targets(c,s)%entry_c = solutions(c)%orbit_entry(2,s)
+          targets(c,s)%entry_c_mavg = solutions(c)%orbit_entry(3,s)
+          ! In a one-substrate layer the split is pinned to the seed, not a periodic diagnostic.
+          IF (MINVAL(targets(c,s)%carbon([3,5])) > eps8 .AND. targets(c,s)%enzyme_depoly > 0._lp) &
+            & targets(c,s)%entry_cycles = 1
+        END IF
         targets(c,s)%maoc_volume = coefficients(s)%volume_per_carbon_maoc*SUM(targets(c,s)%carbon(7:8))
         targets(c,s)%poc_volume = coefficients(s)%volume_per_carbon_poc*SUM(targets(c,s)%carbon([1,3,4,5]))
         IF (.NOT. solutions(c)%diagnostics%valid) CYCLE

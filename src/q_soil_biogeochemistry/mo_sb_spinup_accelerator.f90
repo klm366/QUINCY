@@ -1864,6 +1864,7 @@ CONTAINS
     INTEGER, ALLOCATABLE :: pool_indices(:)
     INTEGER :: ics, ice, iblk, nc, ns, c, s, n, failed_layer, accepted_count, rejected_count
     INTEGER :: failed_pool !< Local analytical pool index; zero if rejection is not pool-specific [-]
+    INTEGER :: zero_month_trials, zero_month_columns !< Trial failures and final explicit zero-month rejections [-]
     INTEGER :: e, element_indices(6) !< Optional element indices for diagnostic increments [-]
     REAL(lp) :: dt, woody_fraction, woody_c, woody_n, rate(5), transfer(4)
     REAL(lp) :: analytical_cpu_start, analytical_cpu_end !< Local process CPU time, not MPI wall time [s]
@@ -1921,6 +1922,8 @@ CONTAINS
     transfer = [frac_woody2dec_litter,frac_litter2fast_som,frac_fast2slow_som,frac_slow2fast_som]
     accepted_count = 0
     rejected_count = 0
+    zero_month_trials = 0
+    zero_month_columns = 0
     increment_total = 0._lp
     element_indices = [ixC,ixN,ixP,ixC13,ixC14,ixN15]
     first_rejection = ''
@@ -1969,8 +1972,12 @@ CONTAINS
         ! live state; the existing whole-column CNP/isotope reconstruction below is atomic.
         CALL CPU_TIME(analytical_cpu_start)
         CALL diagnose_full_profile_carbon_targets(inputs,sb_pool_mt(pool_indices,ixC,c:c,:), &
-          & dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction,targets,solutions)
+          & dsl4jsb_Config(SB_)%sb_spinup_lateral_return_fraction,targets,solutions, &
+          & replay_days=forcing%n_daily_bins)
         CALL CPU_TIME(analytical_cpu_end)
+        zero_month_trials=zero_month_trials+solutions(1)%zero_month_evaluations
+        IF (INDEX(solutions(1)%reason,'Zero depolymerization month')>0) &
+          & zero_month_columns=zero_month_columns+1
         IF (model%config%flag_spinup_debug .OR. .NOT. solutions(1)%admissible) THEN
           WRITE(report,*) 'Analytical profile tile/block/cell=',TRIM(tile%name),iblk,ics+c-1, &
             & '; converged/admissible=',solutions(1)%converged,solutions(1)%admissible, &
@@ -1978,6 +1985,7 @@ CONTAINS
             & '; iterations/evaluations=',solutions(1)%total_iterations,solutions(1)%evaluations, &
             & '; worst layer/equation=',solutions(1)%worst_layer,solutions(1)%worst_equation, &
             & '; local CPU seconds=',analytical_cpu_end-analytical_cpu_start, &
+            & '; zero-depoly-month trial evaluations=',solutions(1)%zero_month_evaluations, &
             & '; ',TRIM(solutions(1)%reason)
           CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
           IF (solutions(1)%diagnostics%valid) THEN
@@ -2044,6 +2052,27 @@ CONTAINS
           sb__mem%enzyme_frac_residue%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_residue
           sb__mem%enzyme_frac_poly_c%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_poly
           sb__mem%enzyme_frac_poly_c_mavg%ptr(ics+c-1,s,iblk) = targets(1,s)%alpha_poly
+          IF (targets(1,s)%entry_cycles > 0) THEN
+            ! Commit only after whole-column CNP/isotope acceptance. Annual
+            ! mean flux allocation is not the December forward initial state.
+            sb__mem%enzyme_frac_poly%ptr(ics+c-1,s,iblk) = targets(1,s)%entry_alpha
+            sb__mem%enzyme_frac_residue%ptr(ics+c-1,s,iblk) = 1._lp-targets(1,s)%entry_alpha
+            sb__mem%enzyme_frac_poly_c%ptr(ics+c-1,s,iblk) = targets(1,s)%entry_c
+            sb__mem%enzyme_frac_poly_c_mavg%ptr(ics+c-1,s,iblk) = targets(1,s)%entry_c_mavg
+          END IF
+          IF (model%config%flag_spinup_debug .AND. ALLOCATED(solutions(1)%orbit_entry)) THEN
+            WRITE(report,*) 'Analytical December commit: tile/cell/layer=',TRIM(tile%name),ics+c-1,s, &
+              & '; actual/C target/C history=',targets(1,s)%entry_alpha,targets(1,s)%entry_c, &
+              & targets(1,s)%entry_c_mavg,'; periodic gaps=',solutions(1)%orbit_gap(:,s), &
+              & '; committed C S,W,L,B,R,D,AD,AR=',targets(1,s)%carbon
+            CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+            DO e=1,SIZE(solutions(1)%orbit_month,2)
+              WRITE(report,*) 'Analytical monthly enzyme: tile/cell/layer/month=',TRIM(tile%name),ics+c-1,s,e, &
+                & '; mean alpha/poly flux/residue flux=',solutions(1)%orbit_month(s,e), &
+                & solutions(1)%orbit_depoly(:,s,e)
+              CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
+            END DO
+          END IF
         END DO
       END IF
     END DO
@@ -2054,6 +2083,7 @@ CONTAINS
     END IF
     WRITE(report,*) 'Analytical seed event/tile/block=',execution_index,TRIM(tile%name),iblk, &
       & '; accepted/rejected columns=',accepted_count,rejected_count, &
+      & '; zero-depoly-month rejected columns/trial evaluations=',zero_month_columns,zero_month_trials, &
       & '; chunk-summed artificial C,N,P,C13,C14,N15 increments [mol m-2; C14: pmol m-2]=',increment_total
     CALL message(modname//':analytical_seed',TRIM(report),all_print=.TRUE.)
     IF (rejected_count > 0) CALL message(modname//':analytical_seed',TRIM(first_rejection),all_print=.TRUE.)
