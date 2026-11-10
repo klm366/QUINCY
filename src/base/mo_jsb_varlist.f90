@@ -1,4 +1,4 @@
-!> Contains routines for var_lists/streams
+!> Wrapper for the host model's var_list routines
 !>
 !> ICON-Land
 !>
@@ -10,6 +10,9 @@
 !> See LICENSES/ for license information
 !> SPDX-License-Identifier: BSD-3-Clause
 !> ---------------------------------------
+!>
+!> Wrapper for the host model's var_list routines (via `mo_jsb_varlist_iface`), plus the output levels
+!> used to sort variables into output groups.
 !>
 MODULE mo_jsb_varlist
 #ifndef __NO_JSBACH__
@@ -49,6 +52,7 @@ MODULE mo_jsb_varlist
     MODULE PROCEDURE jsb_add_var_list_element_r2d
   END INTERFACE jsb_add_var
 
+  !> Output levels of variables, see [[Get_var_group_name]]
   ENUM, BIND(C)
     ENUMERATOR :: NONE=0, MINIMUM, BASIC, MEDIUM, FULL
   END ENUM
@@ -57,10 +61,16 @@ MODULE mo_jsb_varlist
 
 CONTAINS
 
+  ! ====================================================================================================== !
+  !
+  !> Get a pointer to the var_list `name` of the host model.
+  !>
+  !> If the var_list does not exist yet, a new one is created on host grid `patch_id`.
+  !
   FUNCTION Get_varlist(name, patch_id) RESULT(return_ptr)
 
-    CHARACTER(LEN=*), INTENT(in) :: name
-    INTEGER,          INTENT(in) :: patch_id
+    CHARACTER(LEN=*), INTENT(in) :: name        !< Name of the var_list
+    INTEGER,          INTENT(in) :: patch_id    !< ID of the host model grid (patch)
     TYPE(t_jsb_varlist), POINTER :: return_ptr
 
     CALL jsb_get_var_list(return_ptr, TRIM(name))
@@ -74,6 +84,13 @@ CONTAINS
 
   END FUNCTION Get_varlist
 
+  ! ====================================================================================================== !
+  !
+  !> Register a 2D ICON-Land field with the host model's var_list `varlist_name`
+  !>
+  !> Makes the field `ptr` available to the host model for output and restart.
+  !> Used via the generic interface `jsb_add_var`. Used for tile fractions.
+  !
   SUBROUTINE jsb_add_var_list_element_r2d(varlist_name, name, ptr, &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
     loutput, lcontainer,                                        &
@@ -82,53 +99,57 @@ CONTAINS
     groups, verbose                                             &
     )
 
-    CHARACTER(len=*),     INTENT(in)           :: varlist_name
-    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
-    REAL(lp),             POINTER              :: ptr(:,:)            ! reference to field
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
-    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
-    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
-    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
-    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
-    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
-    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(lp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
-    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(lp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
-    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(lp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
-    CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
-    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    CHARACTER(len=*),     INTENT(in)           :: varlist_name        !< Name of the var_list
+    CHARACTER(len=*),     INTENT(in)           :: name                !< Name of variable
+    REAL(lp),             POINTER              :: ptr(:,:)            !< Reference to field
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               !< Horizontal grid
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               !< Vertical grid
+    TYPE(t_cf),           INTENT(in)           :: cf                  !< CF related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               !< GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               !< GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              !< Prefix for variable name
+    CHARACTER(len=*),     INTENT(in)           :: suffix              !< Suffix for variable name
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             !< Output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          !< Container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            !< Restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       !< Continue restart if var not available
+    REAL(lp),             INTENT(in), OPTIONAL :: initval_r           !< Value if var not available
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           !< Type of statistical processing
+    REAL(lp),             INTENT(in), OPTIONAL :: resetval_r          !< Reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               !< Missing value flag
+    REAL(lp),             INTENT(in), OPTIONAL :: missval_r           !< Missing value
+    CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)     !< Output groups the var belongs to
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             !< Print information
 
-!!$    REAL(lp), POINTER :: ptr(:,:,:,:,:)
-    TYPE(t_jsb_varlist), POINTER :: this_list           ! list
-    CHARACTER(len=50) :: name_loc
-    TYPE(t_cf_var)    :: cf_loc
-    TYPE(t_grib2_var) :: grib2_loc
-    LOGICAL           :: lmiss_loc
-    REAL(lp)          :: missval_r_loc
-    INTEGER           :: ldims(2), gdims(2)
-    INTEGER           :: n_groups
-    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     ! groups to which this variable belongs to
+    TYPE(t_jsb_varlist), POINTER :: this_list           !< Host var_list the variable is added to
+    CHARACTER(len=50) :: name_loc                       !< Output name: [prefix_]name[_suffix]
+    TYPE(t_cf_var)    :: cf_loc                         !< CF metadata in the host model's type
+    TYPE(t_grib2_var) :: grib2_loc                      !< GRIB2 metadata in the host model's type
+    LOGICAL           :: lmiss_loc                      !< Missing value flag (default: .TRUE.)
+    REAL(lp)          :: missval_r_loc                  !< Missing value (default: `missval`)
+    INTEGER           :: ldims(2), gdims(2)             !< Local (nproma, nblks) and global field dimensions
+    INTEGER           :: n_groups                       !< Number of output groups incl. 'ALL' and 'jsb_all'
+    CHARACTER(len=VARNAME_LEN), ALLOCATABLE :: groups_loc(:)     !< Groups to which this variable belongs to
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsb_add_var_list_element_r2d'
 
+    ! Set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    ! Set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    ! Set CF and GRIB2 meta data
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
+    ! ldims: local dimensions (nproma, number of blocks)
+    ! gdims: global dimensions of the field in the output file
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
@@ -141,13 +162,14 @@ CONTAINS
       n_groups = 2
     END IF
     ALLOCATE(groups_loc(n_groups))
+    ! All variables are put into these two catch-all groups
     groups_loc(1) = 'ALL'
     groups_loc(2) = 'jsb_all'
     IF (PRESENT(groups)) THEN
       groups_loc(3:n_groups) = groups(:)
     END IF
 
-    ! calls the generic routine on the host model
+    ! Calls the generic routine on the host model
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
@@ -158,10 +180,14 @@ CONTAINS
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 
+  ! ====================================================================================================== !
+  !
+  !> Get the output group name for output level `id`
+  !
   FUNCTION Get_var_group_name(id) RESULT(group_name)
 
-    INTEGER, INTENT(in) :: id
-    CHARACTER(len=:), ALLOCATABLE :: group_name
+    INTEGER, INTENT(in) :: id                       !< Output level (MINIMUM, BASIC, MEDIUM or FULL)
+    CHARACTER(len=:), ALLOCATABLE :: group_name     !< Name of the output group
 
     SELECT CASE (id)
     CASE(MINIMUM)
@@ -172,6 +198,8 @@ CONTAINS
       group_name = 'medium'
     CASE(FULL)
       group_name = 'full'
+    ! TODO: group_name stays unallocated for NONE or invalid ids (currently prevented by the callers).
+    !       Add a CASE DEFAULT calling finish(routine, ...); this requires a `routine` constant.
     END SELECT
 
   END FUNCTION

@@ -27,12 +27,18 @@ MODULE mo_hd_config_class
   PUBLIC :: t_hd_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_hd_config
-     LOGICAL                     :: debug_hd                !< additional printing for debugging
-     LOGICAL                     :: diag_water_budget       !< prints to diagnose global water budget
-     INTEGER                     :: enforce_water_budget    !< descriptor for water balance 'ignore', 'logging', or 'error'
-     CHARACTER(len=32)           :: routing_scheme          !< river_routing_scheme: full / weighted_to_coast / zero
-     CHARACTER(len=filename_max) :: fract_filename          !< file name with fractions (land, ocean, etc)
-     LOGICAL                     :: read_initial_reservoirs !< whether to read initial reservoir fillings from file
+     LOGICAL                     :: debug_hd                !< Additional printing for debugging
+     LOGICAL                     :: diag_water_budget       !< Prints to diagnose global water budget
+     INTEGER                     :: enforce_water_budget    !< Handling global water balance violations in HD process
+                                                            !< (with [[t_hd_config:diag_water_budget]]=true); overwrites
+                                                            !< [[t_jsb_model_config:enforce_water_budget]] set in namelist
+                                                            !< 'jsb_model_nml' for all ICON-Land process.</br>
+                                                            !< 'unset' (default): setting from namelist 'jsb_model_nml'</br>
+                                                            !< 'ignore' (0), 'logging' (1): message with global imbalance</br>
+                                                            !< 'error' (2): message with global imbalance and model stop
+     CHARACTER(len=32)           :: routing_scheme          !< River routing scheme: full / weighted_to_coast / zero
+     CHARACTER(len=filename_max) :: fract_filename          !< File name with fractions (land, ocean, etc)
+     LOGICAL                     :: read_initial_reservoirs !< True: read initial reservoir fillings from file
      LOGICAL                     :: use_bifurcated_rivers   !< Switches on the potential splitting of rivers
    CONTAINS
      PROCEDURE :: Init => Init_hd_config
@@ -137,7 +143,7 @@ CONTAINS
     hd_b  => new_vgrid('hd_nres_baseflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._lp/), units='')
     CALL Register_vgrid(hd_b)
 
-    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._lp,2._lp,3._lp,4._lp,5._lp/), units='')
+    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levelsq=(/1._lp,2._lp,3._lp,4._lp,5._lp/), units='')
     CALL Register_vgrid(hd_r)
 
   END SUBROUTINE Init_hd_config
