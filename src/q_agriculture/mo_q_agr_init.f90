@@ -297,7 +297,7 @@ CONTAINS
             IF (hlp1(ic,iblk) <= eps8) THEN
               nh4_fertiliser_c3crops(ic,iblk) = frac_fertil_nh4 * background_n_fertiliser_rate
               no3_fertiliser_c3crops(ic,iblk) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
-            ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio 
+            ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
             ! Convert unit of background_n_fertiliser_rate from mol N m-2 yr-1 to kg N ha-1 yr-1
             ELSE IF (hlp1(ic,iblk) > eps8 .AND. hlp1(ic,iblk) <= background_n_fertiliser_rate * 10._lp * molar_mass_N) THEN
               nh4_fertiliser_c3crops(ic,iblk) = nh4_fertiliser_c3crops(ic,iblk) / hlp1(ic,iblk) &
