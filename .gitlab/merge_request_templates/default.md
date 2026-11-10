@@ -5,8 +5,7 @@
 * do simulation results change (brief summary if so)
 
 
-
-### detailed description
+### Detailed description
 #### Issue
 * description of the issue / feature you want to address
 
@@ -21,14 +20,15 @@
 
 #### Follow-up or remaining issues
 * add here a list of new (follow-up) or remaining issues, if applicable
-* link every item to an existing gitlab issue or create a new gitlab issue and provide the link to it
+* if suitable already create a gitlab issue provide the link to it
 
 #### ICON-Land testing and docu of changes in simulation results
-* [ ] I tested the latest version of the branch (using the NAG & GPU compilers)
+* [ ] I tested the latest feature-complete version of the branch (using the NAG & GPU compilers)
   * [ ] `exp.land_jsbach_R2B4_test`
   * [ ] `exp.land_jsbach_sitelevel_test`
   * [ ] `exp.land_quincy_canopy_R2B4_test`
   * [ ] `exp.land_iqj_sitelevel_test`
+  * [ ] GPU and CPU simulatio results do NOT differ more than expected (as with previous model version)
 * [ ] simulation results do NOT change
 * [ ] simulation results do change
 
