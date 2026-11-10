@@ -500,6 +500,7 @@ CONTAINS
   !> is given, with an extra third dimension (not for output).
   !> Called through the generic `Add_var`.
   !
+  ! TODO: Can we remove the "extra_dim_n" option -- it does not seem to be used and complicates the code
   SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,            &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
