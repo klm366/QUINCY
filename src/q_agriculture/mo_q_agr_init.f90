@@ -262,7 +262,7 @@ CONTAINS
         ptr_2D => input_file%Read_2d(variable_name='fertl_c4crops', fill_array = nh4_fertiliser_c4crops(:,:))
         CALL input_file%Close()
 
-        ! The actually applied fertiliser is the maximum of the default and the (converted) read fertiliser
+        ! The actually applied fertiliser is the maximum of the default and the read fertiliser. Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
         nh4_fertiliser_c3crops(:,:) = MAX(background_n_fertiliser_rate, &
           &                               nh4_fertiliser_c3crops(:,:) / 10._lp / molar_mass_N)
         nh4_fertiliser_c4crops(:,:) = MAX(background_n_fertiliser_rate, &
@@ -297,7 +297,8 @@ CONTAINS
             IF (hlp1(ic,iblk) <= eps8) THEN
               nh4_fertiliser_c3crops(ic,iblk) = frac_fertil_nh4 * background_n_fertiliser_rate
               no3_fertiliser_c3crops(ic,iblk) = (1._lp - frac_fertil_nh4) * background_n_fertiliser_rate
-            ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio
+            ! IF fertiliser is non-zero but low, applying the minimum fertiliser rate but original NH4/NO3 ratio 
+            ! Convert unit of background_n_fertiliser_rate from mol N m-2 yr-1 to kg N ha-1 yr-1
             ELSE IF (hlp1(ic,iblk) > eps8 .AND. hlp1(ic,iblk) <= background_n_fertiliser_rate * 10._lp * molar_mass_N) THEN
               nh4_fertiliser_c3crops(ic,iblk) = nh4_fertiliser_c3crops(ic,iblk) / hlp1(ic,iblk) &
                 &                           * background_n_fertiliser_rate
@@ -315,7 +316,7 @@ CONTAINS
         nh4_fertiliser_c4crops(:,:) = nh4_fertiliser_c3crops(:,:)
         no3_fertiliser_c4crops(:,:) = no3_fertiliser_c3crops(:,:)
 
-        ! The actually applied fertiliser is the (converted) read fertiliser, no background fertilisation assumed on pasture
+        ! The actually applied fertiliser is the read fertiliser, no background fertilisation assumed on pasture. Convert unit from kg N ha-1 yr-1 to mol N m-2 yr-1
         nh4_fertiliser_pasture(:,:) = nh4_fertiliser_pasture(:,:) / 10._lp / molar_mass_N
         no3_fertiliser_pasture(:,:) = no3_fertiliser_pasture(:,:) / 10._lp / molar_mass_N
 
