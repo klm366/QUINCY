@@ -780,6 +780,7 @@ CONTAINS
       IF ((dsl4jsb_Config(CARBON_)%vertical_yasso) .AND. (dsl4jsb_Config(CARBON_)%remove_permafrost_carbon) &
         &  .AND. (lresume .OR. lstart)) THEN
         CALL message(TRIM(routine), 'Removing carbon from permafrost affected soil layers')
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
         DO ic = 1, nc
           DO is = 1, nsoil
             IF (permafrost_period_sl_climbuf(ic,is) > permafrost_threshold) THEN
@@ -794,8 +795,9 @@ CONTAINS
               c_humus_1_sl(ic,is)        = 0._lp
               c_humus_2_sl(ic,is)        = 0._lp
             END IF
-          END DO    ! is
-        END DO    ! ic
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
       ! Calculate soil carbon pools
@@ -825,7 +827,7 @@ CONTAINS
         ! Use single-layer yasso scheme
         CALL calc_soil_c(                                                          &
           ! Input (Parameter, Climate forcing, Carbon fluxes)
-          & nc, nsoil, delta_time_C, LeafLit_coef(:), WoodLit_coef(:), MiscPar(:), &
+          & nc, delta_time_C, LeafLit_coef(:), WoodLit_coef(:), MiscPar(:),        &
           & temp_15d_yDay_climbuf(:), precip_15d_yDay_climbuf(:),                  &
           & cflux_c_wood_2_litter(:), cflux_c_green_2_litter(:), root_exudates(:), &
           ! Inout (Carbon pools)
@@ -947,7 +949,7 @@ CONTAINS
               & mass_organic_soil / (rho_org_bg * layer_thick(is))))
           END DO
         END DO
-        !$ACC END PARALLEL
+        !$ACC END PARALLEL LOOP
       END IF
 
     END IF ! new day

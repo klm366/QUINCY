@@ -611,7 +611,7 @@ CONTAINS
   !> which are then decomposed into humus according to the single-layer Yasso model.
   !
   SUBROUTINE calc_soil_c_single_layer(                                &
-    & nc, nsoil, delta_time_C, LeafLit_coef, WoodLit_coef, MiscPar,   &
+    & nc, delta_time_C, LeafLit_coef, WoodLit_coef, MiscPar,          &
     & t_air, precip,                                                  &
     & Cflx_wood_2_litter, Cflx_green_2_litter, Cflx_2_root_exudates,  &
     & c_acid_ag1, c_water_ag1, c_ethanol_ag1, c_nonsoluble_ag1,       &
@@ -623,10 +623,9 @@ CONTAINS
     & c_into_humus_2_sum, c_decomp_humus_2_sum, Cflx_soil_respiration &
     & )
 
-    USE mo_carbon_constants, ONLY: WOODLITSIZE, ROOT_DIST_BETA
+    USE mo_carbon_constants, ONLY: WOODLITSIZE
 
     INTEGER,  INTENT(in)    :: nc                       !< Number of grid cells []
-    INTEGER,  INTENT(in)    :: nsoil                    !< Number of soil layers in vertical yasso scheme []
     REAL(lp), INTENT(in)    :: delta_time_C             !< Carbon time step [s]
     !   Vegetation dependent coefficients to separate leaf litter into classes of chemical composition
     REAL(lp), INTENT(in)    :: LeafLit_coef(:)          !< Leaf litter fraction going to specific pools
@@ -1040,7 +1039,6 @@ CONTAINS
     !! implementation: Tea Thum (FMI), Petri Raisanen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
-    USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_carbon_constants, ONLY: sec_per_year, ref_decomp_rate_acid, ref_decomp_rate_water, &
       & ref_decomp_rate_ethanol, ref_decomp_rate_nonsoluble, ref_decomp_rate_humus,           &
       & A_2_W, A_2_E, A_2_N, W_2_A, W_2_E, W_2_N, E_2_A, E_2_W, E_2_N, N_2_A, N_2_W, N_2_E,   &
@@ -1101,10 +1099,6 @@ CONTAINS
 
     ! Climate dependencies
     REAL(lp)   :: d_pool                  !< term which accounds for the pool type (above,below) for humus decomposition
-
-    ! Decomposition rate for N litter green (needed for N cycle)
-    REAL(lp)   :: d_litter_green          !< the rate with which the sum of AWEN pools decays
-    REAL(lp)   :: Pseudo_litter_green     !< Sum of all AWEN pools
 
     ! time stepping: yasso is parameterized based on annual time
     ! steps, thus the fluxes have to be scaled up to annual rates.

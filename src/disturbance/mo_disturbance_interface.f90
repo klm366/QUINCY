@@ -373,7 +373,7 @@ CONTAINS
     REAL(lp), DIMENSION(5)                    :: lctlib_LeafLit_coef, lctlib_WoodLit_coef
     REAL(lp)                                  :: delta_time_C    !< Carbon time step [s]
 
-    INTEGER :: iblk, ics, ice, ic, nc, is, nsoil
+    INTEGER :: iblk, ics, ice, ic, nc, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_natural_disturbances'
 
