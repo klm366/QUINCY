@@ -417,6 +417,7 @@ CONTAINS
     !$ACC   CREATE(cflux_c_green_2_litter, cflux_c_wood_2_litter, cflux_crop_harvest_2_atmos) &
     !$ACC   CREATE(LeafLit_coef, WoodLit_coef, MiscPar)
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      !$ACC ENTER DATA CREATE(soil_depth_thaw, thaw_depth) ASYNC(acc_stream)
       !$ACC ENTER DATA COPYIN(layer_depth, layer_thick) ASYNC(acc_stream)
     END IF
 
@@ -613,10 +614,16 @@ CONTAINS
 
     ! Get information about the maximum thaw depth on soil layers
     IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
-      soil_depth_thaw = MIN(soil_depth, max_thaw_prev_year_climbuf)
-      max_layer_sl = soil_depth_to_layers(soil_depth_thaw, layer_thick)
-      thaw_depth = max_thaw_prev_year_climbuf
-      !$ACC ENTER DATA COPYIN(soil_depth_thaw, thaw_depth) ASYNC(acc_stream)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        thaw_depth(ic)      = max_thaw_prev_year_climbuf(ic)
+        soil_depth_thaw(ic) = MIN(soil_depth(ic), thaw_depth(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC UPDATE HOST(thaw_depth, soil_depth_thaw) ASYNC(acc_stream)
+      !$ACC WAIT(acc_stream)
+      max_layer_sl(:,:) = soil_depth_to_layers(soil_depth_thaw(:), layer_thick(:))
+      !$ACC UPDATE DEVICE(max_layer_sl) ASYNC(acc_stream)
     END IF
 
     ! All per tile variables need to be re-calculated in case they are written to output

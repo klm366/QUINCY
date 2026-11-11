@@ -25,7 +25,7 @@ MODULE mo_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers, soil_depth_to_layers_1d, soil_depth_to_layers_2d, ifs2soil, read_bc_data, one_of, &
+  PUBLIC :: soil_depth_to_layers, ifs2soil, read_bc_data, one_of, &
     &       report_memory_usage, soil_init_from_texture, tdma_solver_vec, scaled_global_sum_2D
   PUBLIC :: toupper, tolower, int2string, real2string, logical2string, separator
 

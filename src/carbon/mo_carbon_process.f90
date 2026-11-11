@@ -80,6 +80,7 @@ CONTAINS
     !! Carbon pools use the c_ prefix and are amounts [mol(C) m-2].
     !! Intermediate cflx_*_step variables are transfers integrated over delta_time_C.
     !! All area-based quantities are per m2 of canopy area.
+    USE mo_carbon_constants, ONLY: days_per_year
 
     ! Input arguments
     REAL(lp), INTENT(in)    :: delta_time_C            !< Carbon time step [s]
@@ -116,7 +117,6 @@ CONTAINS
     REAL(lp), INTENT(out)   :: cflx_crop_harvest_to_atmosphere !< Signed crop-harvest decay flux to atmosphere [mol(C) m-2 s-1]
 
     ! Parameters
-    REAL(lp), PARAMETER :: days_per_year        = 365.0_lp !< Number of days used to convert annual turnover times to days
     REAL(lp), PARAMETER :: greenC2leafC         = 4.0_lp   !< ratio of carbon green pool (leaves, fine roots, starches,
                                                            !<   sugars) to leaf carbon
     REAL(lp), PARAMETER :: fract_c_crop_harvest = 0.5_lp   !< Fraction of eligible litter carbon routed to crop harvest
@@ -360,8 +360,7 @@ CONTAINS
 
     ! Arguments
     REAL(lp), INTENT(in)    :: delta_time_C                 !< Carbon time step [s]
-    REAL(lp), INTENT(in)    :: burned_fract(:)              !< Fraction of the vegetated area of each tile burned till the last
-                                                            !< call of this routine
+    REAL(lp), INTENT(in)    :: burned_fract(:)              !< Fraction of newly burned vegetated area [ ]
     REAL(lp), INTENT(in)    :: fire_fract_wood_2_atmos      !< Fraction of above ground wood immediately emitted to atmosphere
                                                             !< in case of fire
     REAL(lp), INTENT(in)    :: LeafLit_coef(:)              !< Factor to spread non woody litterfall into yasso pools [ ]
@@ -513,7 +512,7 @@ CONTAINS
 
     ! Arguments
     REAL(lp), INTENT(in)    :: delta_time_C                !< Carbon time step [s]
-    REAL(lp), INTENT(in)    :: damaged_fract(:)            !< Fraction of the vegetated area of each tile damaged since the last
+    REAL(lp), INTENT(in)    :: damaged_fract(:)            !< Fraction of newly damaged vegetated area [ ]
                                                            !< call of this routine
     REAL(lp), INTENT(in)    :: LeafLit_coef(:)             !< Factor to spread non woody litter into yasso pools [ ]
     REAL(lp), INTENT(in)    :: WoodLit_coef(:)             !< Factor to spread woody litterfall into yasso pools [ ]
