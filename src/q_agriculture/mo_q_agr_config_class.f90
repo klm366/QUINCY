@@ -33,8 +33,10 @@ MODULE mo_q_agr_config_class
   !> Q_AGR_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_q_agr_config
-    CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQ. Note: should NOT include an ending "_"
-    LOGICAL   :: l_read_fertiliser
+    CHARACTER(len=filename_max) :: fertiliser_filename_prefix   !< IQJ. Name of the input file of fertiliser. Note: should NOT include an ending "_"
+    CHARACTER(len=filename_max) :: fertiliser_data_source       !< IQJ. The type of fertiliser data wiht the option of LUH or NMIP. Note: should NOT include an ending "_"
+    LOGICAL   :: l_read_fertiliser                              !< IQJ. T reads fertiliser from the input file; F indicates default minimum fertiliser application rate
+    LOGICAL   :: l_read_manure                                  !< IQJ. T reads fertiliser from the input file; F indicates zero manure application
       !< determines if fertiliser data is to be read from a file (default FALSE) (ignored in QS)
 
   CONTAINS
@@ -61,9 +63,11 @@ CONTAINS
     LOGICAL                     :: lrestart_cont
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
-    CHARACTER(len=filename_max) :: fertiliser_filename_prefix
+    CHARACTER(len=filename_max) :: fertiliser_filename_prefix !< IQJ. Name of the input file of fertiliser
+    CHARACTER(len=filename_max) :: fertiliser_data_source !< IQJ. The type of fertiliser data wiht the option of LUH or NMIP
 
-    LOGICAL   :: l_read_fertiliser
+    LOGICAL   :: l_read_fertiliser !< IQJ. T reads fertiliser from the input file; F indicates default minimum fertiliser application rate
+    LOGICAL   :: l_read_manure  !< IQJ. T reads manure from the input file; F indicates zero manure application
 
     NAMELIST /lnd_q_agr_nml/  &
       & active,                     &
@@ -71,7 +75,9 @@ CONTAINS
       & ic_filename,                &
       & bc_filename,                &
       & fertiliser_filename_prefix, &
-      & l_read_fertiliser
+      & fertiliser_data_source,     &
+      & l_read_fertiliser,          &
+      & l_read_manure
 
     INTEGER                     :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_q_agr_config'
@@ -84,8 +90,10 @@ CONTAINS
     bc_filename                   = 'bc_land_use_static.nc'
     ic_filename                   = 'ic_land_agr.nc'
     fertiliser_filename_prefix    = 'bc_land_use_quincy'
+    fertiliser_data_source        = 'LUH'
     !
     l_read_fertiliser            = .FALSE.
+    l_read_manure                = .FALSE.
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
@@ -100,7 +108,9 @@ CONTAINS
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
     config%fertiliser_filename_prefix = fertiliser_filename_prefix
+    config%fertiliser_data_source     = fertiliser_data_source
     config%l_read_fertiliser          = l_read_fertiliser
+    config%l_read_manure              = l_read_manure
 
     CALL close_nml(nml_handler)
 

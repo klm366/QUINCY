@@ -63,22 +63,26 @@ MODULE mo_q_agr_constants
 
   ! generic parameters for agriculture model
   REAL(lp), SAVE :: &
-    & qs_def_n_fertiliser             = def_parameters, &  !< QS-only default rate of fertiliser application for crops per year (mol / m2 / year)
-    & iq_background_n_fertiliser_rate = def_parameters, &  !< IQ-only minimum entry from natural fertilisation sources (manure etc.)
-                                                           !< in extensive agriculture lacking mineral N input (mol / m2 / year)
+    & def_n_fertiliser_rate        = def_parameters, &  !< default rate of fertiliser application for crops per year (mol / m2 / year)
+    & def_n_manure_rate            = def_parameters, &  !< default rate of manure application for pasture per year (mol / m2 / year)
+    & background_n_fertiliser_rate = def_parameters, &  !< minimum level of nitrogen fertiliser/manure use for AGR process (mol / m2 / year)
+                                                        !< in extensive agriculture lacking mineral N input (mol / m2 / year)
     & crop_planting_mass           = def_parameters, &  !< initial mass of crops on planting, taken from the seed bed (mol/m2)
     & fstore_seed_min              = def_parameters, &  !< minimal seed pool size as fraction of crop planting mass
     & fstore_seed_max              = def_parameters, &  !< maximal seed pool size as fraction of crop planting mass
     & max_harvesting_rate          = def_parameters, &  !< maximum harvesting fraction (1/days)
     & fract_crop_to_slash          = def_parameters, &  !< initial mass of crops on planting, taken from the seed bed (mol/m2)
     & frac_fertil_nh4              = def_parameters, &  !< fraction of fertiliser applied that is NH4 (unitless)
-    & frac_fertil_po4              = def_parameters, &  !< molar ratio of P fertiliser to N fertiliser application
+    & ratio_fertil_po4             = def_parameters, &  !< molar ratio of P fertiliser to N fertiliser application
+    & frac_manure_nh4              = def_parameters, &  !< fraction of manure applied that is NH4 (unitless)
+    & ratio_manure_po4             = def_parameters, &  !< molar ratio of P manure to N manure application
     & fcs_fertappl_day1            = def_parameters, &  !< fraction of crop growing season when 1st fertiliser dose is applied
     & fcs_fertappl_day2            = def_parameters, &  !< fraction of crop growing season when 2nd fertiliser dose is applied
     & fcs_fertappl_day3            = def_parameters, &  !< fraction of crop growing season when 3rd fertiliser dose is applied
     & fcs_fertappl_day4            = def_parameters, &  !< fraction of crop growing season when 4th fertiliser dose is applied
     & canopy_mode_correction_factor= def_parameters, &  !< calibration factor to allow use of cttab_lai_max with all QUINCY modes
-    & eta_fertiliser               = def_parameters     !< fractionation of N15 due to NH3 volatilisation [per mill]
+    & eta_fertiliser               = def_parameters, &  !< N15 signature of fertiliser, the relative difference in the N15/N14 ratio between fertiliser and atmospheric N2 [per mill]
+    & eta_manure                   = def_parameters     !< N15 signature of manure, the relative difference in the N15/N14 ratio between manure and atmospheric N2 [per mill]
 
   ! phenology parameters for all crop types
   REAL(lp), SAVE :: &
@@ -118,11 +122,11 @@ MODULE mo_q_agr_constants
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_q_agr_constants'
 
-  !$ACC DECLARE CREATE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate, crop_planting_mass)
-  !$ACC DECLARE CREATE(fstore_seed_min, fstore_seed_max)
-  !$ACC DECLARE CREATE(max_harvesting_rate, fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1)
+  !$ACC DECLARE CREATE(def_n_fertiliser_rate, def_n_manure_rate, background_n_fertiliser_rate, crop_planting_mass)
+  !$ACC DECLARE CREATE(fstore_seed_min, fstore_seed_max, max_harvesting_rate, fract_crop_to_slash)
+  !$ACC DECLARE CREATE(frac_fertil_nh4, ratio_fertil_po4, frac_manure_nh4, ratio_manure_po4, fcs_fertappl_day1)
   !$ACC DECLARE CREATE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, canopy_mode_correction_factor, eta_fertiliser)
-  !$ACC DECLARE CREATE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting)
+  !$ACC DECLARE CREATE(eta_manure, mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting)
   !$ACC DECLARE CREATE(cttab_t_thres_gdd_gs, cttab_gdd_mat_min, cttab_gdd_mat_max, cttab_gdd_max)
   !$ACC DECLARE CREATE(cttab_fgdd_mat, cttab_nd_gs_max, cttab_nd_dorm_max, cttab_min_daylength)
   !$ACC DECLARE CREATE(cttab_fract_gdd_mat_gp2to3, cttab_crop_season_max, k_heatindex, cttab_k_hi_leaf)
@@ -143,8 +147,9 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_q_agr_constants'
 
     ! general crop parameters
-    qs_def_n_fertiliser               = 100._lp / 10._lp / molar_mass_N !< 100 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in QS)
-    iq_background_n_fertiliser_rate   = 20._lp / 10._lp / molar_mass_N  !< 20 kgN/ha/yr -> 1/10 to give g/m2/yr (only used in IQ)
+    def_n_fertiliser_rate             = 100._lp / 10._lp / molar_mass_N !< Tuned empirical value. 100 kgN/ha/yr -> 1/10 to give g/m2/yr.
+    def_n_manure_rate                 = 20._lp / 10._lp / molar_mass_N  !< Tuned empirical value. 20 kgN/ha/yr -> 1/10 to give g/m2/yr
+    background_n_fertiliser_rate      = 20._lp / 10._lp / molar_mass_N  !< Tuned empirical value. 20 kgN/ha/yr -> 1/10 to give g/m2/yr
     crop_planting_mass                = 4.5_lp / molar_mass_C       !< tuned from 3 gC/m2, AgroIBIS, as AgroIBIS does not need roots for N uptake
     fstore_seed_min                   = 2.0_lp                      !< top up seed pool with fruit harvest if seed pool is smaller than 2 time crop planting mass
     fstore_seed_max                   = 20.0_lp                     !< put seed pool to litter if pool is larger than 20 times crop planting mass
@@ -155,10 +160,15 @@ CONTAINS
     fcs_fertappl_day3                 = 0.35_lp                     !< intermediate
     fcs_fertappl_day4                 = 0.55_lp                     !< during grainfilling
     frac_fertil_nh4                   = 7._lp / 8._lp               !< an global average value
-    frac_fertil_po4                   = 0.5_lp * 0.4366197_lp * &   !< FAO statistic global N:P2O5 application
+    ratio_fertil_po4                  = 0.5_lp * 0.4366197_lp * &   !< FAO statistic global N:P2O5 application
                                         molar_mass_N / molar_mass_P
+    frac_manure_nh4                   = 0.988_lp                    !< assuming manure cattle manure, and organic N = NH4,
+                                                                    !< Whalen et al. 2001, https://doi.org/10.1007/s003740100416
+    ratio_manure_po4                  = 0.145_lp * &                !< assuming manure cattle manure, Whalen et al. 2001 https://doi.org/10.1007/s003740100416
+      &                                 molar_mass_N / molar_mass_P
     canopy_mode_correction_factor     = 0.8_lp                      !< tuned to get reasonable maximum LAI globally in CANOPY mode
-    eta_fertiliser                    = 0._lp                       !< not clear how to design this now
+    eta_fertiliser                    = 0._lp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732
+    eta_manure                        = 8._lp                       !< Bateman & Kelly, 2007, https://doi.org/10.1080/10256010701550732
 
     ! phenology and growth stage parameters (all AgroIBIS/CLM5)
     mavg_period_cropseason            = 20.0_lp                     !< AgroIBIS/CLM5
@@ -209,11 +219,12 @@ CONTAINS
     cttab_lai_max = &
       & (/ 7._lp, 5._lp, 6._lp, 6._lp, 7._lp, 5._lp, 5._lp, 6._lp /)
 
-    !$ACC UPDATE DEVICE(qs_def_n_fertiliser, iq_background_n_fertiliser_rate) ASYNC(1)
-    !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max) ASYNC(1)
-    !$ACC UPDATE DEVICE(crop_planting_mass, max_harvesting_rate, canopy_mode_correction_factor) ASYNC(1)
-    !$ACC UPDATE DEVICE(fract_crop_to_slash, frac_fertil_nh4, frac_fertil_po4, fcs_fertappl_day1) ASYNC(1)
+    !$ACC UPDATE DEVICE(def_n_fertiliser_rate, def_n_manure_rate, background_n_fertiliser_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(fstore_seed_min, fstore_seed_max, crop_planting_mass, max_harvesting_rate) ASYNC(1)
+    !$ACC UPDATE DEVICE(canopy_mode_correction_factor, fract_crop_to_slash, frac_fertil_nh4) ASYNC(1)
+    !$ACC UPDATE DEVICE(ratio_fertil_po4, frac_manure_nh4, ratio_manure_po4, fcs_fertappl_day1) ASYNC(1)
     !$ACC UPDATE DEVICE(fcs_fertappl_day2, fcs_fertappl_day3, fcs_fertappl_day4, eta_fertiliser) ASYNC(1)
+    !$ACC UPDATE DEVICE(eta_manure) ASYNC(1)
     !$ACC UPDATE DEVICE(mavg_period_cropseason, gdd_t_thres_dormseason, cttab_t_thres_planting) ASYNC(1)
     !$ACC UPDATE DEVICE(cttab_t_thres_gdd_gs, cttab_gdd_mat_min, cttab_gdd_mat_max, cttab_gdd_max) ASYNC(1)
     !$ACC UPDATE DEVICE(cttab_fgdd_mat, cttab_nd_gs_max, cttab_nd_dorm_max, cttab_min_daylength) ASYNC(1)
