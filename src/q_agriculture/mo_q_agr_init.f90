@@ -134,7 +134,7 @@ CONTAINS
     no3_fertiliser_c3crops(:,:) = (1._lp - frac_fertil_nh4) * def_n_fertiliser_rate
     nh4_fertiliser_c4crops(:,:) = frac_fertil_nh4 * def_n_fertiliser_rate
     no3_fertiliser_c4crops(:,:) = (1._lp - frac_fertil_nh4) * def_n_fertiliser_rate
-    n_manure_crops(:,:)         = def_n_manure_rate
+    n_manure_crop(:,:)         = def_n_manure_rate
     ! ----------------------------------------------------------------------------------------------------- !
 #else
     !---- For IQ: Read crop type from bc file (fertiliser is also read but in the time-loop not in the init)
