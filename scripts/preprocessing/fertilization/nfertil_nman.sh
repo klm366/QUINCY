@@ -31,15 +31,49 @@ module load cdo/2.5.0-gcc-11.2.0
 # set ncatted command to create no history
 ncatted="ncatted -h"
 # set cdo command to be silent, create no history and use double precision
-cdo="cdo -s --no_history -b 64"
+cdo="cdo -s -O --no_history -b 64"
 
 #----------------------------------------------------------------------
 
 # path and name of the target output folder
-FINAL_DIR=./YOURFINALOUTPUTFOLDER
-OUT_DIR="n_fert_applic"
+FINAL_DIR=./test_nmips3
+OUT_DIR="TEST_nmips3"
 TMP="${OUT_DIR}"/tmp
-REMOVE_TMP="yes" # yes/no
+REMOVE_TMP="yes"          # na czas testów
+
+TEST_MODE="yes"          # yes = tylko TEST_YEARS, no = pełny przebieg
+TEST_YEARS="1702 1850 2000 2025"
+
+# lata z TEST_YEARS mieszczące się w zakresie [lo,hi] (albo pełny seq)
+years_in_range() {
+    local lo=$1 hi=$2 y
+    if [[ "${TEST_MODE}" == "yes" ]]; then
+        for y in ${TEST_YEARS}; do
+            if (( y >= lo && y <= hi )); then echo "${y}"; fi
+        done
+    else
+        seq "${lo}" "${hi}"
+    fi
+}
+
+# rok nawozu: <1850 -> 1850, >2024 -> 2024
+clamp() {
+    local y=$1
+    if (( y < 1850 )); then y=1850; fi
+    if (( y > 2024 )); then y=2024; fi
+    echo "${y}"
+}
+
+# lata, dla których trzeba policzyć fert_man_icon_scaled (1850 zawsze: BASE_1850)
+if [[ "${TEST_MODE}" == "yes" ]]; then
+    FERT_YEARS=$( { echo 1850; for y in ${TEST_YEARS}; do clamp "${y}"; done; } | sort -un )
+else
+    FERT_YEARS=$(seq 1850 2024)
+fi
+echo "FERT_YEARS: ${FERT_YEARS}"
+
+SIMULATION_TYPE=NMIP
+NMIP_RUN=NMIP_S2
 
 MANURE_DIR="/work/mj0143/icon_land_data_pool/preprocessing/manure/"
 FERT_DIR="/work/mj0143//icon_land_data_pool/trendy/2026/raw-data-20260702/nfert/"
@@ -100,59 +134,48 @@ ${cdo} -mul "${FERT_DIR}/Nfer_Pas_NO3.nc" "${TMP}/frac_pas.nc" "${TMP}/Nfer_Pas_
 
 ${cdo} -O -add "${TMP}/manure_pasture_dep_raw.nc" "${TMP}/manure_pasture_app_raw.nc" "${TMP}/manure_pasture_pas_raw.nc"
 ${cdo} -O -add "${TMP}/manure_pasture_pas_raw.nc" "${TMP}/manure_range_dep_raw.nc" "${TMP}/manure_pasture_raw.nc"
+ncrename -O -h -v Nmanure_Pas_dep,manure_pasture_grid "${TMP}/manure_pasture_raw.nc"
 # conversion from g N m-2 → kg N ha-1: *1e-3*1e4 = *10
 # 
-${cdo} -O -setmissval,nan "${TMP}/Nfer_Crop_NH4.nc" "${TMP}/Nfer_Crop_NH4_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/Nfer_Crop_NH4_mvn.nc" "${TMP}/Nfer_Crop_NH4_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/Nfer_Crop_NH4_clean.nc" "${TMP}/Nfer_Crop_NH4_kgNha.nc"
+scale_to_kgNha() {
+    local infile="$1"
+    local outfile="$2"
 
-${cdo} -O -setmissval,nan "${TMP}/Nfer_Crop_NO3.nc" "${TMP}/Nfer_Crop_NO3_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/Nfer_Crop_NO3_mvn.nc" "${TMP}/Nfer_Crop_NO3_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/Nfer_Crop_NO3_clean.nc" "${TMP}/Nfer_Crop_NO3_kgNha.nc"
+    ${cdo} -O -setmissval,nan "${infile}" "${infile%.nc}_mvn.nc"
+    ${cdo} -O -setmisstoc,0 "${infile%.nc}_mvn.nc" "${infile%.nc}_clean.nc"
+    ${cdo} -O -mulc,10 "${infile%.nc}_clean.nc" "${outfile}"
 
-${cdo} -O -setmissval,nan "${TMP}/Nfer_Pas_NH4.nc" "${TMP}/Nfer_Pas_NH4_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/Nfer_Pas_NH4_mvn.nc" "${TMP}/Nfer_Pas_NH4_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/Nfer_Pas_NH4_clean.nc" "${TMP}/Nfer_Pas_NH4_kgNha.nc"
+    rm -f "${infile%.nc}_mvn.nc" "${infile%.nc}_clean.nc"
+}
 
-${cdo} -O -setmissval,nan "${TMP}/Nfer_Pas_NO3.nc" "${TMP}/Nfer_Pas_NO3_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/Nfer_Pas_NO3_mvn.nc" "${TMP}/Nfer_Pas_NO3_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/Nfer_Pas_NO3_clean.nc" "${TMP}/Nfer_Pas_NO3_kgNha.nc"
+scale_to_kgNha "${TMP}/Nfer_Crop_NH4.nc" "${TMP}/Nfer_Crop_NH4_kgNha.nc"
+scale_to_kgNha "${TMP}/Nfer_Crop_NO3.nc" "${TMP}/Nfer_Crop_NO3_kgNha.nc"
+scale_to_kgNha "${TMP}/Nfer_Pas_NH4.nc"  "${TMP}/Nfer_Pas_NH4_kgNha.nc"
+scale_to_kgNha "${TMP}/Nfer_Pas_NO3.nc"  "${TMP}/Nfer_Pas_NO3_kgNha.nc"
+scale_to_kgNha "${TMP}/manure_crops_raw.nc"    "${TMP}/manure_crops_kgNha.nc"
+scale_to_kgNha "${TMP}/manure_pasture_raw.nc"   "${TMP}/manure_pasture_kgNha.nc"
 
-${cdo} -O -setmissval,nan "${TMP}/manure_crops_raw.nc" "${TMP}/manure_crops_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/manure_crops_mvn.nc" "${TMP}/manure_crops_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/manure_crops_clean.nc" "${TMP}/manure_crops_kgNha.nc"
+# remap to R2B5 ans plit years
 
-${cdo} -O -setmissval,nan "${TMP}/manure_pasture_raw.nc" "${TMP}/manure_pasture_mvn.nc"
-${cdo} -O -setmisstoc,0 "${TMP}/manure_pasture_mvn.nc" "${TMP}/manure_pasture_clean.nc"
-${cdo} -O -mulc,10 "${TMP}/manure_pasture_clean.nc" "${TMP}/manure_pasture_kgNha.nc"
+remap_and_split() {
+    local infile="$1"
+    local prefix="$2"
 
-# remove temporary files
-rm -f "${TMP}/Nfer_Crop_NH4_mvn.nc" "${TMP}/Nfer_Crop_NH4_clean.nc"
-rm -f "${TMP}/Nfer_Crop_NO3_mvn.nc" "${TMP}/Nfer_Crop_NO3_clean.nc"
-rm -f "${TMP}/Nfer_Pas_NH4_mvn.nc" "${TMP}/Nfer_Pas_NH4_clean.nc"
-rm -f "${TMP}/Nfer_Pas_NO3_mvn.nc" "${TMP}/Nfer_Pas_NO3_clean.nc"
-rm -f "${TMP}/manure_crops_raw.nc" "${TMP}/manure_crops_mvn.nc" "${TMP}/manure_crops_clean.nc"
-rm -f "${TMP}/manure_pasture_raw.nc" "${TMP}/manure_pasture_mvn.nc" "${TMP}/manure_pasture_clean.nc"
+    ${cdo} -remapcon,"${GRID_ICON}" "${infile}" "${infile%.nc}_r2b5.nc"
+    ${cdo} splityear "${infile%.nc}_r2b5.nc" "${TMP}/${prefix}_"
+}
 
-# remap to R2B5
-${cdo} -remapcon,${GRID_ICON} "${TMP}/Nfer_Crop_NH4_kgNha.nc" "${TMP}/Nfer_Crop_NH4_kgNha_r2b5.nc"
-${cdo} -remapcon,${GRID_ICON} "${TMP}/Nfer_Crop_NO3_kgNha.nc" "${TMP}/Nfer_Crop_NO3_kgNha_r2b5.nc"
-${cdo} -remapcon,${GRID_ICON} "${TMP}/Nfer_Pas_NH4_kgNha.nc" "${TMP}/Nfer_Pas_NH4_kgNha_r2b5.nc"
-${cdo} -remapcon,${GRID_ICON} "${TMP}/Nfer_Pas_NO3_kgNha.nc" "${TMP}/Nfer_Pas_NO3_kgNha_r2b5.nc"
-${cdo} -remapcon,${GRID_ICON} "${TMP}/manure_crops_kgNha.nc" "${TMP}/manure_crops_kgNha_r2b5.nc"
-${cdo} -remapcon,${GRID_ICON} "${TMP}/manure_pasture_kgNha.nc" "${TMP}/manure_pasture_kgNha_r2b5.nc"
+remap_and_split "${TMP}/Nfer_Crop_NH4_kgNha.nc" "Nfer_Crop_NH4"
+remap_and_split "${TMP}/Nfer_Crop_NO3_kgNha.nc" "Nfer_Crop_NO3"
+remap_and_split "${TMP}/Nfer_Pas_NH4_kgNha.nc"  "Nfer_Pas_NH4"
+remap_and_split "${TMP}/Nfer_Pas_NO3_kgNha.nc"  "Nfer_Pas_NO3"
+remap_and_split "${TMP}/manure_crops_kgNha.nc"  "manure_crops"
+remap_and_split "${TMP}/manure_pasture_kgNha.nc" "manure_pasture"
 
-# split into years
 
-${cdo} splityear "${TMP}/Nfer_Crop_NH4_kgNha_r2b5.nc" "${TMP}/Nfer_Crop_NH4_"
-${cdo} splityear "${TMP}/Nfer_Crop_NO3_kgNha_r2b5.nc" "${TMP}/Nfer_Crop_NO3_"
-${cdo} splityear "${TMP}/Nfer_Pas_NH4_kgNha_r2b5.nc" "${TMP}/Nfer_Pas_NH4_"
-${cdo} splityear "${TMP}/Nfer_Pas_NO3_kgNha_r2b5.nc" "${TMP}/Nfer_Pas_NO3_"
-${cdo} splityear "${TMP}/manure_crops_kgNha_r2b5.nc" "${TMP}/manure_crops_"
-${cdo} splityear "${TMP}/manure_pasture_kgNha_r2b5.nc" "${TMP}/manure_pasture_"
 
 # going back to fert grid
-for year in $(seq 1850 2024); do
+for year in ${FERT_YEARS}; do
   FRAC_FILE="${FRAC_DIR}/bc_land_frac_iq_13pfts_${year}.nc"
   FRAC_CROP="${TMP}/frac_crop_${year}.nc"
   FRAC_PAS="${TMP}/frac_pas_${year}.nc"
@@ -194,7 +217,7 @@ for year in $(seq 1850 2024); do
   ${cdo} -O expr,'manure_crops=Nmanure_Crop_App/frac_crop' "${TMP}/tmp5.nc" "${OUT_DIR}/manure_crops_${year}.nc"
 
   ${cdo} -O merge "${TMP}/manure_pasture_${year}.nc" "${FRAC_PAS}" "${TMP}/tmp6.nc"
-  ${cdo} -O expr,'manure_pasture=Nmanure_Pas_App/frac_pas' "${TMP}/tmp6.nc" "${OUT_DIR}/manure_pasture_${year}.nc"
+  ${cdo} -O expr,'manure_pasture=manure_pasture_grid/frac_pas' "${TMP}/tmp6.nc" "${OUT_DIR}/manure_pasture_${year}.nc"
 
   ${cdo} -merge "${OUT_DIR}/fertl_crops_nh4_${year}.nc" \
   "${OUT_DIR}/fertl_crops_no3_${year}.nc" \
@@ -210,78 +233,201 @@ for year in $(seq 1850 2024); do
 
 done
 
-for year in $(seq 1850 2024); do
-  HARV_SRC="${LUH_LAND_USE_DIR}/bc_land_use_quincy_${year}.nc"
-  HARV_TMP="${TMP}/harvest_fract_${year}.nc"
-  FERT_ICON="${OUT_DIR}/fert_man_icon_scaled_clean_${year}.nc"
-  OUT_NMIP="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+FERT_VARS="fertl_crops_nh4,fertl_crops_no3,fertl_pasture_nh4,fertl_pasture_no3"
+MANURE_VARS="manure_crops,manure_pasture"
 
-  ${ncatted} -a _FillValue,fertl_crops_nh4,d,, -a missing_value,fertl_crops_nh4,d,, "${FERT_ICON}"
-  ${ncatted} -a _FillValue,fertl_crops_no3,d,, -a missing_value,fertl_crops_no3,d,, "${FERT_ICON}"
-  ${ncatted} -a _FillValue,fertl_pasture_nh4,d,, -a missing_value,fertl_pasture_nh4,d,, "${FERT_ICON}"
-  ${ncatted} -a _FillValue,fertl_pasture_no3,d,, -a missing_value,fertl_pasture_no3,d,, "${FERT_ICON}"
-  ${ncatted} -a _FillValue,manure_crops,d,, -a missing_value,manure_crops,d,, "${FERT_ICON}"
-  ${ncatted} -a _FillValue,manure_pasture,d,, -a missing_value,manure_pasture,d,, "${FERT_ICON}"
+BASE_1850="${OUT_DIR}/fert_man_icon_scaled_clean_1850.nc"
 
-  # harvest_fract z oryginalnego bc_land_use_quincy
-  ${cdo} selvar,harvest_fract "${HARV_SRC}" "${HARV_TMP}"
+extract_harvest() {
+    local year="$1"
+    local outfile="$2"
 
-  # merge: fertl_* + harvest_fract
-  ${cdo} merge "${FERT_ICON}" "${HARV_TMP}" "${OUT_NMIP}"
-done
+    ${cdo} selvar,harvest_fract \
+        "${LUH_LAND_USE_DIR}/bc_land_use_quincy_${year}.nc" \
+        "${outfile}"
+}
 
-for file in "${FINAL_DIR}"/bc_land_use_quincy_NMIP_????.nc; do
+remove_fill_attributes() {
+    local infile="$1"
 
-  [ -e "${file}" ] || continue
+    for var in fertl_crops_nh4 fertl_crops_no3 \
+               fertl_pasture_nh4 fertl_pasture_no3 \
+               manure_crops manure_pasture; do
+        ${ncatted} -a _FillValue,"${var}",d,, \
+                   -a missing_value,"${var}",d,, "${infile}"
+    done
+}
+# frac crop/pasture for year L (same safety rules as in the main loop)
+prep_frac() {
+    local L="$1"
+    local FRAC_FILE="${FRAC_DIR}/bc_land_frac_iq_13pfts_${L}.nc"
 
-  echo "Reducing time dimension in ${file}"
+    ${cdo} expr,'frac_crop=(fract_pft11+fract_pft12)*fract_veg*fract_land*notsea' \
+        "${FRAC_FILE}" "${TMP}/fc_${L}.nc"
+    ${cdo} expr,'frac_pas=(fract_pft09+fract_pft10)*fract_veg*fract_land*notsea' \
+        "${FRAC_FILE}" "${TMP}/fp_${L}.nc"
 
-  tmp_file="${file}.tmp.nc"
+    # frac==0 -> -1 (later max(...,0) turns the result into 0); 0<frac<=0.001 -> 0.001
+    ${cdo} expr,'frac_crop=(frac_crop==0?-1:((frac_crop>0 && frac_crop<=0.001)?0.001:frac_crop))' \
+        "${TMP}/fc_${L}.nc" "${TMP}/frac_crop_L${L}.nc"
+    ${cdo} expr,'frac_pas=(frac_pas==0?-1:((frac_pas>0 && frac_pas<=0.001)?0.001:frac_pas))' \
+        "${TMP}/fp_${L}.nc" "${TMP}/frac_pas_L${L}.nc"
+}
 
-  # Dla jednego timestepu ncwa usunie wymiar time
-  ${cdo} --reduce_dim copy "${file}" "${tmp_file}"
+# data from year F divided by fractions from year L -> 6 variables in one file
+scale_FL() {
+    local F="$1" L="$2" out="$3"
 
-  # Podmiana pliku wynikowego
-  mv "${tmp_file}" "${file}"
-done
+    ${cdo} merge \
+        "${TMP}/Nfer_Crop_NH4_${F}.nc" "${TMP}/Nfer_Crop_NO3_${F}.nc" \
+        "${TMP}/Nfer_Pas_NH4_${F}.nc"  "${TMP}/Nfer_Pas_NO3_${F}.nc" \
+        "${TMP}/manure_crops_${F}.nc"  "${TMP}/manure_pasture_${F}.nc" \
+        "${TMP}/frac_crop_L${L}.nc"    "${TMP}/frac_pas_L${L}.nc" \
+        "${TMP}/sfl.nc"
 
-# create years 1700 till 1850 and 2025
-# fertilization variables from 1850 year, harv from created earlier luh files 
+    ${cdo} expr,'fertl_crops_nh4=max(Nfer_Crop_NH4/frac_crop,0);fertl_crops_no3=max(Nfer_Crop_NO3/frac_crop,0);fertl_pasture_nh4=max(Nfer_Pas_NH4/frac_pas,0);fertl_pasture_no3=max(Nfer_Pas_NO3/frac_pas,0);manure_crops=max(Nmanure_Crop_App/frac_crop,0);manure_pasture=max(manure_pasture_grid/frac_pas,0)' \
+        "${TMP}/sfl.nc" "${out}"
+}
+case "${NMIP_RUN}" in
+    NMIP)
+        # Fertilizer, manure and harvest all vary annually.
+        for year in $(years_in_range 1850 2024); do
+            BASE="${OUT_DIR}/fert_man_icon_scaled_clean_${year}.nc"
+            HARV_TMP="${TMP}/harvest_fract_${year}.nc"
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
 
-# Exctract fert variables from year 1850
-# Create 2025 year by copying fert data from 2024
+            remove_fill_attributes "${BASE}"
+            extract_harvest "${year}" "${HARV_TMP}"
+            ${cdo} merge "${BASE}" "${HARV_TMP}" "${OUTFILE}"
+        done
+        ;;
 
-for year in 1850 2024; do
-  ${cdo} selvar,fertl_crops_nh4 "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/fertl_crops_nh4_${year}.nc
-  ${cdo} selvar,fertl_crops_no3 "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/fertl_crops_no3_${year}.nc
-  ${cdo} selvar,fertl_pasture_nh4 "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/fertl_pasture_nh4_${year}.nc
-  ${cdo} selvar,fertl_pasture_no3 "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/fertl_pasture_no3_${year}.nc
-  ${cdo} selvar,manure_crops    "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/manure_crops_${year}.nc
-  ${cdo} selvar,manure_pasture  "${FINAL_DIR}"/bc_land_use_quincy_NMIP_${year}.nc "${TMP}"/manure_pasture_${year}.nc
-done
-# -----------------------------------------------------------
-# Extract only harvest_fract for years 1700–1850
-# ------------------------------------------------------------------
-for year in $(seq 1700 1849); do
-  HARV_SRC="${LUH_LAND_USE_DIR}/bc_land_use_quincy_${year}.nc"
-  TMP_FILE="${TMP}/tmp_bc_land_use_quincy_NMIP_${year}.nc"
-  OUT_NMIP="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+    NMIP_S0)
+        # Constant 1850 boundary condition; symlink it for 0850-2024.
+        remove_fill_attributes "${BASE_1850}"
+        extract_harvest 1850 "${TMP}/harvest_fract_1850.nc"
+        ${cdo} merge "${BASE_1850}" "${TMP}/harvest_fract_1850.nc" \
+            "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.nc"
 
-  # Select only harvest_fract variable
-  ${cdo} selvar,harvest_fract "${HARV_SRC}" "${TMP_FILE}"
-  ${cdo} merge "${TMP}"/fertl_crops_nh4_1850.nc "${TMP}"/fertl_crops_no3_1850.nc "${TMP}"/fertl_pasture_nh4_1850.nc \
-  "${TMP}"/manure_crops_1850.nc \
-  "${TMP}"/manure_pasture_1850.nc \
-  "${TMP}"/fertl_pasture_no3_1850.nc \
-  "${TMP_FILE}" "${OUT_NMIP}"
-done
+        ${cdo} --reduce_dim copy \
+            "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.nc" \
+            "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.tmp.nc"
+        mv "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.tmp.nc" \
+           "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.nc"
 
-${cdo} selvar,harvest_fract "${LUH_LAND_USE_DIR}/bc_land_use_quincy_2025.nc" "${TMP}/harv_fract_2025.nc"
-${cdo} merge "${TMP}/fertl_crops_nh4_2024.nc" "${TMP}/fertl_crops_no3_2024.nc" "${TMP}/fertl_pasture_nh4_2024.nc" "${TMP}/fertl_pasture_no3_2024.nc" "${TMP}/harv_fract_2025.nc" "${TMP}/manure_crops_2024.nc" "${TMP}/manure_pasture_2024.nc" "${FINAL_DIR}/bc_land_use_quincy_NMIP_2025.nc"
+        for year in $(years_in_range 850 2024); do
+            if (( year == 1850 )); then continue; fi   # plik 1850 już istnieje
+            printf -v year_padded '%04d' "${year}"
+            ln -sf "${FINAL_DIR}/bc_land_use_quincy_NMIP_1850.nc" \
+                "${FINAL_DIR}/bc_land_use_quincy_NMIP_${year_padded}.nc"
+        done
+        ;;
 
-# An option to remove temporary directory
-if [[ "$REMOVE_TMP" == "yes" ]]; then
-  rm -f "${TMP}"
+    NMIP_S2)
+    # Fertilizer: year Y / frac Y.  Manure: year 1850 / frac Y (constant total per cell).
+        for year in $(years_in_range 1850 2024); do
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+
+            prep_frac "${year}"
+            scale_FL 1850 "${year}" "${TMP}/s2_man_full.nc"      # manure: F=1850, L=Y
+            ${cdo} selvar,"${MANURE_VARS}" "${TMP}/s2_man_full.nc" "${TMP}/s2_manure.nc"
+
+            BASE="${OUT_DIR}/fert_man_icon_scaled_clean_${year}.nc"
+            remove_fill_attributes "${BASE}"
+            ${cdo} selvar,"${FERT_VARS}" "${BASE}" "${TMP}/s2_fert.nc"
+
+            ${cdo} merge "${TMP}/s2_fert.nc" "${TMP}/s2_manure.nc" "${TMP}/s2_merged.nc"
+            extract_harvest "${year}" "${TMP}/s2_harvest.nc"
+            ${cdo} merge "${TMP}/s2_merged.nc" "${TMP}/s2_harvest.nc" "${OUTFILE}"
+            remove_fill_attributes "${OUTFILE}"
+    done
+    ;;
+
+    NMIP_S3)
+        # Manure and harvest vary annually; fertilizer fixed at 1850.
+        for year in $(years_in_range 1850 2024); do
+            BASE="${OUT_DIR}/fert_man_icon_scaled_clean_${year}.nc"
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+            remove_fill_attributes "${BASE}"
+            remove_fill_attributes "${BASE_1850}"
+
+            ${cdo} selvar,"${FERT_VARS}" "${BASE_1850}" "${TMP}/s3_fert.nc"
+            ${cdo} selvar,"${MANURE_VARS}" "${BASE}" "${TMP}/s3_manure.nc"
+            ${cdo} merge "${TMP}/s3_fert.nc" "${TMP}/s3_manure.nc" "${TMP}/s3_merged.nc"
+
+            extract_harvest "${year}" "${TMP}/s3_harvest.nc"
+            ${cdo} merge "${TMP}/s3_merged.nc" "${TMP}/s3_harvest.nc" "${OUTFILE}"
+        done
+        ;;
+
+    NMIP_S6)
+        # Fertilizer and manure: year Y / frac 1850 (land cover frozen at 1850).
+        # Harvest fixed at 1850.
+        extract_harvest 1850 "${TMP}/s6_harvest_1850.nc"
+        prep_frac 1850
+
+        for year in $(years_in_range 1850 2024); do
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+
+            scale_FL "${year}" 1850 "${TMP}/s6_fert_man.nc"   # F=Y, L=1850
+            ${cdo} merge "${TMP}/s6_fert_man.nc" "${TMP}/s6_harvest_1850.nc" "${OUTFILE}"
+            remove_fill_attributes "${OUTFILE}"
+        done
+        ;;
+    NMIP_S11)
+        # Fertilizer and manure fixed at 1850; harvest varies annually.
+        remove_fill_attributes "${BASE_1850}"
+        ${cdo} selvar,"${FERT_VARS},${MANURE_VARS}" "${BASE_1850}" "${TMP}/s11_base_1850.nc"
+
+        for year in $(years_in_range 1850 2024); do
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+
+            extract_harvest "${year}" "${TMP}/s11_harvest.nc"
+            ${cdo} merge "${TMP}/s11_base_1850.nc" "${TMP}/s11_harvest.nc" "${OUTFILE}"
+        done
+        ;;
+
+
+    TRENDY)
+        # fertilizer: clamp(year) do 1850-2024, harvest_fract: dany rok
+        # (1700-1849 -> nawóz z 1850, 2025 -> nawóz z 2024)
+        for fy in ${FERT_YEARS}; do
+            remove_fill_attributes "${OUT_DIR}/fert_man_icon_scaled_clean_${fy}.nc"
+        done
+
+        for year in $(years_in_range 1700 2025); do
+            fy=$(clamp "${year}")
+            BASE="${OUT_DIR}/fert_man_icon_scaled_clean_${fy}.nc"
+            OUTFILE="${FINAL_DIR}/bc_land_use_quincy_NMIP_${year}.nc"
+
+            ${cdo} selvar,"${FERT_VARS}" "${BASE}" "${TMP}/trendy_fert_${year}.nc"
+            extract_harvest "${year}" "${TMP}/trendy_harvest_${year}.nc"
+            ${cdo} merge "${TMP}/trendy_fert_${year}.nc" \
+                         "${TMP}/trendy_harvest_${year}.nc" "${OUTFILE}"
+        done
+        ;;
+esac
+
+#----------------------------------------------------------------------
+# Remove the time dimension from regular annual output files
+#----------------------------------------------------------------------
+if [[ "${NMIP_RUN}" != "NMIP_S0" ]]; then
+    for file in "${FINAL_DIR}"/bc_land_use_quincy_NMIP_????.nc; do
+        [[ -e "${file}" ]] || continue
+
+        echo "Reducing time dimension in ${file}"
+
+        tmp_file="${file}.tmp.nc"
+        ${cdo} --reduce_dim copy "${file}" "${tmp_file}"
+        mv "${tmp_file}" "${file}"
+    done
+fi
+
+#----------------------------------------------------------------------
+# Optional cleanup
+#----------------------------------------------------------------------
+if [[ "${REMOVE_TMP}" == "yes" ]]; then
+    rm -rf "${TMP}"
 else
-  echo "The "${TMP}" directory was not removed"
+    echo "The ${TMP} directory was not removed"
 fi
