@@ -43,7 +43,7 @@ CONTAINS
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
   ELEMENTAL PURE SUBROUTINE bioclim_limits (is_dynamic, lct_tcmin, lct_tcmax, lct_twmax, lct_min_temprange, lct_gddmin, &
-                                            min_mmtemp20, max_mmtemp20, gdd_prev_year, bio_exist)
+                                            lct_snowmin, min_mmtemp20, max_mmtemp20, max_snow_prev_year, gdd_prev_year, bio_exist)
 
 !
 ! calculation of bioclimatic limits for each PFT based on modified
@@ -58,8 +58,10 @@ CONTAINS
     REAL(lp), INTENT(in)  :: lct_min_temprange ! PFT-specific minimum difference of 20-year average warme st
                                                ! minus coldest month temperature [C]
     REAL(lp), INTENT(in)  :: lct_gddmin        ! PFT-specific minimum GDD limit
+    REAL(lp), INTENT(in)  :: lct_snowmin       ! PFT-specific minimum required snow depth [m]
     REAL(lp), INTENT(in)  :: min_mmtemp20      ! Minimum monthly mean temp. (20yr climatology) [K]
     REAL(lp), INTENT(in)  :: max_mmtemp20      ! Maximum monthly mean temp. (20yr climatology) [K]
+    REAL(lp), INTENT(in)  :: max_snow_prev_year  ! previous year maximum snow depth [m]
     REAL(lp), INTENT(in)  :: gdd_prev_year     ! GDD of previous year
 
 ! output
@@ -69,9 +71,10 @@ CONTAINS
 
     bio_exist = 1._lp
 
-    IF (is_dynamic .AND. (min_mmtemp20 - tmelt < lct_tcmin .OR. min_mmtemp20 - tmelt > lct_tcmax  &
-       .OR. gdd_prev_year < lct_gddmin .OR. max_mmtemp20 - tmelt > lct_twmax                      &
-       .OR. (max_mmtemp20 - min_mmtemp20) < lct_min_temprange)) bio_exist = 0._lp
+    IF (is_dynamic .AND. (((min_mmtemp20 - tmelt) < lct_tcmin) .OR. ((min_mmtemp20 - tmelt) > lct_tcmax)  &
+       .OR. (gdd_prev_year < lct_gddmin) .OR. ((max_mmtemp20 - tmelt) > lct_twmax)                        &
+       .OR. ((max_mmtemp20 - min_mmtemp20) < lct_min_temprange)                                           &
+       .OR. (max_snow_prev_year < lct_snowmin))) bio_exist = 0._lp
 
   END SUBROUTINE bioclim_limits
 
@@ -526,7 +529,6 @@ CONTAINS
     REAL(lp)    :: total_act_fpc(nidx)
     REAL(lp)    :: grass_sum(nidx)
     REAL(lp)    :: non_woody_fpc(nidx)
-    REAL(lp)    :: woody_estab_fpc(nidx)
     REAL(lp)    :: theta, veg_inc, tau_pft
     REAL(lp), PARAMETER  ::  min_dist_woody = 0.002_lp / 365._lp !! mortality of woody plants (not caused by fire/windthrow,
                                                                  !! but by other unresolved processes)

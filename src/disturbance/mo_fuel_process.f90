@@ -14,6 +14,7 @@
 MODULE mo_fuel_process
 #ifndef __NO_JSBACH__
 
+  USE mo_jsb_control, ONLY: acc_stream
   USE mo_kind,      ONLY: lp
 
   IMPLICIT NONE
@@ -56,7 +57,7 @@ CONTAINS
 
     nc = SIZE(c_acid_ag1_ta)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       fuel(ic) =  c_acid_ag1_ta(ic)    + c_water_ag1_ta(ic)       &
         &       + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic)  &

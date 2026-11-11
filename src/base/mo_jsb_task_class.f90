@@ -63,6 +63,7 @@ MODULE mo_jsb_task_class
     INTEGER                   :: nc      = -1     !< Length of chunk
     INTEGER                   :: nsoil_e = -1     !< Number of soil layers for energy, set by ICON
     INTEGER                   :: nsoil_w = -1     !< Number of soil layers for water, set by ICON
+    INTEGER                   :: nsoil_c = -1     !< Number of soil layers for carbon, set by ICON
     INTEGER                   :: nsnow_e = -1     !< Number of snow layers for energy, set by ICON
     INTEGER                   :: npft    =  0     !< Number of PFTs
   END TYPE t_jsb_task_options

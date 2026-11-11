@@ -21,7 +21,7 @@ MODULE mo_jsb_lctlib_class
 
   USE mo_jsb_parallel, ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_kind,         ONLY: lp
-  USE mo_exception,    ONLY: message_text, finish
+  USE mo_exception,    ONLY: message_text, finish, message
   USE mo_util,         ONLY: int2string
 
   IMPLICIT NONE
@@ -124,6 +124,7 @@ MODULE mo_jsb_lctlib_class
     REAL(lp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
     REAL(lp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
     REAL(lp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
+    REAL(lp) :: bclimit_min_snow          !< PFT-specific minimum required snow depth [m]
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
     REAL(lp) :: moist_extinction          !< PFT specific moisture of extinction
@@ -149,6 +150,7 @@ MODULE mo_jsb_lctlib_class
     REAL(lp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
                                                  !< and if BETHY is not used)
     REAL(lp) :: StemArea             !< Area of stems and branches of woody plants
+    REAL(lp) :: root_dist_beta       !< Beta for exponential decaying root distribution with depth [cm-1]
 
     ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
     INTEGER  :: growthform
@@ -353,6 +355,7 @@ CONTAINS
     LOGICAL            :: exists_bclimit_max_warm_mmtemp  = .FALSE.
     LOGICAL            :: exists_bclimit_min_temprange    = .FALSE.
     LOGICAL            :: exists_bclimit_min_gdd          = .FALSE.
+    LOGICAL            :: exists_bclimit_min_snow         = .FALSE.
     LOGICAL            :: exists_gdd_base                 = .FALSE.
     LOGICAL            :: exists_upper_tlim               = .FALSE.
     LOGICAL            :: exists_fract_wood_2_onSite       = .FALSE.
@@ -370,6 +373,7 @@ CONTAINS
     LOGICAL            :: exists_woodlit_coef             = .FALSE.
     LOGICAL            :: exists_leaflit_coef             = .FALSE.
     LOGICAL            :: exists_litveg_coef              = .FALSE.
+    LOGICAL            :: exists_root_dist_beta           = .FALSE.
     ! quincy model - start
     LOGICAL            :: exists_growthform = .FALSE.
     LOGICAL            :: exists_ps_pathway = .FALSE.
@@ -711,6 +715,9 @@ CONTAINS
           CASE ('bclimit_min_gdd')                              ! PFT-specific minimum growing degree days (at or above 5 deg C)
              READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_gdd
              exists_bclimit_min_gdd = .TRUE.
+          CASE ('bclimit_min_snow')                              ! PFT-specific minimum required snow depth
+             READ(line(pos:length),*) lctlib(1:nlct)%bclimit_min_snow
+             exists_bclimit_min_snow = .TRUE.
           CASE ('gdd_base')                                     ! PFT-specific GDD base
              READ(line(pos:length),*) lctlib(1:nlct)%gdd_base
              exists_gdd_base = .TRUE.
@@ -790,6 +797,9 @@ CONTAINS
           CASE ('woodlittersize')                                ! PFT-specific wood liter size (needed for wood decomposition)
              READ(line(pos:length),*) lctlib(1:nlct)%WoodLitterSize
              exists_woodlittersize_coef = .TRUE.
+          CASE ('root_dist_beta')                                ! PFT-specific exponent for root distribution
+             READ(line(pos:length),*) lctlib(1:nlct)%root_dist_beta
+             exists_root_dist_beta = .TRUE.
           CASE default
             ! nothing to do
           END SELECT
@@ -1200,6 +1210,23 @@ CONTAINS
            lctlib(i)%CarboxRate=lctlib(i)%CarboxRate * 1.e-06_lp
          END DO
          !------------------------------------------------------------------------------------------
+         ! Some parameters are conditional and not needed if those processes are not
+         ! enabled. Instead of stopping the simulation if these parameters are not found,
+         ! they are filled with error values and checked in the respective process.
+         IF(.NOT. exists_bclimit_min_snow) THEN
+           CALL message('init_lctlib', 'No data for BCLIMIT_MIN_SNOW found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%bclimit_min_snow = -999._lp
+           END DO
+         END IF
+         IF(.NOT. exists_root_dist_beta) THEN
+           CALL message('init_lctlib','No data for ROOT_DIST_BETA found in ' &
+             & //TRIM(lctlib_file_name) // '. Consider updating your lctlib file!')
+           DO i=1,nlct
+             lctLib(i)%root_dist_beta = -999._lp
+           END DO
+         END IF
        END IF
 
        ! model scheme: quincy
@@ -1608,6 +1635,7 @@ CONTAINS
         CALL p_bcast(lctlib(:)%bclimit_max_warm_mmtemp, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bclimit_min_temprange, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%bclimit_min_gdd, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bclimit_min_snow, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%gdd_base, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%upper_tlim, p_io, mpi_comm)
         CALL p_bcast(lctlib(:)%fract_wood_2_onSite, p_io, mpi_comm)
@@ -1627,6 +1655,7 @@ CONTAINS
           CALL p_bcast(lctlib(:)%WoodLit_coef(i), p_io, mpi_comm)
         END DO
         CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%root_dist_beta, p_io, mpi_comm)
       END IF
 
       ! model scheme: quincy

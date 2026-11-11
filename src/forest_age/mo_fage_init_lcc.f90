@@ -21,7 +21,7 @@ MODULE mo_fage_init_lcc
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
   USE mo_jsb_lcc,             ONLY: init_lcc
   USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                               BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+    &                               BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
 
   dsl4jsb_Use_processes FAGE_
 
@@ -34,7 +34,7 @@ MODULE mo_fage_init_lcc
   CHARACTER(len=*), PARAMETER :: procname = 'fage'
 
   INTEGER, PARAMETER :: nr_of_active_cqts = 0   !< fage currently does not have any active cqts
-  INTEGER, PARAMETER :: nr_of_passive_cqts = 5
+  INTEGER, PARAMETER :: nr_of_passive_cqts = 6
 
 CONTAINS
 
@@ -60,7 +60,8 @@ CONTAINS
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    passive_cqts = (/ LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
+    passive_cqts = (/ LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+      &               PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE /)
 
     nr_of_involved_tiles = tile%Get_no_of_children()
     ALLOCATE(involved_child_tiles(nr_of_involved_tiles))

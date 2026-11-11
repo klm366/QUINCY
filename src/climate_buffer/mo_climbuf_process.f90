@@ -25,46 +25,57 @@ MODULE mo_climbuf_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_climbuf, get_relative_humidity_air
+  PUBLIC :: calc_climbuf_2d, calc_climbuf_3d, get_relative_humidity_air
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_climbuf_process'
 CONTAINS
   !
   ! ======================================================================================================== !
   !>
-  !>#### Compute running averages of climate variables
+  !>#### Compute running averages of 2D climate variables
   !>
   !> We here calculate daily, annual or climatological mean, maximum or minimum values from
-  !> atmospheric forcing data.
+  !> atmospheric forcing data. This routine is used for 2D (surface) variables.
   !>
   ! -------------------------------------------------------------------------------------------------------- !
-  ELEMENTAL PURE SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, &
-    &                                     dtime, t_air, rain, snow, wind_10m, q_rel_air, &
-    &                                     seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
-    &                                     min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
-    &                                     temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
-    &                                     gdd5_sum_year, gdd5_prev_year, &
-    &                                     max_wind_of_day, max_wind_yDay, max_wind_4yr, &
-    &                                     q_rel_air_14d, q_rel_air_14d_yDay)
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_climbuf_2d ( &
+    & lstart, init_running_means, new_day, new_month, new_year, &
+    & dtime, t_air, rain, snow, wind_10m, q_rel_air, thaw_depth, &
+    & seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
+    & min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp_20yr, max_mmtemp_20yr, &
+    & temp_15d, temp_15d_yDay, precip_15d, precip_15d_yDay, &
+    & gdd5_sum_year, gdd5_prev_year, &
+    & max_thaw_of_yr, max_thaw_prev_year, &
+    & max_wind_of_day, max_wind_yDay, max_wind_4yr, &
+    & q_rel_air_14d, q_rel_air_14d_yDay, &
+    & snow_depth, max_snow_of_yr, max_snow_prev_year)
 
-    LOGICAL, INTENT(in) :: &
+    !$ACC ROUTINE SEQ
+
+    LOGICAL, INTENT(in) ::      &
       & lstart,                 & !< This is the first time step in a simulation
       & init_running_means,     & !< Initialize the min/max temperature climatology
       & new_day,                & !< This is the first time step of the day
       & new_month,              & !< This is the first time step of the month
       & new_year                  !< This is the first time step of the year
 
-    REAL(lp), INTENT(in) :: &
+    REAL(lp), INTENT(in) ::     &
       & dtime,                  & !< Time step length [s]
       & seconds_day,            & !< Length of a day [s]
-      & seconds_month,          & !< Length of the previous month [s]
+      & seconds_month             !< Length of the previous month [s]
+
+    REAL(lp), INTENT(in) ::     &
       & t_air,                  & !< Near surface air temperature [K]
       & rain,                   & !< Liquid precipitation [kg m-2 s-1]
       & snow,                   & !< Solid precipitation [kg m-2 s-1]
       & wind_10m,               & !< 10m wind speed [m/s]
-      & q_rel_air                 !< Relative humidity [%]
+      & q_rel_air,              & !< Relative humidity [%]
+      & thaw_depth                !< Thaw depth within soil column (== active layer) [m]
 
-    REAL(lp), INTENT(inout) :: &
+    REAL(lp), INTENT(inout) ::  &
       & temp_sum_day,           & !< Current temperature sum of the day [K]
       & temp_sum_month,         & !< Current temperature sum of the month [K]
       & min_mmtemp_of_yr,       & !< Current minimum monthly mean temperature of the year [K]
@@ -73,15 +84,24 @@ CONTAINS
       & max_mmtemp_20yr,        & !< Climatological mean temperature of the warmest month [K]
       & temp_15d,               & !< 15-day smoothed temperature [K]
       & temp_15d_yDay,          & !< 15-day smoothed temperature at the end of the previous day [K]
-      & precip_15d,             & !< 15-day smoothed precipitation [K]
-      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [K]
+      & precip_15d,             & !< 15-day smoothed precipitation [kg m-2 s-1]
+      & precip_15d_yDay,        & !< 15-day smoothed precipitation at the end of the previous day [kg m-2 s-1]
       & gdd5_sum_year,          & !< Current number of growing degree days of this year
       & gdd5_prev_year,         & !< Growing degree days of previous year
+      & max_thaw_of_yr,         & !< Maximum soil column thaw depth in current year [m]
+      & max_thaw_prev_year,     & !< Maximum soil column thaw depth in previous year [m]
       & max_wind_of_day,        & !< Current maximum wind speed of the day [m s-1]
       & max_wind_yDay,          & !< Maximum wind speed of the previous day [m s-1]
       & max_wind_4yr,           & !< Smoothed maximum wind speed (~4 years) [m s-1]
       & q_rel_air_14d,          & !< Relative humidity smoothed in time (~14 days) [%]
       & q_rel_air_14d_yDay        !< Previous day value of smoothed relative humidity [%]
+
+    REAL(lp), INTENT(in), OPTIONAL ::    &
+      & snow_depth                !< Snow depth [m]
+
+    REAL(lp), INTENT(inout), OPTIONAL :: &
+      & max_snow_of_yr,         & !< Maximum snow depth in current year [m]
+      & max_snow_prev_year        !< Maximum snow depth in previous year [m]
 
     ! Local variables
     REAL(lp) :: &
@@ -100,7 +120,7 @@ CONTAINS
     ELSE
       prev_day_mean_temp = temp_sum_day / seconds_day
       temp_sum_day = t_air * dtime
-    ENDIF
+    END IF
 
     IF (.NOT. new_month .OR. lstart) THEN
       temp_sum_month = temp_sum_month + t_air * dtime
@@ -119,6 +139,16 @@ CONTAINS
       gdd5_sum_year = gdd5_sum_year + MAX(0._lp, prev_day_mean_temp - tmelt - 5._lp)
     END IF
 
+    !-- Soil thaw depth
+    !  ---------------------
+    IF (.NOT. new_year .OR. lstart) THEN
+      max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
+    ELSE
+      max_thaw_prev_year = max_thaw_of_yr
+      max_thaw_of_yr = 0._lp
+      max_thaw_of_yr = MAX(max_thaw_of_yr, thaw_depth)
+    END IF
+
     !-- Multi-year minimum and maximum monthly mean temperatures
     !  ----------------------
     IF (new_month .AND. .NOT. lstart) THEN
@@ -134,7 +164,7 @@ CONTAINS
         ELSE
           min_mmtemp_20yr = (min_mmtemp_20yr * 19._lp + min_mmtemp_of_yr) / 20._lp
           max_mmtemp_20yr = (max_mmtemp_20yr * 19._lp + max_mmtemp_of_yr) / 20._lp
-        ENDIF
+        END IF
         ! --- reset for current year
         min_mmtemp_of_yr =  1000._lp
         max_mmtemp_of_yr = -1000._lp
@@ -176,7 +206,94 @@ CONTAINS
       q_rel_air_14d_yDay = q_rel_air_14d
     END IF
 
-  END SUBROUTINE calc_climbuf
+    !-- Snow depth
+    !  ---------------------
+    IF (PRESENT(snow_depth) .AND. PRESENT(max_snow_of_yr) .AND. PRESENT(max_snow_prev_year)) THEN
+      IF (.NOT. new_year .OR. lstart) THEN
+         max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
+      ELSE
+         max_snow_prev_year = max_snow_of_yr
+         max_snow_of_yr = 0._lp
+         max_snow_of_yr = MAX(max_snow_of_yr, snow_depth)
+      END IF
+    END IF
+
+  END SUBROUTINE calc_climbuf_2d
+  !
+  ! ======================================================================================================== !
+  !>
+  !>#### Compute running averages of 3D climate variables
+  !>
+  !> We here calculate daily, annual or climatological mean, maximum or minimum values from
+  !> 3D (e.g. layered) data.
+  !>
+  ! -------------------------------------------------------------------------------------------------------- !
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_climbuf_3d ( &
+    & lstart, new_day, new_year, dtime, t_soil, wtr_soil_rel, seconds_day, &
+    & t_soil_15d, t_soil_15d_yDay, wtr_soil_rel_15d, wtr_soil_rel_15d_yDay, &
+    & max_t_soil_year, permafrost_period)
+
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
+    LOGICAL, INTENT(in) :: &
+      & lstart,                 & !< This is the first time step in a simulation
+      & new_day,                & !< This is the first time step of the day
+      & new_year                  !< This is the first time step of the year
+
+    REAL(lp), INTENT(in) :: &
+      & dtime,                  & !< Time step length [s]
+      & seconds_day,            & !< Length of a day [s]
+      & t_soil,                 & !< Soil layer temperature [K]
+      & wtr_soil_rel              !< Relative soil water content on layers [-]
+
+    REAL(lp), INTENT(inout) ::  &
+      & t_soil_15d,             & !< 15-day smoothed soil layer temperature [K]
+      & t_soil_15d_yDay,        & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
+      & wtr_soil_rel_15d,       & !< 15-day smoothed relative soil layer moisture [-]
+      & wtr_soil_rel_15d_yDay,  & !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+      & max_t_soil_year,        & !< Maximum soil layer temperature in previous year [K]
+      & permafrost_period         !< Number of years of consecutively frozen soil layer [yr]
+
+    ! Local variables
+    REAL(lp) :: &
+      & F_15d,                  & !< Factor for 15-day smoothing
+      & N_15d                     !< Factor for 15-day smoothing
+
+    ! ------------------------------------------------------------------------------------------------------ !
+
+    !-- 15-day smoothing of soil layer temperature and moisture (needed with vertical yasso)
+    !  ---------------------
+    F_15d = EXP(-dtime / (15._lp * seconds_day))
+    N_15d = 1._lp - F_15d
+
+    t_soil_15d = t_soil * N_15d  +  F_15d * t_soil_15d
+    wtr_soil_rel_15d = wtr_soil_rel * N_15d  +  F_15d * wtr_soil_rel_15d
+    ! TODO: Check, if these yDay variables are actually needed
+    IF (new_day .AND. .NOT. lstart) THEN
+      ! Save previous day variables (for yasso)
+      t_soil_15d_yDay   = t_soil_15d
+      wtr_soil_rel_15d_yDay = wtr_soil_rel_15d
+    END IF
+
+    !-- Soil thermal states (temperature and permafrost)
+    !  ---------------------
+    IF (new_year) THEN
+      IF (max_t_soil_year < tmelt) THEN
+        permafrost_period = permafrost_period + 1._lp
+      ELSE
+        permafrost_period = 0._lp
+      END IF
+      max_t_soil_year = t_soil
+    ELSE
+      max_t_soil_year = MAX(t_soil, max_t_soil_year)
+    END IF
+
+  END SUBROUTINE calc_climbuf_3d
 
   ! ======================================================================================================== !
   !>

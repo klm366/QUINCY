@@ -43,8 +43,9 @@ MODULE mo_hydro_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string, soil_init_from_texture, read_bc_data
 
-  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_processes HYDRO_, CARBON_
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_memory(HYDRO_)
 
 #ifdef __QUINCY_STANDALONE__
@@ -140,7 +141,7 @@ MODULE mo_hydro_init
       & fract_pond_max   (:,:) => NULL(), & !< maximum pond fraction []
       & depth_pond_max   (:,:) => NULL(), & !< maximum pond depth [m]
       & wtr_soil_sl    (:,:,:) => NULL(), & !< initial soil moisture within soil layers [m water equivalent]
-      & fract_org_sl   (:,:,:) => NULL(), & !< fraction of soil organic matter within soil layers []
+      & fract_org_sl   (:,:,:) => NULL(), & !< vol. fraction of soil organic matter within soil layers []
       & fr_sand          (:,:) => NULL(), & !< fraction of sand for soil index []
       & fr_silt          (:,:) => NULL(), & !< fraction of silt for soil index []
       & fr_clay          (:,:) => NULL(), & !< fraction of clay for soil index []
@@ -399,7 +400,7 @@ CONTAINS
   !>#### Set initial and boundary conditions for the hydrology process - quincy standalone
   !>
   SUBROUTINE qs_hydro_init_ic_bc(tile)
-    USE mo_util,                  ONLY: soil_depth_to_layers_2d
+    USE mo_util,                  ONLY: soil_depth_to_layers
     USE mo_hydro_util,            ONLY: get_amount_in_rootzone
     USE mo_hydro_process,         ONLY: calc_orographic_features
     USE mo_hydro_constants,       ONLY: &
@@ -507,8 +508,8 @@ CONTAINS
 
     !> calc actual soil layer depths based on the fixed layer thicknesses from namelist and the bedrock depth
     !>
-    ! NOTE: soil_depth_to_layers_2d() returns a 3D variable
-    soil_depth_sl(:,:,:) = soil_depth_to_layers_2d(soil_depth(:,:), &   ! Total soil depth until bedrock (from textures), 2D variable
+    ! NOTE: soil_depth_to_layers() returns a 3D variable
+    soil_depth_sl(:,:,:) = soil_depth_to_layers(soil_depth(:,:), &   ! Total soil depth until bedrock (from textures), 2D variable
       &                                            soil_w%dz(:))        ! Soil layer thicknesses from namelist
     ! pass these values to a HYDRO_ variable with an improved name
     soil_lay_width_sl(:,:,:) = soil_depth_sl(:,:,:)
@@ -624,7 +625,7 @@ CONTAINS
     !> Root depth within the soil layers:
     !> calculated from the total root depth and the layer thicknesses
     !>
-    dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
+    dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers( &
       & root_depth(:,:), &      ! Total rooting depth
       & soil_w%dz(:))           ! Soil layer thicknesses from vertical grid
 
@@ -873,6 +874,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile      !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                  !< Configurable parameters of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                 !< Configurable parameters of the CARBON process
 
     REAL(lp), POINTER :: &
       & ptr_1D(:    ),   &                      !< Pointer to 1d variable
@@ -899,6 +901,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
 
     grid   => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
@@ -1166,7 +1169,7 @@ CONTAINS
       !>
       !>    D: Further soil data
       !>
-      !>     - Soil organic carbon fractions for each soil layer
+      !>     - Volumetric fraction of soil organic matter for each soil layer
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         DO isoil = 1,nsoil_input_file
           CALL read_bc_data(input_file, 'fract_org_sl', tile%name, hydro_init_vars%fract_org_sl(:,isoil,:), &
@@ -1260,13 +1263,14 @@ CONTAINS
   !
   SUBROUTINE hydro_init_bc(tile)
 
-    USE mo_util,                ONLY: soil_depth_to_layers_2d
+    USE mo_util,                ONLY: soil_depth_to_layers
     USE mo_hydro_process,       ONLY: calc_orographic_features
     USE mo_jsb_math_constants,  ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                       !< Configuration of the CARBON process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
 
     TYPE(t_jsb_model), POINTER :: model               !< Current instance of ICON-Land
@@ -1301,6 +1305,7 @@ CONTAINS
     nproma = grid%nproma
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(HYDRO_)
 
     SELECT CASE (model%config%model_scheme)
@@ -1385,7 +1390,7 @@ CONTAINS
       !>     - Soil depth within each soil layer:
       !>       calculated from total soil depth until bedrock and the fixed layer thicknesses of the
       !>       vertical grid.
-      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
+      dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers( &
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), & ! Total soil depth until bedrock
         & soil_w%dz(:))                                 ! Fixed soil layer thicknesses from vertical grid
       !>
@@ -1538,7 +1543,7 @@ CONTAINS
 
       !>     - Root depth within the soil layers:
       !>       calculated from the total root depth and the layer thicknesses
-      dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers_2d( &
+      dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl) = soil_depth_to_layers( &
         & dsl4jsb_var2D_onDomain(HYDRO_, root_depth), & ! Total rooting depth
         & soil_w%dz(:))                                 ! Soil layer thicknesses from vertical grid
 
@@ -1584,6 +1589,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile !< Current tile
 
     dsl4jsb_Def_config(HYDRO_)                        !< Configuration of the HYDRO process
+    dsl4jsb_Def_config(CARBON_)                       !< Configuration of the CARBON process
     dsl4jsb_Def_memory(HYDRO_)                        !< Memory of the HYDRO process
     dsl4jsb_Def_memory(PHENO_)                        !< Memory of the PHENO process
 
@@ -1604,6 +1610,7 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(CARBON_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH) THEN
       dsl4jsb_Get_memory(PHENO_)
@@ -1680,13 +1687,14 @@ CONTAINS
       !>    been read from file ([[t_hydro_config:l_socmap]]=false, namelist 'jsb_hydro_nml'), the organic
       !>    fraction of the uppermost soil layer is initialized according to the forest fraction, while
       !>    it is zero in the deeper soil layers.
-      ! Note: Currently fract_org_sl does not change with time
 
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN        ! Explicitly represent organic soil fractions
 
         SELECT CASE (model%config%model_scheme)
         CASE (MODEL_JSBACH)
-          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN ! Not using organic soil fractions from a map
+          ! Use neither SOC from maps nor interactively computed SOC by vertical yasso carbon module
+          IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap &
+            & .AND. .NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
 
             ! Initialize with zero
             dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._lp
@@ -1707,6 +1715,11 @@ CONTAINS
                 dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
               END IF
             END IF ! is_vegetation
+            CALL message(TRIM(routine), 'Soil organic fraction is initialized from forest fraction (uppermost soil layer only).')
+          ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap &
+            &  .AND. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+            ! SOC will be computed within vertical yasso carbon module
+            CALL message(TRIM(routine), 'Soil organic fraction is computed by the vertical yasso carbon module.')
           END IF ! l_socmap
         CASE (MODEL_QUINCY)
           ! Not using organic soil fractions from a map
@@ -2045,7 +2058,7 @@ CONTAINS
   !>
   SUBROUTINE hydro_sanitize_state(tile)
 
-    USE mo_util, ONLY: soil_depth_to_layers_2d
+    USE mo_util, ONLY: soil_depth_to_layers
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -2121,7 +2134,7 @@ CONTAINS
       ! in the root zone. The might not add up to the total root depth for the same reason. Fix by recomputing.
       soil_w => Get_vgrid('soil_depth_water')
       root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
-      root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
+      root_depth_sl(:,:,:) = soil_depth_to_layers(root_depth(:,:), soil_w%dz(:))
 
       !$ACC UPDATE DEVICE(root_depth, root_depth_sl) ASYNC(1)
     END IF

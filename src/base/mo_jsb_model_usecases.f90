@@ -157,6 +157,10 @@ CONTAINS
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(veg_tile)
 
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
+        END IF
+
     NULLIFY(box_tile, land_tile, veg_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
@@ -223,6 +227,10 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='equal')
           !$ACC ENTER DATA COPYIN(veg_tile)
+        END IF
+
+        IF (model%processes(CLIMBUF_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(CLIMBUF_, ON_TILE_, AGGREGATE_)
         END IF
 
     NULLIFY(box_tile, land_tile, veg_tile)

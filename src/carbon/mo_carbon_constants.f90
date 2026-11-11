@@ -22,11 +22,20 @@ MODULE mo_carbon_constants
   PUBLIC
 
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
-  INTEGER, PARAMETER  :: i_lctlib_acid           = 1 !< Index of constants for acid yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_water          = 2 !< Index of constants for water yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_ethanol        = 3 !< Index of constants for ethanol yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_nonsoluble     = 4 !< Index of constants for nonsoluble yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
+  ENUM, BIND(C)
+    ENUMERATOR :: Y_ACID=1, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS
+  END ENUM
+
+  ! Yasso pool indicators for above, below ground and vertically resolved below ground carbon pools
+  ENUM, BIND(C)
+    ENUMERATOR :: ABOVE_GROUND=1, BELOW_GROUND, BELOW_GROUND_SL
+  END ENUM
+
+  ! Misc parameters in interface
+  ENUM, BIND(C)
+    ENUMERATOR :: WOODLITSIZE=1, ROOT_DIST_BETA
+  END ENUM
+
 
   ! Further constants
   REAL(lp), PARAMETER :: molarMassC_kg           = 12.01_lp * 1.e-3_lp  !< 12.01e-3_lp   -  Mass of 1 mol C   in kg
@@ -50,6 +59,15 @@ MODULE mo_carbon_constants
   REAL(lp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
   !$ACC DECLARE COPYIN(sec_per_year)
 
+  ! Parameters for Yasso peat
+  REAL(lp), parameter :: rho_YCpool_acro          = 3.5e4_lp !< Bulk density of acrotelm peat: 0.035 g/cm3, based on
+                                                             !< Granberg (1999): rho upper 20cm: 0.02 g/cm^3  */
+                                                             !<  rho 20-40cm: 0.05 g/cm3, > 40 cm: 0.1-0.12 g/cm3
+  REAL(lp), parameter :: rho_YCpool_cato          = 9.1e4_lp !< Bulk density of catotelm peat: 0.091 g/cm3, based on
+                                                             !< Clymo (1983); Turunen (2002)
+  REAL(lp), parameter :: Cfrac_YCpool_acro        = 0.50_lp  !< C fraction in acrotelm peat Malmer and Wallen (2004)
+  REAL(lp), parameter :: Cfrac_YCpool_cato        = 0.52_lp  !< Malmer and Wallen (2004)
+
   ! Definitions for lcc
 
   !> list of potential active variables for the carbon process: For these the carbon interface provides active relocation
@@ -69,10 +87,90 @@ MODULE mo_carbon_constants
 
   !> helper for automatization (order needs to match var name list in carbon_required_passive_vars)
   INTEGER :: coefficient_ind_of_passive_vars(nr_of_yasso_pools) = (/ &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,                 &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus, &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble,                 &
-    & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus  /)
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE,                      &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS,             &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE,                      &
+    & Y_ACID, Y_WATER, Y_ETHANOL, Y_NONSOLUBLE, Y_HUMUS           /)
+
+  ! Yasso parameters (Tuomi 2011)
+  !   reference decompositation rates for T = 0C and unlimited water availability in [yr-1]...
+  REAL(lp), PARAMETER   :: ref_decomp_rate_acid       = -0.72_lp    !<  ... acid-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_water      = -5.9_lp     !<  ... water-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_ethanol    = -0.28_lp    !<  ... ethanol-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_nonsoluble = -0.031_lp   !<  ... nonsoluble-soluble fraction
+  REAL(lp), PARAMETER   :: ref_decomp_rate_humus      = -0.0016_lp  !<  ... humus
+
+  ! Fractions to split the decomposition flux of each pool into fluxes to the other AWEN pools and atmosphere
+  ! REMARK: there is no a priori (to the calibration procedure of YASSO) assumption about possible fluxes between pools,
+  ! therefore all fluxes are theoretically possible, however some of the fraction are zero which means the corresponding flux
+  ! does not exists. However, after a recalibration of the model this fraction may change.
+  !
+  ! fractions of decomposition flux of acid soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: A_2_W = 0.99_lp
+  REAL(lp), PARAMETER   :: A_2_E = 0.00_lp
+  REAL(lp), PARAMETER   :: A_2_N = 0.00_lp
+  ! fractions of decomposition flux of water soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: W_2_A = 0.48_lp
+  REAL(lp), PARAMETER   :: W_2_E = 0.00_lp
+  REAL(lp), PARAMETER   :: W_2_N = 0.015_lp
+  ! fractions of decomposition flux of ethanol soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: E_2_A = 0.01_lp
+  REAL(lp), PARAMETER   :: E_2_W = 0.00_lp
+  REAL(lp), PARAMETER   :: E_2_N = 0.95_lp
+  ! fractions of decomposition flux of non soluble pool going to the other AWEN pools [yr-1]
+  REAL(lp), PARAMETER   :: N_2_A = 0.83_lp
+  REAL(lp), PARAMETER   :: N_2_W = 0.01_lp
+  REAL(lp), PARAMETER   :: N_2_E = 0.02_lp
+  ! Alternative pathway for N pool which enters the humus pool [yr-1]
+  REAL(lp), PARAMETER   :: N_2_H   = 0.0045_lp
+  REAL(lp), PARAMETER   :: AWE_2_H = 0.0045_lp
+
+  ! ------------------------------------------------------------------------------------------
+  ! Parameters for vertical YASSO
+  !
+
+  ! decomposition modifier parameters for temperature and depth modifier
+  REAL(lp), PARAMETER :: Q10     = 1.5_lp           !< Q10 for deep soil C decomposition, based on CLM
+  REAL(lp), PARAMETER :: ref_dep = 1000._lp         !< reference depth to remove depth dependence of decomposition
+
+  ! decomposition modifiers for oxic / anoxic soils (Wania et al. 2009, https://doi.org/10.1029/2008GB003413)
+  REAL(lp), PARAMETER :: d_anox = 0.35_lp           !< decomposition modifier for anaerobic decomposition
+  REAL(lp), PARAMETER :: d_oxic = 1.0_lp            !< decomposition modifier for oxic decomposition
+
+  ! Yasso parameters (Tuomi 2011)
+  ! Parameters for temperature dependence
+  REAL(lp), PARAMETER   :: temp_p1     = 0.095_lp   !< first  order temperature dependence [1/C]
+  REAL(lp), PARAMETER   :: temp_p2     = -0.0014_lp !< second order temperature dependence [1/C]
+  ! Parameter for precipitation dependence
+  REAL(lp), PARAMETER   :: precip_p1   = -1.21_lp   !< first  order precipitation dependence [yr/m]
+  ! Parameters for size dependence
+  REAL(lp), PARAMETER   :: size_p1     = -1.71_lp   !< first  order size dependence [1/cm]
+  REAL(lp), PARAMETER   :: size_p2     = 0.86_lp    !< second order size dependence [1/cm]
+  REAL(lp), PARAMETER   :: size_p3     = -0.306_lp  !< size dependence power [ ]
+  REAL(lp), PARAMETER   :: d_size_leaf = 1.0_lp     !< leaf litter is not size dependent
+
+  ! Parameters for moisture dependence, DAYCENT formulation
+  REAL(lp), PARAMETER   :: moist_p_a = 0.575_lp
+  REAL(lp), PARAMETER   :: moist_p_b = 1.5_lp
+  REAL(lp), PARAMETER   :: moist_p_d = 3.0_lp
+
+  ! Parameters for vertical carbon mixing based on Koven et al. 2013 (https://doi.org/10.5194/bg-10-7109-2013)
+  ! They provide 5 cm2 yr-1 for cryoturbation and 0.5 cm 2 yr-1 for bioturbation, which is converted to m2 s-1 below
+  REAL(lp), PARAMETER :: cryo_max = 1.58e-11_lp !< Maximum mixing rate for cryoturbation [m2 s-1]
+  REAL(lp), PARAMETER :: bio_max  = 3.17e-12_lp !< Maximum mixing rate for bioturbation [m2 s-1]
+
+  REAL(lp), PARAMETER   :: minimum_layer_thickness = 0.05_lp !< minimum unfrozen soil layer thickness threshold [m]
+  REAL(lp), PARAMETER   :: permafrost_threshold    = 1._lp   !< length threshold to consider a layer permafrost [yr]
+
+  ! ------------------------------------------------------------------------------------------
+  ! Ratio of C mass to biomass
+  REAL(lp),  PARAMETER :: C_2_biomass_ratio = 0.5_lp !< Conversion factor between SOC and SOM (Pribyl, 2010)
+
+  ! organic matter [litter/duff?] bulk densities for below above and ground [kg/m3],
+  ! see Chojnacky (2009), 0'Donnell (2009), (https://philbusey.com/sports_turf/organic_matter.html#table), Ahn (2009)
+  REAL(lp), PARAMETER ::  rho_org    = 100._lp
+  REAL(lp), PARAMETER ::  rho_org_ag =  75._lp
+  REAL(lp), PARAMETER ::  rho_org_bg = 150._lp
 
 #endif
 END MODULE mo_carbon_constants

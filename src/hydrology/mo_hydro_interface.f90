@@ -42,7 +42,7 @@ MODULE mo_hydro_interface
 #ifndef __QUINCY_STANDALONE__
   dsl4jsb_Use_processes PHENO_
 #endif
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, VEG_, Q_ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, A2L_, HYDRO_, CLIMBUF_, VEG_, Q_ASSIMI_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -54,6 +54,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(SSE_)
+  dsl4jsb_Use_memory(CLIMBUF_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(VEG_)
   dsl4jsb_Use_memory(Q_ASSIMI_)
@@ -1137,7 +1138,7 @@ CONTAINS
       & vol_p_wilt,           &         !< Volumetric moisture at permanent wilting point [m/m]
       & vol_wres                        !< Volumetric residual water content [m/m]
     dsl4jsb_Real3D_onChunk :: &
-      & fract_org_sl,         &         !< Soil layer organic matter fraction []
+      & fract_org_sl,         &         !< Volumetric fraction of soil organic matter in soil layers []
       & hyd_cond_sat_sl,      &         !< Saturated hydraulic conductivity of soil layer [m/s]
       & vol_porosity_sl,      &         !< Volumetric soil layer porosity [m3/m3]
       & bclapp_sl,            &         !< Clapp and Hornberger exponent b in soil layer []
@@ -1424,7 +1425,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: rhoh2o, rhoi
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
     USE mo_hydro_constants,        ONLY: frac_wtr_vertical_transport_up_max, frac_wtr_vertical_transport_down_max, &
-      &                                  frac_w_lat_loss_max
+      &                                  frac_w_lat_loss_max, Uniform_
     USE mo_jsb_math_constants,     ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Current tile
@@ -1434,6 +1435,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)                   !< Configurable parameters of the hydrology process
     dsl4jsb_Def_memory(HYDRO_)                   !< Variables of the hydrology process
     dsl4jsb_Def_memory(SSE_)                     !< Variables of the "snow and snow energy" process
+    dsl4jsb_Def_memory(CLIMBUF_)                 !< Variables of the "climate buffer" process
     dsl4jsb_Def_memory(Q_ASSIMI_)
 
     ! Pointers to variables in memory
@@ -1452,8 +1454,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond           !< Amount of ice in the pond reservoir [m water equivalent]
     dsl4jsb_Real2D_onChunk :: weq_pond           !< Water/ice content of the pond reservoir [m water equiv.]
 
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max     !< Maximum thaw depth in current year [m]
-    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1 !< Maximum thaw depth of previous year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_of_yr     !< Maximum thaw depth in current year [m]
+    dsl4jsb_Real2D_onChunk :: max_thaw_prev_year !< Maximum thaw depth of previous year [m]
     dsl4jsb_Real2D_onChunk :: steepness          !< Parameter representing subgrid scale slopes []
     dsl4jsb_Real2D_onChunk :: soil_depth         !< Soil depth until bedrock [m]
 
@@ -1466,7 +1468,6 @@ CONTAINS
     LOGICAL  :: ltpe_closed                      !< For terraplanet setup: Water balance is closed
     LOGICAL  :: l_latflow_to_streamflow          !< With "[[t_hydro_config:hydro_scale]]=Uniform" True:
                                                  !< outflow of intermediary runoff/drainage storage goes to streamflow
-
     INTEGER  :: &
       & iblk,   &                                !< Index of current block
       & ics,    &                                !< Index of first cell in block
@@ -1475,6 +1476,7 @@ CONTAINS
       & ic,     &                                !< Looping index for grid cells
       & is,     &                                !< Looping index for soil layers
       & nsoil                                    !< Number of vertical layers (grid dimension)
+
     REAL(lp) :: dtime                            !< Time step length [s]
 
     INTEGER :: last_soil_layer(options%nc)       !< Deepest active soil layer index (above the bedrock boundary)
@@ -1498,6 +1500,7 @@ CONTAINS
     LOGICAL :: &
       & l_fract(options%nc), &                   !< Tile has a non-zero grid cell fraction
       & l_pf_soil(options%nc)                    !< Permafrost affects bottom layer drainage
+
     REAL(lp), ALLOCATABLE :: wtr_soil_old_sl(:,:) !< wtr_soil_sl of previous timestep
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -1552,9 +1555,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)         ! out
 
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max)     ! in
-    dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1) ! in
-
     !$ACC DATA ASYNC(acc_stream) CREATE(l_fract) &
     !$ACC   CREATE(l_pf_soil, depth_thrsh, slope_used, flowlag_used) &
     !$ACC   CREATE(drainage_lowest_soil_layer, last_soil_layer)
@@ -1601,16 +1601,28 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
-    ! depth. In shallow soils, bottom layer drainage is also affected if the whole soil column is in the
-    ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
-    DO ic = 1, nc
-      depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_lp)
-      l_pf_soil(ic)   = (thaw_depth_max_ym1(ic) < depth_thrsh(ic) .AND. &
-        &                thaw_depth_max(ic)     < depth_thrsh(ic))
-    END DO
-    !$ACC END PARALLEL LOOP
+    IF (dsl4jsb_Config(HYDRO_)%hydro_scale == Uniform_) THEN
+      dsl4jsb_Get_memory(CLIMBUF_)
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_of_yr)     ! in
+      dsl4jsb_Get_var2D_onChunk(CLIMBUF_, max_thaw_prev_year) ! in
+      ! In deep soils permafrost affects bottom layer drainage as long as the active layer is smaller than soil
+      ! depth. In shallow soils, bottom layer drainage is also affected if the whole soil column is in the
+      ! active zone, but permafrost remains (below bedrock) in less then 1m depth.
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      DO ic = 1, nc
+        depth_thrsh(ic) = MAX(soil_depth(ic), 1.0_lp)
+        l_pf_soil(ic)   = (max_thaw_prev_year(ic) < depth_thrsh(ic) .AND. &
+          &                max_thaw_of_yr(ic)     < depth_thrsh(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
+    ELSE
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
+      ! The permafrost soil flag is not used if hydro_scale is set to "Distributed_"
+      DO ic = 1, nc
+        l_pf_soil(ic)   = .FALSE.
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
     ! Set to true, until HydroTiles are implemented
     l_latflow_to_streamflow = .TRUE.
@@ -2090,6 +2102,7 @@ CONTAINS
                                                      !< point.)
                                                      ! Note: with jsbach the wilting point in account for later.
                                                      ! TODO: do we need both variables?
+    dsl4jsb_Real3D_onChunk :: wtr_soil_rel_sl        !< Relative water content in soil column []
 
     INTEGER :: &
       & iblk, &                                      !< Current block index
@@ -2159,6 +2172,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_plant_avail_rel)    ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_rel_sl)        ! out
 
     !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min, wpi_fcap_soil_sl) &
     !$ACC   CREATE(wpi_pwp_soil_sl, wtr_soil_pwp_sl, wtr_soil_avail_sl, wtr_soil_avail_max_sl) &
@@ -2291,6 +2305,20 @@ CONTAINS
       config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
       config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+      ! determine relative soil moisture on all layers (needed for vertical yasso scheme)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2) ASYNC(acc_stream)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF ( wtr_soil_avail_max_sl(ic,is) > 0._lp) THEN
+            wtr_soil_rel_sl(ic,is) =  MIN(wtr_soil_avail_sl(ic,is) / wtr_soil_avail_max_sl(ic,is), 1._lp)
+          ELSE
+            ! weq_rootzone_max is zero for glacier tiles
+            wtr_soil_rel_sl(ic,is) = 0._lp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
       ! Calculate water stress factor
       ! TODO: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
@@ -2389,6 +2417,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_pot, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_scool_act, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_rel_sl,        weighted_by_fract)
 
     CALL weighted_by_fract%EndAggregate()
 

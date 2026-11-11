@@ -40,7 +40,7 @@ MODULE mo_pplcc_interface
 
   USE mo_jsb_time,          ONLY: is_newday
   USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                             BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
+    &                             BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE, &
     &                             IQ_2L2D_POOL_CQ_TYPE, IQ_1L2D_POOL_CQ_TYPE, IQ_FLUX_CQ_TYPE, &
     &                             IQ_SL_POOL_CQ_TYPE, IQ_SL_FLUX_CQ_TYPE
 
@@ -223,7 +223,8 @@ CONTAINS
         ! Conversion depends on the conserved quantity type (cqt)
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+            & PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! In the current implementation of JSBACH carbon variables are only available on the pft tiles.
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN
@@ -430,7 +431,8 @@ CONTAINS
         cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
 
         SELECT CASE (cqt_id)
-          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
+          CASE (LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, &
+            &   PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE)
 
             ! In the current implementation of JSBACH carbon variables are only available on the pft tiles
             IF (.NOT. index(tile%name, 'pft') /= 0) THEN

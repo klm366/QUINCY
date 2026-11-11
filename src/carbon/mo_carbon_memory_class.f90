@@ -19,9 +19,9 @@ MODULE mo_carbon_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_cqt_class,          ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                                  BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
+    &                                  BG_DEAD_C_CQ_TYPE, BGLEV_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_, CARBON_, NLCC_
@@ -90,18 +90,17 @@ MODULE mo_carbon_memory_class
       GPP_sum,                    & ! used to accumulated GPP-Rate over a day
       !runoff_sum,                 & ! used to accumulate runoff over a day.  R: Nicht notwendig in JS4.
       soil_respiration,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(canopy)].
-                                    ! Without N limitation!
       NPP_flux_correction,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(canopy) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
                                     ! negative (positive correction).
-      excess_NPP,                 & ! That part of NPP that because of structural limits could not be allocated in
+      NPP_excess,                 & ! That part of NPP that because of structural limits could not be allocated in
                                     ! carbon pools [mol(CO2)/m^2(canopy) s]
       LAI_yyDayMean,              & ! previous previous day mean
       LAI_yDayMean,               & ! previous day mean
       NPP_pot_yDayMean,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(canopy) s)]
-      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after N-limitation and excess carbon drop.
+      NPP_act_yDayMean,           & ! mean value of actual NPP-Rate after excess carbon is removed.
                                     ! "yDayMean" because the actual NPP depends on/is calculated from results of the
                                     ! previous day.
       GPP_yDayMean,               & !
@@ -114,8 +113,6 @@ MODULE mo_carbon_memory_class
       cflux_dist_woods_2_soil,    & ! R: should be later renamed to C_2_WoodLitterPools
 
       co2flux_fire_all_2_atm,     & ! CO2 flux from fire per tile [kg(CO2)/m^2(canopy) s]
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
 
   !JN: variables required when l_forestRegrowth = true, i.e. when maxLAI is derived from biomass via allometric relationships
       current_max_green,          & ! Running maximum of the green pool [mol(C) m-2(canopy)]
@@ -175,28 +172,23 @@ MODULE mo_carbon_memory_class
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
 !      GPP_sum_ta,                    & ! used to accumulated GPP-Rate over a day
       soil_respiration_ta,           & ! mean daily rate of heterotrophic (soil) respiration [mol(CO2)/m^2(tile area)].
-                                       ! Without N limitation!
       NPP_flux_correction_ta,        & ! Daily updated flux correction from yesterdays carbon balance
                                     ! [mol(CO2)/m^2(tile area) s]
                                     ! Amount by which the NPP rate entering the routine has to be corrected. This
                                     ! correction arises either because otherwise the reserve pool would get
                                     ! negative (positive correction).
-      excess_NPP_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
+      NPP_excess_ta,                 & ! That part of NPP that because of structural limits could not be allocated in
                                     ! carbon pools [mol(CO2)/m^2(tile area) s]
 !      LAI_yyDayMean_ta,              & ! previous previous day mean
 !      LAI_yDayMean_ta,               & ! previous day mean
       NPP_pot_yDayMean_ta,           & ! mean value of NPP-Rate yesterday (from NPP_pot_sum()) [mol(CO2)/(m^2(tile area) s)]
-      NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
-                                       ! Actual NPP (after N-limitation and) excess carbon drop.
+      NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday after excess carbon is removed.
                                        ! [mol(CO2)/(m^2(tile area) s)]
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
       cflux_dist_green_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
       cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
-
-      ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
-      fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
 
       ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]
       ! .. positive for emission to atmosphere
@@ -219,6 +211,37 @@ MODULE mo_carbon_memory_class
       GPP_yDayMean_gsum,             & ! Global GPP rate [PgC/yr]
       soil_respiration_gsum
 
+    ! YASSO on soil layers
+    TYPE(t_jsb_var_real3d) ::   &
+     !SIZE CLASS 1
+      c_acid_bg1_sl,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_bg1_sl,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_bg1_sl,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_bg1_sl,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_humus_1_sl,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
+     !SIZE CLASS 2
+      c_acid_bg2_sl,            & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(canopy)]
+      c_water_bg2_sl,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(canopy)]
+      c_ethanol_bg2_sl,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(canopy)]
+      c_nonsoluble_bg2_sl,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(canopy)]
+      c_humus_2_sl,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(canopy)]
+      root_dist_sl,             & ! root distribution on soil layers
+      max_layer_sl                ! max layer thickness (soil / thaw depth dependent)
+
+    ! YASSO on soil layers, as tile average
+    TYPE(t_jsb_var_real3d) ::   &
+     !SIZE CLASS 1
+      c_acid_bg1_sl_ta,         & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
+      c_water_bg1_sl_ta,        & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
+      c_ethanol_bg1_sl_ta,      & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
+      c_nonsoluble_bg1_sl_ta,   & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
+      c_humus_1_sl_ta,          & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
+     !SIZE CLASS 2
+      c_acid_bg2_sl_ta,         & ! Yasso below ground litter-pool for acid soluble litter [mol(C)/m^2(tile)]
+      c_water_bg2_sl_ta,        & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile)]
+      c_ethanol_bg2_sl_ta,      & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile)]
+      c_nonsoluble_bg2_sl_ta,   & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile)]
+      c_humus_2_sl_ta             ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile)]
 
   CONTAINS
     PROCEDURE :: Init => Init_carbon_memory
@@ -249,6 +272,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface   ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: soil_c    ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
@@ -257,13 +281,16 @@ CONTAINS
 
     model => Get_model(model_id)
 
+    dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(CARBON_)
+
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-
-    dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_config(CARBON_)
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      soil_c  => Get_vgrid('soil_depth_carbon')
+    END IF
 
     ! Carbon variables on canopy area
     CALL mem%Add_var('c_greenwood2litter', mem%cflux_c_greenwood_2_litter,                             &
@@ -507,9 +534,9 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('excess_npp', mem%excess_NPP,                                                                     &
+    CALL mem%Add_var('NPP_excess', mem%NPP_excess,                                                                     &
       & hgrid, surface,                                                                                                &
-      & t_cf('excess_NPP', 'mol(C) m-2 (canopy) s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
+      & t_cf('NPP_excess', 'mol(C) m-2 (canopy) s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
       & prefix, suffix,                                                                                                &
       & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
@@ -850,9 +877,9 @@ CONTAINS
       & prefix, suffix,                                                                              &
       & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('excess_npp_ta', mem%excess_NPP_ta,                                                          &
+    CALL mem%Add_var('NPP_excess_ta', mem%NPP_excess_ta,                                                          &
       & hgrid, surface,                                                                                           &
-      & t_cf('excess_NPP_ta', 'mol(C) m-2  s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
+      & t_cf('NPP_excess_ta', 'mol(C) m-2  s-1', 'NPP that could not be not stored in vegetation carbon pools.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
@@ -878,8 +905,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
       & prefix, suffix,                                                                           &
       & output_level=BASIC,                                                                                &
-      & lrestart=.FALSE., initval_r=1.0E-13_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
-                                                  ! in a zero divide in the first time step of an initialized run.
+      & lrestart=.FALSE., initval_r=1.0E-13_lp, l_aggregate_all=.TRUE. )
+      ! initval taken from JSBACH3. Initializing to zero would result
+      ! in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('npp_act_ydaymean_ta', mem%NPP_act_yDayMean_ta,                                &
       & hgrid, surface,                                                                             &
@@ -887,8 +915,9 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
       & prefix, suffix,                                                                             &
       & output_level=BASIC,                                                                         &
-      & lrestart=.FALSE., initval_r=1.0E-13_lp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
-                                                  ! in a zero divide in the first time step of an initialized run.
+      & lrestart=.FALSE., initval_r=1.0E-13_lp, l_aggregate_all=.TRUE. )
+      ! initval taken from JSBACH3. Initializing to zero would result
+      ! in a zero divide in the first time step of an initialized run.
 
     CALL mem%Add_var('gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                             &
       & hgrid, surface,                                                                  &
@@ -980,6 +1009,210 @@ CONTAINS
       & prefix, suffix,                                                           &
       & loutput=.TRUE.,lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
 
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      ! Soil level pools for vertical C separation
+      ! Yasso 1: Green carbon pools
+      CALL mem%Add_var('c_acid_bg1_sl', mem%c_acid_bg1_sl,                        &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_acid_bg1_sl', 'mol(C) m-2(canopy)',                             &
+        &      'C-Pool for acid-soluble litter in Yasso (belowground).'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_water_bg1_sl', mem%c_water_bg1_sl,                      &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_water_bg1_sl', 'mol(C) m-2(canopy)',                            &
+        &      'C-Pool for water-soluble litter in Yasso (belowground).'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_ethanol_bg1_sl', mem%c_ethanol_bg1_sl,                  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_ethanol_bg1_sl', 'mol(C) m-2(canopy)',                          &
+        &      'C-Pool for ethanol-soluble litter in Yasso (belowground)'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_nonsoluble_bg1_sl', mem%c_nonsoluble_bg1_sl,            &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_nonsoluble_bg1_sl', 'mol(C) m-2(canopy)',                       &
+        &      'C-Pool for nonsoluble litter in Yasso (belowground).'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_humus_1_sl', mem%c_humus_1_sl,                          &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_humus_1_sl', 'mol(C) m-2(canopy)',                              &
+        &      'C-Pool for humus in Yasso.'),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      ! Yasso 2: Woody carbon pools
+      CALL mem%Add_var('c_acid_bg2_sl', mem%c_acid_bg2_sl,                        &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_acid_bg2_sl', 'mol(C) m-2(canopy)',                             &
+        &      'C-Pool for acid-soluble litter in Yasso (belowground).'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_water_bg2_sl', mem%c_water_bg2_sl,                      &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_water_bg2_sl', 'mol(C) m-2(canopy)',                            &
+        &      'C-Pool for water-soluble litter in Yasso (belowground).'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_ethanol_bg2_sl', mem%c_ethanol_bg2_sl,                  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_ethanol_bg2_sl', 'mol(C) m-2(canopy)',                          &
+        &      'C-Pool for ethanol-soluble litter in Yasso (belowground)'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_nonsoluble_bg2_sl', mem%c_nonsoluble_bg2_sl,            &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_nonsoluble_bg2_sl', 'mol(C) m-2(canopy)',                       &
+        &      'C-Pool for nonsoluble litter in Yasso (belowground).'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_humus_2_sl', mem%c_humus_2_sl,                          &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_humus_2_sl', 'mol(C) m-2(canopy)',                              &
+        &      'C-Pool for humus in Yasso.'),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL, cons_quan_type_id = BGLEV_DEAD_C_CQ_TYPE,            &
+        & lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      ! Soil level pools for vertical C separation
+      ! Tile-aggregated variant
+      ! Yasso 1: Green carbon pools
+      CALL mem%Add_var('c_acid_bg1_sl_ta', mem%c_acid_bg1_sl_ta,                  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_acid_bg1_sl_ta', 'mol(C) m-2',                                  &
+        &      'C-Pool for acid-soluble litter in Yasso (belowground).'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_water_bg1_sl_ta', mem%c_water_bg1_sl_ta,                &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_water_bg1_sl_ta', 'mol(C) m-2',                                 &
+        &      'C-Pool for water-soluble litter in Yasso (belowground).'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_ethanol_bg1_sl_ta', mem%c_ethanol_bg1_sl_ta,            &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_ethanol_bg1_sl_ta', 'mol(C) m-2',                               &
+        &      'C-Pool for ethanol-soluble litter in Yasso (belowground)'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_nonsoluble_bg1_sl_ta', mem%c_nonsoluble_bg1_sl_ta,      &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_nonsoluble_bg1_sl_ta', 'mol(C) m-2',                            &
+        &      'C-Pool for nonsoluble litter in Yasso (belowground).'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_humus_1_sl_ta', mem%c_humus_1_sl_ta,                    &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_humus_1_sl_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      ! Yasso 2: Woody carbon pools
+      CALL mem%Add_var('c_acid_bg2_sl_ta', mem%c_acid_bg2_sl_ta,                  &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_acid_bg2_sl_ta', 'mol(C) m-2',                                  &
+        &      'C-Pool for acid-soluble litter in Yasso (belowground).'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_water_bg2_sl_ta', mem%c_water_bg2_sl_ta,                &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_water_bg2_sl_ta', 'mol(C) m-2',                                 &
+        &      'C-Pool for water-soluble litter in Yasso (belowground).'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_ethanol_bg2_sl_ta', mem%c_ethanol_bg2_sl_ta,            &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_ethanol_bg2_sl_ta', 'mol(C) m-2',                               &
+        &      'C-Pool for ethanol-soluble litter in Yasso (belowground)'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_nonsoluble_bg2_sl_ta', mem%c_nonsoluble_bg2_sl_ta,      &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_nonsoluble_bg2_sl_ta', 'mol(C) m-2',                            &
+        &      'C-Pool for nonsoluble litter in Yasso (belowground).'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('c_humus_2_sl_ta', mem%c_humus_2_sl_ta,                    &
+        & hgrid, soil_c,                                                          &
+        & t_cf('c_humus_2_sl_ta', 'mol(C) m-2', 'C-Pool for humus in Yasso.'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=MEDIUM,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('root_dist_sl', mem%root_dist_sl,                          &
+        & hgrid, soil_c,                                                          &
+        & t_cf('root_dist_sl', '', 'Root distribution on soil layers'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('max_layer_sl', mem%max_layer_sl,                          &
+        & hgrid, soil_c,                                                          &
+        & t_cf('max_layer_sl', '', 'Maximum soil layer thickness'),               &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
+        & prefix, suffix,                                                         &
+        & output_level=FULL,                                                      &
+        & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+    END IF
+
     CALL mem%Add_var('c_decomp_humus_1_sum', mem%c_decomp_humus_1_sum, hgrid, surface,                                 &
       & t_cf('c_decomp_humus_1_sum', 'mol(C) m-2(canopy)', 'annual sum of carbon decomposed from YASSO humus (leaf)'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                             &
@@ -1028,7 +1261,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_lp, l_aggregate_all=.TRUE.)
-    ENDIF
+    END IF
 
     ! Diagnostic global carbon sums for experiment monitoring - only calculated on top (i.e. box) tile
     IF (ASSOCIATED(mem%parent)) RETURN

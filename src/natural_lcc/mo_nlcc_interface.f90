@@ -134,20 +134,21 @@ CONTAINS
     LOGICAL, ALLOCATABLE  :: is_pasture(:,:)
     LOGICAL, ALLOCATABLE  :: is_crop(:,:)
     LOGICAL, ALLOCATABLE  :: is_dynamic(:,:)
-    REAL(lp), POINTER  ::  bclimit_min_cold_mmtemp(:,:)
-    REAL(lp), POINTER  ::  bclimit_max_cold_mmtemp(:,:)
-    REAL(lp), POINTER  ::  bclimit_max_warm_mmtemp(:,:)
-    REAL(lp), POINTER  ::  bclimit_min_temprange(:,:)
-    REAL(lp), POINTER  ::  bclimit_min_gdd(:,:)
-    REAL(lp), POINTER  ::  tau_c_woods(:,:)
-    REAL(lp), POINTER  ::  NPP_mean_5year(:,:)
-    REAL(lp), POINTER  ::  burned_fract(:,:)
-    REAL(lp), POINTER  ::  damaged_fract(:,:)
-    REAL(lp), POINTER  ::  max_green_bio(:,:)
-    REAL(lp), POINTER  ::  sla(:,:)
-    REAL(lp), ALLOCATABLE  ::  cover_fract_pot_previous_year(:,:)
-    REAL(lp), ALLOCATABLE  ::  cover_fract_sum(:)
-    REAL(lp), ALLOCATABLE  :: fract_fpc_max(:,:)
+    REAL(lp), POINTER     :: bclimit_min_cold_mmtemp(:,:)
+    REAL(lp), POINTER     :: bclimit_max_cold_mmtemp(:,:)
+    REAL(lp), POINTER     :: bclimit_max_warm_mmtemp(:,:)
+    REAL(lp), POINTER     :: bclimit_min_temprange(:,:)
+    REAL(lp), POINTER     :: bclimit_min_gdd(:,:)
+    REAL(lp), POINTER     :: bclimit_min_snow(:,:)
+    REAL(lp), POINTER     :: tau_c_woods(:,:)
+    REAL(lp), POINTER     :: NPP_mean_5year(:,:)
+    REAL(lp), POINTER     :: burned_fract(:,:)
+    REAL(lp), POINTER     :: damaged_fract(:,:)
+    REAL(lp), POINTER     :: max_green_bio(:,:)
+    REAL(lp), POINTER     :: sla(:,:)
+    REAL(lp), ALLOCATABLE :: cover_fract_pot_previous_year(:,:)
+    REAL(lp), ALLOCATABLE :: cover_fract_sum(:)
+    REAL(lp), ALLOCATABLE :: fract_fpc_max(:,:)
 
     ! Declare process memories
     dsl4jsb_Def_config(NLCC_)
@@ -162,6 +163,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: min_mmtemp_20yr
     dsl4jsb_Real2D_onChunk :: max_mmtemp_20yr
     dsl4jsb_Real2D_onChunk :: gdd_prev_year
+    dsl4jsb_Real2D_onChunk :: max_snow_prev_year
 
     ! Declare pointers to variables in nlcc memory
     dsl4jsb_Real3D_onChunk :: act_fpc
@@ -237,7 +239,14 @@ CONTAINS
     bclimit_max_warm_mmtemp => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_max_warm_mmtemp)
     bclimit_min_temprange => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_temprange)
     bclimit_min_gdd => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_gdd)
+    bclimit_min_snow => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%bclimit_min_snow)
     tau_c_woods => assimi__mem%collect_var_real2d(ics, ice, iblk, no_children, assimi__mem%tau_c_woods)
+
+    ! Check whether optional values were read from lctlib
+    IF (ALL(bclimit_min_snow < -990._lp)) THEN
+      CALL finish(TRIM(routine), 'BCLIMIT_MIN_SNOW is required in lctlib file for simulations ' // &
+        & 'using NLCC')
+    END IF
 
     ! import specific leave area from lct library
     sla => carbon__mem%collect_var_real2d(ics, ice, iblk, no_children, carbon__mem%sla)
@@ -253,17 +262,18 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)  ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)  ! inout
-    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,min_mmtemp_20yr)   ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_mmtemp_20yr)   ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,gdd_prev_year)     ! in
+    dsl4jsb_Get_var2D_onChunk(CLIMBUF_,max_snow_prev_year)! in
+    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)              ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)             ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)              ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)      ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)          ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)            ! inout
     dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)           ! inout
 
     IF ((is_time_experiment_start(options%current_datetime) .OR. is_time_restart(options%current_datetime)) &
         & .AND. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
@@ -316,7 +326,8 @@ CONTAINS
        DO itile = 1,no_children
           CALL bioclim_limits (is_dynamic(:,itile), bclimit_min_cold_mmtemp(:,itile), bclimit_max_cold_mmtemp(:,itile),    &
                                bclimit_max_warm_mmtemp(:,itile), bclimit_min_temprange(:,itile), bclimit_min_gdd(:,itile), &
-                               min_mmtemp_20yr(:), max_mmtemp_20yr(:), gdd_prev_year(:), bio_exist(:,itile))
+                               bclimit_min_snow(:,itile), min_mmtemp_20yr(:), max_mmtemp_20yr(:), max_snow_prev_year(:),   &
+                               gdd_prev_year(:), bio_exist(:,itile))
        ENDDO
        IF (.NOT. lstart) THEN
           CALL potential_tree_fpc (nc, no_children, is_dynamic(:,:), is_woody(:,:), bio_exist(:,:), &
@@ -345,7 +356,7 @@ CONTAINS
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
                                sum_green_bio_memory(:), desert_fpc(:))
-!!$ TR          fract_fpc_max(:) = MAX(1.e-10_lp,1._lp - desert_fpc(:))
+
           !  calculate fract_fpc_max and hand it back to child tiles (pft tiles)
           ALLOCATE(fract_fpc_max(nc,no_children))
           fract_fpc_max(:,:) = SPREAD(MAX(1.e-10_lp,1._lp - desert_fpc(:)),NCOPIES=no_children, DIM=2)
@@ -362,7 +373,7 @@ CONTAINS
 
     DEALLOCATE(is_woody, is_grass, is_pasture, is_crop, is_dynamic)
     DEALLOCATE(bclimit_min_cold_mmtemp, bclimit_max_cold_mmtemp, &
-               bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, tau_c_woods)
+               bclimit_max_warm_mmtemp, bclimit_min_temprange, bclimit_min_gdd, bclimit_min_snow, tau_c_woods)
     IF (new_year .AND. .NOT. lstart) DEALLOCATE(fract_fpc_max)
     DEALLOCATE(NPP_mean_5year)
     DEALLOCATE(burned_fract, damaged_fract)

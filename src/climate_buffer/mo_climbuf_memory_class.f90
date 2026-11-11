@@ -33,16 +33,24 @@ MODULE mo_climbuf_memory_class
 
   USE mo_kind, ONLY: lp
 
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE
+
+  ! Use of processes in this module
+  dsl4jsb_Use_processes CARBON_
+
+  ! Use process configurations
+  dsl4jsb_Use_config(CARBON_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_climbuf_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20   !< Maximum number of variables of this process
+  INTEGER, PARAMETER :: max_no_of_vars = 30   !< Maximum number of variables of this process
 
   !> Memory of the CLIMBUF process
   !> _Note for the ford documentation_: The table lists the general jsbach memory variables
@@ -66,7 +74,19 @@ MODULE mo_climbuf_memory_class
     & precip_15d,               & !< Precipitation with 15-day smoothing [kg m-2 s-1]
     & precip_15d_yDay,          & !< 15-day precipitation at the end of previous day [kg m-2 s-1]
     & gdd_sum_year,             & !< Current number of growing degree days in this year
-    & gdd_prev_year               !< Growing degree days of the previous year
+    & gdd_prev_year,            & !< Growing degree days of the previous year
+    & max_snow_of_yr,           & !< Maximum snow depth in current year [m]
+    & max_snow_prev_year,       & !< Maximum snow depth in previous year [m]
+    & max_thaw_of_yr,           & !< Maximum soil column thaw depth in current year [m]
+    & max_thaw_prev_year          !< Maximum soil column thaw depth in previous year [m]
+
+  TYPE(t_jsb_var_real3d) ::     &
+    & t_soil_sl_15d,            & !< 15-day smoothed soil layer temperature [K]
+    & t_soil_sl_15d_yDay,       & !< 15-day smoothed soil layer temperature at the end of the previous day [K]
+    & wtr_soil_rel_sl_15d,      & !< 15-day smoothed relative soil layer moisture [-]
+    & wtr_soil_rel_sl_15d_yDay, & !< 15-day smoothed relative soil layer moisture at the end of the previous day [-]
+    & max_t_soil_sl_year,       & !< Maximum soil layer temperature in previous year [K]
+    & permafrost_period_sl        !< Number of years of consecutively frozen soil layer [year]
 
   CONTAINS
     PROCEDURE :: Init => Init_climbuf_memory
@@ -88,7 +108,7 @@ CONTAINS
   !>
   SUBROUTINE Init_climbuf_memory(mem, prefix, suffix, lct_ids, lib_id, model_id)
 
-    USE mo_jsb_varlist,       ONLY: MEDIUM !, FULL, NONE, BASIC
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL, NONE
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -104,17 +124,33 @@ CONTAINS
       & lib_id,       & !< ID of the tile's primary land cover type (e.g. LAND_TYPE)
       & model_id        !< ID of the current model instance
 
+    dsl4jsb_Def_config(CARBON_)             !< Configurable settings of the carbon process
+
+    TYPE(t_jsb_model), POINTER :: model     !< This instance of ICON-Land
     TYPE(t_jsb_grid),  POINTER :: hgrid     !< Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface   !< Vertical grid for surface variables (vertical dim. = 1)
+    TYPE(t_jsb_vgrid), POINTER :: soil_e    !< Vertical grid for soil energy variables (vertical dim. = nsoil)
+    TYPE(t_jsb_vgrid), POINTER :: soil_w    !< Vertical grid for soil hydrology variables (vertical dim. = nsoil)
     INTEGER :: table
+
+    INTEGER  :: nsoil                        !< Number of soil layers
+    REAL(lp) :: max_depth                    !< lower boundary of deepest soil layer
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_climbuf_memory'
 
+    model => Get_model(model_id)
 
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+    soil_e  => Get_vgrid('soil_depth_energy')
+    soil_w  => Get_vgrid('soil_depth_water')
+
+    dsl4jsb_Get_config(CARBON_)
+
+    nsoil = soil_e%n_levels
+    max_depth = soil_e%ubounds(nsoil)
 
     CALL mem%Add_var( 'q_rel_air_14d', mem%q_rel_air_14d,                                 &
       & hgrid, surface,                                                                   &
@@ -245,7 +281,92 @@ CONTAINS
         & prefix, suffix,                                                                 &
         & output_level=MEDIUM,                                                            &
         & lrestart=.TRUE., initval_r=0.0_lp)
-     END IF
+    END IF
+
+    CALL mem%Add_var('max_thaw_of_yr', mem%max_thaw_of_yr,                                &
+      & hgrid, surface,                                                                   &
+      & t_cf('max_thaw_of_yr', 'm', 'Maximum thaw depth in current year'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=max_depth)
+
+    CALL mem%Add_var('max_thaw_prev_year', mem%max_thaw_prev_year,                        &
+      & hgrid, surface,                                                                   &
+      & t_cf('max_thaw_prev_year', 'm', 'Maximum annual thaw depth in previous year'),    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.TRUE., initval_r=max_depth)
+
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL mem%Add_var('max_snow_of_yr', mem%max_snow_of_yr,                                &
+        & hgrid, surface,                                                                   &
+        & t_cf('max_snow_of_yr', 'm', 'Maximum snow depth in current year'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
+      CALL mem%Add_var('max_snow_prev_year', mem%max_snow_prev_year,                        &
+        & hgrid, surface,                                                                   &
+        & t_cf('max_snow_prev_year', 'm', 'Maximum snow depth in previous year'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
+      CALL mem%Add_var('t_soil_sl_15d', mem%t_soil_sl_15d,                                  &
+        & hgrid, soil_e,                                                                    &
+        & t_cf('soil_temperature_15d', 'K',                                                 &
+        &      '15-day smoothed soil layer temperature'),                                   &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.TRUE., initval_r=280.0_lp)
+
+      CALL mem%Add_var('t_soil_sl_15d_yDay', mem%t_soil_sl_15d_yDay,                        &
+        & hgrid, soil_e,                                                                    &
+        & t_cf('soil_temperature_15d_yDay', 'K',                                            &
+        &      '15-day smoothed soil layer temperature at the end of the previous day'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=280.0_lp)
+
+      CALL mem%Add_var('wtr_soil_rel_sl_15d', mem%wtr_soil_rel_sl_15d,                      &
+        & hgrid, soil_w,                                                                    &
+        & t_cf('rel_soil_water_sl_15d', '-',                                                &
+        &      '15-day smoothed rel soil layer water content'),                             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
+      CALL mem%Add_var('wtr_soil_rel_sl_15d_yDay', mem%wtr_soil_rel_sl_15d_yDay,            &
+        & hgrid, soil_w,                                                                    &
+        & t_cf('rel_soil_water_sl_15d_yDay', '-',                                           &
+        &      '15-day smoothed rel soil layer water content at the end of the previous day'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+
+      CALL mem%Add_var('max_t_soil_sl_year', mem%max_t_soil_sl_year,                        &
+        & hgrid, soil_w,                                                                    &
+        & t_cf('max_t_soil_sl_year', 'K',                                                   &
+        &      'Maximum soil layer temperature in current year'),                           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=280.0_lp)
+
+      CALL mem%Add_var('permafrost_period_sl', mem%permafrost_period_sl,                    &
+        & hgrid, soil_w,                                                                    &
+        & t_cf('permafrost_period_sl', 'yr',                                                &
+        &      'Number of years of consecutively frozen soil layer'),                       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & output_level=MEDIUM,                                                              &
+        & lrestart=.TRUE., initval_r=0.0_lp)
+    END IF
 
   END SUBROUTINE Init_climbuf_memory
 

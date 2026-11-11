@@ -18,6 +18,7 @@
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
+  USE mo_jsb_control, ONLY: acc_stream
   USE mo_kind,      ONLY: lp
 
   IMPLICIT NONE
@@ -58,7 +59,7 @@ CONTAINS
 
     nc = SIZE(fuel)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       ! Minimum fraction burnt every day (needed with natural LCC)
       burned_fract(ic) = fire_minimum * delta_time_yr
@@ -71,7 +72,7 @@ CONTAINS
       END IF
 
     END DO
-    !$END PARALLEL LOOP
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE burned_fract_jsbach
 
@@ -103,7 +104,7 @@ CONTAINS
 
     nc = SIZE(max_wind_clim)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(acc_stream)
     DO ic = 1, nc
       IF (cover_fract_pot(ic) > EPSILON(1._lp) .AND. max_wind_yDay(ic) > max_wind_clim(ic) * wind_threshold) THEN
         damaged_fract(ic) = MIN( 1._lp - EPSILON(1._lp) / cover_fract_pot(ic),                                          &

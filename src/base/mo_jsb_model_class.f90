@@ -569,7 +569,7 @@ CONTAINS
   END SUBROUTINE Get_top_tile
 
   SUBROUTINE Set_options(this, current_datetime, dtime, alpha, iblk, ics, ice, nc, &
-    &                    nsoil_e, nsoil_w, nsnow_e, npft)
+    &                    nsoil_e, nsoil_w, nsoil_c, nsnow_e, npft)
 
     USE mo_fortran_tools,   ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -584,6 +584,7 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: nc
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_e
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_w
+    INTEGER,          OPTIONAL,          INTENT(in)    :: nsoil_c
     INTEGER,          OPTIONAL,          INTENT(in)    :: nsnow_e
     INTEGER,          OPTIONAL,          INTENT(in)    :: npft
 
@@ -622,6 +623,14 @@ CONTAINS
         this%options(:)%nsoil_w = nsoil_w
       ELSE
         CALL finish(routine, 'nsoil_w may only be set outside OpenMP parallel regions')
+      END IF
+    END IF
+
+    IF (PRESENT(nsoil_c)) THEN
+      IF (Is_omp_inside_serial()) THEN
+        this%options(:)%nsoil_c = nsoil_c
+      ELSE
+        CALL finish(routine, 'nsoil_c may only be set outside OpenMP parallel regions')
       END IF
     END IF
 

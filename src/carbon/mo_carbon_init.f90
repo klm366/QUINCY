@@ -129,6 +129,9 @@ CONTAINS
 
   SUBROUTINE carbon_read_cpools(tile)
 
+    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_vgrid
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model),         POINTER :: model
@@ -138,22 +141,33 @@ CONTAINS
     !INTEGER :: icarbon
     REAL(lp), POINTER ::          &
       & return_pointer  (:,  :) , &  !< temporary pointer just used to "call" the reading
-      ! & return_pointer3d(:,:,:)
-      & memory_pointer  (:,  :)      !< pointer the memory of the current variable of the current tile
-    !LOGICAL :: &
-    !  read_cpools
+      & return_pointer3d(:,:,:) , &  !< temporary 3D pointer just used to "call" the reading
+      & memory_pointer  (:,  :) , &  !< pointer the memory of the current variable of the current tile
+      & memory_pointer3d(:,:,:)      !< 3D pointer the memory of the current variable of the current tile
 
     TYPE(t_input_file) :: input_file
 
     INTEGER, PARAMETER :: npools = 21
     INTEGER            :: i
-    CHARACTER(len=40)            :: invar_name
-    CHARACTER(len=20), PARAMETER :: Cpool_name(npools) = [character(len=20) ::           &
+    CHARACTER(len=40)  :: invar_name
+    LOGICAL            :: invar_3D
+
+    INTEGER            :: is, nsoil
+    TYPE(t_jsb_vgrid), POINTER   :: soil_c
+
+    CHARACTER(len=20), PARAMETER :: Cpool_name_2d(npools) = [character(len=20) ::        &
       & 'c_green',  'c_woods',  'c_reserve',                                             &
       & 'c_acid_ag1',  'c_water_ag1', 'c_ethanol_ag1', 'c_nonsoluble_ag1',               &
       & 'c_acid_bg1',  'c_water_bg1', 'c_ethanol_bg1', 'c_nonsoluble_bg1', 'c_humus_1',  &
       & 'c_acid_ag2',  'c_water_ag2', 'c_ethanol_ag2', 'c_nonsoluble_ag2',               &
       & 'c_acid_bg2',  'c_water_bg2', 'c_ethanol_bg2', 'c_nonsoluble_bg2', 'c_humus_2' ]
+
+    CHARACTER(len=20), PARAMETER :: Cpool_name_3d(npools) = [character(len=20) ::                     &
+      & 'c_green',  'c_woods',  'c_reserve',                                                          &
+      & 'c_acid_ag1',    'c_water_ag1',    'c_ethanol_ag1',    'c_nonsoluble_ag1',                    &
+      & 'c_acid_bg1_sl', 'c_water_bg1_sl', 'c_ethanol_bg1_sl', 'c_nonsoluble_bg1_sl', 'c_humus_1_sl', &
+      & 'c_acid_ag2',    'c_water_ag2',    'c_ethanol_ag2',    'c_nonsoluble_ag2',                    &
+      & 'c_acid_bg2_sl', 'c_water_bg2_sl', 'c_ethanol_bg2_sl', 'c_nonsoluble_bg2_sl', 'c_humus_2_sl' ]
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_read_cpools'
 
@@ -166,77 +180,166 @@ CONTAINS
     IF (.NOT. model%Is_process_enabled(CARBON_)) RETURN
 
     ! Initialize the C Pools
+    invar_3D = .false.
 
+    return_pointer   => NULL()
+    return_pointer3d => NULL()
+
+    IF (dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      soil_c => Get_vgrid('soil_depth_carbon')
+      nsoil = soil_c%n_levels
+    END IF
 
     CALL message(TRIM(routine), 'Reading carbon pools for tile '//TRIM(tile%name)// &
       &                         ' from '//TRIM(dsl4jsb_Config(CARBON_)%ic_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(CARBON_)%ic_filename), model%grid_id)
 
-    DO i=1,npools
-      invar_name = 'carbon_'//TRIM(Cpool_name(i))//'_'//TRIM(tile%name)
+    IF (.NOT. dsl4jsb_Config(CARBON_)%vertical_yasso) THEN
+      CALL message(TRIM(routine), 'Reading 1D carbon pools for total soil column.')
+      DO i=1,npools
+        invar_name = 'carbon_'//TRIM(Cpool_name_2d(i))//'_'//TRIM(tile%name)
 
-      SELECT CASE(Cpool_name(i))
-      CASE ("c_green")
-        memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
-      CASE ("c_woods")
-        memory_pointer => CARBON__mem%c_woods%ptr
-      CASE ("c_reserve")
-        memory_pointer => CARBON__mem%c_reserve%ptr
-      CASE ("c_acid_ag1")
-        memory_pointer => CARBON__mem%c_acid_ag1%ptr
-      CASE ("c_water_ag1")
-        memory_pointer => CARBON__mem%c_water_ag1%ptr
-      CASE ("c_ethanol_ag1")
-        memory_pointer => CARBON__mem%c_ethanol_ag1%ptr
-      CASE ("c_nonsoluble_ag1")
-        memory_pointer => CARBON__mem%c_nonsoluble_ag1%ptr
-      CASE ("c_acid_bg1")
-        memory_pointer => CARBON__mem%c_acid_bg1%ptr
-      CASE ("c_water_bg1")
-        memory_pointer => CARBON__mem%c_water_bg1%ptr
-      CASE ("c_ethanol_bg1")
-        memory_pointer => CARBON__mem%c_ethanol_bg1%ptr
-      CASE ("c_nonsoluble_bg1")
-        memory_pointer => CARBON__mem%c_nonsoluble_bg1%ptr
-      CASE ("c_humus_1")
-        memory_pointer => CARBON__mem%c_humus_1%ptr
-      CASE ("c_acid_ag2")
-        memory_pointer => CARBON__mem%c_acid_ag2%ptr
-      CASE ("c_water_ag2")
-        memory_pointer => CARBON__mem%c_water_ag2%ptr
-      CASE ("c_ethanol_ag2")
-        memory_pointer => CARBON__mem%c_ethanol_ag2%ptr
-      CASE ("c_nonsoluble_ag2")
-        memory_pointer => CARBON__mem%c_nonsoluble_ag2%ptr
-      CASE ("c_acid_bg2")
-        memory_pointer => CARBON__mem%c_acid_bg2%ptr
-      CASE ("c_water_bg2")
-        memory_pointer => CARBON__mem%c_water_bg2%ptr
-      CASE ("c_ethanol_bg2")
-        memory_pointer => CARBON__mem%c_ethanol_bg2%ptr
-      CASE ("c_nonsoluble_bg2")
-        memory_pointer => CARBON__mem%c_nonsoluble_bg2%ptr
-      CASE ("c_humus_2")
-        memory_pointer => CARBON__mem%c_humus_2%ptr
-      END SELECT
-      __acc_attach(memory_pointer)
+        SELECT CASE(Cpool_name_2d(i))
+        CASE ("c_green")
+          memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
+        CASE ("c_woods")
+          memory_pointer => CARBON__mem%c_woods%ptr
+        CASE ("c_reserve")
+          memory_pointer => CARBON__mem%c_reserve%ptr
+        CASE ("c_acid_ag1")
+          memory_pointer => CARBON__mem%c_acid_ag1%ptr
+        CASE ("c_water_ag1")
+          memory_pointer => CARBON__mem%c_water_ag1%ptr
+        CASE ("c_ethanol_ag1")
+          memory_pointer => CARBON__mem%c_ethanol_ag1%ptr
+        CASE ("c_nonsoluble_ag1")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag1%ptr
+        CASE ("c_acid_bg1")
+          memory_pointer => CARBON__mem%c_acid_bg1%ptr
+        CASE ("c_water_bg1")
+          memory_pointer => CARBON__mem%c_water_bg1%ptr
+        CASE ("c_ethanol_bg1")
+          memory_pointer => CARBON__mem%c_ethanol_bg1%ptr
+        CASE ("c_nonsoluble_bg1")
+          memory_pointer => CARBON__mem%c_nonsoluble_bg1%ptr
+        CASE ("c_humus_1")
+          memory_pointer => CARBON__mem%c_humus_1%ptr
+        CASE ("c_acid_ag2")
+          memory_pointer => CARBON__mem%c_acid_ag2%ptr
+        CASE ("c_water_ag2")
+          memory_pointer => CARBON__mem%c_water_ag2%ptr
+        CASE ("c_ethanol_ag2")
+          memory_pointer => CARBON__mem%c_ethanol_ag2%ptr
+        CASE ("c_nonsoluble_ag2")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag2%ptr
+        CASE ("c_acid_bg2")
+          memory_pointer => CARBON__mem%c_acid_bg2%ptr
+        CASE ("c_water_bg2")
+          memory_pointer => CARBON__mem%c_water_bg2%ptr
+        CASE ("c_ethanol_bg2")
+          memory_pointer => CARBON__mem%c_ethanol_bg2%ptr
+        CASE ("c_nonsoluble_bg2")
+          memory_pointer => CARBON__mem%c_nonsoluble_bg2%ptr
+        CASE ("c_humus_2")
+          memory_pointer => CARBON__mem%c_humus_2%ptr
+        END SELECT
+        __acc_attach(memory_pointer)
 
-      return_pointer => input_file%Read_2d(        &
-        & variable_name = invar_name,              &
-        & fill_array = memory_pointer )
+        return_pointer => input_file%Read_2d(        &
+          & variable_name = invar_name,              &
+          & fill_array = memory_pointer )
 
-      memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
+        memory_pointer(:,:) = MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
 
-      !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
+        !$ACC UPDATE DEVICE(memory_pointer) ASYNC(1)
+      END DO
+    ELSE
+      CALL message(TRIM(routine), 'Reading depth-resolved carbon pools for soil layers.')
+      DO i=1,npools
+        invar_name = 'carbon_'//TRIM(Cpool_name_3d(i))//'_'//TRIM(tile%name)
+        invar_3D = .false.
 
-    END DO
+        SELECT CASE(Cpool_name_3d(i))
+        CASE ("c_green")
+          memory_pointer => CARBON__mem%c_green%ptr ! CARBON__mem= tile%mem(carbon_)%p
+        CASE ("c_woods")
+          memory_pointer => CARBON__mem%c_woods%ptr
+        CASE ("c_reserve")
+          memory_pointer => CARBON__mem%c_reserve%ptr
+        CASE ("c_acid_ag1")
+          memory_pointer => CARBON__mem%c_acid_ag1%ptr
+        CASE ("c_water_ag1")
+          memory_pointer => CARBON__mem%c_water_ag1%ptr
+        CASE ("c_ethanol_ag1")
+          memory_pointer => CARBON__mem%c_ethanol_ag1%ptr
+        CASE ("c_nonsoluble_ag1")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag1%ptr
+        CASE ("c_acid_bg1_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_acid_bg1_sl%ptr
+        CASE ("c_water_bg1_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_water_bg1_sl%ptr
+        CASE ("c_ethanol_bg1_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_ethanol_bg1_sl%ptr
+        CASE ("c_nonsoluble_bg1_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_nonsoluble_bg1_sl%ptr
+        CASE ("c_humus_1_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_humus_1_sl%ptr
+        CASE ("c_acid_ag2")
+          memory_pointer => CARBON__mem%c_acid_ag2%ptr
+        CASE ("c_water_ag2")
+          memory_pointer => CARBON__mem%c_water_ag2%ptr
+        CASE ("c_ethanol_ag2")
+          memory_pointer => CARBON__mem%c_ethanol_ag2%ptr
+        CASE ("c_nonsoluble_ag2")
+          memory_pointer => CARBON__mem%c_nonsoluble_ag2%ptr
+        CASE ("c_acid_bg2_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_acid_bg2_sl%ptr
+        CASE ("c_water_bg2_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_water_bg2_sl%ptr
+        CASE ("c_ethanol_bg2_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_ethanol_bg2_sl%ptr
+        CASE ("c_nonsoluble_bg2_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_nonsoluble_bg2_sl%ptr
+        CASE ("c_humus_2_sl")
+          invar_3D = .true.
+          memory_pointer3d => CARBON__mem%c_humus_2_sl%ptr
+        END SELECT
+
+        IF (.NOT. invar_3D) THEN
+          __acc_attach(memory_pointer)
+          return_pointer => input_file%Read_2d(        &
+            & variable_name = invar_name,              &
+            & fill_array = memory_pointer )
+          memory_pointer(:,:) = &
+            & MERGE( memory_pointer(:,:), 0._lp,  memory_pointer(:,:) >= 0._lp)
+        ELSE
+          __acc_attach(memory_pointer3d)
+          DO is=1,nsoil
+            return_pointer3d => input_file%Read_2d_extdim( &
+              & variable_name = invar_name,     &
+              & start_extdim = is, end_extdim = is, extdim_name='soillev')
+            memory_pointer3d(:,is,:) = MERGE(return_pointer3d(:,:,1), 0._lp, return_pointer3d(:,:,1) >= 0._lp)
+          END DO
+        END IF
+
+      END DO
+    END IF
 
     CALL input_file%Close()
 
     ! avoid compiler warnings about pointers not being dereferenced
-    IF (ASSOCIATED(return_pointer)) CONTINUE
-    NULLIFY(return_pointer)
+    IF (.NOT. ASSOCIATED(return_pointer)) NULLIFY(return_pointer)
+    IF (.NOT. ASSOCIATED(return_pointer3d)) NULLIFY(return_pointer3d)
 
   END SUBROUTINE carbon_read_cpools
 

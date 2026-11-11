@@ -50,6 +50,7 @@ MODULE mo_assimi_memory_class
       bclimit_max_warm_mmtemp,    & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
       bclimit_min_temprange,      & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
       bclimit_min_gdd,            & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_min_snow,           & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
       tau_c_woods                   ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
 
@@ -248,6 +249,14 @@ CONTAINS
     CALL mem%Add_var('bclimit_min_gdd', mem%bclimit_min_gdd,                              &
       & hgrid, surface,                                                                   &
       & t_cf('bclimit_min_gdd', '', 'bclimit_min_gdd'),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=MEDIUM,                                                              &
+      & lrestart=.FALSE., initval_r=0.0_lp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_min_snow', mem%bclimit_min_snow,                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_min_snow', 'm', 'PFT-specific minimum required snow depth'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & output_level=MEDIUM,                                                              &

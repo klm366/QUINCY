@@ -29,10 +29,7 @@ MODULE mo_disturbance_constants
   !                                                           !! (ok: 8 is unlikely to ever be used - maybe for extreme
   !                                                           !! precipitation events?!)
   INTEGER , PARAMETER, PUBLIC  :: DIST_WINDBREAK        = 12 !! Calculation wrt. windbreak of any pft types
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_NONE             =  0
   INTEGER , PARAMETER, PUBLIC  :: FIRE_JSBACH           =  1
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_ARORA            =  2
-  !INTEGER , PARAMETER, PUBLIC  :: FIRE_THONICKE         =  3
 
   REAL(lp), PARAMETER          :: persist_rel_hum  = 0.95_lp   ! factor concerning the smoothing of relative air humidity (~14 days)
   REAL(lp), PARAMETER          :: persist_wind_10m = 0.9995_lp ! factor concerning the smoothing of daily maximum wind speed
